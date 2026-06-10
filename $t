@@ -1,0 +1,8 @@
+<?php
+require 'vendor/autoload.php';
+$app = require_once 'bootstrap/app.php';
+$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
+$rows = DB::connection('mysql')->select('SHOW COLUMNS FROM proyectos WHERE Field IN (?,?,?,?)', ['lin_codigo','mei_codigo','tpu_codigo','tin_codigo']);
+foreach ($rows as $r) {
+    echo $r->Field . ': ' . $r->Type . ' | Null: ' . $r->Null . ' | Default: ' . ($r->Default ?? 'NULL') . PHP_EOL;
+}

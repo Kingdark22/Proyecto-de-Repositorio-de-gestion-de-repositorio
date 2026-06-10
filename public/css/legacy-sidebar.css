@@ -1,0 +1,76 @@
+.legacy-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.legacy-nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.legacy-nav li {
+    margin-bottom: 0;
+}
+
+.legacy-menu-item {
+    display: block;
+    padding: 5px 10px;
+    background-color: #e0e0e0;
+    border: 1px solid #bcbcbc;
+    color: #000;
+    font-family: Verdana, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 900;
+    text-decoration: none;
+    cursor: pointer;
+    position: relative;
+}
+
+.legacy-menu-item:hover {
+    background-color: #d0d0d0;
+    text-decoration: none !important;
+}
+
+.legacy-menu-item.active {
+    background-color: #ccc;
+}
+
+.arrow-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    margin-top: -5px;
+    width: 0;
+    height: 0;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 6px solid #86b970;
+    transition: transform 0.2s;
+}
+
+.legacy-submenu {
+    background: #fff;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease-out;
+}
+
+.legacy-submenu a {
+    display: block;
+    padding: 4px 10px 4px 25px;
+    color: #2c4760;
+    font-size: 12px;
+    text-decoration: underline;
+    font-weight: 900;
+}
+
+.legacy-submenu a:hover,
+.legacy-submenu a.active-sub {
+    background: #f0f0f0;
+    color: #000;
+}
+
+.legacy-nav::-webkit-scrollbar { width: 6px; }
+.legacy-nav::-webkit-scrollbar-thumb { background: #b0b0b0; border-radius: 3px; }

@@ -1,0 +1,160 @@
+.pgm-wrap {
+    font-family: Verdana, Arial, sans-serif;
+    font-size: 11px;
+}
+
+.pgm-action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 12px 14px;
+    background: linear-gradient(180deg, #f5f5f5 0%, #e8e8e8 100%);
+    border: 2px solid #8b0000;
+    border-radius: 6px;
+}
+
+.pgm-btn-registrar {
+    display: inline-block;
+    padding: 10px 22px;
+    font-size: 13px;
+    font-weight: bold;
+    color: #fff !important;
+    background: linear-gradient(180deg, #a52a2a 0%, #8b0000 100%);
+    border: 2px solid #5c0000;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+    letter-spacing: 0.3px;
+}
+
+.pgm-btn-registrar:hover {
+    background: linear-gradient(180deg, #8b0000 0%, #6b0000 100%);
+}
+
+.pgm-btn-registrar:disabled,
+.pgm-btn-registrar[aria-disabled="true"] {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.pgm-btn-volver {
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: bold;
+    background: #f0f0f0;
+    border: 1px solid #999;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 12px;
+}
+
+.pgm-tabs button {
+    cursor: pointer;
+}
+
+.pgm-aviso {
+    font-size: 11px;
+    color: #856404;
+    max-width: 520px;
+    line-height: 1.4;
+}
+
+.pgm-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
+.pgm-btn-action {
+    display: inline-block;
+    padding: 4px 12px;
+    font-size: 10px;
+    font-weight: bold;
+    font-family: Verdana, Arial, sans-serif;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    border: 1px solid transparent;
+    transition: background-color 0.15s, box-shadow 0.15s;
+    min-width: 70px;
+}
+
+.pgm-btn-action:hover {
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    text-decoration: none;
+}
+
+.pgm-btn-action--approve {
+    background-color: #d4edda;
+    color: #155724;
+    border-color: #008000;
+}
+
+.pgm-btn-action--approve:hover {
+    background-color: #c3e6cb;
+}
+
+.pgm-btn-action--reject {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-color: #FF0000;
+}
+
+.pgm-btn-action--reject:hover {
+    background-color: #f5c6cb;
+}
+
+.pgm-btn-action--details {
+    background-color: #cce5ff;
+    color: #004085;
+    border-color: #9fc5e8;
+}
+
+.pgm-btn-action--details:hover {
+    background-color: #b8daff;
+}
+
+.pgm-btn-action--edit {
+    background-color: #fff3cd;
+    color: #856404;
+    border-color: #e6cc7e;
+}
+
+.pgm-btn-action--edit:hover {
+    background-color: #ffeaa7;
+}
+
+.pgm-btn-action--toggle {
+    background-color: #e2e3e5;
+    color: #383d41;
+    border-color: #bcbebf;
+}
+
+.pgm-btn-action--toggle:hover {
+    background-color: #d6d8db;
+}
+
+.pgm-btn-action--delete {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-color: #e9aaad;
+}
+
+.pgm-btn-action--delete:hover {
+    background-color: #f5c6cb;
+}
+
+.pgm-wrap select,
+.pgm-wrap input[type="text"],
+.pgm-wrap input[type="date"],
+.pgm-wrap input[type="number"] {
+    margin-top: 0;
+    font-size: 11px;
+    box-sizing: border-box;
+}

@@ -1,0 +1,98 @@
+/* Profesores de proyecto — estilo alineado al legacy del sistema */
+.ppm-manager {
+    font-family: Verdana, Arial, sans-serif;
+    font-size: 11px;
+}
+
+/* Anula reglas globales del layout solo dentro de esta pantalla */
+.ppm-manager select,
+.ppm-manager input[type="text"] {
+    margin-top: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 28px;
+    box-sizing: border-box;
+    font-size: 11px;
+    text-transform: none;
+}
+
+.ppm-manager input[type="text"]::placeholder {
+    text-transform: none;
+}
+
+.ppm-filters-table {
+    width: 100%;
+    font-size: 11px;
+}
+
+.ppm-filters-table td {
+    padding: 4px 6px 8px 0;
+    vertical-align: top;
+}
+
+.ppm-filters-table b {
+    font-size: 11px;
+}
+
+.ppm-search-row td {
+    padding-top: 4px;
+}
+
+.ppm-table tbody tr:hover {
+    background-color: #ccc !important;
+    color: #000;
+}
+
+.ppm-row-inputs select,
+.ppm-row-inputs input {
+    margin-top: 0;
+    margin-bottom: 4px;
+    width: 100%;
+    font-size: 10px;
+}
+
+.ppm-btn-action {
+    border-radius: 4px;
+    padding: 4px 12px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 10px;
+    font-family: Verdana, Arial, sans-serif;
+    min-width: 85px;
+}
+
+.ppm-btn-action--enable {
+    border: 1px solid #0000ee;
+    background-color: #cce5ff;
+    color: #000;
+}
+
+.ppm-btn-action--disable {
+    border: 1px solid #ff0000;
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.ppm-btn-action:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+.ppm-estado {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: bold;
+    border: 1px solid #ccc;
+}
+
+.ppm-estado--ok {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.ppm-estado--off {
+    background-color: #eee;
+    color: #555;
+}
