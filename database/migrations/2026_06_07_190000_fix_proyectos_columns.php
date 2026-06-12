@@ -9,7 +9,7 @@ class FixProyectosColumns extends Migration
     {
         if (!Schema::hasColumn('proyectos', 'pry_estado_validacion')) {
             Schema::table('proyectos', function ($table) {
-                $table->enum('pry_estado_validacion', ['Aprobado', 'Pendiente', 'Rechazado'])
+                $table->string('pry_estado_validacion', 20)
                     ->default('Pendiente')
                     ->after('pry_estado_logico');
             });

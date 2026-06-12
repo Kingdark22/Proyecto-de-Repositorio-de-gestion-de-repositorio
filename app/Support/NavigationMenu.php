@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\User;
+use App\Services\NotificacionService;
 use App\Services\ProyectoGestionService;
 use App\Services\UserRoleService;
 use Illuminate\Support\Facades\Cache;
@@ -42,31 +43,74 @@ class NavigationMenu
             return $cached;
         }
 
-        $availableRoles = array_keys($user->availableRoles());
-        $isAdmin = in_array('administrador', $availableRoles, true);
-        $isCoordinator = in_array('coordinador', $availableRoles, true);
-        $isTeacher = in_array('profesor proyecto', $availableRoles, true);
-        $isStudent = in_array('estudiante', $availableRoles, true);
-        $studentWithTeam = $isStudent && $user->perteneceAEquipo();
+        $activeRole = $this->roles->getActiveRole($user);
+        $isStudent = $activeRole === 'estudiante';
 
-        $pendingUpdatesCount = \App\Models\Proyecto::where('actualizado_por_estudiante', true)->count();
+        $pendingUpdatesCount = app(NotificacionService::class)->contarPendientes($user);
 
         $flags = [
-            'isAdmin'              => $isAdmin,
-            'isCoordinator'        => $isCoordinator,
-            'isTeacher'            => $isTeacher,
+            'isAdmin'              => $activeRole === 'administrador',
+            'isCoordinator'        => $activeRole === 'coordinador',
+            'isTeacher'            => $activeRole === 'profesor proyecto',
             'isStudent'            => $isStudent,
-            'canViewAcademic'      => $isAdmin || $isCoordinator || $isTeacher || $studentWithTeam,
-            'canViewComunes'       => $isAdmin || $isCoordinator || $isTeacher || $studentWithTeam,
-            'canManageCatalogs'    => $isAdmin,
-            'canManageComponents'  => $isAdmin || $isCoordinator,
-            'canValidateProjects'  => app(ProyectoGestionService::class)->usuarioPuedeValidar($user),
-            'canRegisterProject'   => $user->puedeRegistrarProyecto(),
-            'canManageSystemConfig'=> $isAdmin || $isCoordinator,
-            'canManageOrganizaciones' => $this->roles->esGestionador($user),
-            'canViewPublicaciones'   => $this->roles->esGestionador($user),
+            'canViewAcademic'      => false,
+            'canViewComunes'       => false,
+            'canManageCatalogs'    => false,
+            'canManageComponents'  => false,
+            'canValidateProjects'  => false,
+            'canRegisterProject'   => false,
+            'canManageSystemConfig'=> false,
+            'canManageOrganizaciones' => false,
+            'canViewPublicaciones'   => false,
             'pendingUpdatesCount'    => $pendingUpdatesCount,
         ];
+
+        if ($activeRole !== null) {
+            switch ($activeRole) {
+                case 'administrador':
+                    $flags['canViewAcademic'] = true;
+                    $flags['canViewComunes'] = true;
+                    $flags['canManageCatalogs'] = true;
+                    $flags['canManageComponents'] = true;
+                    $flags['canManageSystemConfig'] = true;
+                    $flags['canManageOrganizaciones'] = true;
+                    $flags['canViewPublicaciones'] = true;
+                    $flags['canRegisterProject'] = true;
+                    break;
+
+                case 'coordinador':
+                    $flags['canViewAcademic'] = true;
+                    $flags['canViewComunes'] = true;
+                    $flags['canManageCatalogs'] = true;
+                    $flags['canManageComponents'] = true;
+                    $flags['canManageSystemConfig'] = true;
+                    break;
+
+                case 'profesor proyecto':
+                    $flags['canViewAcademic'] = true;
+                    $flags['canViewComunes'] = true;
+                    break;
+
+                case 'estudiante':
+                    if ($user->perteneceAEquipo()) {
+                        $flags['canViewAcademic'] = true;
+                        $flags['canViewComunes'] = true;
+                        $flags['canRegisterProject'] = true;
+                    }
+                    break;
+
+                case 'gestionador':
+                    $flags['canManageOrganizaciones'] = true;
+                    $flags['canViewPublicaciones'] = true;
+                    break;
+            }
+        }
+
+        // canValidateProjects y canRegisterProject usan servicios especializados
+        $flags['canValidateProjects'] = app(ProyectoGestionService::class)->usuarioPuedeValidar($user);
+        if ($flags['canRegisterProject'] === false) {
+            $flags['canRegisterProject'] = $user->puedeRegistrarProyecto();
+        }
 
         Cache::put($sessionKey, $flags, now()->addSeconds(self::CACHE_TTL));
 

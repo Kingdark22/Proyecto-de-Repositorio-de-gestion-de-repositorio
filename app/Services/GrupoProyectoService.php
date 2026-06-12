@@ -34,7 +34,7 @@ class GrupoProyectoService
 
     public function conexionRepositorio(): string
     {
-        return (string) config('dual_database.repositorio_connection', 'mysql');
+        return (string) config('dual_database.repositorio_connection', 'pgsql');
     }
 
     public function usaGruposIntranet(): bool

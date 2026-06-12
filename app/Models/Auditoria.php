@@ -22,7 +22,7 @@ class Auditoria extends Model
      */
     public static function registrarParaProyecto(int $proyectoId, string $accion, string $modulo = 'proyectos', ?string $connection = null): void
     {
-        $connection = $connection ?? config('dual_database.repositorio_connection', 'mysql');
+        $connection = $connection ?? config('dual_database.repositorio_connection', 'pgsql');
 
         if (! Schema::connection($connection)->hasTable('auditorias')) {
             return;

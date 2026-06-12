@@ -6,16 +6,21 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    protected function conn(): string
+    {
+        return (string) config('dual_database.repositorio_connection', 'pgsql');
+    }
+
     public function up(): void
     {
-        if (!Schema::connection('mysql')->hasColumn('comunidad_contactos', 'com_codigo')) {
-            Schema::connection('mysql')->table('comunidad_contactos', function (Blueprint $table) {
+        if (!Schema::connection($this->conn())->hasColumn('comunidad_contactos', 'com_codigo')) {
+            Schema::connection($this->conn())->table('comunidad_contactos', function (Blueprint $table) {
                 $table->bigInteger('com_codigo')->nullable(false)->after('ccom_codigo');
             });
         }
 
         try {
-            Schema::connection('mysql')->table('comunidad_contactos', function (Blueprint $table) {
+            Schema::connection($this->conn())->table('comunidad_contactos', function (Blueprint $table) {
                 $table->foreign('com_codigo')->references('com_codigo')->on('comunidades')->cascadeOnDelete();
             });
         } catch (Exception $e) {
@@ -25,8 +30,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (Schema::connection('mysql')->hasColumn('comunidad_contactos', 'com_codigo')) {
-            Schema::connection('mysql')->table('comunidad_contactos', function (Blueprint $table) {
+        if (Schema::connection($this->conn())->hasColumn('comunidad_contactos', 'com_codigo')) {
+            Schema::connection($this->conn())->table('comunidad_contactos', function (Blueprint $table) {
                 $table->dropForeign(['com_codigo']);
                 $table->dropColumn('com_codigo');
             });

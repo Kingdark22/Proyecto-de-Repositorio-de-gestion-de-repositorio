@@ -23,7 +23,7 @@ class IntranetProfessorService
 
     public function repositorioConnection(): string
     {
-        return (string) config('dual_database.repositorio_connection', 'mysql');
+        return (string) config('dual_database.repositorio_connection', 'pgsql');
     }
 
     /**
