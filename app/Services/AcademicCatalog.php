@@ -30,9 +30,9 @@ class AcademicCatalog
         if ($search) {
             $term = '%' . trim($search) . '%';
             $query->where(function ($q) use ($term) {
-                $q->whereRaw('TRIM(e.est_cedula) LIKE ?', [$term])
-                    ->orWhereRaw('TRIM(p.per_nombres) LIKE ?', [$term])
-                    ->orWhereRaw('TRIM(p.per_apellidos) LIKE ?', [$term]);
+                $q->whereRaw('TRIM(e.est_cedula) ILIKE ?', [$term])
+                    ->orWhereRaw('TRIM(p.per_nombres) ILIKE ?', [$term])
+                    ->orWhereRaw('TRIM(p.per_apellidos) ILIKE ?', [$term]);
             });
         }
 

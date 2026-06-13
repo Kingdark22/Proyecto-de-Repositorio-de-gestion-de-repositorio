@@ -283,15 +283,15 @@ class IntranetProfessorService
             if ($search !== '') {
                 $term = '%' . $search . '%';
                 $intranetQuery->where(function($q) use ($term) {
-                    $q->where('sud.sud_ced_docente', 'LIKE', $term)
-                      ->orWhere('p.per_nombres', 'LIKE', $term)
-                      ->orWhere('p.per_apellidos', 'LIKE', $term)
-                      ->orWhere('pro.pro_siglas', 'LIKE', $term)
-                      ->orWhere('pro.pro_nombre', 'LIKE', $term)
-                      ->orWhere('tra.tra_nombre', 'LIKE', $term)
-                      ->orWhere('sec.sec_nombre', 'LIKE', $term)
-                      ->orWhere('ucu.ucu_siglas', 'LIKE', $term)
-                      ->orWhere('ucu.ucu_nombre', 'LIKE', $term);
+                    $q->whereRaw('sud.sud_ced_docente ILIKE ?', [$term])
+                      ->orWhereRaw('p.per_nombres ILIKE ?', [$term])
+                      ->orWhereRaw('p.per_apellidos ILIKE ?', [$term])
+                      ->orWhereRaw('pro.pro_siglas ILIKE ?', [$term])
+                      ->orWhereRaw('pro.pro_nombre ILIKE ?', [$term])
+                      ->orWhereRaw('tra.tra_nombre ILIKE ?', [$term])
+                      ->orWhereRaw('sec.sec_nombre ILIKE ?', [$term])
+                      ->orWhereRaw('ucu.ucu_siglas ILIKE ?', [$term])
+                      ->orWhereRaw('ucu.ucu_nombre ILIKE ?', [$term]);
                 });
             }
 
@@ -311,7 +311,7 @@ class IntranetProfessorService
                     ->select('ppm_cedula');
 
                 if ($search !== '') {
-                    $modQuery->where('ppm_cedula', 'LIKE', '%' . $search . '%');
+                    $modQuery->whereRaw('ppm_cedula ILIKE ?', ['%' . $search . '%']);
                 }
 
                 $moduleCedulas = $modQuery
@@ -465,9 +465,9 @@ class IntranetProfessorService
             if ($search !== '') {
                 $term = '%' . $search . '%';
                 $query->where(function($q) use ($term) {
-                    $q->where('sud.sud_ced_docente', 'LIKE', $term)
-                      ->orWhere('p.per_nombres', 'LIKE', $term)
-                      ->orWhere('p.per_apellidos', 'LIKE', $term);
+                    $q->whereRaw('sud.sud_ced_docente ILIKE ?', [$term])
+                      ->orWhereRaw('p.per_nombres ILIKE ?', [$term])
+                      ->orWhereRaw('p.per_apellidos ILIKE ?', [$term]);
                 });
             }
 
@@ -718,7 +718,7 @@ class IntranetProfessorService
             foreach ($prefijos as $prefijo) {
                 $prefijo = trim((string) $prefijo);
                 if ($prefijo !== '') {
-                    $q->orWhereRaw('TRIM('.$colSiglas.') LIKE ?', [$prefijo.'%']);
+                    $q->orWhereRaw('TRIM('.$colSiglas.') ILIKE ?', [$prefijo.'%']);
                 }
             }
             foreach ($patrones as $patron) {

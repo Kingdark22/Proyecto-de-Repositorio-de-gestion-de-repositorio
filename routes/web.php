@@ -57,7 +57,7 @@ Route::middleware(['auth', 'active.role'])->group(function () {
     Route::view('/dashboard', 'dashboard')->name('dashboard');
     Route::view('/configuracion', 'configuracion.index')->name('configuracion');
 
-    Route::middleware('role:administrador,estudiante')->group(function () {
+    Route::middleware('role:administrador,estudiante,coordinador')->group(function () {
         Route::view('/lineas-investigacion', 'lineas.index')->name('lineas-investigacion');
         Route::view('/tipos-investigacion', 'tipo_investigacion.index')->name('tipos-investigacion');
         Route::view('/metodologia-investigacion', 'metodologia_investigacion.index')->name('metodologia-investigacion');
@@ -75,7 +75,7 @@ Route::middleware(['auth', 'active.role'])->group(function () {
         Route::view('/proyectos/gestion', 'proyectos.index')->name('proyectos.gestion');
     });
 
-    Route::view('/publicaciones', 'publicaciones.index')->name('publicaciones.index')->middleware('role:gestionador');
+    Route::view('/publicaciones', 'publicaciones.index')->name('publicaciones.index')->middleware('role:administrador,gestionador');
     Route::view('/vinculacion', 'vinculacion.index')->name('vinculacion.index')->middleware('role:administrador,gestionador');
 
     Route::get('/proyectos/crear', function () {

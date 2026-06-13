@@ -183,6 +183,16 @@ class GrupoProyectoManager extends Component
             return;
         }
 
+        // Validar que todos los miembros seleccionados pertenezcan a la sección elegida
+        $candidatos = $this->candidatosActuales();
+        foreach ($this->miembrosSeleccionados as $m) {
+            $cedula = trim($m['cedula']);
+            if (!$candidatos->contains('cedula', $cedula)) {
+                session()->flash('message_error', 'El integrante ' . ($m['apellido'] ?: '') . ', ' . ($m['nombre'] ?: '') . ' (' . $cedula . ') no pertenece a la sección seleccionada.');
+                return;
+            }
+        }
+
         $user = auth()->user();
         $clave = $grupos->registrar(
             $this->nombreGrupo,

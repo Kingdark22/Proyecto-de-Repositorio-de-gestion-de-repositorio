@@ -1,6 +1,7 @@
 @php
 $nav = app(\App\Support\NavigationMenu::class)->flags(auth()->user());
 $notificacionesList = app(\App\Services\NotificacionService::class)->listar(auth()->user());
+$notificacionesCount = count($notificacionesList);
 @endphp
 
 <link rel="stylesheet" href="{{ asset('css/legacy-sidebar.css') }}">
@@ -145,25 +146,68 @@ $notificacionesList = app(\App\Services\NotificacionService::class)->listar(auth
         </ul>
     </nav>
 
-    <div id="notificacionesContainer" style="position:relative; padding:8px; border-top:1px solid rgba(255,255,255,0.15); text-align:center;">
-        <button type="button" onclick="toggleNotificaciones()" style="background:none; border:none; cursor:pointer; position:relative; padding:6px;">
-            <i data-lucide="bell" style="width:20px; height:20px; color:rgba(255,255,255,0.8);"></i>
-            @if ($nav['pendingUpdatesCount'] > 0)
-            <span style="position:absolute; top:-2px; right:-2px; background:#dc3545; color:#fff; border-radius:50%; min-width:16px; height:16px; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:bold; line-height:1; padding:0 4px; box-shadow:0 1px 3px rgba(0,0,0,0.3);">{{ $nav['pendingUpdatesCount'] }}</span>
+    <div id="notificacionesContainer" class="notif-container">
+        <div class="notif-card-header">
+            <span class="notif-card-title">Notificaciones</span>
+            <button type="button" onclick="toggleNotificaciones()" class="notif-bell-btn {{ $notificacionesCount > 0 ? 'has-notifications' : '' }}">
+                <i data-lucide="bell"></i>
+                @if ($notificacionesCount > 0)
+                <span class="notif-badge">{{ $notificacionesCount }}</span>
+                @endif
+            </button>
+        </div>
+        
+        <div class="notif-card-body">
+            @if ($notificacionesCount > 0)
+                <div class="notif-alert-box" onclick="toggleNotificaciones()" style="cursor:pointer;">
+                    <i data-lucide="alert-circle" style="width:14px; height:14px; color:#d97706; flex-shrink:0;"></i>
+                    <span style="font-size:10px; color:#78350f; font-weight:700;">Tienes {{ $notificacionesCount }} pendiente(s)</span>
+                </div>
+            @else
+                <div class="notif-ok-box">
+                    <i data-lucide="check-circle" style="width:14px; height:14px; color:#16a34a; flex-shrink:0;"></i>
+                    <span style="font-size:10px; color:#14532d; font-weight:700;">Todo al día</span>
+                </div>
             @endif
-        </button>
-        <div id="notificacionesDropdown" style="display:none; position:absolute; bottom:100%; left:50%; transform:translateX(-50%); margin-bottom:8px; background:#fff; border:1px solid #ccc; border-radius:8px; box-shadow:0 -4px 16px rgba(0,0,0,0.2); min-width:300px; max-width:320px; z-index:9999; font-size:12px;">
-            <div style="padding:10px 14px; border-bottom:1px solid #eee; font-weight:bold; background:#f5f5f5; border-radius:8px 8px 0 0; display:flex; align-items:center; gap:6px;">
-                <i data-lucide="bell" style="width:14px; height:14px;"></i>
-                Notificaciones
+        </div>
+
+        <div id="notificacionesDropdown" class="notif-dropdown">
+            <div class="notif-header">
+                <div class="notif-header-title">
+                    <i data-lucide="bell" style="width:16px; height:16px; color:#8b0000;"></i>
+                    <span>Notificaciones</span>
+                </div>
+                <span style="background:#f1f5f9; color:#475569; font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600;">
+                    {{ $notificacionesCount }}
+                </span>
             </div>
-            <div style="max-height:320px; overflow-y:auto;">
+            <div class="notif-list">
                 @forelse ($notificacionesList as $notif)
-                <a href="{{ $notif['url'] }}" style="display:block; padding:10px 14px; text-decoration:none; color:#333; border-bottom:1px solid #f0f0f0; transition:background 0.15s;" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background=''">
-                    <div style="font-size:12px;">{{ $notif['mensaje'] }}</div>
+                @php
+                    $iconName = 'info';
+                    $iconClass = 'info';
+                    if (($notif['type'] ?? '') === 'warning') {
+                        $iconName = 'alert-triangle';
+                        $iconClass = 'warning';
+                    } elseif (($notif['type'] ?? '') === 'success') {
+                        $iconName = 'check-circle';
+                        $iconClass = 'success';
+                    }
+                @endphp
+                <a href="{{ $notif['url'] }}" class="notif-item">
+                    <div class="notif-item-icon {{ $iconClass }}">
+                        <i data-lucide="{{ $iconName }}" style="width:16px; height:16px;"></i>
+                    </div>
+                    <div class="notif-item-text">
+                        <div class="notif-item-title">{{ $notif['title'] ?? 'Aviso' }}</div>
+                        <div>{{ $notif['mensaje'] }}</div>
+                    </div>
                 </a>
                 @empty
-                <div style="padding:16px; color:#999; text-align:center;">Sin notificaciones</div>
+                <div class="notif-empty">
+                    <i data-lucide="bell-off" style="width:32px; height:32px; color:#94a3b8;"></i>
+                    <span>No tienes notificaciones pendientes</span>
+                </div>
                 @endforelse
             </div>
         </div>

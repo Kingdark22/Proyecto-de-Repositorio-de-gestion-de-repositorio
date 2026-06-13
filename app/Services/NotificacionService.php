@@ -15,59 +15,82 @@ class NotificacionService
         }
 
         $userRoleService = app(UserRoleService::class);
-        $availableRoles = array_keys($user->availableRoles());
-        $isAdmin = in_array('administrador', $availableRoles, true);
-        $isCoordinator = in_array('coordinador', $availableRoles, true);
-        $isTeacher = in_array('profesor proyecto', $availableRoles, true);
-        $isStudent = in_array('estudiante', $availableRoles, true);
+        $activeRole = $userRoleService->getActiveRole($user);
+        $isAdmin = $activeRole === 'administrador';
+        $isCoordinator = $activeRole === 'coordinador';
+        $isTeacher = $activeRole === 'profesor proyecto';
+        $isStudent = $activeRole === 'estudiante';
 
         $notificaciones = [];
 
         if ($isAdmin || $isCoordinator || $isTeacher) {
-            $proyectos = Proyecto::where('actualizado_por_estudiante', true)->get();
+            $query = Proyecto::where('estado_validacion', 'pendiente');
+
+            if ($isTeacher) {
+                $clavesDocente = app(ProyectoGestionService::class)->clavesEquipoFiltroValidacion($user);
+                if ($clavesDocente !== null) {
+                    $query->whereIn('pry_direccion_logica', $clavesDocente);
+                }
+            }
+
+            $proyectos = $query->get();
+
             foreach ($proyectos as $p) {
-                $notificaciones[] = [
-                    'mensaje' => 'Proyecto actualizado por el líder: ' . $p->titulo,
-                    'url' => route('proyectos.gestion'),
-                    'proyecto_id' => $p->id,
-                ];
+                if ($p->actualizado_por_estudiante) {
+                    $notificaciones[] = [
+                        'type' => 'info',
+                        'title' => 'Proyecto actualizado',
+                        'mensaje' => 'Proyecto actualizado por el líder: ' . $p->titulo,
+                        'url' => route('proyectos.gestion', ['tab' => 'validar', 'details' => $p->id]),
+                        'proyecto_id' => $p->id,
+                    ];
+                } else {
+                    $notificaciones[] = [
+                        'type' => 'info',
+                        'title' => 'Proyecto registrado',
+                        'mensaje' => 'Nuevo proyecto registrado: ' . $p->titulo,
+                        'url' => route('proyectos.gestion', ['tab' => 'validar', 'details' => $p->id]),
+                        'proyecto_id' => $p->id,
+                    ];
+                }
             }
         } elseif ($isStudent) {
             $cedula = trim($user->usu_cedula);
-            $proyectos = Proyecto::where('actualizado_por_estudiante', false)
+            $gruposSvc = app(GrupoProyectoService::class);
+
+            // 1. Proyectos nuevos que necesitan subir documentos
+            $proyectosNuevos = Proyecto::where('actualizado_por_estudiante', false)
+                ->where('estado_validacion', '!=', 'aprobado')
+                ->where('estado_validacion', '!=', 'rechazado')
                 ->whereNotNull('pry_direccion_logica')
                 ->get();
 
-            $gruposSvc = app(GrupoProyectoService::class);
+            // 2. Proyectos rechazados que necesitan correcciones
+            $proyectosRechazados = Proyecto::where('estado_validacion', 'rechazado')
+                ->whereNotNull('pry_direccion_logica')
+                ->get();
 
-            foreach ($proyectos as $p) {
-                $clave = $p->equipo_ref;
-                if ($clave === '') {
-                    continue;
+            foreach ($proyectosNuevos as $p) {
+                if ($this->esLiderDelProyecto($p, $cedula, $gruposSvc)) {
+                    $notificaciones[] = [
+                        'type' => 'warning',
+                        'title' => 'Subir documentos',
+                        'mensaje' => 'Debe subir los documentos del proyecto: ' . $p->titulo,
+                        'url' => route('proyectos.gestion', ['edit' => $p->id]),
+                        'proyecto_id' => $p->id,
+                    ];
                 }
+            }
 
-                $partes = $gruposSvc->parsearClave($clave);
-                if (!$partes || ($partes['tipo'] ?? '') !== GrupoProyectoService::PREFIJO) {
-                    continue;
-                }
-
-                $grupo = GrupoProyectoModulo::find($partes['grp_codigo'] ?? 0);
-                if (!$grupo) {
-                    continue;
-                }
-
-                $miembros = $grupo->grp_miembros ?? [];
-                foreach ($miembros as $m) {
-                    if (trim($m['cedula'] ?? '') === $cedula
-                        && (int) ($m['rol_id'] ?? 0) === IntranetEquipoSeccionService::ROL_LIDER
-                    ) {
-                        $notificaciones[] = [
-                            'mensaje' => 'Debe subir los documentos del proyecto: ' . $p->titulo,
-                            'url' => route('proyectos.gestion'),
-                            'proyecto_id' => $p->id,
-                        ];
-                        break;
-                    }
+            foreach ($proyectosRechazados as $p) {
+                if ($this->esLiderDelProyecto($p, $cedula, $gruposSvc)) {
+                    $notificaciones[] = [
+                        'type' => 'warning',
+                        'title' => 'Proyecto rechazado',
+                        'mensaje' => 'Revisión requerida para "' . $p->titulo . '". Motivo: ' . ($p->motivo_rechazo ?: 'Revisar detalles.'),
+                        'url' => route('proyectos.gestion', ['edit' => $p->id]),
+                        'proyecto_id' => $p->id,
+                    ];
                 }
             }
         }
@@ -78,5 +101,34 @@ class NotificacionService
     public function contarPendientes(?User $user): int
     {
         return count($this->listar($user));
+    }
+
+    protected function esLiderDelProyecto(Proyecto $p, string $cedula, GrupoProyectoService $gruposSvc): bool
+    {
+        $clave = $p->equipo_ref;
+        if ($clave === '') {
+            return false;
+        }
+
+        $partes = $gruposSvc->parsearClave($clave);
+        if (!$partes || ($partes['tipo'] ?? '') !== GrupoProyectoService::PREFIJO) {
+            return false;
+        }
+
+        $grupo = GrupoProyectoModulo::find($partes['grp_codigo'] ?? 0);
+        if (!$grupo) {
+            return false;
+        }
+
+        $miembros = $grupo->grp_miembros ?? [];
+        foreach ($miembros as $m) {
+            if (trim($m['cedula'] ?? '') === $cedula
+                && (int) ($m['rol_id'] ?? 0) === IntranetEquipoSeccionService::ROL_LIDER
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

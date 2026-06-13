@@ -59,7 +59,7 @@ class UserRoleService
         $cedula = trim((string) $user->usu_cedula);
 
         if ($cedula === '13354832') {
-            return ['administrador' => 'Administrador', 'gestionador' => 'Gestionador'];
+            return ['gestionador' => 'Gestionador'];
         }
 
         if ($this->cachedAvailableRoles !== null && $this->cachedCedula === $cedula) {
@@ -222,6 +222,12 @@ class UserRoleService
             return;
         }
 
+        // Usuario 13354832 siempre inicia como gestionador
+        if (trim((string) $user->usu_cedula) === '13354832') {
+            Session::put($this->sessionKey(), 'gestionador');
+            return;
+        }
+
         $available = $this->detectAvailableRoles($user);
 
         if ($available === []) {
@@ -240,6 +246,11 @@ class UserRoleService
 
     public function userHasRole(User $user, string ...$requestedRoles): bool
     {
+        // Super-admin (cedula 13354832) siempre pasa cualquier verificación
+        if (trim((string) $user->usu_cedula) === '13354832') {
+            return true;
+        }
+
         $activeSessionRole = $this->getActiveRole($user);
 
         if ($activeSessionRole !== null) {

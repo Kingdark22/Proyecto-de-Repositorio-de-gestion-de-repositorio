@@ -1,34 +1,30 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
+    protected function conn(): string
     {
-        Schema::table('proyectos', function (Blueprint $table) {
-            $table->bigInteger('lin_codigo')->nullable()->change();
-            $table->bigInteger('mei_codigo')->nullable()->change();
-            $table->bigInteger('tpu_codigo')->nullable()->change();
-            $table->bigInteger('tin_codigo')->nullable()->change();
-        });
+        return config('dual_database.repositorio_connection', 'pgsql');
     }
 
-    /**
-     * Reverse the migrations.
-     */
+    public function up(): void
+    {
+        $c = $this->conn();
+        DB::connection($c)->statement('ALTER TABLE proyectos ALTER COLUMN lin_codigo DROP NOT NULL');
+        DB::connection($c)->statement('ALTER TABLE proyectos ALTER COLUMN mei_codigo DROP NOT NULL');
+        DB::connection($c)->statement('ALTER TABLE proyectos ALTER COLUMN tpu_codigo DROP NOT NULL');
+        DB::connection($c)->statement('ALTER TABLE proyectos ALTER COLUMN tin_codigo DROP NOT NULL');
+    }
+
     public function down(): void
     {
-        Schema::table('proyectos', function (Blueprint $table) {
-            $table->bigInteger('lin_codigo')->nullable(false)->change();
-            $table->bigInteger('mei_codigo')->nullable(false)->change();
-            $table->bigInteger('tpu_codigo')->nullable(false)->change();
-            $table->bigInteger('tin_codigo')->nullable(false)->change();
-        });
+        $c = $this->conn();
+        DB::connection($c)->statement('ALTER TABLE proyectos ALTER COLUMN lin_codigo SET NOT NULL');
+        DB::connection($c)->statement('ALTER TABLE proyectos ALTER COLUMN mei_codigo SET NOT NULL');
+        DB::connection($c)->statement('ALTER TABLE proyectos ALTER COLUMN tpu_codigo SET NOT NULL');
+        DB::connection($c)->statement('ALTER TABLE proyectos ALTER COLUMN tin_codigo SET NOT NULL');
     }
 };

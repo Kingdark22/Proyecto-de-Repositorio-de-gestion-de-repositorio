@@ -288,6 +288,9 @@ class ProyectoGestionService
         User $user,
         mixed $archivoProyecto = null,
     ): Proyecto {
+        $esAdmin = $this->usuarioEsAdminEnSistema($user);
+        $existing = $editingId ? Proyecto::find($editingId) : null;
+
         $payload = [
             'titulo' => $datos['titulo'],
             'resumen' => $datos['resumen'],
@@ -301,9 +304,17 @@ class ProyectoGestionService
             'tipo_investigacion_id' => $datos['tipo_investigacion_id'] ?? null,
             'comunidad_id' => $datos['comunidad_id'],
             'equipo_ref' => $datos['equipo_seccion_clave'],
-            'estado_validacion' => 'aprobado',
-            'estado_logico' => true,
+            'estado_validacion' => $editingId 
+                ? ($existing->estado_validacion ?? 'pendiente') 
+                : ($esAdmin ? 'aprobado' : 'pendiente'),
+            'estado_logico' => $editingId
+                ? (bool) ($existing->estado_logico ?? false)
+                : ($esAdmin ? true : false),
         ];
+
+        if (!$editingId) {
+            $payload['creador_cedula'] = trim((string) $user->usu_cedula);
+        }
 
         if ($editingId) {
             $proyecto = Proyecto::findOrFail($editingId);
@@ -654,11 +665,38 @@ class ProyectoGestionService
 
     public function usuarioPuedeValidar(?User $user): bool
     {
-        return false;
+        if ($user === null) {
+            return false;
+        }
+
+        return $this->usuarioEsAdminEnSistema($user)
+            || $user->hasRole('coordinador', 'profesor proyecto');
     }
 
     public function usuarioPuedeValidarProyecto(?User $user, Proyecto $proyecto): bool
     {
+        if ($user === null) {
+            return false;
+        }
+
+        if ($this->usuarioEsAdminEnSistema($user)) {
+            return true;
+        }
+
+        $userRoleService = app(UserRoleService::class);
+        $activeRole = $userRoleService->getActiveRole($user);
+
+        if ($userRoleService->roleMatches('coordinador', $activeRole)) {
+            return true;
+        }
+
+        if ($userRoleService->roleMatches('profesor proyecto', $activeRole)) {
+            $clavesDocente = $this->clavesEquipoFiltroValidacion($user);
+            if ($clavesDocente !== null) {
+                return in_array($proyecto->pry_direccion_logica, $clavesDocente, true);
+            }
+        }
+
         return false;
     }
 
