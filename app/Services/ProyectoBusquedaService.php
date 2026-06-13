@@ -115,7 +115,7 @@ class ProyectoBusquedaService
         $termino = trim((string) ($filtros['search'] ?? ''));
         if ($termino !== '') {
             $query->where(function (Builder $q) use ($termino) {
-                $q->where('resumen', 'like', '%'.$termino.'%');
+                $q->whereRaw('pry_resumen ILIKE ?', ['%'.$termino.'%']);
             });
         }
 

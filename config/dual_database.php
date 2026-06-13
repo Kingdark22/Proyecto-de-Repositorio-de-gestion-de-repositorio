@@ -4,14 +4,14 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Conexión MySQL del módulo repositorio (proyectos, comunidades, etc.)
+    | Conexión del módulo repositorio (proyectos, comunidades, etc.)
     |--------------------------------------------------------------------------
     */
-    'repositorio_connection' => env('DB_CONNECTION', 'mysql'),
+    'repositorio_connection' => env('DB_CONNECTION', 'pgsql'),
 
     /*
     |--------------------------------------------------------------------------
-    | Tablas que viven en intranet (PostgreSQL) / simulación — datos académicos
+    | Tablas que viven en intranet — datos académicos
     |--------------------------------------------------------------------------
     */
     'intranet_tables' => [
@@ -35,7 +35,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Tablas solo en MySQL repositorio — gestión del sistema de proyectos
+    | Tablas del repositorio — gestión del sistema de proyectos
     |--------------------------------------------------------------------------
     */
     'repositorio_tables' => [

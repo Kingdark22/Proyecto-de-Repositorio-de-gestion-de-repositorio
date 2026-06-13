@@ -7,7 +7,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $connection = config('dual_database.repositorio_connection', 'mysql');
+        $connection = config('dual_database.repositorio_connection', 'pgsql');
 
         if (Schema::connection($connection)->hasColumn('profesor_proyecto_modulo', 'ppm_coordinacion_id')) {
             Schema::connection($connection)->table('profesor_proyecto_modulo', function ($table) {

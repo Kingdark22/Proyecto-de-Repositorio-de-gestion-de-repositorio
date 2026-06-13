@@ -3,7 +3,7 @@
 return [
 
     /*
-    | Copia automática intranet → MySQL simulación al leer datos (respaldo si cae intranet).
+    | Copia automática intranet → simulación al leer datos (respaldo si cae intranet).
     | NO crea tablas: solo escribe en tablas que YA existen en simulación (mismos nombres que intranet).
     | La BD simulación debe ser un respaldo/export de intranet mantenido por el equipo (no migraciones Laravel).
     */

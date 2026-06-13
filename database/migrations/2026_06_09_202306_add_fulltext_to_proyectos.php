@@ -5,13 +5,18 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
+    protected function conn(): string
+    {
+        return config('dual_database.repositorio_connection', 'pgsql');
+    }
+
     public function up(): void
     {
-        DB::statement('ALTER TABLE proyectos ADD FULLTEXT INDEX ft_proyectos_titulo_resumen (pry_titulo, pry_resumen)');
+        DB::connection($this->conn())->statement('CREATE INDEX CONCURRENTLY IF NOT EXISTS ft_proyectos_resumen_gin ON proyectos USING GIN (to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')))');
     }
 
     public function down(): void
     {
-        DB::statement('ALTER TABLE proyectos DROP INDEX ft_proyectos_titulo_resumen');
+        DB::connection($this->conn())->statement('DROP INDEX IF EXISTS ft_proyectos_resumen_gin');
     }
 };

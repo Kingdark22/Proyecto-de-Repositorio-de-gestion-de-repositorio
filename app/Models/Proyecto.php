@@ -96,10 +96,9 @@ class Proyecto extends RepositorioModel
             $query->where(function ($q) use ($search) {
                 $q->where('equipo_ref', 'like', "%{$search}%");
                 try {
-                    $q->orWhereRaw('MATCH(pry_titulo, pry_resumen) AGAINST(? IN BOOLEAN MODE)', [$search . '*']);
+                    $q->orWhereRaw('to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)', [$search]);
                 } catch (\Throwable) {
-                    $q->orWhere('pry_titulo', 'like', "%{$search}%");
-                    $q->orWhere('pry_resumen', 'like', "%{$search}%");
+                    $q->orWhereRaw('pry_resumen ILIKE ?', ["%{$search}%"]);
                 }
             });
         }
@@ -199,10 +198,9 @@ class Proyecto extends RepositorioModel
 
         if ($search) {
             try {
-                $query->whereRaw('MATCH(pry_titulo, pry_resumen) AGAINST(? IN BOOLEAN MODE)', [$search . '*']);
+                $query->whereRaw('to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)', [$search]);
             } catch (\Throwable) {
-                $query->where('pry_titulo', 'like', '%' . $search . '%')
-                    ->orWhere('pry_resumen', 'like', '%' . $search . '%');
+                $query->whereRaw('pry_resumen ILIKE ?', ['%' . $search . '%']);
             }
         }
 

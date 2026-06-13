@@ -33,7 +33,7 @@ class ProyectoGestionService
 
     protected function conexionRepositorio(): string
     {
-        return (string) config('dual_database.repositorio_connection', 'mysql');
+        return (string) config('dual_database.repositorio_connection', 'pgsql');
     }
 
     public function usaComponentesDocumentales(): bool
@@ -88,9 +88,9 @@ class ProyectoGestionService
                     return;
                 }
                 try {
-                    $q->whereRaw('MATCH(pry_resumen) AGAINST(? IN BOOLEAN MODE)', [$search . '*']);
+                    $q->whereRaw('to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)', [$search]);
                 } catch (\Throwable) {
-                    $q->where('resumen', 'like', '%' . $search . '%');
+                    $q->whereRaw('pry_resumen ILIKE ?', ['%' . $search . '%']);
                 }
             });
 
@@ -288,6 +288,9 @@ class ProyectoGestionService
         User $user,
         mixed $archivoProyecto = null,
     ): Proyecto {
+        $esAdmin = $this->usuarioEsAdminEnSistema($user);
+        $existing = $editingId ? Proyecto::find($editingId) : null;
+
         $payload = [
             'titulo' => $datos['titulo'],
             'resumen' => $datos['resumen'],
@@ -301,9 +304,17 @@ class ProyectoGestionService
             'tipo_investigacion_id' => $datos['tipo_investigacion_id'] ?? null,
             'comunidad_id' => $datos['comunidad_id'],
             'equipo_ref' => $datos['equipo_seccion_clave'],
-            'estado_validacion' => 'aprobado',
-            'estado_logico' => true,
+            'estado_validacion' => $editingId 
+                ? ($existing->estado_validacion ?? 'pendiente') 
+                : ($esAdmin ? 'aprobado' : 'pendiente'),
+            'estado_logico' => $editingId
+                ? (bool) ($existing->estado_logico ?? false)
+                : ($esAdmin ? true : false),
         ];
+
+        if (!$editingId) {
+            $payload['creador_cedula'] = trim((string) $user->usu_cedula);
+        }
 
         if ($editingId) {
             $proyecto = Proyecto::findOrFail($editingId);
@@ -462,9 +473,9 @@ class ProyectoGestionService
             ->when(($filtros['search'] ?? '') !== '', function ($q) use ($filtros) {
                 $s = $filtros['search'];
                 try {
-                    $q->whereRaw('MATCH(pry_resumen) AGAINST(? IN BOOLEAN MODE)', [$s . '*']);
+                    $q->whereRaw('to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)', [$s]);
                 } catch (\Throwable) {
-                    $q->where('resumen', 'like', '%' . $s . '%');
+                    $q->whereRaw('pry_resumen ILIKE ?', ['%' . $s . '%']);
                 }
             })
             ->when(($filtros['estado'] ?? '') !== '', fn ($q) => $q->where('estado_validacion', $filtros['estado']))
@@ -564,9 +575,16 @@ class ProyectoGestionService
             return static::$roleCache[$key] = false;
         }
 
+        $roleService = app(UserRoleService::class);
+        $activeRole = $roleService->getActiveRole($user);
+
+        if ($activeRole !== null) {
+            return static::$roleCache[$key] = $roleService->roleMatches('administrador', $activeRole);
+        }
+
         return static::$roleCache[$key] = in_array(
             'administrador',
-            array_keys(app(UserRoleService::class)->detectAvailableRoles($user)),
+            array_keys($roleService->detectAvailableRoles($user)),
             true
         );
     }
@@ -647,11 +665,38 @@ class ProyectoGestionService
 
     public function usuarioPuedeValidar(?User $user): bool
     {
-        return false;
+        if ($user === null) {
+            return false;
+        }
+
+        return $this->usuarioEsAdminEnSistema($user)
+            || $user->hasRole('coordinador', 'profesor proyecto');
     }
 
     public function usuarioPuedeValidarProyecto(?User $user, Proyecto $proyecto): bool
     {
+        if ($user === null) {
+            return false;
+        }
+
+        if ($this->usuarioEsAdminEnSistema($user)) {
+            return true;
+        }
+
+        $userRoleService = app(UserRoleService::class);
+        $activeRole = $userRoleService->getActiveRole($user);
+
+        if ($userRoleService->roleMatches('coordinador', $activeRole)) {
+            return true;
+        }
+
+        if ($userRoleService->roleMatches('profesor proyecto', $activeRole)) {
+            $clavesDocente = $this->clavesEquipoFiltroValidacion($user);
+            if ($clavesDocente !== null) {
+                return in_array($proyecto->pry_direccion_logica, $clavesDocente, true);
+            }
+        }
+
         return false;
     }
 

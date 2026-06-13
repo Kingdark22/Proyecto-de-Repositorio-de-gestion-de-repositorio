@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Mapeo entre nombres usados en el código Laravel y columnas reales en MySQL repositorio.
+ * Mapeo entre nombres usados en el código Laravel y columnas reales en la BD repositorio.
  */
 return [
 

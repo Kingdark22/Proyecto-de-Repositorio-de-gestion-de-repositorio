@@ -4,7 +4,7 @@ require dirname(__DIR__).'/vendor/autoload.php';
 $app = require dirname(__DIR__).'/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
-foreach (['intranet', 'mysql', 'simulacion'] as $conn) {
+foreach (['intranet', 'simulacion'] as $conn) {
     try {
         Illuminate\Support\Facades\DB::connection($conn)->getPdo();
     } catch (Throwable $e) {

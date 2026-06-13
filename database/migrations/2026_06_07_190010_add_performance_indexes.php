@@ -8,14 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $connection = config('dual_database.repositorio_connection', 'mysql');
+        $connection = config('dual_database.repositorio_connection', 'pgsql');
 
         Schema::connection($connection)->table('proyectos', function ($table) {
             $table->index('pry_estado_validacion', 'idx_proyectos_validacion');
         });
 
         try {
-            DB::connection($connection)->statement('ALTER TABLE proyectos ADD INDEX idx_proyectos_validacion_dir (pry_estado_validacion, pry_direccion_logica)');
+            Schema::connection($connection)->table('proyectos', function ($table) {
+                $table->index(['pry_estado_validacion', 'pry_direccion_logica'], 'idx_proyectos_validacion_dir');
+            });
         } catch (\Throwable) {
         }
 
@@ -31,14 +33,16 @@ return new class extends Migration
 
     public function down(): void
     {
-        $connection = config('dual_database.repositorio_connection', 'mysql');
+        $connection = config('dual_database.repositorio_connection', 'pgsql');
 
         Schema::connection($connection)->table('proyectos', function ($table) {
             $table->dropIndex('idx_proyectos_validacion');
         });
 
         try {
-            DB::connection($connection)->statement('ALTER TABLE proyectos DROP INDEX idx_proyectos_validacion_dir');
+            Schema::connection($connection)->table('proyectos', function ($table) {
+                $table->dropIndex('idx_proyectos_validacion_dir');
+            });
         } catch (\Throwable) {
         }
 

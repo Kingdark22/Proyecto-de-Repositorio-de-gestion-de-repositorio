@@ -34,7 +34,7 @@ class GrupoProyectoService
 
     public function conexionRepositorio(): string
     {
-        return (string) config('dual_database.repositorio_connection', 'mysql');
+        return (string) config('dual_database.repositorio_connection', 'pgsql');
     }
 
     public function usaGruposIntranet(): bool
@@ -170,16 +170,16 @@ class GrupoProyectoService
             $query = GrupoProyectoModulo::query();
 
             if (!empty($filtros['lapso'])) {
-                $query->where('grp_contexto->lap_codigo', (int) $filtros['lapso']);
+                $query->where('grp_contexto->lap_codigo', (string) $filtros['lapso']);
             }
             if (!empty($filtros['programa'])) {
-                $query->where('grp_contexto->pro_codigo', (int) $filtros['programa']);
+                $query->where('grp_contexto->pro_codigo', (string) $filtros['programa']);
             }
             if (!empty($filtros['seccion'])) {
-                $query->where('grp_contexto->sec_codigo', (int) $filtros['seccion']);
+                $query->where('grp_contexto->sec_codigo', (string) $filtros['seccion']);
             }
             if (!empty($filtros['trayecto'])) {
-                $query->where('grp_contexto->tra_codigo', (int) $filtros['trayecto']);
+                $query->where('grp_contexto->tra_codigo', (string) $filtros['trayecto']);
             }
             if (!empty($filtros['equipo'])) {
                 $query->whereJsonContains('grp_miembros', ['cedula' => $filtros['equipo']]);

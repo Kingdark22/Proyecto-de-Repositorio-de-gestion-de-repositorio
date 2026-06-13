@@ -129,6 +129,16 @@ class ProyectoManager extends Component
             $this->listTab = 'gestion';
             $this->iniciarRegistro();
         }
+
+        if ($editId = request()->query('edit')) {
+            $this->listTab = 'gestion';
+            $this->edit((int) $editId, $gestion, app(GrupoProyectoService::class));
+        }
+
+        if ($detailsId = request()->query('details')) {
+            $this->listTab = 'validar';
+            $this->openDetails((int) $detailsId, $gestion);
+        }
     }
 
     public function iniciarRegistro(): void
@@ -396,11 +406,13 @@ class ProyectoManager extends Component
             $this->archivo_proyecto
         );
 
-        // Si lider actualizo, marcar
+        // Si lider actualizo, marcar y devolver a pendiente de validacion
         if ($this->modoActualizacion && $proyecto) {
             $proyecto->update([
                 'actualizado_por_estudiante' => true,
                 'fecha_actualizacion_estudiante' => now(),
+                'estado_validacion' => 'pendiente',
+                'estado_logico' => false,
             ]);
         }
 

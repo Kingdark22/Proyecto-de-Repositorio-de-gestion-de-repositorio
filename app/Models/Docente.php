@@ -109,7 +109,7 @@ class Docente extends Model
             foreach ($prefijos as $prefijo) {
                 $prefijo = trim((string) $prefijo);
                 if ($prefijo !== '') {
-                    $q->orWhereRaw('TRIM(ucu.ucu_siglas) LIKE ?', [$prefijo.'%']);
+                    $q->orWhereRaw('TRIM(ucu.ucu_siglas) ILIKE ?', [$prefijo.'%']);
                 }
             }
             foreach ($patrones as $patron) {

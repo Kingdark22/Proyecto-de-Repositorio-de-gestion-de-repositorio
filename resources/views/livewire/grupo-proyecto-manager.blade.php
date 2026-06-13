@@ -252,16 +252,16 @@
                             @php
                                 $lapLabel = $lapsos->firstWhere('lap_codigo', (int)$filterLapso)?->lap_nombre ?? 'Lapso #'.$filterLapso;
                                 $proLabel = $programas->firstWhere('pro_codigo', (int)$filterPrograma)?->pro_siglas ?? '—';
-                                $secLabel = $secciones->firstWhere('sec_codigo', (int)$filterSeccion)?->sec_nombre ?? 'Secci&oacute;n #'.$filterSeccion;
+                                $secLabel = $secciones->firstWhere('sec_codigo', (int)$filterSeccion)?->sec_nombre ?? 'Sección #'.$filterSeccion;
                             @endphp
                             <div style="margin-top:6px; background:#f0f7f0; border:1px solid #b8d4b8; border-radius:4px; padding:6px 10px; font-size:12px;">
-                                <b>Secci&oacute;n seleccionada:</b>
-                                {{ $proLabel }} &middot; {{ $secLabel }}
-                                @if($lapLabel) <span style="color:#666;">({{ $lapLabel }})</span>@endif
+                                <b>Sección seleccionada:</b>
+                                {!! html_entity_decode($proLabel) !!} &middot; {!! html_entity_decode($secLabel) !!}
+                                @if($lapLabel) <span style="color:#666;">({!! html_entity_decode($lapLabel) !!})</span>@endif
                             </div>
                         @else
                             <p style="font-size: 11px; color: #856404; margin-top:4px;">
-                                Seleccione lapso, PNF y secci&oacute;n para ver los estudiantes candidatos.
+                                Seleccione lapso, PNF y sección para ver los estudiantes candidatos.
                             </p>
                         @endif
                     </td>

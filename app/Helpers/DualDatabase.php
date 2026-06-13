@@ -17,7 +17,7 @@ class DualDatabase
 
     public static function repositorioConnection(): string
     {
-        return (string) config('dual_database.repositorio_connection', 'mysql');
+        return (string) config('dual_database.repositorio_connection', 'pgsql');
     }
 
     public static function isIntranetTable(string $table): bool

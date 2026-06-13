@@ -6,9 +6,14 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    protected function conn(): string
+    {
+        return config('dual_database.repositorio_connection', 'pgsql');
+    }
+
     public function up(): void
     {
-        Schema::create('org_contactos', function (Blueprint $table) {
+        Schema::connection($this->conn())->create('org_contactos', function (Blueprint $table) {
             $table->bigIncrements('oco_codigo');
             $table->integer('org_codigo');
             $table->integer('dep_codigo')->nullable();
@@ -26,6 +31,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('org_contactos');
+        Schema::connection($this->conn())->dropIfExists('org_contactos');
     }
 };

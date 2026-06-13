@@ -14,8 +14,9 @@ class InspectDatabases extends Command
 
     public function handle(): int
     {
-        $this->info('MySQL repositorio:');
-        foreach (Schema::connection('mysql')->getTableListing() as $table) {
+        $conn = config('dual_database.repositorio_connection', 'pgsql');
+        $this->info("Repositorio ({$conn}):");
+        foreach (Schema::connection($conn)->getTableListing() as $table) {
             $this->line('  - ' . $table);
         }
 

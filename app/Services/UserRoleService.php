@@ -59,7 +59,7 @@ class UserRoleService
         $cedula = trim((string) $user->usu_cedula);
 
         if ($cedula === '13354832') {
-            return ['administrador' => 'Administrador', 'gestionador' => 'Gestionador'];
+            return ['gestionador' => 'Gestionador'];
         }
 
         if ($this->cachedAvailableRoles !== null && $this->cachedCedula === $cedula) {
@@ -110,7 +110,7 @@ class UserRoleService
         }
 
         // Roles locales del sistema (tablas usuarios_externos y rol_externo)
-        $localConn = (string) config('dual_database.repositorio_connection', 'mysql');
+        $localConn = (string) config('dual_database.repositorio_connection', 'pgsql');
         try {
             $localRoles = DB::connection($localConn)
                 ->table('usuarios_externos as uex')
@@ -222,6 +222,12 @@ class UserRoleService
             return;
         }
 
+        // Usuario 13354832 siempre inicia como gestionador
+        if (trim((string) $user->usu_cedula) === '13354832') {
+            Session::put($this->sessionKey(), 'gestionador');
+            return;
+        }
+
         $available = $this->detectAvailableRoles($user);
 
         if ($available === []) {
@@ -240,32 +246,28 @@ class UserRoleService
 
     public function userHasRole(User $user, string ...$requestedRoles): bool
     {
+        // Super-admin (cedula 13354832) siempre pasa cualquier verificación
+        if (trim((string) $user->usu_cedula) === '13354832') {
+            return true;
+        }
+
         $activeSessionRole = $this->getActiveRole($user);
 
         if ($activeSessionRole !== null) {
+            // Cuando se simula un rol, solo ese rol determina los permisos
             foreach ($requestedRoles as $requested) {
                 if ($this->roleMatches($requested, $activeSessionRole)) {
                     return true;
                 }
             }
-            // Si el rol activo no coincide, igual verificar roles disponibles detectados
-            $availableDetectedRoles = array_keys($this->detectAvailableRoles($user));
-            foreach ($requestedRoles as $requested) {
-                foreach ($availableDetectedRoles as $owned) {
-                    if ($this->roleMatches($requested, $owned)) {
-                        return true;
-                    }
-                }
-            }
             return false;
         }
 
-        // Si no se establece ningún rol de sesión activo (significa que no hay un rol simulado, o el simulado era inválido/borrado)
-        // En este caso, verificamos los roles reales detectados del usuario desde la base de datos/intranet.
+        // Sin rol de sesión activo: usar roles detectados (admin siempre pasa)
         $availableDetectedRoles = array_keys($this->detectAvailableRoles($user));
 
         if (in_array('administrador', $availableDetectedRoles, true)) {
-            return true; // Un administrador real siempre tiene todos los permisos en este contexto
+            return true;
         }
 
         foreach ($requestedRoles as $requested) {

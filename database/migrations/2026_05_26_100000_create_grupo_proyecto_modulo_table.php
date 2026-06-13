@@ -5,14 +5,14 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Registro de grupos de proyecto del módulo (MySQL repositorio).
+ * Registro de grupos de proyecto del módulo (repositorio).
  * Sin columnas de lapso/sección/programa (intranet): contexto en grp_contexto (JSON).
  */
 return new class extends Migration
 {
     public function up(): void
     {
-        $connection = (string) config('dual_database.repositorio_connection', 'mysql');
+        $connection = (string) config('dual_database.repositorio_connection', 'pgsql');
 
         if (Schema::connection($connection)->hasTable('grupo_proyecto_modulo')) {
             return;
@@ -37,7 +37,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        $connection = (string) config('dual_database.repositorio_connection', 'mysql');
+        $connection = (string) config('dual_database.repositorio_connection', 'pgsql');
         Schema::connection($connection)->dropIfExists('grupo_proyecto_modulo');
     }
 };

@@ -519,6 +519,23 @@ class IntranetEquipoSeccionService
 
             $row = $query->first();
 
+            if (! $row && $proCodigo) {
+                $row = DB::connection($conn)
+                    ->table('seccion as sec')
+                    ->join('lapso_academico as lap', 'lap.lap_codigo', '=', 'sec.sec_cod_lapso_academico')
+                    ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
+                    ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
+                    ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'mal.mal_cod_trayecto')
+                    ->where('lap.lap_codigo', $lapCodigo)
+                    ->where('sec.sec_codigo', $secCodigo)
+                    ->select([
+                        'lap.lap_nombre', 'sec.sec_nombre',
+                        'pro.pro_siglas', 'pro.pro_nombre',
+                        'tra.tra_codigo', 'tra.tra_nombre as trayecto_nombre',
+                    ])
+                    ->first();
+            }
+
             if (! $row) {
                 return ['lap_nombre' => '', 'sec_nombre' => '', 'pro_siglas' => '', 'pro_nombre' => '', 'tra_codigo' => null, 'trayecto_nombre' => ''];
             }

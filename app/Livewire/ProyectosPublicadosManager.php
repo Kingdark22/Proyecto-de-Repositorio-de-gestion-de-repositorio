@@ -287,11 +287,10 @@ class ProyectosPublicadosManager extends Component
             $search = trim($this->search);
             $query->where(function ($q) use ($search) {
                 try {
-                    $q->whereRaw('MATCH(pry_titulo, pry_resumen) AGAINST(? IN BOOLEAN MODE)', [$search . '*']);
+                    $q->whereRaw('to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)', [$search]);
                 } catch (\Throwable) {
-                    $term = '%' . mb_strtolower($search) . '%';
-                    $q->whereRaw('LOWER(pry_titulo) LIKE ?', [$term])
-                        ->orWhereRaw('LOWER(pry_resumen) LIKE ?', [$term]);
+                    $term = '%' . $search . '%';
+                    $q->whereRaw('pry_resumen ILIKE ?', [$term]);
                 }
             });
         }
