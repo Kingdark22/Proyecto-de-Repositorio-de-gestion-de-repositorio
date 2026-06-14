@@ -18,7 +18,7 @@ class RepositorioPublico extends Component
     public function with()
     {
         return [
-            'proyectos' => Proyecto::busquedaPublica(
+            'proyectos' => Proyecto::with('documentos')->busquedaPublica(
                 $this->search,
                 (int) $this->filterPrograma ?: null,
                 $this->filterLapso

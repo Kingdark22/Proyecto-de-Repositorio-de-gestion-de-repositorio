@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Comunidad;
+use App\Models\ComunidadContacto;
 use App\Models\Direccion;
 use App\Models\Estado;
 use App\Models\Municipio;
@@ -22,16 +23,6 @@ class ComunidadGestionService
             'municipio_id' => 'required|integer|exists:municipios,mun_codigo',
             'dir_nombre' => 'required|string|max:500',
             'correo' => 'nullable|email|max:150',
-            'prefijo_telefono' => 'nullable|in:0424,0414,0412,0422,0416,0426',
-            'numero_telefono' => 'nullable|digits:7',
-            'contactos' => 'nullable|array',
-            'contactos.*.nombre' => 'required|string|max:255',
-            'contactos.*.apellido' => 'nullable|string|max:255',
-            'contactos.*.correo' => 'nullable|email|max:150',
-            'contactos.*.correo_confirmacion' => 'nullable|email|max:150',
-            'contactos.*.prefijo' => 'nullable|in:0424,0414,0412,0422,0416,0426',
-            'contactos.*.telefono' => 'nullable|string|max:50',
-            'contactos.*.cargo' => 'nullable|string|max:100',
         ];
     }
 
@@ -40,7 +31,7 @@ class ComunidadGestionService
      */
     public function cargarParaEdicion(int $id): array
     {
-        $comunidad = Comunidad::with('contactos', 'direccion.municipio.estado')->whereKey($id)->firstOrFail();
+        $comunidad = Comunidad::with(['direccion.municipio.estado', 'contactos'])->whereKey($id)->firstOrFail();
 
         $direccion = $comunidad->direccion;
 
@@ -48,20 +39,15 @@ class ComunidadGestionService
             'nombre' => $comunidad->nombre,
             'rif' => $comunidad->rif,
             'correo' => $comunidad->correo,
-            'numero_telefono' => $comunidad->numero_telefono,
             'estado_id' => $direccion?->municipio?->est_codigo ? (string) $direccion->municipio->est_codigo : '',
             'municipio_id' => $direccion?->mun_codigo ? (string) $direccion->mun_codigo : '',
             'dir_nombre' => $direccion?->dir_calle ?? '',
             'contactos' => $comunidad->contactos->map(fn ($c) => [
-                'nombre' => $c->ccon_nombre,
+                'nombre' => $c->ccon_nombre ?? '',
                 'apellido' => $c->ccon_apellido ?? '',
                 'correo' => $c->ccon_correo ?? '',
-                'correo_confirmacion' => $c->ccon_correo ?? '',
-                'prefijo' => $c->ccon_telefono ? (strlen(trim($c->ccon_telefono)) >= 10 ? substr(trim($c->ccon_telefono), 0, 4) : '0424') : '0424',
-                'telefono' => $c->ccon_telefono ? (strlen(trim($c->ccon_telefono)) >= 7 ? substr(trim($c->ccon_telefono), -7) : trim($c->ccon_telefono)) : '',
-                'cargo' => array_key_exists($c->ccon_cargo ?? '', config('comunidades.cargos_contacto', [])) ? ($c->ccon_cargo ?? '') : ($c->ccon_cargo ?? ''),
-                'mostrar_input_cargo' => !array_key_exists($c->ccon_cargo ?? '', config('comunidades.cargos_contacto', [])),
-                'cargo_custom' => array_key_exists($c->ccon_cargo ?? '', config('comunidades.cargos_contacto', [])) ? '' : ($c->ccon_cargo ?? ''),
+                'telefono' => $c->ccon_telefono ?? '',
+                'cargo' => $c->ccon_cargo ?? '',
             ])->toArray(),
         ];
     }
@@ -86,36 +72,29 @@ class ComunidadGestionService
             'nombre' => $datos['nombre'],
             'rif' => $datos['rif'],
             'correo' => $datos['correo'],
-            'numero_telefono' => !empty($datos['prefijo_telefono']) && !empty($datos['numero_telefono'])
-                ? $datos['prefijo_telefono'] . $datos['numero_telefono']
-                : ($datos['numero_telefono'] ?? null),
-            'dir_codigo' => $direccionId,
-            'tipo' => 'Consejo comunal',
+            'direccion_id' => $direccionId,
         ];
 
         $comunidad = Comunidad::guardar($payload, $id);
 
-        if (isset($datos['contactos'])) {
-            $comunidad->contactos()->delete();
-            $rows = [];
-            foreach ($datos['contactos'] as $contacto) {
-                $prefijo = $contacto['prefijo'] ?? '';
-                $numero = $contacto['telefono'] ?? '';
-                $telefono = $numero !== '' ? ($prefijo !== '' ? $prefijo . $numero : $numero) : '';
-                $rows[] = [
-                    'ccom_codigo' => $comunidad->getKey(),
-                    'ccon_nombre' => $contacto['nombre'],
-                    'ccon_apellido' => $contacto['apellido'] ?? null,
-                    'ccon_correo' => $contacto['correo'] ?? null,
-                    'ccon_telefono' => $telefono,
-                    'ccon_cargo' => $contacto['cargo'] ?? null,
+        // Save contactos
+        $contactos = $datos['contactos'] ?? [];
+        if (!empty($contactos)) {
+            ComunidadContacto::where('com_codigo', $comunidad->getKey())->delete();
+            $toInsert = [];
+            foreach ($contactos as $c) {
+                $toInsert[] = [
+                    'com_codigo' => $comunidad->getKey(),
+                    'ccon_nombre' => $c['nombre'] ?? '',
+                    'ccon_apellido' => $c['apellido'] ?? '',
+                    'ccon_correo' => $c['correo'] ?? '',
+                    'ccon_telefono' => ($c['prefijo'] ?? '') . ($c['telefono'] ?? ''),
+                    'ccon_cargo' => $c['cargo'] ?? '',
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
             }
-            if ($rows) {
-                $comunidad->contactos()->insert($rows);
-            }
+            ComunidadContacto::insert($toInsert);
         }
 
         return $comunidad->getKey();
@@ -127,7 +106,7 @@ class ComunidadGestionService
     public function eliminar(int $id): void
     {
         $comunidad = Comunidad::findOrFail($id);
-        $direccionId = $comunidad->dir_codigo;
+        $direccionId = $comunidad->direccion_id;
         $comunidad->delete();
         if ($direccionId) {
             Direccion::where('dir_codigo', $direccionId)->whereDoesntHave('comunidad')->delete();
@@ -141,10 +120,10 @@ class ComunidadGestionService
     {
         $termino = trim($filtros['search'] ?? '');
 
-        $comunidades = Comunidad::with('contactos', 'direccion.municipio.estado')
+        $comunidades = Comunidad::with('direccion.municipio.estado')
             ->when($termino !== '', function ($q) use ($termino) {
-                $q->where('nombre', 'like', '%' . $termino . '%')
-                    ->orWhere('rif', 'like', '%' . $termino . '%');
+                $q->where('nombre', 'ILIKE', '%' . $termino . '%')
+                    ->orWhere('rif', 'ILIKE', '%' . $termino . '%');
             })
             ->orderByDesc((new Comunidad())->getKeyName())
             ->paginate(10, ['*'], 'page', $page);

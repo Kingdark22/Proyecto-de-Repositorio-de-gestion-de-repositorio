@@ -26,8 +26,6 @@ class ProyectoManager extends Component
 
     public ?string $fecha_subida = '';
 
-    public bool $asignacion_ct = false;
-
     public ?string $calificacion = '';
 
     public ?string $fecha_aprobacion = '';
@@ -54,13 +52,9 @@ class ProyectoManager extends Component
 
     public ?string $filterComunidadList = '';
 
-    public array $archivos_componentes = [];
+    public $archivosComponente = [];
 
     public array $archivos_actuales = [];
-
-    public $archivo_proyecto = null;
-
-    public ?string $archivo_actual = '';
 
     public bool $showTeamFilters = false;
 
@@ -93,6 +87,12 @@ class ProyectoManager extends Component
 
     /** True cuando un lider esta actualizando documentos (modo solo subida) */
     public bool $modoActualizacion = false;
+
+    /** Cédulas de los líderes seleccionados (max 2) */
+    public array $selectedLeaders = [];
+
+    /** Miembros del grupo seleccionado (para mostrar checkboxes) */
+    public array $miembrosGrupo = [];
 
     public function placeholder()
     {
@@ -202,8 +202,6 @@ class ProyectoManager extends Component
             'trayecto.required' => 'El trayecto es obligatorio.',
             'motivo_rechazo.required' => 'Debe indicar el motivo de rechazo.',
             'motivo_rechazo.min' => 'El motivo debe tener al menos 10 caracteres.',
-            'archivos_componentes.*.required' => 'El componente es de subida estrictamente obligatoria.',
-            'archivos_componentes.*.max' => 'El archivo no debe exceder los 20MB permitidos.',
         ];
     }
 
@@ -261,6 +259,8 @@ class ProyectoManager extends Component
                         $this->trayecto_derived = '';
                     }
                 }
+                // Load group members for leader selection
+                $this->cargarMiembrosGrupo($grupos, $clave);
                 return;
             }
         }
@@ -317,6 +317,38 @@ class ProyectoManager extends Component
     public function updatingSearch(): void
     {
         $this->resetPage();
+    }
+
+    protected function cargarMiembrosGrupo(GrupoProyectoService $grupos, string $clave): void
+    {
+        $integrantes = $grupos->integrantes($clave);
+        $this->miembrosGrupo = $integrantes->map(fn($m) => [
+            'cedula' => $m->cedula,
+            'nombre' => $m->nombre,
+            'apellido' => $m->apellido ?? '',
+            'rol_id' => $m->rol_id ?? 0,
+        ])->toArray();
+        $this->selectedLeaders = [];
+        foreach ($this->miembrosGrupo as $m) {
+            if ((int) ($m['rol_id'] ?? 0) === IntranetEquipoSeccionService::ROL_LIDER) {
+                $this->selectedLeaders[] = $m['cedula'];
+            }
+        }
+    }
+
+    public function toggleLider(string $cedula): void
+    {
+        $idx = array_search($cedula, $this->selectedLeaders, true);
+        if ($idx !== false) {
+            unset($this->selectedLeaders[$idx]);
+            $this->selectedLeaders = array_values($this->selectedLeaders);
+        } else {
+            if (count($this->selectedLeaders) >= 2) {
+                $this->dispatch('notify', type: 'error', message: 'Solo puede seleccionar hasta 2 líderes por grupo.');
+                return;
+            }
+            $this->selectedLeaders[] = $cedula;
+        }
     }
 
     public function updatingFilterEstadoList(): void
@@ -386,24 +418,28 @@ class ProyectoManager extends Component
         $estado = $this->estadoFormulario();
 
         if ($this->modoActualizacion) {
-            // Lider solo puede subir archivos, el resto es solo lectura
             $this->validate([
-                'archivo_proyecto' => 'nullable|file|max:20480|mimes:pdf',
+                'archivosComponente.*' => 'nullable|file|max:20480|mimes:pdf',
             ]);
         } else {
             $this->validate(
-                $gestion->reglasValidacion($estado, $this->archivos_actuales, $user, $this->editingId !== null),
+                $gestion->reglasValidacion($estado, $user, $this->editingId !== null),
                 $this->messages()
             );
+
+            // Validar que se seleccione al menos 1 líder para grupos registrados
+            if ($this->esGrupoRegistrado && empty($this->selectedLeaders)) {
+                $this->dispatch('notify', type: 'error', message: 'Debe seleccionar al menos un líder para el grupo.');
+                return;
+            }
         }
 
         $proyecto = $gestion->guardar(
             $this->editingId,
             $estado,
-            $this->archivos_componentes,
-            $this->archivos_actuales,
             $user,
-            $this->archivo_proyecto
+            $this->archivosComponente,
+            $this->esGrupoRegistrado ? $this->selectedLeaders : [],
         );
 
         // Si lider actualizo, marcar y devolver a pendiente de validacion
@@ -542,7 +578,6 @@ class ProyectoManager extends Component
         $this->titulo = '';
         $this->resumen = '';
         $this->fecha_subida = '';
-        $this->asignacion_ct = false;
         $this->calificacion = '';
         $this->fecha_aprobacion = '';
         $this->linea_investigacion_id = '';
@@ -554,10 +589,8 @@ class ProyectoManager extends Component
         $this->filterLapsoEquipo = '';
         $this->filterProgramaEquipo = '';
         $this->filterSeccionEquipo = '';
-        $this->archivos_componentes = [];
+        $this->archivosComponente = [];
         $this->archivos_actuales = [];
-        $this->archivo_proyecto = null;
-        $this->archivo_actual = '';
         $this->editingId = null;
         $this->esGrupoRegistrado = false;
         $this->comunidadNombreGrupo = null;
@@ -579,11 +612,9 @@ class ProyectoManager extends Component
             'equipo_seccion_clave' => $this->equipo_seccion_clave,
             'programa_id' => $this->programa_id_derived,
             'trayecto' => $this->trayecto_derived,
-            'archivo_actual' => $this->archivo_actual,
             'titulo' => $this->titulo,
             'resumen' => $this->resumen,
             'fecha_subida' => $this->fecha_subida,
-            'asignacion_ct' => $this->asignacion_ct,
             'calificacion' => $this->calificacion,
             'fecha_aprobacion' => $this->fecha_aprobacion,
             'linea_investigacion_id' => $this->linea_investigacion_id,

@@ -214,7 +214,7 @@
                 <tr>
                     <td width="50%"><b>Nombre del equipo:</b><br><input wire:model="nombreGrupo" type="text"
                             class="grp-filter-input" style="width:90%;"></td>
-                    <td><b>Comunidad (opcional):</b><br>
+                    <td><b>Comunidad:</b><br>
                         <select wire:model="comunidadId" class="grp-filter-select" style="width:90%;">
                             <option value="">&mdash;</option>
                             @foreach ($comunidades as $c)

@@ -214,14 +214,12 @@
                         <td align="center" style="padding: 5px;">
                             <a href="#" wire:click.prevent="openDetails({{ $p->id }})"
                                 style="color: #0000EE; font-weight: bold;">[Ver detalles]</a>
-                            @if (count($p->documentos ?? []))
-                                @foreach ($p->documentos as $doc)
-                                    <br><a href="{{ Storage::url(data_get($doc, 'archivo_path')) }}" target="_blank"
-                                        style="color: #008000; font-size: 10px;">[{{ data_get($doc, 'componente.nombre', data_get($doc, 'componente_nombre', 'DOC')) }}]</a>
+                            @php $srchDocs = $p->documentos; @endphp
+                            @if ($srchDocs->isNotEmpty())
+                                @foreach ($srchDocs as $doc)
+                                    <br><a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank"
+                                        style="color: #008000; font-size: 10px;">[{{ $doc->componente?->nombre ?? 'Documento' }}]</a>
                                 @endforeach
-                            @elseif($p->archivo_path)
-                                <br><a href="{{ Storage::url($p->archivo_path) }}" target="_blank"
-                                    style="color: #008000; font-size: 10px;">[PDF]</a>
                             @endif
                         </td>
                     </tr>
@@ -290,22 +288,18 @@
                     </tr>
                 </table>
 
-                @if (count($selectedProject->documentos ?? []))
+                @php $detSrchDocs = $selectedProject->documentos; @endphp
+                @if ($detSrchDocs->isNotEmpty())
                     <fieldset style="border: 1px solid #CCC; padding: 10px; margin-top: 15px;">
                         <legend style="font-weight: bold; font-size: 12px;">Documentos</legend>
-                        @foreach ($selectedProject->documentos as $doc)
-                            <a href="{{ Storage::url(data_get($doc, 'archivo_path')) }}" target="_blank"
+                        @foreach ($detSrchDocs as $doc)
+                            <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank"
                                 class="cm-btn cm-btn-secondary cm-btn-sm"
                                 style="display: inline-block; margin: 4px; text-decoration: none;">
-                                {{ data_get($doc, 'componente.nombre', data_get($doc, 'componente_nombre', 'Documento')) }}
+                                {{ $doc->componente?->nombre ?? 'Documento' }}
                             </a>
                         @endforeach
                     </fieldset>
-                @elseif($selectedProject->archivo_path)
-                    <div style="margin-top: 15px; text-align: center;">
-                        <a href="{{ Storage::url($selectedProject->archivo_path) }}" target="_blank"
-                            class="cm-btn cm-btn-secondary cm-btn-sm" style="text-decoration: none;">Ver PDF</a>
-                    </div>
                 @endif
 
                 <div style="text-align: center; margin-top: 20px;">

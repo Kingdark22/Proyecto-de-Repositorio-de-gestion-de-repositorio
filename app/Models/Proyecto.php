@@ -11,7 +11,6 @@ class Proyecto extends RepositorioModel
     protected $fillable = [
         'resumen',
         'fecha_subida',
-        'asignacion_ct',
         'calificacion',
         'fecha_aprobacion',
         'linea_investigacion_id',
@@ -19,8 +18,6 @@ class Proyecto extends RepositorioModel
         'tipo_publicacion_id',
         'tipo_investigacion_id',
         'estado_logico',
-        'archivo_path',
-        'documentos',
         'estado_validacion',
         'motivo_rechazo',
         'actualizado_por_estudiante',
@@ -66,9 +63,8 @@ class Proyecto extends RepositorioModel
         'fecha_aprobacion' => 'date',
         'pry_fecha_subida' => 'date',
         'pry_fecha_aprobacion' => 'date',
-        'pry_documentos' => 'array',
         'estado_logico' => 'boolean',
-        'asignacion_ct' => 'boolean',
+
         'calificacion' => 'integer',
         'actualizado_por_estudiante' => 'boolean',
         'fecha_actualizacion_estudiante' => 'datetime',
@@ -94,7 +90,7 @@ class Proyecto extends RepositorioModel
     {
         if ($search !== null && $search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->where('equipo_ref', 'like', "%{$search}%");
+                $q->where('equipo_ref', 'ILIKE', "%{$search}%");
                 try {
                     $q->orWhereRaw('to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)', [$search]);
                 } catch (\Throwable) {
@@ -138,6 +134,11 @@ class Proyecto extends RepositorioModel
     public function comunidad()
     {
         return $this->belongsTo(Comunidad::class, 'com_codigo', 'com_codigo');
+    }
+
+    public function documentos()
+    {
+        return $this->hasMany(ProyectoDocumento::class, 'pry_codigo', 'pry_codigo')->orderBy('pd_orden');
     }
 
     public static function precargarTitulos($proyectos): void
@@ -193,7 +194,7 @@ class Proyecto extends RepositorioModel
      */
     public static function pendientes(?string $search = null)
     {
-        $query = self::with(['tipo_publicacion', 'linea_investigacion', 'comunidad'])
+        $query = self::with(['tipo_publicacion', 'linea_investigacion', 'comunidad', 'documentos'])
             ->where('estado_validacion', 'pendiente');
 
         if ($search) {

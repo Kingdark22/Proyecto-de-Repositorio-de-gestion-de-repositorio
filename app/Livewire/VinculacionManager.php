@@ -157,8 +157,8 @@ class VinculacionManager extends Component
         $comunidadesFiltradas = collect();
         if ($this->searchComunidad !== '') {
             $term = '%' . $this->searchComunidad . '%';
-            $comunidadesFiltradas = Comunidad::where('nombre', 'like', $term)
-                ->orWhere('rif', 'like', $term)
+            $comunidadesFiltradas = Comunidad::where('nombre', 'ILIKE', $term)
+                ->orWhere('rif', 'ILIKE', $term)
                 ->orderBy('com_nombre')
                 ->get(['com_codigo', 'com_nombre', 'com_rif']);
         }

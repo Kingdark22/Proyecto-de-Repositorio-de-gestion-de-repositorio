@@ -112,8 +112,8 @@ class LineaInvestigacionManager extends Component
     public function with()
     {
         $items = LineaInvestigacion::where(function ($q) {
-                $q->where('nombre_investigacion', 'like', $this->search . '%')
-                  ->orWhere('area_de_investigacion', 'like', $this->search . '%');
+                $q->where('nombre_investigacion', 'ILIKE', $this->search . '%')
+                  ->orWhere('area_de_investigacion', 'ILIKE', $this->search . '%');
             })
             ->latest()
             ->paginate(10);

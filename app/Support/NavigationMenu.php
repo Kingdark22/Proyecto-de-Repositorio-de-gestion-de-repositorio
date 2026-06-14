@@ -60,7 +60,6 @@ class NavigationMenu
             'canValidateProjects'  => false,
             'canRegisterProject'   => false,
             'canManageSystemConfig'=> false,
-            'canManageOrganizaciones' => false,
             'canViewPublicaciones'   => false,
             'pendingUpdatesCount'    => $pendingUpdatesCount,
         ];
@@ -73,7 +72,6 @@ class NavigationMenu
                     $flags['canManageCatalogs'] = true;
                     $flags['canManageComponents'] = true;
                     $flags['canManageSystemConfig'] = true;
-                    $flags['canManageOrganizaciones'] = true;
                     $flags['canViewPublicaciones'] = true;
                     $flags['canRegisterProject'] = true;
                     break;
@@ -105,7 +103,6 @@ class NavigationMenu
                     $flags['canManageCatalogs'] = true;
                     $flags['canManageComponents'] = true;
                     $flags['canManageSystemConfig'] = true;
-                    $flags['canManageOrganizaciones'] = true;
                     $flags['canViewPublicaciones'] = true;
                     $flags['canRegisterProject'] = true;
                     break;
@@ -135,7 +132,6 @@ class NavigationMenu
             'canViewAcademic', 'canViewComunes', 'canManageCatalogs',
             'canManageComponents', 'canValidateProjects', 'canRegisterProject',
             'canManageSystemConfig', 'canManageCoordinators',
-            'canManageOrganizaciones',
             'canViewPublicaciones',
         ], false);
     }

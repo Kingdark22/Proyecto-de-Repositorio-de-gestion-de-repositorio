@@ -98,10 +98,12 @@
                                 {{ $p->lapso_academico->nombre }}
                             </td>
                             <td align="center" style="padding: 5px;">
-                                @if ($p->archivo_path)
-                                    <a href="{{ Storage::url($p->archivo_path) }}" target="_blank"
-                                        style="color: #0000EE; text-decoration: none; font-weight: bold;">[Ver Documento
-                                        PDF]</a>
+                                @php $valDocs = $p->documentos; @endphp
+                                @if($valDocs->isNotEmpty())
+                                    @foreach ($valDocs as $doc)
+                                        <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank"
+                                            style="color: #0000EE; text-decoration: none; font-weight: bold; display:block;">[{{ $doc->componente?->nombre ?? 'Documento' }}]</a>
+                                    @endforeach
                                 @else
                                     <span style="color: #999; font-size: 10px;">No aportado</span>
                                 @endif

@@ -98,7 +98,7 @@ class TipoPublicacionManager extends Component
     public function with()
     {
         return [
-            'items' => TipoPublicacion::where('nombre', 'like', '%' . $this->search . '%')
+            'items' => TipoPublicacion::where('nombre', 'ILIKE', '%' . $this->search . '%')
                 ->latest()
                 ->paginate(10),
         ];

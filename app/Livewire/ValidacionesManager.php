@@ -34,7 +34,7 @@ class ValidacionesManager extends Component
 
     public function openDetails($id)
     {
-        $this->selectedProject = Proyecto::with(['tipo_publicacion', 'linea_investigacion', 'metodologia', 'tipo_investigacion', 'comunidad'])->findOrFail($id);
+        $this->selectedProject = Proyecto::with(['tipo_publicacion', 'linea_investigacion', 'metodologia', 'tipo_investigacion', 'comunidad', 'documentos.componente'])->findOrFail($id);
         $this->viewMode = 'details';
         $this->dispatch('refresh-icons');
     }

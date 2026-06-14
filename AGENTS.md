@@ -102,3 +102,7 @@
 - `AsArrayObject` model casts require `instanceof ArrayObject` check before `json_decode` in service code.
 - DbHelper: fsockopen (300ms) before PDO (2s) for intranet reachability — `SET statement_timeout` failure is non-fatal.
 - `userHasRole()` should check both active session role AND available detected roles.
+- **Leader selection in ProyectoManager**: Professor selects up to 2 leaders when registering a group project. `$selectedLeaders` (cedulas array), `$miembrosGrupo` (member list), `toggleLider()` toggles selection with max-2 enforcement. `cargarMiembrosGrupo()` pre-selects existing leaders from group roles.
+- **Leader assignment on save**: `ProyectoGestionService::guardar()` accepts `$leaders` param. When creating a new project (non-admin), `asignarLideresGrupo()` delegates to `GrupoProyectoService::asignarLideres()` which updates `grp_miembros` JSON on `grupo_proyecto_modulo`.
+- **Notification for leaders**: `NotificacionService` shows "Has sido seleccionado como líder del proyecto. Sube los documentos: {title}" for projects with `actualizado_por_estudiante = false` where the current user is a leader (checks `GrupoProyectoModulo::grp_miembros` JSON for cedula with `rol_id = 1`).
+- **Validation**: At least 1 leader required when registering a new group project (EQGRP:).

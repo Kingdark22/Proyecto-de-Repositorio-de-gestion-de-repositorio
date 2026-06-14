@@ -22,94 +22,7 @@
         </div>
     @endif
 
-    @if($showEmailPanel)
-        <fieldset style="border: 2px solid #0d6efd; border-radius: 6px; padding: 15px; margin-bottom: 15px;">
-            <legend style="color: #0d6efd; font-weight: bold; font-style: italic; padding: 0 5px;">Enviar proyectos por correo</legend>
-
-            <div style="margin-bottom: 12px;">
-                <button type="button" wire:click="closeEmailPanel" class="cm-btn cm-btn-secondary cm-btn-sm">&larr; Volver al listado</button>
-                <span style="margin-left: 10px; font-size: 12px; color: #555;">
-                    {{ count($selectedProjects) }} proyecto(s) seleccionado(s)
-                </span>
-            </div>
-
-            <table width="100%" cellpadding="6" cellspacing="0" style="font-size: 12px;">
-                <tr>
-                    <td width="15%"><b>Asunto:</b><span style="color:red;">*</span></td>
-                    <td><input type="text" wire:model="emailSubject" style="width: 95%; padding: 4px;" placeholder="Asunto del correo"></td>
-                </tr>
-                <tr>
-                    <td valign="top"><b>Comentarios:</b></td>
-                    <td><textarea wire:model="emailBody" rows="4" style="width: 95%; padding: 4px;" placeholder="Comentarios opcionales..."></textarea></td>
-                </tr>
-            </table>
-
-            @error('emailSubject') <div style="color:red;font-size:10px;margin:2px 0;">{{ $message }}</div> @enderror
-            @error('selectedEmails') <div style="color:red;font-size:10px;margin:2px 0;">{{ $message }}</div> @enderror
-
-            <div style="margin-top: 15px;">
-                <b>Buscar organización / contacto:</b>
-                <input type="text" wire:model.live.debounce.300ms="searchOrg" style="width: 60%; padding: 4px; margin-top: 4px;" placeholder="Nombre, RIF o correo...">
-            </div>
-
-            <div style="margin-top: 10px; max-height: 350px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 8px;">
-                @if($organizations->isEmpty())
-                    <p style="color:#888; font-style:italic; padding: 10px; text-align:center;">
-                        {{ $searchOrg ? 'Sin resultados.' : 'Escriba para buscar organizaciones...' }}
-                    </p>
-                @else
-                    @php $idx = 0; @endphp
-                    @foreach($organizations as $org)
-                        <div style="border-bottom: 1px solid #eee; padding: 6px 0;">
-                            <div style="font-weight: bold; font-size: 13px; color: #333; margin-bottom: 4px;">
-                                {{ $org->nombre }}
-                                @if($org->rif)
-                                    <span style="font-weight:normal; color:#888; font-size:11px;">({{ $org->rif }})</span>
-                                @endif
-                            </div>
-
-                            <div style="padding-left: 15px;">
-                                @if($org->correo)
-                                    @php $currentEmail = $emailList[$idx] ?? null; @endphp
-                                    <div class="email-option {{ $currentEmail && in_array($currentEmail, $selectedEmails) ? 'selected' : '' }}"
-                                         wire:click="toggleEmail({{ $idx }})" style="display: flex; align-items: center; gap: 8px;">
-                                        <input type="checkbox" {{ $currentEmail && in_array($currentEmail, $selectedEmails) ? 'checked' : '' }} style="pointer-events:none;">
-                                        <span style="font-size:12px;">&#128231; <b>Organización:</b> {{ $org->correo }}</span>
-                                    </div>
-                                    @php $idx++; @endphp
-                                @endif
-
-                                @foreach($org->contactos as $contacto)
-                                    @if($contacto->oco_correo)
-                                        @php $currentEmail = $emailList[$idx] ?? null; @endphp
-                                        <div class="email-option {{ $currentEmail && in_array($currentEmail, $selectedEmails) ? 'selected' : '' }}"
-                                             wire:click="toggleEmail({{ $idx }})" style="display: flex; align-items: center; gap: 8px;">
-                                            <input type="checkbox" {{ $currentEmail && in_array($currentEmail, $selectedEmails) ? 'checked' : '' }} style="pointer-events:none;">
-                                            <span style="font-size:12px;">&#128231; <b>Contacto:</b> {{ trim($contacto->oco_nombre . ' ' . ($contacto->oco_apellido ?? '')) }} &lt;{{ $contacto->oco_correo }}&gt;</span>
-                                        </div>
-                                        @php $idx++; @endphp
-                                    @endif
-                                @endforeach
-                            </div>
-                        </div>
-                    @endforeach
-                @endif
-            </div>
-
-            <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 12px; color: #555;">
-                    <b>{{ count($selectedEmails) }}</b> destinatario(s) seleccionado(s)
-                </span>
-                <div>
-                    <button type="button" wire:click="toggleSelectAllEmails" class="cm-btn cm-btn-secondary cm-btn-sm">
-                        {{ $selectAllOrgs ? 'Deseleccionar todos' : 'Seleccionar todos' }}
-                    </button>
-                    <button type="button" wire:click="closeEmailPanel" class="cm-btn cm-btn-secondary cm-btn-sm" style="margin-left: 8px;">Cancelar</button>
-                    <button type="button" wire:click="sendProjects" class="cm-btn cm-btn-primary cm-btn-sm">&#128231; Enviar proyectos</button>
-                </div>
-            </div>
-        </fieldset>
-    @elseif($selectedPubId)
+    @if($selectedPubId)
         @if($selectedProyecto)
             @php $proyecto = $selectedProyecto; @endphp
             <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px;">
@@ -127,47 +40,35 @@
                     <p><b>Comunidad:</b> {{ $proyecto->comunidad->nombre }}</p>
                 @endif
 
-                @php
-                    $mainPdf = $proyecto->archivo_path ?? null;
-                    $docs = $proyecto->documentos ?? [];
-                    $hasDocs = is_array($docs) && count($docs) > 0;
-                @endphp
-                @if($mainPdf || $hasDocs)
+                @php $docs = $proyecto->documentos; @endphp
+                @if($docs->isNotEmpty())
                     <hr style="border:none; border-top:1px solid #ccc; margin:15px 0;">
                     <h4 style="margin:0 0 10px 0;">Documentos del proyecto</h4>
-                    @if($mainPdf)
-                        <p style="margin:0 0 8px 0;">
-                            <a href="{{ route('documentos.serve', ['path' => $mainPdf]) }}" target="_blank" style="color:#0000EE;font-weight:bold;font-size:13px;">&#128196; Ver proyecto completo (PDF)</a>
-                        </p>
-                    @endif
-                    @if($hasDocs)
-                        <table width="100%" border="1" cellpadding="5" cellspacing="0"
-                            style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px;">
-                            <thead>
-                                <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
-                                    <th width="5%">N&deg;</th>
-                                    <th width="65%">Componente</th>
-                                    <th width="30%">Archivo</th>
+                    <table width="100%" border="1" cellpadding="5" cellspacing="0"
+                        style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px;">
+                        <thead>
+                            <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
+                                <th width="5%">N&deg;</th>
+                                <th width="65%">Documento</th>
+                                <th width="30%">Archivo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($docs as $dIdx => $doc)
+                                <tr style="background-color: {{ $dIdx % 2 == 0 ? '#FFFFFF' : '#E0E0E0' }};" valign="top">
+                                    <td align="center">{{ $dIdx + 1 }}</td>
+                                    <td>{{ $doc->componente?->nombre ?? 'Documento' }}</td>
+                                    <td align="center">
+                                        @if($doc->pd_archivo_path)
+                                            <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank" style="color:#0000EE;font-weight:bold;">Ver PDF</a>
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($docs as $dIdx => $doc)
-                                    @php $docPath = $doc['archivo_path'] ?? null; @endphp
-                                    <tr style="background-color: {{ $dIdx % 2 == 0 ? '#FFFFFF' : '#E0E0E0' }};" valign="top">
-                                        <td align="center">{{ $dIdx + 1 }}</td>
-                                        <td>{{ $doc['componente_nombre'] ?? 'Documento' }}</td>
-                                        <td align="center">
-                                            @if($docPath)
-                                                <a href="{{ route('documentos.serve', ['path' => $docPath]) }}" target="_blank" style="color:#0000EE;font-weight:bold;">Ver PDF</a>
-                                            @else
-                                                -
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    @endif
+                            @endforeach
+                        </tbody>
+                    </table>
                 @endif
 
                 <hr style="border:none; border-top:1px solid #ccc; margin:15px 0;">
@@ -212,16 +113,7 @@
                         <option value="{{ $c->id }}">{{ $c->nombre }}</option>
                     @endforeach
                 </select>
-                <button type="button" wire:click="selectAll" class="cm-btn cm-btn-secondary cm-btn-sm">Seleccionar todos</button>
-                <button type="button" wire:click="deselectAll" class="cm-btn cm-btn-secondary cm-btn-sm">Deseleccionar todos</button>
-                <span style="font-size: 12px; color: #555;">
-                    <b>{{ count($selectedProjects) }}</b> proyecto(s) seleccionado(s)
-                </span>
-                @if(count($selectedProjects) > 0)
-                    <button type="button" wire:click="openEmailPanel" class="cm-btn cm-btn-info cm-btn-sm" style="margin-left: auto;">
-                        &#128231; Enviar por correo
-                    </button>
-                @endif
+
             </div>
 
             @if($proyectos->isEmpty())
@@ -229,47 +121,24 @@
             @else
                 <table width="100%" border="1" cellpadding="5" cellspacing="0"
                     style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px;">
-                    <thead>
+                        <thead>
                         <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
-                            <th width="4%"><input type="checkbox" wire:click="selectAll" {{ count($selectedProjects) === count($proyectos) ? 'checked' : '' }}></th>
                             <th width="4%">N&deg;</th>
-                            <th width="28%">T&iacute;tulo / Equipo</th>
-                            <th width="18%">Resumen</th>
-                            <th width="10%">Comunidad</th>
+                            <th width="30%">T&iacute;tulo / Equipo</th>
+                            <th width="20%">Resumen</th>
+                            <th width="12%">Comunidad</th>
                             <th width="8%">Fecha</th>
-                            <th width="8%">Doc.</th>
-                            <th width="20%">Acci&oacute;n</th>
+                            <th width="26%">Acci&oacute;n</th>
                         </tr>
                     </thead>
                     <tbody class="Texto">
                         @foreach($proyectos as $proy)
                             <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }};" valign="top">
-                                <td align="center">
-                                    <input type="checkbox" wire:click="toggleProject({{ $proy->id }})"
-                                        {{ in_array($proy->id, $selectedProjects) ? 'checked' : '' }}>
-                                </td>
                                 <td align="center">{{ $loop->iteration }}</td>
                                 <td style="font-weight:bold;">{{ $proy->titulo ?? 'N/A' }}</td>
                                 <td style="font-size:10px;">{{ \Illuminate\Support\Str::limit($proy->resumen ?? '', 60) }}</td>
                                 <td>{{ $proy->comunidad->nombre ?? '-' }}</td>
                                 <td align="center">{{ $proy->fecha_aprobacion ? $proy->fecha_aprobacion->format('d/m/Y') : '-' }}</td>
-                                <td align="center">
-                                    @php
-                                        $docs = $proy->documentos ?? [];
-                                        $docCount = is_array($docs) ? count($docs) : 0;
-                                        $pdfPath = $proy->archivo_path ?? null;
-                                    @endphp
-                                    @if($pdfPath)
-                                        <a href="{{ route('documentos.serve', ['path' => $pdfPath]) }}" target="_blank" style="color:#0000EE;font-weight:bold;">PDF</a>
-                                        @if($docCount > 0)
-                                            <span style="color:#006600;"> +{{ $docCount }} doc(s)</span>
-                                        @endif
-                                    @elseif($docCount > 0)
-                                        <span style="font-weight:bold;color:#006600;">{{ $docCount }} doc(s)</span>
-                                    @else
-                                        -
-                                    @endif
-                                </td>
                                 <td align="center">
                                     <button type="button" wire:click.prevent="seleccionar({{ $proy->id }})"
                                         class="cm-btn cm-btn-secondary cm-btn-sm">Ver detalle</button>
