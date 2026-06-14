@@ -16,7 +16,7 @@ class Comunidad extends RepositorioModel
         'nombre',
         'rif',
         'correo',
-        'direccion',
+        'numero_telefono',
         'direccion_id',
         'anio',
     ];
@@ -24,10 +24,5 @@ class Comunidad extends RepositorioModel
     public function direccion()
     {
         return $this->belongsTo(Direccion::class, 'com_dir_codigo');
-    }
-
-    public function contactos()
-    {
-        return $this->hasMany(ComunidadContacto::class, 'com_codigo', 'com_codigo');
     }
 }

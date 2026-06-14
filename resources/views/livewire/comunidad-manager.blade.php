@@ -49,7 +49,7 @@
     <h2 class="titulo" style="margin-bottom: 20px; font-weight: bolder; margin-top: 10px;">Gestión de Comunidades</h2>
 
     <p style="font-size: 10px; color: #555; margin-bottom: 12px;">
-        Datos en tabla <b>comunidades</b> del repositorio. Las personas de contacto se registran en la sección correspondiente.
+        Datos en tabla <b>comunidades</b> del repositorio.
         @if ($lapsoVigente)
             Lapso vigente intranet: <b>{{ $lapsoVigente->lap_nombre }}</b>.
         @endif
@@ -96,8 +96,7 @@
                         <th width="4%">N°</th>
                         <th width="30%">Comunidad / dirección</th>
                         <th width="11%">RIF</th>
-                        <th width="15%">Contacto</th>
-                        <th width="16%">Personas contacto</th>
+                        <th width="16%">Contacto</th>
                         <th width="10%">Acciones</th>
                     </tr>
                 </thead>
@@ -112,16 +111,6 @@
                             </td>
                             <td align="center">{{ $c->rif }}</td>
                             <td align="center">{{ $c->correo }}<br><b>{{ $c->numero_telefono }}</b></td>
-                            <td style="font-size:10px;">
-                                @if ($c->relationLoaded('contactos') && $c->contactos->isNotEmpty())
-                                    @foreach ($c->contactos as $ct)
-                                        {{ trim($ct->ccon_nombre . ' ' . $ct->ccon_apellido) }}<br>
-                                        @if ($ct->ccon_cargo) <i>{{ config('comunidades.cargos_contacto.' . $ct->ccon_cargo, $ct->ccon_cargo) }}</i><br>@endif
-                                    @endforeach
-                                @else
-                                    <span style="color:#999;">-</span>
-                                @endif
-                            </td>
                             <td align="center">
                                 @if ($puedeGestionar)
                                     <div style="display: inline-flex; align-items: center; gap: 4px;">
@@ -282,135 +271,13 @@
                         </div>
                     </td>
                 </tr>
-            </table>
-
-            <div style="margin-top: 25px; border-top: 2px solid #8b0000; padding-top: 20px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
-                    <h4 style="margin: 0; font-size: 14px; font-weight: bold; color: #8b0000; font-style: italic;">Personas de Contacto</h4>
-                    <button type="button" wire:click="agregarContacto" class="cm-btn cm-btn-primary cm-btn-sm">
-                        + Agregar contacto
-                    </button>
-                </div>
-                @if (empty($contactos))
-                    <div style="background: #fdfdfd; border: 1px dashed #bbbbbb; border-radius: 6px; padding: 20px; text-align: center; color: #555; font-size: 11px; font-style: italic;">
-                        No hay personas de contacto registradas para esta comunidad.
-                    </div>
-                @else
-                    @foreach ($contactos as $i => $contacto)
-                        <div style="background: #fff; border: 1px solid #bbbbbb; border-radius: 6px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden;">
-                            
-                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background-color: #8bb2b7; color: #000; border-bottom: 1px solid #bbbbbb;">
-                                <span style="font-size: 11px; font-weight: bold; display: flex; align-items: center; gap: 5px;">
-                                    Contacto #{{ $loop->iteration }}
-                                </span>
-                                <button type="button" wire:click="quitarContacto({{ $i }})" wire:confirm="¿Desea eliminar este contacto?" class="cm-btn cm-btn-danger cm-btn-sm" style="padding: 2px 8px; font-size: 10px;">
-                                    Quitar
-                                </button>
-                            </div>
-
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; padding: 15px; font-size: 11px; background: #fff;">
-                                <div>
-                                    <label style="display: block; font-weight: bold; margin-bottom: 4px; color: #000;">Nombre:</label>
-                                    <input wire:model="contactos.{{ $i }}.nombre" type="text" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; box-sizing: border-box;">
-                                    @error('contactos.' . $i . '.nombre')
-                                        <span style="color:red; font-size:10px; display: block; margin-top: 3px;">{{ $message }}</span>
-                                    @enderror
-                                </div>
-
-                                <div>
-                                    <label style="display: block; font-weight: bold; margin-bottom: 4px; color: #000;">Apellido:</label>
-                                    <input wire:model="contactos.{{ $i }}.apellido" type="text" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; box-sizing: border-box;">
-                                    @error('contactos.' . $i . '.apellido')
-                                        <span style="color:red; font-size:10px; display: block; margin-top: 3px;">{{ $message }}</span>
-                                    @enderror
-                                </div>
-
-                                <div>
-                                    <label style="display: block; font-weight: bold; margin-bottom: 4px; color: #000;">Cargo:</label>
-                                    @if ($contactos[$i]['mostrar_input_cargo'] ?? false)
-                                        <div style="display: flex; gap: 4px; align-items: center;">
-                                            <input wire:model="contactos.{{ $i }}.cargo_custom" type="text" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; box-sizing: border-box;" placeholder="Escriba el cargo...">
-                                            <button type="button" wire:click="aceptarCargoPersonalizado({{ $i }})" style="padding: 6px 10px; border: none; border-radius: 4px; background: #19692e; color: #fff; cursor: pointer; font-size: 11px; white-space: nowrap;">✓</button>
-                                            <button type="button" wire:click="cancelarCargoPersonalizado({{ $i }})" style="padding: 6px 10px; border: 1px solid #aaa; border-radius: 4px; background: #f4f4f4; cursor: pointer; font-size: 11px; white-space: nowrap;">✗</button>
-                                        </div>
-                                    @else
-                                        <div style="display: flex; gap: 4px; align-items: center;">
-                                            <select wire:model="contactos.{{ $i }}.cargo" style="flex: 1; padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; background: #fff; box-sizing: border-box;">
-                                                <option value="">-- Seleccione cargo --</option>
-                                                @foreach (config('comunidades.cargos_contacto', []) as $key => $label)
-                                                    <option value="{{ $key }}">{{ $label }}</option>
-                                                @endforeach
-                                            </select>
-                                            <button type="button" wire:click="mostrarCargoPersonalizado({{ $i }})" title="Añadir otro cargo" style="padding: 6px 10px; border: 1px solid #aaa; border-radius: 4px; background: #fff; cursor: pointer; font-size: 14px; line-height: 1; white-space: nowrap;">+</button>
-                                        </div>
-                                    @endif
-                                    @error('contactos.' . $i . '.cargo')
-                                        <span style="color:red; font-size:10px; display: block; margin-top: 3px;">{{ $message }}</span>
-                                    @enderror
-                                </div>
-
-                                <div>
-                                    <label style="display: block; font-weight: bold; margin-bottom: 4px; color: #000;">Correo Electrónico:</label>
-                                    <input wire:model.live="contactos.{{ $i }}.correo" type="email" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; box-sizing: border-box;">
-                                    <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
-                                    @error('contactos.' . $i . '.correo')
-                                        <span style="color:red; font-size:10px; display: block; margin-top: 3px;">{{ $message }}</span>
-                                    @enderror
-                                </div>
-
-                                <div>
-                                    <label style="display: block; font-weight: bold; margin-bottom: 4px; color: #000;">Confirmar Correo Electrónico:</label>
-                                    <input wire:model.live="contactos.{{ $i }}.correo_confirmacion" type="email" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; box-sizing: border-box;">
-                                    @error('contactos.' . $i . '.correo_confirmacion')
-                                        <span style="color:red; font-size:10px; display: block; margin-top: 3px;">{{ $message }}</span>
-                                    @enderror
-                                    @php
-                                        $ce = trim($contactos[$i]['correo'] ?? '');
-                                        $cf = trim($contactos[$i]['correo_confirmacion'] ?? '');
-                                    @endphp
-                                    @if ($ce !== '' && $cf !== '')
-                                        @if ($ce === $cf)
-                                            <span style="color:green; font-size:10px; display: block; margin-top: 2px;">✓ Coinciden</span>
-                                        @else
-                                            <span style="color:red; font-size:10px; display: block; margin-top: 2px;">✗ No coinciden</span>
-                                        @endif
-                                    @endif
-                                </div>
-
-                                <div>
-                                    <label style="display: block; font-weight: bold; margin-bottom: 4px; color: #000;">Número de Teléfono:</label>
-                                    <div style="display: flex; gap: 5px; align-items: center;">
-                                        <select wire:model="contactos.{{ $i }}.prefijo" style="padding: 6px 6px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; background: #fff; font-size: 11px; min-width: 65px;">
-                                            <option value="0424">0424</option>
-                                            <option value="0414">0414</option>
-                                            <option value="0412">0412</option>
-                                            <option value="0422">0422</option>
-                                            <option value="0416">0416</option>
-                                            <option value="0426">0426</option>
-                                        </select>
-                                        <input wire:model="contactos.{{ $i }}.telefono" type="text" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 11px; box-sizing: border-box;" placeholder="123-4567" maxlength="7">
-                                    </div>
-                                    <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
-                                    @error('contactos.' . $i . '.telefono')
-                                        <span style="color:red; font-size:10px; display: block; margin-top: 3px;">{{ $message }}</span>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div style="padding: 8px 15px 12px; text-align: right; border-top: 1px solid #eee;">
-                                <button type="button" wire:click="guardarContactosAhora" class="cm-btn cm-btn-primary cm-btn-sm" style="background: #5a7d8a; border-color: #4a6a77; padding: 4px 14px; font-size: 11px;">
-                                    Guardar
-                                </button>
-                            </div>
-                        </div>
-                    @endforeach
-                @endif
-            </div>
-
-            <div style="margin-top: 15px; text-align: center;">
-                <button type="button" wire:click="cancel" class="cm-btn cm-btn-danger"
-                    style="margin-right: 10px;">Cancelar</button>
-                <button type="button" wire:click="save" class="cm-btn cm-btn-primary">Guardar</button>
-            </div>
-        </fieldset>
-    @endif
-</div>
+             </table>
+ 
+             <div style="margin-top: 15px; text-align: center;">
+                 <button type="button" wire:click="cancel" class="cm-btn cm-btn-danger"
+                     style="margin-right: 10px;">Cancelar</button>
+                 <button type="button" wire:click="save" class="cm-btn cm-btn-primary">Guardar</button>
+             </div>
+         </fieldset>
+     @endif
+ </div>

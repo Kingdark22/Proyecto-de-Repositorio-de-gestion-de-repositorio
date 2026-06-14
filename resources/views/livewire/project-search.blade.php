@@ -282,7 +282,7 @@
                                 <legend style="font-weight: bold; font-size: 12px;">Comunidad</legend>
                                 <b>Nombre:</b> {{ $selectedProject->comunidad->nombre ?? 'N/A' }}<br>
                                 <b>RIF:</b> {{ $selectedProject->comunidad->rif ?? 'N/A' }}<br>
-                                <b>Dirección:</b> {{ $selectedProject->comunidad?->direccion ?? 'N/A' }}
+                                <b>Dirección:</b> {{ $selectedProject->comunidad->direccion?->dir_calle ?? 'N/A' }}
                             </fieldset>
                         </td>
                     </tr>
