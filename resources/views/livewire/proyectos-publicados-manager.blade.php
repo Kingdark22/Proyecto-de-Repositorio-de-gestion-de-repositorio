@@ -13,7 +13,7 @@
         .email-option.selected { background: #d4edda; border-color: #c3e6cb; }
     </style>
 
-    <h2 class="titulo" style="margin-bottom: 20px; font-weight: bolder; margin-top: 10px;">Proyectos Aprobados</h2>
+    <h2 class="titulo" style="margin-bottom: 20px; font-weight: bolder; margin-top: 10px;">Proyectos Vinculados</h2>
 
     @if($mensaje)
         <div style="background-color: {{ $tipoMensaje === 'error' ? '#f8d7da' : '#d4edda' }}; color: {{ $tipoMensaje === 'error' ? '#721c24' : '#155724' }}; border: 1px solid {{ $tipoMensaje === 'error' ? '#f5c6cb' : '#c3e6cb' }}; padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size:12px; display: flex; justify-content: space-between; align-items: center;">
@@ -38,6 +38,17 @@
                 <p><b>Fecha de aprobaci&oacute;n:</b> {{ $proyecto->fecha_aprobacion ? $proyecto->fecha_aprobacion->format('d/m/Y') : '-' }}</p>
                 @if($proyecto->comunidad)
                     <p><b>Comunidad:</b> {{ $proyecto->comunidad->nombre }}</p>
+                @endif
+                @php $vinculo = $proyecto->vinculacion; @endphp
+                @if($vinculo)
+                    <p><b>Vinculaci&oacute;n:</b> {{ $vinculo->tipo }}
+                    @if($vinculo->comunidad)
+                        &mdash; {{ $vinculo->comunidad->nombre }}
+                    @endif
+                    </p>
+                    @if($vinculo->observaciones)
+                        <p><b>Observaciones:</b> {{ $vinculo->observaciones }}</p>
+                    @endif
                 @endif
 
                 @php $docs = $proyecto->documentos; @endphp
@@ -103,7 +114,7 @@
         @endif
     @else
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px;">
-            <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Listado de Proyectos Aprobados</legend>
+            <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Listado de Proyectos Vinculados</legend>
 
             <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                 <input wire:model.live.debounce.300ms="search" type="text" placeholder="Buscar por t&iacute;tulo o resumen..." style="padding:4px 8px; border:1px solid #ccc; border-radius:4px; font-size:12px; min-width:200px; flex:1;">
@@ -117,28 +128,40 @@
             </div>
 
             @if($proyectos->isEmpty())
-                <p style="color:#666; font-style:italic; padding: 10px;">No hay proyectos aprobados.</p>
+                <p style="color:#666; font-style:italic; padding: 10px;">No hay proyectos vinculados.</p>
             @else
                 <table width="100%" border="1" cellpadding="5" cellspacing="0"
                     style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px;">
                         <thead>
                         <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
                             <th width="4%">N&deg;</th>
-                            <th width="30%">T&iacute;tulo / Equipo</th>
-                            <th width="20%">Resumen</th>
+                            <th width="25%">T&iacute;tulo / Equipo</th>
+                            <th width="15%">Resumen</th>
                             <th width="12%">Comunidad</th>
                             <th width="8%">Fecha</th>
-                            <th width="26%">Acci&oacute;n</th>
+                            <th width="16%">Vinculaci&oacute;n</th>
+                            <th width="20%">Acci&oacute;n</th>
                         </tr>
                     </thead>
                     <tbody class="Texto">
                         @foreach($proyectos as $proy)
+                            @php $vinculo = $proy->vinculacion; @endphp
                             <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }};" valign="top">
                                 <td align="center">{{ $loop->iteration }}</td>
                                 <td style="font-weight:bold;">{{ $proy->titulo ?? 'N/A' }}</td>
                                 <td style="font-size:10px;">{{ \Illuminate\Support\Str::limit($proy->resumen ?? '', 60) }}</td>
                                 <td>{{ $proy->comunidad->nombre ?? '-' }}</td>
                                 <td align="center">{{ $proy->fecha_aprobacion ? $proy->fecha_aprobacion->format('d/m/Y') : '-' }}</td>
+                                <td align="center" style="font-size:10px;">
+                                    @if($vinculo)
+                                        <span style="background:#0d6efd;color:#fff;padding:2px 8px;border-radius:4px;font-weight:600;display:inline-block;margin-bottom:2px;">{{ $vinculo->tipo }}</span>
+                                        @if($vinculo->comunidad)
+                                            <div style="color:#555;margin-top:2px;">{{ $vinculo->comunidad->nombre }}</div>
+                                        @endif
+                                    @else
+                                        <span style="color:#999;">-</span>
+                                    @endif
+                                </td>
                                 <td align="center">
                                     <button type="button" wire:click.prevent="seleccionar({{ $proy->id }})"
                                         class="cm-btn cm-btn-secondary cm-btn-sm">Ver detalle</button>

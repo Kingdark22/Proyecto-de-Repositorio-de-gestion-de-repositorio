@@ -61,9 +61,10 @@ class ProyectosPublicadosManager extends Component
 
     protected function proyectosQuery()
     {
-        $query = Proyecto::with('comunidad')
+        $query = Proyecto::with(['comunidad', 'vinculacion.comunidad'])
             ->where('estado_validacion', 'aprobado')
-            ->where('estado_logico', true);
+            ->where('estado_logico', true)
+            ->whereHas('vinculacion');
 
         if ($this->filterComunidadId !== '') {
             $query->where('com_codigo', (int) $this->filterComunidadId);
@@ -93,7 +94,7 @@ class ProyectosPublicadosManager extends Component
         $selectedProyecto = null;
         $comentarios = collect();
         if ($this->selectedPubId) {
-            $selectedProyecto = Proyecto::with('documentos.componente')->find($this->selectedPubId);
+            $selectedProyecto = Proyecto::with(['documentos.componente', 'vinculacion.comunidad'])->find($this->selectedPubId);
             if (!$selectedProyecto) {
                 $this->selectedPubId = null;
             } else {

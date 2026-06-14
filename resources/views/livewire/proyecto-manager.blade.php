@@ -48,109 +48,13 @@
     <h2 class="titulo" style="margin-bottom: 20px; font-weight: bolder; margin-top: 10px;">Gestión de Proyectos</h2>
 
     @if ($viewMode === 'list')
-        @if (!empty($canValidate))
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-                <div class="pgm-tabs" style="font-size: 11px;">
-                    <button type="button" wire:click="irAListado('gestion')"
-                        style="border: 1px solid #999; border-radius: 4px; padding: 6px 14px; margin-right: 6px; cursor: pointer; {{ $listTab === 'gestion' ? 'background:#8bb2b7;font-weight:bold;' : 'background:#f0f0f0;' }}">
-                        Listado general
-                    </button>
-                    <button type="button" wire:click="irAListado('validar')"
-                        style="border: 1px solid #999; border-radius: 4px; padding: 6px 14px; cursor: pointer; {{ $listTab === 'validar' ? 'background:#8bb2b7;font-weight:bold;' : 'background:#f0f0f0;' }}">
-                        Validar pendientes
-                    </button>
-                </div>
-                @if (($esAdmin ?? false) || (($canRegister ?? false) && !($esLider ?? false)))
-                    <button type="button" wire:click="iniciarRegistro" class="cm-btn cm-btn-success" style="font-size: 14px; padding: 6px 16px;">
-                        + Registrar nuevo proyecto
-                    </button>
-                @endif
+        @if (($esAdmin ?? false) || (($canRegister ?? false) && !($esLider ?? false)))
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+                <button type="button" wire:click="iniciarRegistro" class="cm-btn cm-btn-success" style="font-size: 14px; padding: 6px 16px;">
+                    + Registrar nuevo proyecto
+                </button>
             </div>
-        @else
-            @if (($esAdmin ?? false) || (($canRegister ?? false) && !($esLider ?? false)))
-                <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
-                    <button type="button" wire:click="iniciarRegistro" class="cm-btn cm-btn-success" style="font-size: 14px; padding: 6px 16px;">
-                        + Registrar nuevo proyecto
-                    </button>
-                </div>
-            @endif
         @endif
-
-        @if ($listTab === 'validar')
-            <div style="margin-bottom: 15px;">
-                <b>Búsqueda (título):</b>
-                <input wire:model.live.debounce.300ms="search" type="text" style="width: 400px;" placeholder="Título del proyecto...">
-            </div>
-
-            <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
-                <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Revisión de
-                    expedientes pendientes</legend>
-                <table width="100%" border="1" cellpadding="4" cellspacing="0"
-                    style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px;">
-                    <thead>
-                        <tr style="background-color: #8bb2b7; color: #000; text-align: center; font-weight: bold;">
-                            <th width="35%">Título / resumen</th>
-                            <th width="20%">Equipo / comunidad</th>
-                            <th width="20%">Documentos</th>
-                            <th width="25%">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody class="Texto">
-                        @foreach ($proyectos as $p)
-                            <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }};"
-                                valign="top">
-                                <td style="padding: 5px;">
-                                    <span style="font-weight: bold;">{{ $p->titulo }}</span><br>
-                                    <span
-                                        style="font-size: 10px; color: #555;">{{ Str::limit($p->resumen, 60) }}</span><br>
-                                    <span style="font-size: 9px; color: #888;">Registrado:
-                                        {{ $p->created_at ? $p->created_at->format('d/m/Y') : '-' }}</span>
-                                </td>
-                                <td align="center" style="padding: 5px; font-size: 10px;">
-                                    {{ $p->equipo_resumen }}<br>
-                                    {{ $p->comunidad->nombre ?? 'N/A' }}
-                                </td>
-                                <td align="center" style="padding: 5px;">
-                                    @php $docs = $p->documentos; @endphp
-                                    @if($docs->isNotEmpty())
-                                        @foreach ($docs as $doc)
-                                            <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}"
-                                                target="_blank"
-                                                style="color: #0000EE; font-size: 10px; display:block;">[{{ $doc->componente?->nombre ?? 'Documento' }}]</a>
-                                        @endforeach
-                                    @else
-                                        <span style="color: #999;">Sin archivos</span>
-                                    @endif
-                                    <br>
-                                    <a href="#" wire:click.prevent="openDetails({{ $p->id }})"
-                                        style="color: #0000EE; font-size: 10px;">[Ficha técnica]</a>
-                                </td>
-                                <td align="center" style="padding: 5px;">
-                                    <div class="pgm-actions">
-                                        <button type="button" wire:click="approve({{ $p->id }})"
-                                            onclick="return confirm('¿Aprueba este proyecto?')"
-                                            class="pgm-btn-action pgm-btn-action--approve">
-                                            Aprobar
-                                        </button>
-                                        <button type="button" wire:click="openReject({{ $p->id }})"
-                                            class="pgm-btn-action pgm-btn-action--reject">
-                                            Rechazar
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                        @if ($proyectos->isEmpty())
-                            <tr>
-                                <td colspan="4" align="center" style="padding: 20px; font-weight: bold;">No hay
-                                    expedientes pendientes de revisión.</td>
-                            </tr>
-                        @endif
-                    </tbody>
-                </table>
-                <div style="margin-top: 10px;">{{ $proyectos->links() }}</div>
-            </fieldset>
-        @else
             <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
                 <legend style="font-weight: bold; font-size: 12px;">Filtros</legend>
                 <table width="100%" border="0" cellpadding="8" cellspacing="0" style="font-size: 11px;">
@@ -256,20 +160,11 @@
                                                 Ficha
                                             </button>
                                         @endif
-                                        <button type="button" wire:click="edit({{ $p->id }})"
-                                            class="pgm-btn-action pgm-btn-action--edit">
-                                            {{ $esLider ? 'Actualizar' : 'Editar' }}
-                                        </button>
-                                        @if (!($esLider ?? false))
-                                        <button type="button" wire:click="toggleStatus({{ $p->id }})"
-                                            class="pgm-btn-action pgm-btn-action--toggle">
-                                            {{ $p->estado_logico ? 'Inhabilitar' : 'Habilitar' }}
-                                        </button>
-                                        <button type="button" wire:click="delete({{ $p->id }})"
-                                            wire:confirm="¿Eliminar este proyecto permanentemente?"
-                                            class="pgm-btn-action pgm-btn-action--delete">
-                                            Eliminar
-                                        </button>
+                                        @if ($esLider ?? false)
+                                            <button type="button" wire:click="edit({{ $p->id }})"
+                                                class="pgm-btn-action pgm-btn-action--edit">
+                                                Actualizar
+                                            </button>
                                         @endif
                                     </div>
                                 </td>
