@@ -111,7 +111,7 @@
                                 <br><span style="font-size: 9px; color: #555;">{{ $c->direccion?->municipio?->estado?->est_nombre ?? '' }} / {{ $c->direccion?->municipio?->mun_nombre ?? '' }} - {{ $c->direccion?->dir_calle ?? '' }}</span>
                             </td>
                             <td align="center">{{ $c->rif }}</td>
-                            <td align="center">{{ $c->correo }}<br><b>{{ $c->numero_telefono }}</b></td>
+                            <td align="center">{{ $c->correo }}</td>
                             <td style="font-size:10px;">
                                 @if ($c->relationLoaded('contactos') && $c->contactos->isNotEmpty())
                                     @foreach ($c->contactos as $ct)
@@ -200,29 +200,6 @@
                         </div>
                     </td>
                     <td style="vertical-align: top; padding: 0 0 10px 4px;">
-                        <div style="display: flex; align-items: flex-start; gap: 6px;">
-                            <b style="white-space: nowrap; padding-top: 8px; min-width: 60px;">Teléfono:</b>
-                            <div style="flex: 1;">
-                                <div style="display: flex; gap: 5px; align-items: center;">
-                                    <select wire:model="prefijo_telefono" style="padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; background: #fff; font-size: 11px;">
-                                        <option value="0424">0424</option>
-                                        <option value="0414">0414</option>
-                                        <option value="0412">0412</option>
-                                        <option value="0422">0422</option>
-                                        <option value="0416">0416</option>
-                                        <option value="0426">0426</option>
-                                    </select>
-                                    <input wire:model="numero_telefono" type="text" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" placeholder="XXX-XXXX">
-                                </div>
-                                <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
-                                @error('prefijo_telefono')
-                                    <span style="color:red;font-size:10px; display: block; margin-top: 2px;">{{ $message }}</span>
-                                @enderror
-                                @error('numero_telefono')
-                                    <span style="color:red;font-size:10px; display: block; margin-top: 2px;">{{ $message }}</span>
-                                @enderror
-                            </div>
-                        </div>
                     </td>
                 </tr>
                 <tr>

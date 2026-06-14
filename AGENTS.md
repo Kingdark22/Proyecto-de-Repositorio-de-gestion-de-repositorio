@@ -88,6 +88,12 @@
 - **Files modified**: `routes/web.php` — removed `/organizaciones` route; `resources/views/components/sidebar.blade.php` — removed "Vinculación" menu; `app/Support/NavigationMenu.php` — removed `canManageOrganizaciones` flag; `config/repositorio_schema.php` — removed `organizacion` schema mapping
 - **Models kept**: `Organizacion`, `OrgContacto` — still used by publicaciones email panel (reading org/contact data for sending project PDFs)
 
+### 19. Button restructuring by role in Gestión de Proyectos
+- **File**: `app/Services/ProyectoGestionService.php` — `usuarioPuedeRegistrar()` now returns true for `profesor proyecto` role; added `proyectoIdsLideradosPor()` and `paginarProyectosLider()` methods; `datosVistaListado()` accepts `$onlyLeaderProjects` flag.
+- **File**: `app/Livewire/ProyectoManager.php` — `usuarioEsLider()` now also excludes `profesor proyecto` (not just admin/coordinador). `render()` passes `$esLiderGlobal` as `$onlyLeaderProjects` to `datosVistaListado()`, so leaders only see their own projects.
+- **File**: `resources/views/livewire/proyecto-manager.blade.php` — "REGISTRAR NUEVO PROYECTO" button now shows for `$esAdmin || ($canRegister && !$esLider)`, hiding it from leaders.
+- **Result**: Admin & Profesor proyecto → "Registrar" button, full CRUD, validate tab. Leaders (students) → only see their leader projects with "Actualizar" button. No "Registrar" button, no "Validar" tab for leaders.
+
 ## Key Patterns
 - `MapsLegacyColumns` trait only works on Model instances (after `get()`). The `LegacyColumnBuilder` only overrides `where()` and `orderBy()` — all other QB methods (`whereIn`, `whereNotNull`, `whereNull`, `pluck`, `select`, `groupBy`, `update`, `delete`, etc.) bypass the mapping.
 - **Fix rule**: For `whereIn()`, `whereNotNull()`, `whereNull()` — use the **physical column name** directly.

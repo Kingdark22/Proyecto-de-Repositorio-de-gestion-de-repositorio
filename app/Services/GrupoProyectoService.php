@@ -182,7 +182,8 @@ class GrupoProyectoService
                 $query->whereRaw('CAST(grp_contexto AS jsonb)->>\'tra_codigo\' = ?', [(string) $filtros['trayecto']]);
             }
             if (!empty($filtros['equipo'])) {
-                $query->whereJsonContains('grp_miembros', ['cedula' => $filtros['equipo']]);
+                $cedula = trim((string) $filtros['equipo']);
+                $query->whereRaw('CAST(grp_miembros AS jsonb) @> ?', ['[{"cedula":"' . $cedula . '"}]']);
             }
             if (!empty($filtros['busqueda'])) {
                 $term = '%' . mb_strtolower(trim((string) $filtros['busqueda'])) . '%';

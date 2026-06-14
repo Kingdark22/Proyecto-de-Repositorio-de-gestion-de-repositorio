@@ -212,7 +212,7 @@
             </legend>
             <table width="100%" style="font-size: 11px;">
                 <tr>
-                    <td width="50%"><b>Nombre del equipo:</b><br><input wire:model="nombreGrupo" type="text"
+                    <td width="50%"><b>Nombre del Proyecto:</b><br><input wire:model="nombreGrupo" type="text"
                             class="grp-filter-input" style="width:90%;"></td>
                     <td><b>Comunidad:</b><br>
                         <select wire:model="comunidadId" class="grp-filter-select" style="width:90%;">

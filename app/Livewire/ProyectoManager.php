@@ -534,10 +534,14 @@ class ProyectoManager extends Component
     {
         $user = auth()->user();
         if (!$user) return false;
+        if ($gestion->usuarioEsAdminEnSistema($user)) return false;
         $userRoleService = app(\App\Services\UserRoleService::class);
         $activeRole = $userRoleService->getActiveRole($user);
-        if ($userRoleService->roleMatches('administrador', $activeRole)
-            || $userRoleService->roleMatches('coordinador', $activeRole)) return false;
+        if ($activeRole) {
+            if ($userRoleService->roleMatches('profesor proyecto', $activeRole)) return false;
+            if ($userRoleService->roleMatches('coordinador', $activeRole)) return false;
+            if ($userRoleService->roleMatches('gestionador', $activeRole)) return false;
+        }
         return $gestion->usuarioPuedeRegistrar($user);
     }
 
@@ -554,7 +558,7 @@ class ProyectoManager extends Component
                 'search' => $this->search,
                 'estado' => $this->filterEstadoList,
                 'comunidad' => $this->filterComunidadList,
-            ], $page, $user, $this->listTab),
+            ], $page, $user, $this->listTab, $esLiderGlobal),
             'form' => $gestion->datosVistaFormulario($estado),
             default => ['comunidades' => $gestion->comunidadesOrdenadas()],
         };

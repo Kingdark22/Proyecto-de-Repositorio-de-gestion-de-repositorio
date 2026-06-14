@@ -169,6 +169,18 @@ return [
         ],
     ],
 
+    'vinculaciones' => [
+        'primary_key' => 'vin_codigo',
+        'columns' => [
+            'id' => 'vin_codigo',
+            'proyecto_id' => 'pry_codigo',
+            'tipo' => 'vin_tipo',
+            'comunidad_id' => 'com_codigo',
+            'observaciones' => 'vin_observaciones',
+            'estado_logico' => 'vin_estado_logico',
+        ],
+    ],
+
     'comentarios_proyecto' => [
         'primary_key' => 'cop_codigo',
         'columns' => [

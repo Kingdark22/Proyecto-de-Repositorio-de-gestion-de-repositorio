@@ -55,6 +55,7 @@ class NavigationMenu
             'isStudent'            => $isStudent,
             'canViewAcademic'      => false,
             'canViewComunes'       => false,
+            'canViewVinculacion'   => false,
             'canManageCatalogs'    => false,
             'canManageComponents'  => false,
             'canValidateProjects'  => false,
@@ -72,7 +73,6 @@ class NavigationMenu
                     $flags['canManageCatalogs'] = true;
                     $flags['canManageComponents'] = true;
                     $flags['canManageSystemConfig'] = true;
-                    $flags['canViewPublicaciones'] = true;
                     $flags['canRegisterProject'] = true;
                     break;
 
@@ -100,6 +100,7 @@ class NavigationMenu
                 case 'gestionador':
                     $flags['canViewAcademic'] = true;
                     $flags['canViewComunes'] = true;
+                    $flags['canViewVinculacion'] = true;
                     $flags['canManageCatalogs'] = true;
                     $flags['canManageComponents'] = true;
                     $flags['canManageSystemConfig'] = true;

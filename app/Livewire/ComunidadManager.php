@@ -24,10 +24,6 @@ class ComunidadManager extends Component
 
     public string $correo = '';
 
-    public string $numero_telefono = '';
-
-    public string $prefijo_telefono = '0424';
-
     public string $estado_id = '';
 
     public string $municipio_id = '';
@@ -140,9 +136,6 @@ class ComunidadManager extends Component
             'municipio_id.required' => 'Debe seleccionar un municipio',
             'dir_nombre.required' => 'La dirección exacta es obligatoria',
             'correo.email' => 'El correo debe ser una dirección válida',
-            'prefijo_telefono.required' => 'El prefijo del teléfono es obligatorio',
-            'numero_telefono.required' => 'El teléfono es obligatorio',
-            'numero_telefono.digits' => 'El teléfono debe tener 7 dígitos.',
         ];
     }
 
@@ -177,8 +170,7 @@ class ComunidadManager extends Component
             return;
         }
 
-        $this->reset(['editingId', 'nombre', 'rif', 'correo', 'numero_telefono', 'prefijo_telefono', 'contactos', 'estado_id', 'municipio_id', 'dir_nombre']);
-        $this->prefijo_telefono = '0424';
+        $this->reset(['editingId', 'nombre', 'rif', 'correo', 'contactos', 'estado_id', 'municipio_id', 'dir_nombre']);
         $this->resetValidation();
 
         $this->viewMode = 'form';
@@ -196,19 +188,6 @@ class ComunidadManager extends Component
         $datos = $gestion->cargarParaEdicion($id);
         $this->editingId = $id;
         $this->fill($datos);
-
-        $telefonoCompleto = $datos['numero_telefono'];
-        $prefijos = ['0424', '0414', '0412', '0422', '0416', '0426'];
-        $this->prefijo_telefono = '0424';
-        $this->numero_telefono = $telefonoCompleto;
-
-        foreach ($prefijos as $prefijo) {
-            if (str_starts_with($telefonoCompleto, $prefijo)) {
-                $this->prefijo_telefono = $prefijo;
-                $this->numero_telefono = substr($telefonoCompleto, strlen($prefijo));
-                break;
-            }
-        }
 
         $this->viewMode = 'form';
         $this->dispatch('refresh-icons');
@@ -247,8 +226,6 @@ class ComunidadManager extends Component
             'nombre' => $this->nombre,
             'rif' => $this->rif,
             'correo' => $this->correo,
-            'prefijo_telefono' => $this->prefijo_telefono,
-            'numero_telefono' => $this->numero_telefono,
             'estado_id' => $this->estado_id,
             'municipio_id' => $this->municipio_id,
             'dir_nombre' => $this->dir_nombre,
@@ -283,8 +260,6 @@ class ComunidadManager extends Component
             'nombre' => $this->nombre,
             'rif' => $this->rif,
             'correo' => $this->correo,
-            'prefijo_telefono' => $this->prefijo_telefono,
-            'numero_telefono' => $this->numero_telefono,
             'estado_id' => $this->estado_id,
             'municipio_id' => $this->municipio_id,
             'dir_nombre' => $this->dir_nombre,
