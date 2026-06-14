@@ -93,15 +93,13 @@
                                     {{ $p->comunidad->nombre ?? 'N/A' }}
                                 </td>
                                 <td align="center" style="padding: 5px;">
-                                    @if (count($p->documentos ?? []))
-                                        @foreach ($p->documentos as $doc)
-                                            <a href="{{ Storage::url(data_get($doc, 'archivo_path')) }}"
+                                    @php $docs = $p->documentos; @endphp
+                                    @if($docs->isNotEmpty())
+                                        @foreach ($docs as $doc)
+                                            <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}"
                                                 target="_blank"
-                                                style="color: #0000EE; font-size: 10px; display:block;">[{{ data_get($doc, 'componente.nombre', data_get($doc, 'componente_nombre', 'DOC')) }}]</a>
+                                                style="color: #0000EE; font-size: 10px; display:block;">[{{ $doc->componente?->nombre ?? 'Documento' }}]</a>
                                         @endforeach
-                                    @elseif($p->archivo_path)
-                                        <a href="{{ Storage::url($p->archivo_path) }}" target="_blank"
-                                            style="color: #0000EE; font-size: 10px;">[Ver PDF]</a>
                                     @else
                                         <span style="color: #999;">Sin archivos</span>
                                     @endif
@@ -184,12 +182,13 @@
                                     {{ $p->titulo }}
                                     <br><span style="font-size: 9px; font-weight: normal;">Subido:
                                         {{ $p->fecha_subida?->format('d/m/Y') ?? '-' }}</span>
-                                    @if (count($p->documentos ?? []))
+                                    @php $gestionDocs = $p->documentos; @endphp
+                                    @if ($gestionDocs->isNotEmpty())
                                         <div style="margin-top: 5px;">
-                                            @foreach ($p->documentos as $doc)
-                                                <a href="{{ Storage::url(data_get($doc, 'archivo_path')) }}"
+                                            @foreach ($gestionDocs as $doc)
+                                                <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}"
                                                     target="_blank"
-                                                    style="color: #0000EE; font-size: 10px; display:block;">[{{ data_get($doc, 'componente.nombre', data_get($doc, 'componente_nombre', 'DOC')) }}]</a>
+                                                    style="color: #0000EE; font-size: 10px; display:block;">[{{ $doc->componente?->nombre ?? 'Documento' }}]</a>
                                             @endforeach
                                         </div>
                                     @endif
@@ -213,11 +212,6 @@
                                             title="{{ $p->motivo_rechazo }}">Rechazado</span>
                                     @else
                                         <span style="color: #008000; font-weight: bold;">Aprobado</span>
-                                    @endif
-                                    @if ($p->asignacion_ct)
-                                        <br><span
-                                            style="background-color: #FFFF00; padding: 2px; border: 1px solid #CCC; font-size: 9px;">Asig.
-                                            C&amp;T</span>
                                     @endif
                                 </td>
                                 <td align="center" style="padding: 5px;">
@@ -305,12 +299,13 @@
                     <td>{{ $selectedProject->comunidad->nombre ?? '-' }}</td>
                 </tr>
             </table>
-            @if (count($selectedProject->documentos ?? []))
+            @php $detDocs = $selectedProject->documentos; @endphp
+            @if ($detDocs->isNotEmpty())
                 <div style="margin-top: 10px; font-size: 13px;">
                     <b>Documentos:</b><br>
-                    @foreach ($selectedProject->documentos as $doc)
-                        <a href="{{ Storage::url(data_get($doc, 'archivo_path')) }}" target="_blank"
-                            style="color: #0000EE;">[{{ data_get($doc, 'componente.nombre', data_get($doc, 'componente_nombre', 'Documento')) }}]</a><br>
+                    @foreach ($detDocs as $doc)
+                        <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank"
+                            style="color: #0000EE;">[{{ $doc->componente?->nombre ?? 'Documento' }}]</a><br>
                     @endforeach
                 </div>
             @endif
@@ -390,62 +385,40 @@
                     @endif
                 </fieldset>
 
-                {{-- == SECCIÓN DOCUMENTOS == --}}
+                {{-- == SECCIÓN DOCUMENTOS POR COMPONENTE == --}}
+                @if(isset($componentes_disp) && $componentes_disp->isNotEmpty())
                 <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
-                    <legend style="font-weight: bold; font-size: 12px;">Documentos del proyecto</legend>
+                    <legend style="font-weight: bold; font-size: 12px;">Documentos del proyecto por componente</legend>
                     <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 12px;">
-                        @if (($usaComponentes ?? false) && isset($componentes_requeridos) && count($componentes_requeridos) > 0)
-                            @foreach ($componentes_requeridos as $comp)
-                                <tr>
-                                    <td width="25%" valign="middle"><b>{{ $comp->nombre }}</b>
-                                        @if ($comp->es_obligatorio)
-                                            <span class="obligatorio">*</span>
-                                        @endif
-                                    </td>
-                                    <td width="45%">
-                                        <input type="file" wire:model="archivos_componentes.{{ $comp->id }}"
-                                            style="width: 100%;">
-                                        @error('archivos_componentes.' . $comp->id)
-                                            <br><span class="obligatorio">{{ $message }}</span>
-                                        @enderror
-                                        <div wire:loading wire:target="archivos_componentes.{{ $comp->id }}"
-                                            style="font-size:10px;color:#0000EE;">Cargando archivo...</div>
-                                    </td>
-                                    <td width="30%">
-                                        @if (isset($archivos_actuales[$comp->id]))
-                                            <a href="{{ Storage::url($archivos_actuales[$comp->id]) }}"
-                                                target="_blank"
-                                                style="color:#0000EE; font-size:11px; font-weight:bold;">[VER DOCUMENTO SUBIDO]</a>
-                                        @else
-                                            <span style="color:#999; font-size:10px;">Sin documento</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        @endif
-
-                        <tr>
-                            <td valign="middle"><b>Documento PDF adicional:</b></td>
-                            <td>
-                                <input type="file" wire:model="archivo_proyecto" accept=".pdf,application/pdf"
-                                    style="width: 100%;">
-                                @error('archivo_proyecto')
-                                    <br><span class="obligatorio">{{ $message }}</span>
-                                @enderror
-                                <div wire:loading wire:target="archivo_proyecto"
-                                    style="font-size:10px;color:#0000EE;">Cargando archivo...</div>
-                            </td>
-                            <td>
-                                @if ($archivo_actual)
-                                    <a href="{{ Storage::url($archivo_actual) }}" target="_blank"
-                                        style="color:#0000EE; font-size:11px; font-weight:bold;">[VER PDF ACTUAL]</a>
-                                @else
-                                    <span style="color:#999; font-size:10px;">Sin archivo</span>
-                                @endif
-                            </td>
-                        </tr>
+                        @foreach($componentes_disp as $comp)
+                            @php
+                                $docActual = $archivos_actuales[$comp->id] ?? null;
+                            @endphp
+                            <tr>
+                                <td width="25%" valign="middle"><b>{{ $comp->nombre }}</b>
+                                    @if($comp->es_obligatorio)<span class="obligatorio">*</span>@endif
+                                </td>
+                                <td width="45%">
+                                    <input type="file" wire:model="archivosComponente.{{ $comp->id }}" accept=".pdf,application/pdf" style="width: 100%;">
+                                    @error('archivosComponente.' . $comp->id)
+                                        <br><span class="obligatorio">{{ $message }}</span>
+                                    @enderror
+                                    <div wire:loading wire:target="archivosComponente.{{ $comp->id }}"
+                                        style="font-size:10px;color:#0000EE;">Cargando archivo...</div>
+                                </td>
+                                <td width="30%">
+                                    @if($docActual)
+                                        <a href="{{ route('documentos.serve', ['path' => $docActual['path']]) }}" target="_blank"
+                                            style="color:#0000EE; font-size:11px; font-weight:bold;">[VER {{ $comp->nombre }}]</a>
+                                    @else
+                                        <span style="color:#999; font-size:10px;">Sin documento</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
                     </table>
                 </fieldset>
+                @endif
 
                 @if (!$modoActualizacion)
                 {{-- == SECCIÓN EQUIPO Y COMUNIDAD (desplegable) == --}}
@@ -506,6 +479,24 @@
                                         , Trayecto: {{ $trayecto_derived ?: '?' }}
                                     @endif
                                     ({{ ($integrantesEquipo ?? collect())->count() }} integrantes)
+                                </div>
+                            @endif
+
+                            @if (!empty($miembrosGrupo) && ($esGrupoRegistrado ?? false))
+                                <div style="margin: 8px 0; padding: 8px; background: #f0f8ff; border: 1px solid #b8d4f0; border-radius: 4px; font-size: 12px;">
+                                    <b style="display:block; margin-bottom:6px;">Seleccionar líderes del grupo (máximo 2):</b>
+                                    @foreach ($miembrosGrupo as $miembro)
+                                        <label style="display:block; margin: 3px 0; cursor:pointer;">
+                                            <input type="checkbox" value="{{ $miembro['cedula'] }}"
+                                                wire:click="toggleLider('{{ $miembro['cedula'] }}')"
+                                                {{ in_array($miembro['cedula'], $selectedLeaders) ? 'checked' : '' }}>
+                                            {{ $miembro['nombre'] }} {{ $miembro['apellido'] }}
+                                            @if ((int) ($miembro['rol_id'] ?? 0) === \App\Services\IntranetEquipoSeccionService::ROL_LIDER)
+                                                <small style="color:#888;">(actual líder)</small>
+                                            @endif
+                                        </label>
+                                    @endforeach
+                                    <small style="color:#666;">Los líderes podrán subir los documentos del proyecto.</small>
                                 </div>
                             @endif
 
@@ -599,8 +590,6 @@
                         <div style="padding:10px;">
                             <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px;">
                                 <tr>
-                                    <td width="20%"><b>Asignación C&amp;T:</b></td>
-                                    <td width="30%"><label><input type="checkbox" wire:model="asignacion_ct"> ¿Aplica?</label></td>
                                     @if ($editingId)
                                         <td width="20%"><b>Nota (1-20):</b></td>
                                         <td width="30%"><input wire:model="calificacion" type="number" min="1" max="20"

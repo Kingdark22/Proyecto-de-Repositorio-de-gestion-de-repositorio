@@ -2,27 +2,27 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProyectoDocumento extends RepositorioModel
 {
-    use HasFactory;
-
     protected $table = 'proyecto_documentos';
+    protected $primaryKey = 'pd_codigo';
 
     protected $fillable = [
-        'proyecto_id',
-        'componente_id',
-        'archivo_path'
+        'pry_codigo',
+        'comp_codigo',
+        'pd_archivo_path',
+        'pd_orden',
     ];
 
-    public function proyecto()
+    public function proyecto(): BelongsTo
     {
-        return $this->belongsTo(Proyecto::class);
+        return $this->belongsTo(Proyecto::class, 'pry_codigo', 'pry_codigo');
     }
 
-    public function componente()
+    public function componente(): BelongsTo
     {
-        return $this->belongsTo(Componente::class);
+        return $this->belongsTo(Componente::class, 'comp_codigo', 'comp_codigo');
     }
 }

@@ -77,6 +77,7 @@ class ProyectoBusquedaService
             'metodologia',
             'tipo_investigacion',
             'comunidad',
+            'documentos.componente',
         ])
             ->visiblesPublico()
             ->find($id);
@@ -107,7 +108,7 @@ class ProyectoBusquedaService
             ]);
         }
 
-        $query = Proyecto::with(['tipo_publicacion', 'linea_investigacion', 'comunidad'])
+        $query = Proyecto::with(['tipo_publicacion', 'linea_investigacion', 'comunidad', 'documentos'])
             ->visiblesPublico();
 
         $this->aplicarFiltroEquipo($query, $equipoFiltro);
@@ -213,7 +214,7 @@ class ProyectoBusquedaService
         match ($equipoFiltro['tipo']) {
             'exacto' => $query->where('equipo_ref', $equipoFiltro['valor']),
             'lista' => $query->whereIn('pry_direccion_logica', $equipoFiltro['valor']),
-            'prefijo' => $query->where('equipo_ref', 'like', $equipoFiltro['valor'].'%'),
+            'prefijo' => $query->where('equipo_ref', 'ILIKE', $equipoFiltro['valor'].'%'),
             default => null,
         };
     }

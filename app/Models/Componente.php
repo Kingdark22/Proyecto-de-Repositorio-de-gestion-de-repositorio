@@ -28,12 +28,14 @@ class Componente extends RepositorioModel
     public static function guardarMuchos(array $rows, string $programa_id): void
     {
         foreach ($rows as $row) {
-            self::create([
+            $comp = self::create([
                 'nombre' => $row['nombre'],
                 'programa_id' => $programa_id,
                 'es_obligatorio' => $row['es_obligatorio'],
                 'estado_logico' => true,
             ]);
+            // Sync pivot for new components
+            $comp->programas()->create(['pro_codigo' => $programa_id]);
         }
     }
 
@@ -57,5 +59,10 @@ class Componente extends RepositorioModel
 
             return $prog ? ($prog->pro_siglas ?? $prog->pro_nombre) : "Programa #{$id}";
         });
+    }
+
+    public function programas()
+    {
+        return $this->hasMany(ComponentePrograma::class, 'comp_codigo', 'comp_codigo');
     }
 }

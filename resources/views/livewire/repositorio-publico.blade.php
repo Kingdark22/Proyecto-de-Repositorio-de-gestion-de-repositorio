@@ -63,11 +63,14 @@
                             <span style="font-size: 10px; font-weight: bold;">Lapso: {{ $p->lapso_academico->nombre ?? 'N/A' }}</span>
                         </td>
                         <td align="center" style="padding: 10px;">
-                            @if($p->archivo_path)
-                                <a href="{{ Storage::url($p->archivo_path) }}" target="_blank" style="display: inline-block; text-align: center; color: #0000EE; text-decoration: none; font-weight: bold; margin-top: 10px;">
-                                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/PDF_file_icon.svg/640px-PDF_file_icon.svg.png" alt="PDF" style="width: 32px; height: 32px; border: 0; margin-bottom: 5px;">
-                                    <br>Descargar PDF
-                                </a>
+                            @php $pubDocs = $p->documentos; @endphp
+                            @if($pubDocs->isNotEmpty())
+                                @foreach($pubDocs as $doc)
+                                    <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank" style="display: inline-block; text-align: center; color: #0000EE; text-decoration: none; font-weight: bold; margin-top: 5px;">
+                                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/PDF_file_icon.svg/640px-PDF_file_icon.svg.png" alt="PDF" style="width: 24px; height: 24px; border: 0; margin-bottom: 2px;">
+                                        <br>{{ $doc->componente?->nombre ?? 'Documento' }}
+                                    </a>
+                                @endforeach
                             @else
                                 <span style="font-size: 10px; color: #999;">Sin Documento</span>
                             @endif

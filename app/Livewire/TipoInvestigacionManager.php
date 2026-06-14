@@ -98,7 +98,7 @@ class TipoInvestigacionManager extends Component
     public function with()
     {
         return [
-            'items' => TipoInvestigacion::where('nombre', 'like', '%' . $this->search . '%')
+            'items' => TipoInvestigacion::where('nombre', 'ILIKE', '%' . $this->search . '%')
                 ->latest()
                 ->paginate(10),
         ];

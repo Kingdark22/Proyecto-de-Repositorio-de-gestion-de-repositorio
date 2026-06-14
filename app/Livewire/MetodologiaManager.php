@@ -98,7 +98,7 @@ class MetodologiaManager extends Component
     public function with()
     {
         return [
-            'items' => MetodologiaInvestigacion::where('nombre', 'like', '%' . $this->search . '%')
+            'items' => MetodologiaInvestigacion::where('nombre', 'ILIKE', '%' . $this->search . '%')
                 ->latest()
                 ->paginate(10),
         ];

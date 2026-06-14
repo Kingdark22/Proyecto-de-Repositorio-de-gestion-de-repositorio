@@ -76,10 +76,11 @@
         <table width="100%" border="1" cellpadding="6" cellspacing="0" class="ppm-table" style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px; position: relative;">
             <thead>
                 <tr style="background-color: #8bb2b7; color: #000; text-align: center; font-weight: bold;">
-                    <th width="28%">Docente / cédula</th>
-                    <th width="22%">Asignación intranet</th>
-                    <th width="15%">Módulo repositorio</th>
-                    <th width="20%">Trayecto y sección</th>
+                    <th width="24%">Docente / cédula</th>
+                    <th width="12%">PNF</th>
+                    <th width="16%">Asignación intranet</th>
+                    <th width="13%">Módulo repositorio</th>
+                    <th width="20%">Trayecto, PNF y sección</th>
                     <th width="15%">Acción</th>
                 </tr>
             </thead>
@@ -98,12 +99,10 @@
                                 <span style="color: #0000EE; font-size: 10px;"> (Tú)</span>
                             @endif
                         </td>
+                        <td align="center" style="padding: 5px; font-weight: bold; font-size: 11px;">
+                            {{ $doc->programa_siglas ?: '-' }}
+                        </td>
                         <td style="padding: 5px; font-size: 10px;">
-                            @if($doc->programa_siglas)
-                                <strong>{{ $doc->programa_siglas }}</strong>
-                                @if($doc->trayecto_nombre) &middot; {{ $doc->trayecto_nombre }} @endif
-                                <br>
-                            @endif
                             <strong>Lapso:</strong> {{ $doc->lapso_nombre }}<br>
                             @foreach($doc->asignaciones->take(3) as $asig)
                                 &bull; {{ $asig->unidad_siglas }}
@@ -125,18 +124,46 @@
                         </td>
                         <td align="center" style="padding: 5px;">
                             @if(!$habilitado)
-                                <div class="ppm-row-inputs">
-                                    <select wire:model="selectedYear.{{ $cedula }}">
-                                        <option value="">- Trayecto -</option>
-                                        @foreach($trayectosHabilitar as $t)
-                                            <option value="{{ $t }}">{{ $t }}</option>
+                                @php
+                                    $selProCod = $selectedPrograma[$cedula] ?? null;
+                                    $selProSiglas = $selProCod ? collect($programas)->firstWhere('pro_codigo', (int)$selProCod)?->pro_siglas ?? '' : '';
+                                    $profTrayectos = $selProSiglas
+                                        ? $doc->asignaciones->where('programa_siglas', $selProSiglas)->pluck('trayecto_nombre')->unique()->filter()->values()
+                                        : collect();
+                                    $selTrayecto = $selectedYear[$cedula] ?? '';
+                                    $profSecciones = $selProSiglas && $selTrayecto
+                                        ? $doc->asignaciones->where('programa_siglas', $selProSiglas)->where('trayecto_nombre', $selTrayecto)->pluck('seccion')->unique()->filter()->values()
+                                        : collect();
+                                @endphp
+                                <div class="ppm-row-inputs" style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+                                    <select wire:model.live="selectedPrograma.{{ $cedula }}" style="width: 160px;">
+                                        <option value="">- PNF -</option>
+                                        @foreach($programas as $pro)
+                                            <option value="{{ $pro->pro_codigo }}">{{ trim($pro->pro_siglas) }}</option>
                                         @endforeach
                                     </select>
-                                    <input wire:model="selectedSection.{{ $cedula }}" type="text" placeholder="Sección...">
+                                    @if($selProSiglas)
+                                        <select wire:model.live="selectedYear.{{ $cedula }}" style="width: 160px;">
+                                            <option value="">- Trayecto -</option>
+                                            @foreach($profTrayectos as $t)
+                                                <option value="{{ $t }}">{{ $t }}</option>
+                                            @endforeach
+                                        </select>
+                                    @endif
+                                    @if($selTrayecto && $profSecciones->isNotEmpty())
+                                        <select wire:model.live="selectedSection.{{ $cedula }}" style="width: 160px;">
+                                            <option value="">- Sección -</option>
+                                            @foreach($profSecciones as $s)
+                                                <option value="{{ $s }}">Sec. {{ $s }}</option>
+                                            @endforeach
+                                        </select>
+                                    @elseif($selProSiglas)
+                                        <input wire:model="selectedSection.{{ $cedula }}" type="text" placeholder="Sección..." style="width: 150px;">
+                                    @endif
                                 </div>
                             @else
-<span style="font-weight: bold; color: #8b0000;">{{ $doc->ppm_anio ?? '-' }}</span><br>
-                                                Sec: {{ $doc->ppm_seccion ?? '-' }}
+                                <span style="font-weight: bold; color: #8b0000;">{{ $doc->ppm_anio ?? '-' }}</span><br>
+                                Sec: {{ $doc->ppm_seccion ?? '-' }}
                             @endif
                         </td>
                         <td align="center" style="padding: 5px;">
@@ -153,7 +180,7 @@
                 @endforeach
                 @if($docentes->isEmpty())
                     <tr>
-                        <td colspan="5" align="center" style="padding: 20px;">
+                        <td colspan="6" align="center" style="padding: 20px;">
                             No hay docentes en intranet para este lapso o criterio de búsqueda.
                         </td>
                     </tr>

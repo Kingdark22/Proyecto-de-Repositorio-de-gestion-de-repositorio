@@ -136,6 +136,12 @@ class GrupoProyectoManager extends Component
             return;
         }
 
+        // Validar que el estudiante no pertenezca ya a otro grupo en el mismo lapso
+        if ($this->estudianteEnOtroGrupo($this->selectedCedula)) {
+            session()->flash('message_error', 'El estudiante ya pertenece a un grupo en este lapso académico.');
+            return;
+        }
+
         $rolId = (int) $this->selectedRolId;
         if ($rolId === 1) {
             foreach ($this->miembrosSeleccionados as $m) {
@@ -156,6 +162,34 @@ class GrupoProyectoManager extends Component
         $this->selectedCedula = '';
     }
 
+    protected function estudianteEnOtroGrupo(string $cedula): bool
+    {
+        $lapso = $this->filterLapso;
+        if (!$lapso) {
+            return false;
+        }
+
+        try {
+            $query = \App\Models\GrupoProyectoModulo::whereRaw(
+                "CAST(grp_contexto AS jsonb)->>'lap_codigo' = ?",
+                [(string) $lapso]
+            )->whereRaw(
+                "CAST(grp_miembros AS jsonb) @> ?",
+                ['[{"cedula":"' . $cedula . '"}]']
+            );
+
+            // Excluir el grupo actual si estamos editando
+            if ($this->editingGrpCodigo) {
+                $query->where('grp_codigo', '!=', $this->editingGrpCodigo);
+            }
+
+            return $query->exists();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Error verificando grupo existente: ' . $e->getMessage());
+            return false;
+        }
+    }
+
     public function quitarIntegrante(string $cedula): void
     {
         $this->miembrosSeleccionados = array_values(array_filter($this->miembrosSeleccionados, fn($m) => $m['cedula'] !== $cedula));
@@ -168,11 +202,13 @@ class GrupoProyectoManager extends Component
         $this->validate(
             [
                 'nombreGrupo' => 'required|min:2|max:120',
+                'comunidadId' => 'required',
                 'filterLapso' => 'required',
                 'filterSeccion' => 'required',
             ],
             [
                 'nombreGrupo.required' => 'Indique un nombre para el equipo/grupo.',
+                'comunidadId.required' => 'Seleccione la comunidad.',
                 'filterLapso.required' => 'Seleccione el lapso.',
                 'filterSeccion.required' => 'Seleccione la sección del PNF.',
             ],

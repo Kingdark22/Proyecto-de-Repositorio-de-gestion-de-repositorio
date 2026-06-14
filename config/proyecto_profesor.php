@@ -41,14 +41,36 @@ return [
     |--------------------------------------------------------------------------
     */
     'unidad_siglas_prefijos' => [
-        'AGPFI',
-        'AGPFII',
-        'AGPFIII',
-        'AGPFIV',
+        'AGPF',
+        'PRO',
+        'PSI',
+        'PRF',
+        'PTP',
+        'PIPT',
+        'MEPS',
+        'MTPR',
+        'MTPS',
+        'LDPS',
+        'LSPS',
+        'PNN',
+        'PNC',
+        'PRS',
+        'PRY',
+        'PACPA',
+        'FSCPN',
+        'LDPN',
     ],
 
     'unidad_nombre_patrones' => [
         'PROYECTO FORMATIVO',
+        'PROYECTO SOCIO',
+        'PROYECTO NACIONAL',
+        'PROYECTO TECNOL',
+        'PROYECTO I',
+        'PROYECTO II',
+        'PROYECTO III',
+        'PROYECTO IV',
+        'PROYECTO V',
     ],
 
 ];

@@ -58,6 +58,39 @@ class NotificacionService
             $cedula = trim($user->usu_cedula);
             $gruposSvc = app(GrupoProyectoService::class);
 
+            // 0. Notificar si el estudiante fue agregado a un equipo sin proyecto aún
+            try {
+                $gruposEstudiante = GrupoProyectoModulo::whereRaw(
+                    "CAST(grp_miembros AS jsonb) @> ?",
+                    ['[{"cedula":"' . $cedula . '"}]']
+                )->get();
+
+                if ($gruposEstudiante->isNotEmpty()) {
+                    $clavesGrupos = $gruposEstudiante->pluck('grp_codigo')
+                        ->map(fn($id) => GrupoProyectoService::PREFIJO . ':' . $id)
+                        ->toArray();
+
+                    $proyectosExistentes = Proyecto::whereNotNull('pry_direccion_logica')
+                        ->whereIn('pry_direccion_logica', $clavesGrupos)
+                        ->pluck('pry_direccion_logica')
+                        ->toArray();
+
+                    foreach ($gruposEstudiante as $g) {
+                        $clave = GrupoProyectoService::PREFIJO . ':' . $g->grp_codigo;
+                        if (!in_array($clave, $proyectosExistentes, true)) {
+                            $notificaciones[] = [
+                                'type' => 'info',
+                                'title' => 'Equipo de proyecto',
+                                'mensaje' => 'Has sido agregado al equipo: ' . $g->grp_nombre,
+                                'url' => route('grupos-proyecto.index'),
+                            ];
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Error notificando equipo de proyecto: ' . $e->getMessage());
+            }
+
             // 1. Proyectos nuevos que necesitan subir documentos
             $proyectosNuevos = Proyecto::where('actualizado_por_estudiante', false)
                 ->where('estado_validacion', '!=', 'aprobado')
@@ -75,7 +108,7 @@ class NotificacionService
                     $notificaciones[] = [
                         'type' => 'warning',
                         'title' => 'Subir documentos',
-                        'mensaje' => 'Debe subir los documentos del proyecto: ' . $p->titulo,
+                        'mensaje' => 'Has sido seleccionado como líder del proyecto. Sube los documentos: ' . $p->titulo,
                         'url' => route('proyectos.gestion', ['edit' => $p->id]),
                         'proyecto_id' => $p->id,
                     ];

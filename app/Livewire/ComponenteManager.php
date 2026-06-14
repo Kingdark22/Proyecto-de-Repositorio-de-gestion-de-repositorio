@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Componente;
+use App\Models\ComponentePrograma;
 use App\Services\AcademicCatalog;
 use App\Helpers\DbHelper;
 use Illuminate\Support\Facades\DB;
@@ -25,12 +26,19 @@ class ComponenteManager extends Component
 
     public $rows = [];
 
+    // PNF assignment modal
+    public $showPnfModal = false;
+    public $pnfComponenteId = null;
+    public $pnfSeleccionados = [];
+
     protected function rules()
     {
         return [
             'programa_id' => 'required',
             'rows.*.nombre' => 'required|min:3',
             'rows.*.es_obligatorio' => 'boolean',
+            'pnfSeleccionados' => 'array',
+            'pnfSeleccionados.*' => 'integer',
         ];
     }
 
@@ -109,6 +117,62 @@ class ComponenteManager extends Component
         $this->programa_id = '';
         $this->es_obligatorio = true;
         $this->rows = [];
+        $this->showPnfModal = false;
+        $this->pnfComponenteId = null;
+        $this->pnfSeleccionados = [];
+    }
+
+    public function abrirModalPnf($id)
+    {
+        $comp = Componente::find($id);
+        if (! $comp) {
+            return;
+        }
+        $this->pnfComponenteId = $id;
+        $this->pnfSeleccionados = ComponentePrograma::where('comp_codigo', $id)
+            ->pluck('pro_codigo')
+            ->map(fn($v) => (int) $v)
+            ->toArray();
+        $this->showPnfModal = true;
+    }
+
+    public function cerrarModalPnf()
+    {
+        $this->showPnfModal = false;
+        $this->pnfComponenteId = null;
+        $this->pnfSeleccionados = [];
+    }
+
+    public function guardarAsignacionPnf()
+    {
+        if (! $this->pnfComponenteId) {
+            return;
+        }
+        $this->validate(['pnfSeleccionados' => 'array', 'pnfSeleccionados.*' => 'integer']);
+
+        $comp = Componente::find($this->pnfComponenteId);
+        if (! $comp) {
+            return;
+        }
+
+        // Sync pivot: remove old, insert new
+        ComponentePrograma::where('comp_codigo', $this->pnfComponenteId)->delete();
+        $toInsert = [];
+        foreach ($this->pnfSeleccionados as $proCodigo) {
+            $toInsert[] = [
+                'comp_codigo' => $this->pnfComponenteId,
+                'pro_codigo' => (int) $proCodigo,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+        if (! empty($toInsert)) {
+            ComponentePrograma::insert($toInsert);
+        }
+
+        session()->flash('message', 'Asignación de PNFs actualizada correctamente.');
+        $this->cerrarModalPnf();
+        $this->dispatch('refresh-icons');
     }
 
     public function save()
@@ -148,12 +212,14 @@ class ComponenteManager extends Component
                         ]);
                     }
                 } else {
-                    Componente::create([
+                    $comp = Componente::create([
                         'nombre' => $row['nombre'],
                         'programa_id' => $this->programa_id,
                         'es_obligatorio' => $row['es_obligatorio'],
                         'estado_logico' => true,
                     ]);
+                    // Sync pivot
+                    ComponentePrograma::create(['comp_codigo' => $comp->id, 'pro_codigo' => $this->programa_id]);
                     $createdCount++;
                 }
             }
@@ -165,12 +231,14 @@ class ComponenteManager extends Component
             }
         } else {
             foreach ($this->rows as $row) {
-                Componente::create([
+                $comp = Componente::create([
                     'nombre' => $row['nombre'],
                     'programa_id' => $this->programa_id,
                     'es_obligatorio' => $row['es_obligatorio'],
                     'estado_logico' => true,
                 ]);
+                // Sync pivot
+                ComponentePrograma::create(['comp_codigo' => $comp->id, 'pro_codigo' => $this->programa_id]);
             }
             session()->flash('message', count($this->rows) . ' Componentes creados con éxito.');
         }
@@ -198,16 +266,18 @@ class ComponenteManager extends Component
 
     public function with()
     {
-        $query = Componente::query();
+        $query = Componente::with('programas');
 
         if ($this->search !== '') {
             $query->where(function ($q) {
-                $q->where('nombre', 'like', $this->search . '%');
+                $q->where('nombre', 'ILIKE', $this->search . '%');
             });
         }
 
         if ($this->filterPrograma !== '') {
-            $query->where('programa_id', $this->filterPrograma);
+            $query->where(function ($q) {
+                $q->whereHas('programas', fn($q2) => $q2->where('pro_codigo', $this->filterPrograma));
+            });
         }
 
         $items = $query->latest('id')->paginate(10);
@@ -221,7 +291,8 @@ class ComponenteManager extends Component
 
     protected function cargarNombresPrograma($items): void
     {
-        $ids = $items->pluck('programa_id')->filter()->unique()->values()->toArray();
+        $ids = $items->flatMap(fn($c) => $c->programas->pluck('pro_codigo'))
+            ->filter()->unique()->values()->toArray();
         if (empty($ids)) {
             return;
         }
@@ -231,7 +302,8 @@ class ComponenteManager extends Component
                 ->whereIn('pro_codigo', $ids)
                 ->pluck('pro_nombre', 'pro_codigo');
             $items->each(function ($item) use ($progs) {
-                $item->setAttribute('nombre_programa_cache', $progs[$item->programa_id] ?? "Programa #{$item->programa_id}");
+                $nombres = $item->programas->map(fn($p) => $progs[$p->pro_codigo] ?? "Programa #{$p->pro_codigo}")->implode(' | ');
+                $item->setAttribute('nombre_programa_cache', $nombres ?: 'N/A');
             });
         } catch (\Throwable) {
         }

@@ -3,14 +3,15 @@
 namespace App\Services;
 
 use App\Models\Comunidad;
+use App\Models\Componente;
 use App\Models\LineaInvestigacion;
 use App\Models\MetodologiaInvestigacion;
 use App\Models\Proyecto;
 use App\Models\TipoInvestigacion;
 use App\Models\TipoPublicacion;
 use App\Models\User;
-use App\Models\Componente;
 use App\Models\LapsoAcademico;
+use App\Models\ProyectoDocumento;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\LengthAwarePaginator as PaginatorInstance;
@@ -36,21 +37,12 @@ class ProyectoGestionService
         return (string) config('dual_database.repositorio_connection', 'pgsql');
     }
 
-    public function usaComponentesDocumentales(): bool
-    {
-        return Cache::remember('pry_usa_componentes', 3600, function () {
-            $schema = Schema::connection($this->conexionRepositorio());
-
-            return $schema->hasTable('componentes') && $schema->hasColumn('proyectos', 'pry_documentos');
-        });
-    }
-
     /**
      * @return list<string>
      */
     protected function relacionesProyecto(): array
     {
-        return ['tipo_publicacion', 'linea_investigacion', 'comunidad', 'metodologia', 'tipo_investigacion'];
+        return ['tipo_publicacion', 'linea_investigacion', 'comunidad', 'metodologia', 'tipo_investigacion', 'documentos.componente'];
     }
 
     /**
@@ -147,10 +139,11 @@ class ProyectoGestionService
             ? (int) $estado['filterLapsoEquipo']
             : null;
 
-        $datos = array_merge($this->catalogos(), $equipoCtx, [
+        $programaId = $this->resolverProgramaDesdeClave($estado['equipo_seccion_clave'] ?? '');
+
+        $datos = array_merge($this->catalogos($programaId), $equipoCtx, [
             'canRegister' => $user ? $this->usuarioPuedeRegistrar($user) : false,
             'esAdmin' => $esAdmin,
-            'usaComponentes' => $this->usaComponentesDocumentales(),
             'programasEquipo' => $lapCodigoFiltro
                 ? $this->equipoSeccion->programasEnLapso($lapCodigoFiltro)
                 : collect(),
@@ -162,14 +155,6 @@ class ProyectoGestionService
                 : collect(),
             'comunidades' => $this->comunidadesOrdenadas(),
         ]);
-
-        if ($this->usaComponentesDocumentales()) {
-            $datos['componentes_requeridos'] = $this->componentesRequeridos(
-                $estado['programa_id'] ?? null
-            );
-        } else {
-            $datos['componentes_requeridos'] = collect();
-        }
 
         $datos['catalogosVacios'] = $this->catalogosVacios($datos);
 
@@ -222,14 +207,7 @@ class ProyectoGestionService
      */
     public function cargarParaEdicion(int $id): array
     {
-        $item = Proyecto::findOrFail($id);
-
-        $archivos = [];
-        if ($this->usaComponentesDocumentales()) {
-            foreach ($item->documentos ?? [] as $doc) {
-                $archivos[$doc['componente_id']] = $doc['archivo_path'];
-            }
-        }
+        $item = Proyecto::with('documentos')->findOrFail($id);
 
         $partes = $this->equipoSeccion->parsearClave($item->equipo_ref);
 
@@ -253,12 +231,19 @@ class ProyectoGestionService
             }
         }
 
+        $docsExistentes = [];
+        foreach ($item->documentos as $doc) {
+            $docsExistentes[$doc->comp_codigo] = [
+                'id' => $doc->id,
+                'path' => $doc->pd_archivo_path,
+            ];
+        }
+
         return [
             'editingId' => $id,
             'titulo' => $item->titulo,
             'resumen' => $item->resumen,
             'fecha_subida' => $item->fecha_subida?->format('Y-m-d') ?? '',
-            'asignacion_ct' => (bool) $item->asignacion_ct,
             'calificacion' => $item->calificacion !== null ? (string) $item->calificacion : '',
             'fecha_aprobacion' => $item->fecha_aprobacion?->format('Y-m-d') ?? '',
             'linea_investigacion_id' => (string) ($item->linea_investigacion_id ?? ''),
@@ -270,32 +255,23 @@ class ProyectoGestionService
             'filterLapsoEquipo' => $partes ? (string) $partes['lap_codigo'] : '',
             'programa_id_derived' => $programaDerived,
             'trayecto_derived' => $trayectoDerived,
-            'archivos_actuales' => $archivos,
-            'archivo_actual' => $item->archivo_path ?? '',
+            'archivos_actuales' => $docsExistentes,
         ];
     }
 
-    /**
-     * @param  array<string, mixed>  $datos
-     * @param  array<int, mixed>  $archivosComponentes
-     * @param  array<int, string>  $archivosActuales
-     */
     public function guardar(
         ?int $editingId,
         array $datos,
-        array $archivosComponentes,
-        array $archivosActuales,
         User $user,
-        mixed $archivoProyecto = null,
+        array $documentos = [],
+        array $leaders = [],
     ): Proyecto {
         $esAdmin = $this->usuarioEsAdminEnSistema($user);
-        $existing = $editingId ? Proyecto::find($editingId) : null;
+        $existing = $editingId ? Proyecto::with('documentos')->find($editingId) : null;
 
         $payload = [
-            'titulo' => $datos['titulo'],
             'resumen' => $datos['resumen'],
             'fecha_subida' => $datos['fecha_subida'],
-            'asignacion_ct' => (bool) ($datos['asignacion_ct'] ?? false),
             'calificacion' => ($datos['calificacion'] ?? '') !== '' ? (int) $datos['calificacion'] : null,
             'fecha_aprobacion' => ($datos['fecha_aprobacion'] ?? '') !== '' ? $datos['fecha_aprobacion'] : now()->format('Y-m-d'),
             'linea_investigacion_id' => $datos['linea_investigacion_id'] ?? null,
@@ -318,57 +294,64 @@ class ProyectoGestionService
 
         if ($editingId) {
             $proyecto = Proyecto::findOrFail($editingId);
-            if (! $archivoProyecto && ! empty($datos['archivo_actual'])) {
-                $payload['archivo_path'] = $datos['archivo_actual'];
-            }
             $proyecto->update($payload);
         } else {
-            $payload['archivo_path'] = null;
             $proyecto = Proyecto::create($payload);
         }
 
-        if ($archivoProyecto) {
-            $path = $archivoProyecto->store('proyectos', 'public');
-            $proyecto->update(['archivo_path' => $path]);
-        }
+        $this->guardarDocumentos($proyecto, $documentos, $existing);
 
-        if ($this->usaComponentesDocumentales()) {
-            $componentes = $this->componentesRequeridos($datos['programa_id'] ?? null);
-            $documentos = [];
-
-            if ($editingId && ! empty($archivosActuales)) {
-                foreach ($archivosActuales as $componenteId => $archivoPath) {
-                    $documentos[$componenteId] = [
-                        'componente_id' => $componenteId,
-                        'archivo_path' => $archivoPath,
-                    ];
-                }
-            }
-
-            foreach ($componentes as $c) {
-                if (isset($archivosComponentes[$c->id])) {
-                    $path = $archivosComponentes[$c->id]->store('proyectos/componentes', 'public');
-                    $documentos[$c->id] = [
-                        'componente_id' => $c->id,
-                        'componente_nombre' => $c->nombre,
-                        'archivo_path' => $path,
-                    ];
-                } elseif (! isset($documentos[$c->id]) && isset($archivosActuales[$c->id])) {
-                    $documentos[$c->id] = [
-                        'componente_id' => $c->id,
-                        'archivo_path' => $archivosActuales[$c->id],
-                    ];
-                }
-            }
-
-            if (! empty($documentos)) {
-                $proyecto->update(['documentos' => array_values($documentos)]);
-            }
+        // Actualizar roles de líderes en el grupo (solo si no es admin creando)
+        if (!empty($datos['equipo_seccion_clave']) && !$esAdmin && !$editingId) {
+            $this->asignarLideresGrupo($datos['equipo_seccion_clave'], $leaders);
         }
 
         $this->registrarAuditoria($proyecto, $editingId ? 'actualizar' : 'registrar');
 
         return $proyecto->fresh();
+    }
+
+    protected function asignarLideresGrupo(string $clave, array $leaders): void
+    {
+        if (!str_starts_with($clave, \App\Services\GrupoProyectoService::PREFIJO . ':')) {
+            return;
+        }
+        try {
+            app(\App\Services\GrupoProyectoService::class)->asignarLideres($clave, $leaders);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Error asignando lideres de grupo: ' . $e->getMessage());
+        }
+    }
+
+    protected function guardarDocumentos(Proyecto $proyecto, array $documentos, ?Proyecto $existing): void
+    {
+        $docsActuales = $existing?->documentos?->keyBy('comp_codigo') ?? collect();
+
+        foreach ($documentos as $compCodigo => $file) {
+            if (!$file instanceof \Illuminate\Http\UploadedFile || !$file->isValid()) {
+                continue;
+            }
+
+            $compCodigo = (int) $compCodigo;
+            $path = $file->store('proyectos/' . $proyecto->id, 'public');
+
+            // Si ya existe un documento para este componente, reemplazarlo
+            if ($docsActuales->has($compCodigo)) {
+                $docViejo = $docsActuales->get($compCodigo);
+                Storage::disk('public')->delete($docViejo->pd_archivo_path);
+                $docViejo->update([
+                    'pd_archivo_path' => $path,
+                    'pd_orden' => 0,
+                ]);
+            } else {
+                ProyectoDocumento::create([
+                    'pry_codigo' => $proyecto->id,
+                    'comp_codigo' => $compCodigo,
+                    'pd_archivo_path' => $path,
+                    'pd_orden' => 0,
+                ]);
+            }
+        }
     }
 
     protected function registrarAuditoria(Proyecto $proyecto, string $accion): void
@@ -411,13 +394,13 @@ class ProyectoGestionService
     /**
      * @param  array<string, mixed>  $estado
      */
-    public function reglasValidacion(array $estado, array $archivosActuales, User $user, bool $esEdicion = false): array
+    public function reglasValidacion(array $estado, User $user, bool $esEdicion = false): array
     {
         $rules = [
             'titulo' => 'required|min:5|max:255',
             'resumen' => 'required|min:10',
             'fecha_subida' => 'required|date',
-            'asignacion_ct' => 'boolean',
+
             'linea_investigacion_id' => ['nullable', Rule::exists(LineaInvestigacion::class, (new LineaInvestigacion())->getKeyName())],
             'metodologia_id' => ['nullable', Rule::exists(MetodologiaInvestigacion::class, (new MetodologiaInvestigacion())->getKeyName())],
             'tipo_publicacion_id' => ['nullable', Rule::exists(TipoPublicacion::class, (new TipoPublicacion())->getKeyName())],
@@ -439,7 +422,7 @@ class ProyectoGestionService
                     }
                 },
             ],
-            'archivo_proyecto' => 'nullable|file|max:20480|mimes:pdf',
+
         ];
 
         if ($esEdicion) {
@@ -448,17 +431,6 @@ class ProyectoGestionService
         } else {
             $rules['calificacion'] = 'nullable|integer|min:1|max:20';
             $rules['fecha_aprobacion'] = 'nullable|date';
-        }
-
-        if ($this->usaComponentesDocumentales()) {
-            $componentes = $this->componentesRequeridos($estado['programa_id'] ?? null);
-            foreach ($componentes as $c) {
-                if ($c->es_obligatorio && ! isset($archivosActuales[$c->id])) {
-                    $rules['archivos_componentes.'.$c->id] = 'required|file|max:20480';
-                } else {
-                    $rules['archivos_componentes.'.$c->id] = 'nullable|file|max:20480';
-                }
-            }
         }
 
         return $rules;
@@ -484,21 +456,6 @@ class ProyectoGestionService
             ->paginate(10, page: $page);
     }
 
-    public function componentesRequeridos(mixed $programaId): Collection
-    {
-        if (! $this->usaComponentesDocumentales() || ! $programaId) {
-            return collect();
-        }
-
-        $cacheKey = 'componentes_req_' . $programaId;
-
-        return Cache::remember($cacheKey, 3600, fn() =>
-            Componente::where('programa_id', $programaId)
-                ->where('estado_logico', true)
-                ->get()
-        );
-    }
-
     public function comunidadesOrdenadas(): Collection
     {
         return Cache::remember('gestion_comunidades_ordenadas', now()->addMinutes(10), fn() =>
@@ -509,7 +466,7 @@ class ProyectoGestionService
     /**
      * @return array<string, Collection>
      */
-    protected function catalogos(): array
+    protected function catalogos(?int $programaId = null): array
     {
         $ttl = now()->addMinutes(10);
         return [
@@ -518,6 +475,10 @@ class ProyectoGestionService
             'tipos_publicacion' => Cache::remember('gestion_cat_tipos_publicacion', $ttl, fn() => TipoPublicacion::where('estado_logico', true)->get()),
             'tipos_investigacion' => Cache::remember('gestion_cat_tipos_investigacion', $ttl, fn() => TipoInvestigacion::where('estado_logico', true)->get()),
             'lapsos' => Cache::remember('gestion_cat_lapsos', $ttl, fn() => LapsoAcademico::activos()->orderByDesc('lap_codigo')->get()),
+            'componentes_disp' => $programaId
+                ? Componente::whereHas('programas', fn($q) => $q->where('pro_codigo', $programaId))
+                    ->where('estado_logico', true)->orderBy('nombre')->get()
+                : collect(),
         ];
     }
 
@@ -562,6 +523,33 @@ class ProyectoGestionService
             'equipoValidado' => $equipoValidado,
             'integrantesEquipo' => $integrantes,
         ];
+    }
+
+    protected function resolverProgramaDesdeClave(string $clave): ?int
+    {
+        if ($clave === '') {
+            return null;
+        }
+
+        $partes = $this->equipoSeccion->parsearClave($clave);
+
+        if (!$partes || empty($partes['sec_codigo'])) {
+            return null;
+        }
+
+        try {
+            $row = \Illuminate\Support\Facades\DB::connection($this->equipoSeccion->academicConnection())
+                ->table('seccion as sec')
+                ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
+                ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
+                ->where('sec.sec_codigo', $partes['sec_codigo'])
+                ->select('pro.pro_codigo')
+                ->first();
+
+            return $row ? (int) $row->pro_codigo : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function usuarioEsAdminEnSistema(?User $user): bool

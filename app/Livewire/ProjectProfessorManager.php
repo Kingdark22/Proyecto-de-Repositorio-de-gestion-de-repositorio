@@ -24,6 +24,8 @@ class ProjectProfessorManager extends Component
 
     public array $selectedSection = [];
 
+    public array $selectedPrograma = [];
+
     public function mount(IntranetProfessorService $professorService): void
     {
         $lapsos = $professorService->lapsosActivos();
@@ -73,10 +75,17 @@ class ProjectProfessorManager extends Component
     {
         $cedula = trim($cedula);
 
+        $filtros = $this->filtrosIntranet();
+        // Per-professor PNF overrides global filter
+        $prog = $this->selectedPrograma[$cedula] ?? null;
+        if ($prog) {
+            $filtros['programa'] = (int) $prog;
+        }
+
         $result = $professorService->alternarHabilitacionModulo(
             $cedula,
             (int) $this->lapsoFilter,
-            $this->filtrosIntranet(),
+            $filtros,
             [
                 'anio' => $this->selectedYear[$cedula] ?? null,
                 'seccion' => $this->selectedSection[$cedula] ?? null,
@@ -86,7 +95,7 @@ class ProjectProfessorManager extends Component
         session()->flash($result['flash'], $result['message']);
 
         if ($result['ok'] && ($result['deshabilitado'] ?? false)) {
-            unset($this->selectedYear[$cedula], $this->selectedSection[$cedula]);
+            unset($this->selectedYear[$cedula], $this->selectedSection[$cedula], $this->selectedPrograma[$cedula]);
         }
 
         $this->dispatch('refresh-icons');

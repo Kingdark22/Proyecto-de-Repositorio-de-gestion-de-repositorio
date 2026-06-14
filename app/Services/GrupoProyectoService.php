@@ -170,16 +170,16 @@ class GrupoProyectoService
             $query = GrupoProyectoModulo::query();
 
             if (!empty($filtros['lapso'])) {
-                $query->where('grp_contexto->lap_codigo', (string) $filtros['lapso']);
+                $query->whereRaw('CAST(grp_contexto AS jsonb)->>\'lap_codigo\' = ?', [(string) $filtros['lapso']]);
             }
             if (!empty($filtros['programa'])) {
-                $query->where('grp_contexto->pro_codigo', (string) $filtros['programa']);
+                $query->whereRaw('CAST(grp_contexto AS jsonb)->>\'pro_codigo\' = ?', [(string) $filtros['programa']]);
             }
             if (!empty($filtros['seccion'])) {
-                $query->where('grp_contexto->sec_codigo', (string) $filtros['seccion']);
+                $query->whereRaw('CAST(grp_contexto AS jsonb)->>\'sec_codigo\' = ?', [(string) $filtros['seccion']]);
             }
             if (!empty($filtros['trayecto'])) {
-                $query->where('grp_contexto->tra_codigo', (string) $filtros['trayecto']);
+                $query->whereRaw('CAST(grp_contexto AS jsonb)->>\'tra_codigo\' = ?', [(string) $filtros['trayecto']]);
             }
             if (!empty($filtros['equipo'])) {
                 $query->whereJsonContains('grp_miembros', ['cedula' => $filtros['equipo']]);
@@ -599,5 +599,41 @@ class GrupoProyectoService
                 : true,
             'es_grupo_registrado' => true,
         ];
+    }
+
+    /**
+     * Actualiza los roles de los miembros de un grupo EQGRP.
+     * @param  list<string>  $leaders  Cédulas que serán líderes
+     */
+    public function asignarLideres(string $clave, array $leaders): void
+    {
+        if (!str_starts_with($clave, self::PREFIJO.':')) {
+            return;
+        }
+
+        $grupo = $this->obtenerPorClave($clave);
+        if (!$grupo) {
+            return;
+        }
+
+        $miembros = [];
+        foreach ($grupo->miembros as $m) {
+            $cedula = trim((string) ($m['cedula'] ?? ''));
+            if ($cedula === '') {
+                continue;
+            }
+            $esLider = in_array($cedula, $leaders, true);
+            $miembros[] = [
+                'cedula' => $cedula,
+                'rol_id' => $esLider ? IntranetEquipoSeccionService::ROL_LIDER : IntranetEquipoSeccionService::ROL_AUTOR,
+                'nombre' => trim((string) ($m['nombre'] ?? '')),
+                'apellido' => trim((string) ($m['apellido'] ?? '')),
+            ];
+        }
+
+        $model = GrupoProyectoModulo::find($grupo->grp_codigo);
+        if ($model) {
+            $model->update(['grp_miembros' => $miembros]);
+        }
     }
 }

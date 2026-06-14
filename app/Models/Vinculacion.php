@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class Vinculacion extends Model
+class Vinculacion extends RepositorioModel
 {
     protected $table = 'vinculaciones';
 

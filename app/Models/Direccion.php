@@ -2,9 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class Direccion extends Model
+class Direccion extends RepositorioModel
 {
     protected $primaryKey = 'dir_codigo';
 
