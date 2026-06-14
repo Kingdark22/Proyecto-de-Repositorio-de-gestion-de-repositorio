@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Comunidad;
-use App\Models\ComunidadContacto;
 use App\Models\Direccion;
 use App\Models\Estado;
 use App\Models\Municipio;
@@ -31,24 +30,18 @@ class ComunidadGestionService
      */
     public function cargarParaEdicion(int $id): array
     {
-        $comunidad = Comunidad::with(['direccion.municipio.estado', 'contactos'])->whereKey($id)->firstOrFail();
-
+        $comunidad = Comunidad::with(['direccion.municipio.estado'])->whereKey($id)->firstOrFail();
+ 
         $direccion = $comunidad->direccion;
-
+ 
         return [
             'nombre' => $comunidad->nombre,
             'rif' => $comunidad->rif,
             'correo' => $comunidad->correo,
+            'numero_telefono' => $comunidad->numero_telefono ?? '',
             'estado_id' => $direccion?->municipio?->est_codigo ? (string) $direccion->municipio->est_codigo : '',
             'municipio_id' => $direccion?->mun_codigo ? (string) $direccion->mun_codigo : '',
             'dir_nombre' => $direccion?->dir_calle ?? '',
-            'contactos' => $comunidad->contactos->map(fn ($c) => [
-                'nombre' => $c->ccon_nombre ?? '',
-                'apellido' => $c->ccon_apellido ?? '',
-                'correo' => $c->ccon_correo ?? '',
-                'telefono' => $c->ccon_telefono ?? '',
-                'cargo' => $c->ccon_cargo ?? '',
-            ])->toArray(),
         ];
     }
 
@@ -58,7 +51,7 @@ class ComunidadGestionService
     public function guardar(?int $id, array $datos): int
     {
         $dirNombre = trim($datos['dir_nombre'] ?? '');
-
+ 
         if ($dirNombre !== '' && !empty($datos['municipio_id'])) {
             $direccion = Direccion::firstOrCreate(
                 ['dir_calle' => $dirNombre, 'mun_codigo' => $datos['municipio_id'], 'dir_parroquia' => '', 'dir_sector' => '']
@@ -67,36 +60,17 @@ class ComunidadGestionService
         } else {
             $direccionId = null;
         }
-
+ 
         $payload = [
             'nombre' => $datos['nombre'],
             'rif' => $datos['rif'],
             'correo' => $datos['correo'],
+            'numero_telefono' => ($datos['prefijo_telefono'] ?? '') . ($datos['numero_telefono'] ?? ''),
             'direccion_id' => $direccionId,
         ];
-
+ 
         $comunidad = Comunidad::guardar($payload, $id);
-
-        // Save contactos
-        $contactos = $datos['contactos'] ?? [];
-        if (!empty($contactos)) {
-            ComunidadContacto::where('com_codigo', $comunidad->getKey())->delete();
-            $toInsert = [];
-            foreach ($contactos as $c) {
-                $toInsert[] = [
-                    'com_codigo' => $comunidad->getKey(),
-                    'ccon_nombre' => $c['nombre'] ?? '',
-                    'ccon_apellido' => $c['apellido'] ?? '',
-                    'ccon_correo' => $c['correo'] ?? '',
-                    'ccon_telefono' => ($c['prefijo'] ?? '') . ($c['telefono'] ?? ''),
-                    'ccon_cargo' => $c['cargo'] ?? '',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
-            ComunidadContacto::insert($toInsert);
-        }
-
+ 
         return $comunidad->getKey();
     }
 
