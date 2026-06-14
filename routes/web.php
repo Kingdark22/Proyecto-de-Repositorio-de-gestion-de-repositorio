@@ -71,22 +71,22 @@ Route::middleware(['auth', 'active.role'])->group(function () {
     Route::view('/comunidades', 'comunidades.index')->name('comunidades.index');
     Route::view('/grupos-proyecto', 'grupos_proyecto.index')->name('grupos-proyecto.index');
 
-    Route::middleware('role:administrador,estudiante,coordinador,profesor proyecto')->group(function () {
+    Route::middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador')->group(function () {
         Route::view('/proyectos/gestion', 'proyectos.index')->name('proyectos.gestion');
     });
 
-    Route::view('/publicaciones', 'publicaciones.index')->name('publicaciones.index')->middleware('role:administrador,gestionador');
-    Route::view('/vinculacion', 'vinculacion.index')->name('vinculacion.index')->middleware('role:administrador,gestionador');
+    Route::view('/publicaciones', 'publicaciones.index')->name('publicaciones.index')->middleware('role:gestionador');
+    Route::view('/vinculacion', 'vinculacion.index')->name('vinculacion.index')->middleware('role:gestionador');
 
     Route::get('/proyectos/crear', function () {
         return redirect()->route('proyectos.gestion', request()->query());
-    })->middleware('role:administrador,estudiante,coordinador,profesor proyecto')->name('proyectos.crear');
+    })->middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador')->name('proyectos.crear');
 
     Route::get('/validaciones', function () {
         return redirect('/proyectos/gestion');
-    })->middleware('role:administrador,coordinador,profesor proyecto')->name('validaciones.index');
+    })->middleware('role:administrador,coordinador,profesor proyecto,gestionador')->name('validaciones.index');
 
-    Route::middleware('role:administrador,coordinador')->group(function () {
+    Route::middleware('role:administrador,coordinador,gestionador')->group(function () {
         Route::view('/configuracion/profesores-proyecto', 'profesores_proyecto.index')->name('profesores-proyecto.index');
         Route::view('/configuracion/componentes', 'componentes.index')->name('componentes.index');
     });

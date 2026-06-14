@@ -142,7 +142,7 @@ class VinculacionManager extends Component
         $ids = $proyectosCollection->pluck('id');
 
         $vinculaciones = Vinculacion::with('comunidad')
-            ->whereIn('proyecto_id', $ids)
+            ->whereIn('pry_codigo', $ids->toArray())
             ->get()
             ->keyBy('proyecto_id');
 

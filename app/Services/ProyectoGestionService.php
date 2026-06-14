@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Comunidad;
 use App\Models\Componente;
+use App\Models\GrupoProyectoModulo;
 use App\Models\LineaInvestigacion;
 use App\Models\MetodologiaInvestigacion;
 use App\Models\Proyecto;
@@ -48,15 +49,21 @@ class ProyectoGestionService
     /**
      * @return array<string, mixed>
      */
-    public function datosVistaListado(array $filtros, int $page, ?User $user = null, string $listTab = 'gestion'): array
+    public function datosVistaListado(array $filtros, int $page, ?User $user = null, string $listTab = 'gestion', bool $onlyLeaderProjects = false): array
     {
         $canValidate = $user ? $this->usuarioPuedeValidar($user) : false;
 
+        if ($onlyLeaderProjects && $user) {
+            $proyectos = $this->paginarProyectosLider($filtros, $page, $user);
+        } else {
+            $proyectos = $listTab === 'validar'
+                ? $this->paginarPendientes($filtros['search'] ?? '', $page, $user)
+                : $this->paginarProyectos($filtros, $page);
+        }
+
         return [
             'comunidades' => $this->comunidadesOrdenadas(),
-            'proyectos' => $listTab === 'validar'
-                ? $this->paginarPendientes($filtros['search'] ?? '', $page, $user)
-                : $this->paginarProyectos($filtros, $page),
+            'proyectos' => $proyectos,
             'canRegister' => $user ? $this->usuarioPuedeRegistrar($user) : false,
             'canValidate' => $canValidate,
             'listTab' => $listTab,
@@ -456,6 +463,53 @@ class ProyectoGestionService
             ->paginate(10, page: $page);
     }
 
+    public function proyectoIdsLideradosPor(User $user): array
+    {
+        $cedula = trim((string) $user->usu_cedula);
+        $liderRol = IntranetEquipoSeccionService::ROL_LIDER;
+
+        $grupos = GrupoProyectoModulo::whereRaw(
+            "CAST(grp_miembros AS jsonb) @> ?",
+            ['[{"cedula":"' . $cedula . '","rol_id":' . $liderRol . '}]']
+        )->get(['grp_codigo']);
+
+        if ($grupos->isEmpty()) {
+            return [];
+        }
+
+        $claves = $grupos->map(fn($g) => GrupoProyectoService::PREFIJO . ':' . $g->grp_codigo)->toArray();
+
+        return Proyecto::whereIn('pry_direccion_logica', $claves)
+            ->get()
+            ->pluck('pry_codigo')
+            ->toArray();
+    }
+
+    public function paginarProyectosLider(array $filtros, int $page, User $user): LengthAwarePaginator
+    {
+        $proyectoIds = $this->proyectoIdsLideradosPor($user);
+
+        if (empty($proyectoIds)) {
+            return new PaginatorInstance([], 0, 10, $page, [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]);
+        }
+
+        return Proyecto::with($this->relacionesProyecto())
+            ->whereIn('pry_codigo', $proyectoIds)
+            ->when(($filtros['search'] ?? '') !== '', function ($q) use ($filtros) {
+                $s = $filtros['search'];
+                try {
+                    $q->whereRaw('to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)', [$s]);
+                } catch (\Throwable) {
+                    $q->whereRaw('pry_resumen ILIKE ?', ['%' . $s . '%']);
+                }
+            })
+            ->latest()
+            ->paginate(10, page: $page);
+    }
+
     public function comunidadesOrdenadas(): Collection
     {
         return Cache::remember('gestion_comunidades_ordenadas', now()->addMinutes(10), fn() =>
@@ -595,6 +649,12 @@ class ProyectoGestionService
             if ($userRoleService->roleMatches('administrador', $activeRole)) {
                 return static::$roleCache[$key] = true;
             }
+            if ($userRoleService->roleMatches('profesor proyecto', $activeRole)) {
+                return static::$roleCache[$key] = true;
+            }
+            if ($userRoleService->roleMatches('gestionador', $activeRole)) {
+                return static::$roleCache[$key] = true;
+            }
             if ($userRoleService->roleMatches('estudiante', $activeRole)) {
                 if ($userRoleService->allowsFreeSessionRoles()) {
                     return static::$roleCache[$key] = true;
@@ -607,6 +667,14 @@ class ProyectoGestionService
         $availableDetectedRoles = array_keys($userRoleService->detectAvailableRoles($user));
 
         if (in_array('administrador', $availableDetectedRoles, true)) {
+            return static::$roleCache[$key] = true;
+        }
+
+        if (in_array('profesor proyecto', $availableDetectedRoles, true)) {
+            return static::$roleCache[$key] = true;
+        }
+
+        if (in_array('gestionador', $availableDetectedRoles, true)) {
             return static::$roleCache[$key] = true;
         }
 
@@ -658,7 +726,7 @@ class ProyectoGestionService
         }
 
         return $this->usuarioEsAdminEnSistema($user)
-            || $user->hasRole('coordinador', 'profesor proyecto');
+            || $user->hasRole('coordinador', 'profesor proyecto', 'gestionador');
     }
 
     public function usuarioPuedeValidarProyecto(?User $user, Proyecto $proyecto): bool
@@ -675,6 +743,10 @@ class ProyectoGestionService
         $activeRole = $userRoleService->getActiveRole($user);
 
         if ($userRoleService->roleMatches('coordinador', $activeRole)) {
+            return true;
+        }
+
+        if ($userRoleService->roleMatches('gestionador', $activeRole)) {
             return true;
         }
 

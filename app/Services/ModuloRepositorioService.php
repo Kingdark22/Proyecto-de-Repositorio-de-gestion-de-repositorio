@@ -141,7 +141,7 @@ class ModuloRepositorioService
             }
 
             return $this->queryModel(\App\Models\LineaInvestigacion::class)
-                ->where('activo', true)
+                ->whereRaw("lin_estado = 'Activo'")
                 ->orderBy('nombre_investigacion')
                 ->get();
         });

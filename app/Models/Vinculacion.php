@@ -11,6 +11,7 @@ class Vinculacion extends RepositorioModel
         'tipo',
         'observaciones',
         'comunidad_id',
+        'estado_logico',
     ];
 
     public function proyecto()

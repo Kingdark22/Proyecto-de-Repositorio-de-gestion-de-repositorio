@@ -1,17 +1,28 @@
 <div class="pgm-wrap">
     <style>
-        .pgm-action-bar {
-            margin-bottom: 20px;
-        }
-        .pgm-btn-registrar {
-            background-color: #28a745;
-            color: #fff;
-            border: 1px solid #218838;
-            border-radius: 0;
-            padding: 6px 12px;
-            font-size: 12px;
-            font-weight: bold;
+        .cm-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            padding: 0.55rem 0.95rem;
+            font-size: 0.92rem;
+            font-weight: 600;
+            border: 1px solid transparent;
             cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+            text-decoration: none;
+        }
+        .cm-btn:hover {
+            transform: translateY(-1px);
+        }
+        .cm-btn-success {
+            background: #198754;
+            border-color: #166f43;
+            color: #fff;
+        }
+        .cm-btn-success:hover {
+            background: #146c43;
         }
         .pgm-btn-cancel {
             background-color: #dc3545;
@@ -37,25 +48,32 @@
     <h2 class="titulo" style="margin-bottom: 20px; font-weight: bolder; margin-top: 10px;">Gestión de Proyectos</h2>
 
     @if ($viewMode === 'list')
-        <div class="pgm-action-bar" style="display: flex; align-items: center; gap: 12px;">
-            @if (($esAdmin ?? false) || ($canRegister ?? false))
-                <button type="button" wire:click="iniciarRegistro" class="pgm-btn-registrar">
-                    + REGISTRAR NUEVO PROYECTO
-                </button>
-            @endif
-        </div>
-
         @if (!empty($canValidate))
-            <div class="pgm-tabs" style="margin-bottom: 12px; font-size: 11px;">
-                <button type="button" wire:click="irAListado('gestion')"
-                    style="border: 1px solid #999; border-radius: 4px; padding: 4px 12px; margin-right: 6px; {{ $listTab === 'gestion' ? 'background:#8bb2b7;font-weight:bold;' : 'background:#f0f0f0;' }}">
-                    Listado general
-                </button>
-                <button type="button" wire:click="irAListado('validar')"
-                    style="border: 1px solid #999; border-radius: 4px; padding: 4px 12px; {{ $listTab === 'validar' ? 'background:#8bb2b7;font-weight:bold;' : 'background:#f0f0f0;' }}">
-                    Validar pendientes
-                </button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                <div class="pgm-tabs" style="font-size: 11px;">
+                    <button type="button" wire:click="irAListado('gestion')"
+                        style="border: 1px solid #999; border-radius: 4px; padding: 6px 14px; margin-right: 6px; cursor: pointer; {{ $listTab === 'gestion' ? 'background:#8bb2b7;font-weight:bold;' : 'background:#f0f0f0;' }}">
+                        Listado general
+                    </button>
+                    <button type="button" wire:click="irAListado('validar')"
+                        style="border: 1px solid #999; border-radius: 4px; padding: 6px 14px; cursor: pointer; {{ $listTab === 'validar' ? 'background:#8bb2b7;font-weight:bold;' : 'background:#f0f0f0;' }}">
+                        Validar pendientes
+                    </button>
+                </div>
+                @if (($esAdmin ?? false) || (($canRegister ?? false) && !($esLider ?? false)))
+                    <button type="button" wire:click="iniciarRegistro" class="cm-btn cm-btn-success" style="font-size: 14px; padding: 6px 16px;">
+                        + Registrar nuevo proyecto
+                    </button>
+                @endif
             </div>
+        @else
+            @if (($esAdmin ?? false) || (($canRegister ?? false) && !($esLider ?? false)))
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+                    <button type="button" wire:click="iniciarRegistro" class="cm-btn cm-btn-success" style="font-size: 14px; padding: 6px 16px;">
+                        + Registrar nuevo proyecto
+                    </button>
+                </div>
+            @endif
         @endif
 
         @if ($listTab === 'validar')
