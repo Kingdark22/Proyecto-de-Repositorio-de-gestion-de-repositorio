@@ -124,6 +124,64 @@ class IntranetProfessorService
         }
     }
 
+    /**
+     * Código(s) de programa (PNF) donde el docente imparte UC de proyecto en el lapso.
+     *
+     * @return list<int>
+     */
+    public function programasDelDocente(string $cedula, ?int $lapCodigo = null): array
+    {
+        $cedula = trim($cedula);
+        $lapCodigo = $lapCodigo ?? $this->lapsoVigenteCodigo();
+        if ($cedula === '' || $lapCodigo === null) {
+            return [];
+        }
+
+        try {
+            return $this->baseProfesorProyectoQuery($lapCodigo)
+                ->where('sud.sud_ced_docente', $cedula)
+                ->whereNotNull('pro.pro_codigo')
+                ->select(['pro.pro_codigo'])
+                ->distinct()
+                ->get()
+                ->pluck('pro_codigo')
+                ->map(fn ($v) => (int) $v)
+                ->unique()
+                ->values()
+                ->all();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Código(s) de sección donde el docente imparte UC de proyecto en el lapso.
+     *
+     * @return list<int>
+     */
+    public function seccionesDelDocente(string $cedula, ?int $lapCodigo = null): array
+    {
+        $cedula = trim($cedula);
+        $lapCodigo = $lapCodigo ?? $this->lapsoVigenteCodigo();
+        if ($cedula === '' || $lapCodigo === null) {
+            return [];
+        }
+
+        try {
+            return $this->baseProfesorProyectoQuery($lapCodigo)
+                ->where('sud.sud_ced_docente', $cedula)
+                ->select(['sec.sec_codigo'])
+                ->distinct()
+                ->get()
+                ->pluck('sec_codigo')
+                ->map(fn ($v) => (int) $v)
+                ->values()
+                ->all();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
     public function esDocenteIntranet(string $cedula): bool
     {
         $cedula = trim($cedula);

@@ -53,6 +53,7 @@ class NavigationMenu
             'isCoordinator'        => $activeRole === 'coordinador',
             'isTeacher'            => $activeRole === 'profesor proyecto',
             'isStudent'            => $isStudent,
+            'isGestionador'        => $activeRole === 'gestionador',
             'canViewAcademic'      => false,
             'canViewComunes'       => false,
             'canManageCatalogs'    => false,
@@ -72,7 +73,6 @@ class NavigationMenu
                     $flags['canManageCatalogs'] = true;
                     $flags['canManageComponents'] = true;
                     $flags['canManageSystemConfig'] = true;
-                    $flags['canViewPublicaciones'] = true;
                     $flags['canRegisterProject'] = true;
                     break;
 
@@ -100,11 +100,8 @@ class NavigationMenu
                 case 'gestionador':
                     $flags['canViewAcademic'] = true;
                     $flags['canViewComunes'] = true;
-                    $flags['canManageCatalogs'] = true;
-                    $flags['canManageComponents'] = true;
-                    $flags['canManageSystemConfig'] = true;
-                    $flags['canViewPublicaciones'] = true;
                     $flags['canRegisterProject'] = true;
+                    $flags['canViewPublicaciones'] = true;
                     break;
             }
         }
@@ -128,7 +125,7 @@ class NavigationMenu
     protected function emptyFlags(): array
     {
         return array_fill_keys([
-            'isAdmin', 'isCoordinator', 'isTeacher', 'isStudent',
+            'isAdmin', 'isCoordinator', 'isTeacher', 'isStudent', 'isGestionador',
             'canViewAcademic', 'canViewComunes', 'canManageCatalogs',
             'canManageComponents', 'canValidateProjects', 'canRegisterProject',
             'canManageSystemConfig', 'canManageCoordinators',
