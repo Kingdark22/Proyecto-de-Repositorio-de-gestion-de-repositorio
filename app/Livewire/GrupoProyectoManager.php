@@ -343,11 +343,6 @@ class GrupoProyectoManager extends Component
         $this->comunidadId = '';
         $this->miembrosSeleccionados = [];
         $this->selectedCedula = '';
-        $this->filterLapso = '';
-        $this->filterPrograma = '';
-        $this->filterSeccion = '';
-        $this->loadProgramas();
-        $this->loadSecciones();
     }
 
     public function abrirModalComunidad(): void
@@ -407,7 +402,8 @@ class GrupoProyectoManager extends Component
             'dir_nombre' => $this->modalDirNombre,
         ]);
 
-        $this->comunidades = Comunidad::query()->orderBy('nombre')->get();
+        Cache::forget('grupos_comunidades');
+        $this->comunidades = Comunidad::query()->orderBy('nombre')->get(['com_codigo', 'com_nombre']);
         $this->comunidadId = (string) $id;
         $this->cerrarModalComunidad();
 
