@@ -8,7 +8,9 @@ use App\Services\ComunidadGestionService;
 use App\Services\GrupoProyectoService;
 use App\Services\IntranetEquipoSeccionService;
 use App\Services\IntranetProfessorService;
+use App\Services\UserRoleService;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -95,7 +97,15 @@ class GrupoProyectoManager extends Component
     {
         $profesores = app(IntranetProfessorService::class);
         $this->lapsos = $profesores->lapsosActivos();
-        $this->comunidades = Comunidad::query()->orderBy('nombre')->get();
+        $this->comunidades = Cache::remember('grupos_comunidades', 3600, fn () =>
+            Comunidad::query()->orderBy('nombre')->get(['com_codigo', 'com_nombre'])
+        );
+
+        $user = auth()->user();
+        $activeRole = app(UserRoleService::class)->getActiveRole($user);
+        if ($activeRole === 'profesor proyecto') {
+            $this->filterLapso = (string) ($profesores->lapsoVigenteCodigo() ?? '');
+        }
 
         $this->loadProgramas();
         $this->loadSecciones();
@@ -104,6 +114,38 @@ class GrupoProyectoManager extends Component
     public function crearGrupo(): void
     {
         $this->resetFormulario();
+
+        $user = auth()->user();
+        $activeRole = app(UserRoleService::class)->getActiveRole($user);
+        if ($activeRole === 'profesor proyecto') {
+            $profesores = app(IntranetProfessorService::class);
+            $lapCodigo = $this->filterLapso !== '' ? (int) $this->filterLapso : $profesores->lapsoVigenteCodigo();
+            if ($lapCodigo) {
+                $this->filterLapso = (string) $lapCodigo;
+                $this->loadProgramas();
+
+                $proCodigos = $profesores->programasDelDocente(
+                    trim((string) $user->usu_cedula),
+                    $lapCodigo,
+                );
+                if (count($proCodigos) === 1) {
+                    $this->filterPrograma = (string) $proCodigos[0];
+                    $this->loadSecciones();
+
+                    $secCodigos = $profesores->seccionesDelDocente(
+                        trim((string) $user->usu_cedula),
+                        $lapCodigo,
+                    );
+                    if ($secCodigos !== []) {
+                        $this->secciones = $this->secciones->whereIn('sec_codigo', $secCodigos)->values();
+                        if ($this->secciones->count() === 1) {
+                            $this->filterSeccion = (string) $this->secciones->first()->sec_codigo;
+                        }
+                    }
+                }
+            }
+        }
+
         $this->viewMode = 'form';
     }
 
@@ -158,7 +200,7 @@ class GrupoProyectoManager extends Component
         $candidatos = $this->candidatosActuales();
         $est = $candidatos->firstWhere('cedula', $this->selectedCedula);
         if (!$est) {
-            session()->flash('message_error', 'El estudiante no está inscrito en la sección elegida.');
+            session()->flash('message_error', 'El estudiante no está inscrito en ninguna sección del PNF en este lapso.');
             return;
         }
 
@@ -170,11 +212,13 @@ class GrupoProyectoManager extends Component
 
         $rolId = (int) $this->selectedRolId;
         if ($rolId === 1) {
-            $countLider = 0;
+            $lideresActuales = 0;
             foreach ($this->miembrosSeleccionados as $m) {
-                if ((int) $m['rol_id'] === 1) $countLider++;
+                if ((int) $m['rol_id'] === 1) {
+                    $lideresActuales++;
+                }
             }
-            if ($countLider >= 2) {
+            if ($lideresActuales >= 2) {
                 session()->flash('message_error', 'Solo pueden haber hasta dos autores-líderes en el grupo.');
                 return;
             }
@@ -247,12 +291,12 @@ class GrupoProyectoManager extends Component
             return;
         }
 
-        // Validar que todos los miembros seleccionados pertenezcan a la sección elegida
+        // Validar que todos los miembros seleccionados estén inscritos en alguna sección del PNF
         $candidatos = $this->candidatosActuales();
         foreach ($this->miembrosSeleccionados as $m) {
             $cedula = trim($m['cedula']);
             if (!$candidatos->contains('cedula', $cedula)) {
-                session()->flash('message_error', 'El integrante ' . ($m['apellido'] ?: '') . ', ' . ($m['nombre'] ?: '') . ' (' . $cedula . ') no pertenece a la sección seleccionada.');
+                session()->flash('message_error', 'El integrante ' . ($m['apellido'] ?: '') . ', ' . ($m['nombre'] ?: '') . ' (' . $cedula . ') no está inscrito en el PNF en este lapso.');
                 return;
             }
         }
@@ -299,11 +343,6 @@ class GrupoProyectoManager extends Component
         $this->comunidadId = '';
         $this->miembrosSeleccionados = [];
         $this->selectedCedula = '';
-        $this->filterLapso = '';
-        $this->filterPrograma = '';
-        $this->filterSeccion = '';
-        $this->loadProgramas();
-        $this->loadSecciones();
     }
 
     public function abrirModalComunidad(): void
@@ -363,7 +402,8 @@ class GrupoProyectoManager extends Component
             'dir_nombre' => $this->modalDirNombre,
         ]);
 
-        $this->comunidades = Comunidad::query()->orderBy('nombre')->get();
+        Cache::forget('grupos_comunidades');
+        $this->comunidades = Comunidad::query()->orderBy('nombre')->get(['com_codigo', 'com_nombre']);
         $this->comunidadId = (string) $id;
         $this->cerrarModalComunidad();
 
@@ -399,11 +439,21 @@ class GrupoProyectoManager extends Component
 
     protected function candidatosActuales()
     {
-        if ($this->filterLapso === '' || $this->filterSeccion === '') {
+        if ($this->filterLapso === '' || $this->secciones->isEmpty()) {
             return collect();
         }
 
-        return app(GrupoProyectoService::class)->candidatosSeccion((int) $this->filterLapso, (int) $this->filterSeccion);
+        $grupos = app(GrupoProyectoService::class);
+        $lapCodigo = (int) $this->filterLapso;
+        $candidatos = collect();
+
+        foreach ($this->secciones as $sec) {
+            $candidatos = $candidatos->merge(
+                $grupos->candidatosSeccion($lapCodigo, (int) $sec->sec_codigo)
+            );
+        }
+
+        return $candidatos->unique('cedula')->values();
     }
 
     /**
@@ -425,16 +475,36 @@ class GrupoProyectoManager extends Component
         $programaCodigo = $this->filterPrograma !== '' ? (int) $this->filterPrograma : null;
         $seccionCodigo = $this->filterSeccion !== '' ? (int) $this->filterSeccion : null;
 
+        $user = auth()->user();
+        $activeRole = app(UserRoleService::class)->getActiveRole($user);
+
+        $filters = [
+            'lapso' => $lapCodigo,
+            'programa' => $programaCodigo,
+            'busqueda' => $this->search,
+        ];
+
+        if ($activeRole === 'profesor proyecto' && $this->viewMode === 'list') {
+            $profesorService = app(IntranetProfessorService::class);
+            $secCodigos = $profesorService->seccionesDelDocente(
+                trim((string) $user->usu_cedula),
+                $lapCodigo,
+            );
+            if ($secCodigos === []) {
+                $filters['seccion'] = [-1];
+            } else {
+                $filters['seccion'] = $secCodigos;
+                $this->secciones = $this->secciones->whereIn('sec_codigo', $secCodigos)->values();
+            }
+        } elseif ($seccionCodigo) {
+            $filters['seccion'] = $seccionCodigo;
+        }
+
         $tablaOk = $grupos->tablaDisponible();
         $lista = collect();
         if ($tablaOk) {
             try {
-                $lista = $grupos->listar([
-                    'lapso' => $lapCodigo,
-                    'programa' => $programaCodigo,
-                    'seccion' => $seccionCodigo,
-                    'busqueda' => $this->search,
-                ]);
+                $lista = $grupos->listar($filters);
             } catch (\Throwable $e) {
                 session()->flash('message_error', 'Error: ' . $e->getMessage());
                 $lista = collect();
@@ -454,6 +524,7 @@ class GrupoProyectoManager extends Component
             'candidatos' => $this->viewMode === 'form' ? $this->candidatosActuales() : collect(),
             'comunidades' => $this->comunidades,
             'tablaLista' => $tablaOk,
+            'isProfessor' => $activeRole === 'profesor proyecto',
         ];
     }
 
