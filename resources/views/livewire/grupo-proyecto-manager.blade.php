@@ -212,15 +212,18 @@
             </legend>
             <table width="100%" style="font-size: 11px;">
                 <tr>
-                    <td width="50%"><b>Nombre del equipo:</b><br><input wire:model="nombreGrupo" type="text"
+                    <td width="50%"><b>Nombre del proyecto:</b><br><input wire:model="nombreGrupo" type="text"
                             class="grp-filter-input" style="width:90%;"></td>
                     <td><b>Comunidad:</b><br>
-                        <select wire:model="comunidadId" class="grp-filter-select" style="width:90%;">
-                            <option value="">&mdash;</option>
-                            @foreach ($comunidades as $c)
-                                <option value="{{ $c->id }}">{{ $c->nombre }}</option>
-                            @endforeach
-                        </select>
+                        <div style="display: flex; gap: 4px; align-items: center;">
+                            <select wire:model="comunidadId" class="grp-filter-select" style="flex:1;">
+                                <option value="">&mdash;</option>
+                                @foreach ($comunidades as $c)
+                                    <option value="{{ $c->id }}">{{ $c->nombre }}</option>
+                                @endforeach
+                            </select>
+                            <button type="button" wire:click="abrirModalComunidad" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap;" title="Crear nueva comunidad">+</button>
+                        </div>
                     </td>
                 </tr>
                 <tr>
@@ -281,7 +284,7 @@
                             @endforeach
                         </select>
                         <select wire:model="selectedRolId" class="grp-filter-select" style="width: 130px;">
-                            <option value="1">L&iacute;der</option>
+                            <option value="1">Autor-L&iacute;der</option>
                             <option value="2">Autor</option>
                         </select>
                         <button type="button" class="cm-btn cm-btn-success cm-btn-sm"
@@ -329,6 +332,77 @@
             </div>
             <p style="font-size: 10px; color: #555; margin-top: 8px;">El registro del expediente del proyecto es un
                 paso aparte; luego elija este grupo al crear el expediente.</p>
+
+            @if ($mostrarModalComunidad)
+                <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;">
+                    <div style="background:#fff;border-radius:8px;padding:20px;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;">
+                        <h3 style="margin-top:0;font-size:16px;">Registrar nueva comunidad</h3>
+
+                        @error('modalNombre') <div style="color:red;font-size:10px;margin-bottom:4px;">{{ $message }}</div> @enderror
+                        <table width="100%" style="font-size:11px;">
+                            <tr>
+                                <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
+                                <td><input wire:model="modalNombre" type="text" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;"></td>
+                            </tr>
+                            <tr>
+                                <td><b>RIF:</b></td>
+                                <td><input wire:model="modalRif" type="text" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;"></td>
+                            </tr>
+                            <tr>
+                                <td><b>Correo:</b></td>
+                                <td><input wire:model="modalCorreo" type="email" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;"></td>
+                            </tr>
+                            <tr>
+                                <td><b>Tel&eacute;fono:</b></td>
+                                <td>
+                                    <div style="display:flex;gap:4px;align-items:center;">
+                                        <select wire:model="modalPrefijoTelefono" style="padding:5px;border:1px solid #ccc;border-radius:4px;background:#fff;">
+                                            <option value="0424">0424</option>
+                                            <option value="0414">0414</option>
+                                            <option value="0412">0412</option>
+                                            <option value="0422">0422</option>
+                                            <option value="0416">0416</option>
+                                            <option value="0426">0426</option>
+                                        </select>
+                                        <input wire:model.lazy="modalNumeroTelefono" type="text" style="flex:1;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;" placeholder="XXX-XXXX">
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><b>Estado:</b> <span style="color:red;">*</span></td>
+                                <td>
+                                    <select wire:model.live="modalEstadoId" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;background:#fff;">
+                                        <option value="">-- Seleccione --</option>
+                                        @foreach ($modalEstados as $e)
+                                            <option value="{{ $e->est_codigo }}">{{ $e->est_nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><b>Municipio:</b> <span style="color:red;">*</span></td>
+                                <td>
+                                    <select wire:model="modalMunicipioId" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;background:#fff;">
+                                        <option value="">-- Seleccione --</option>
+                                        @foreach ($modalMunicipios as $m)
+                                            <option value="{{ $m->mun_codigo }}">{{ $m->mun_nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><b>Direcci&oacute;n exacta:</b> <span style="color:red;">*</span></td>
+                                <td><input wire:model="modalDirNombre" type="text" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;" placeholder="Av./Calle/Casa Nro., sector..."></td>
+                            </tr>
+                        </table>
+
+                        <div style="margin-top:15px;text-align:center;display:flex;gap:10px;justify-content:center;">
+                            <button type="button" class="cm-btn cm-btn-success" wire:click="guardarComunidadDesdeModal">Guardar comunidad</button>
+                            <button type="button" class="cm-btn cm-btn-danger" wire:click="cerrarModalComunidad">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+            @endif
         </fieldset>
     @endif
 </div>

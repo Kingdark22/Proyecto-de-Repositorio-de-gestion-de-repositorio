@@ -17,6 +17,6 @@ class Direccion extends RepositorioModel
 
     public function comunidad()
     {
-        return $this->hasOne(Comunidad::class, 'dir_codigo');
+        return $this->hasOne(Comunidad::class, 'com_dir_codigo');
     }
 }

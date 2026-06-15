@@ -3,6 +3,8 @@
 namespace App\Livewire;
 
 use App\Models\Comunidad;
+use App\Models\Estado;
+use App\Services\ComunidadGestionService;
 use App\Services\GrupoProyectoService;
 use App\Services\IntranetEquipoSeccionService;
 use App\Services\IntranetProfessorService;
@@ -35,6 +37,28 @@ class GrupoProyectoManager extends Component
     public Collection $secciones;
 
     public Collection $comunidades;
+
+    public bool $mostrarModalComunidad = false;
+
+    public string $modalNombre = '';
+
+    public string $modalRif = '';
+
+    public string $modalCorreo = '';
+
+    public string $modalPrefijoTelefono = '0424';
+
+    public string $modalNumeroTelefono = '';
+
+    public string $modalEstadoId = '';
+
+    public string $modalMunicipioId = '';
+
+    public string $modalDirNombre = '';
+
+    public Collection $modalEstados;
+
+    public Collection $modalMunicipios;
 
     public function updatingSearch(): void
     {
@@ -137,6 +161,7 @@ class GrupoProyectoManager extends Component
         $this->editingGrpCodigo = $grpCodigo;
         $this->nombreGrupo = $g->nombre;
         $this->filterLapso = (string) $g->lap_codigo;
+        $this->loadProgramas();
         $this->filterPrograma = $g->pro_codigo ? (string) $g->pro_codigo : '';
         $this->loadSecciones();
         $this->filterSeccion = (string) $g->sec_codigo;
@@ -148,7 +173,7 @@ class GrupoProyectoManager extends Component
                 'apellido' => $m['apellido'] ?? '',
                 'rol_id' => (int) ($m['rol_id'] ?? 2),
                 'rol_name' => match ((int) ($m['rol_id'] ?? 2)) {
-                    1 => 'Líder',
+                    1 => 'Autor-Líder',
                     2 => 'Autor',
                     default => 'Integrante',
                 },
@@ -204,7 +229,7 @@ class GrupoProyectoManager extends Component
             'nombre' => $est->nombre,
             'apellido' => $est->apellido,
             'rol_id' => $rolId,
-            'rol_name' => $rolId === 1 ? 'Líder' : 'Autor',
+            'rol_name' => $rolId === 1 ? 'Autor-Líder' : 'Autor',
         ];
         $this->selectedCedula = '';
     }
@@ -320,6 +345,75 @@ class GrupoProyectoManager extends Component
         $this->comunidadId = '';
         $this->miembrosSeleccionados = [];
         $this->selectedCedula = '';
+        $this->filterLapso = '';
+        $this->filterPrograma = '';
+        $this->filterSeccion = '';
+        $this->loadProgramas();
+        $this->loadSecciones();
+    }
+
+    public function abrirModalComunidad(): void
+    {
+        $this->mostrarModalComunidad = true;
+        $this->modalNombre = '';
+        $this->modalRif = '';
+        $this->modalCorreo = '';
+        $this->modalPrefijoTelefono = '0424';
+        $this->modalNumeroTelefono = '';
+        $this->modalEstadoId = '';
+        $this->modalMunicipioId = '';
+        $this->modalDirNombre = '';
+        $this->modalEstados = Estado::orderBy('est_nombre')->get();
+        $this->modalMunicipios = collect();
+    }
+
+    public function cerrarModalComunidad(): void
+    {
+        $this->mostrarModalComunidad = false;
+    }
+
+    public function updatedModalEstadoId(): void
+    {
+        $this->modalMunicipioId = '';
+        if ($this->modalEstadoId !== '') {
+            $this->modalMunicipios = \App\Models\Municipio::where('est_codigo', $this->modalEstadoId)->orderBy('mun_nombre')->get();
+        } else {
+            $this->modalMunicipios = collect();
+        }
+    }
+
+    public function guardarComunidadDesdeModal(ComunidadGestionService $gestion): void
+    {
+        $this->validate([
+            'modalNombre' => 'required|string|max:255',
+            'modalRif' => 'nullable|string|max:50',
+            'modalCorreo' => 'nullable|email|max:150',
+            'modalEstadoId' => 'required|integer|exists:estados,est_codigo',
+            'modalMunicipioId' => 'required|integer|exists:municipios,mun_codigo',
+            'modalDirNombre' => 'required|string|max:500',
+        ], [
+            'modalNombre.required' => 'El nombre de la comunidad es obligatorio.',
+            'modalEstadoId.required' => 'Seleccione un estado.',
+            'modalMunicipioId.required' => 'Seleccione un municipio.',
+            'modalDirNombre.required' => 'La dirección exacta es obligatoria.',
+        ]);
+
+        $id = $gestion->guardar(null, [
+            'nombre' => $this->modalNombre,
+            'rif' => $this->modalRif,
+            'correo' => $this->modalCorreo,
+            'prefijo_telefono' => $this->modalPrefijoTelefono,
+            'numero_telefono' => $this->modalNumeroTelefono,
+            'estado_id' => $this->modalEstadoId,
+            'municipio_id' => $this->modalMunicipioId,
+            'dir_nombre' => $this->modalDirNombre,
+        ]);
+
+        $this->comunidades = Comunidad::query()->orderBy('nombre')->get();
+        $this->comunidadId = (string) $id;
+        $this->cerrarModalComunidad();
+
+        session()->flash('message', 'Comunidad creada correctamente.');
     }
 
     protected function restablecerFiltros(): void
