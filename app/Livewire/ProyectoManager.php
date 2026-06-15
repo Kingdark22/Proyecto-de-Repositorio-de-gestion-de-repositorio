@@ -6,6 +6,7 @@ use App\Models\Proyecto;
 use App\Services\GrupoProyectoService;
 use App\Services\IntranetEquipoSeccionService;
 use App\Services\ProyectoGestionService;
+use App\Services\UserRoleService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -17,8 +18,6 @@ class ProyectoManager extends Component
 {
     use WithFileUploads;
     use WithPagination;
-
-    public ?string $listTab = 'gestion';
 
     public ?string $titulo = '';
 
@@ -49,8 +48,10 @@ class ProyectoManager extends Component
     public ?string $filterSeccionEquipo = '';
 
     public ?string $filterEstadoList = '';
-
     public ?string $filterComunidadList = '';
+    public ?string $filterGruposLapso = '';
+    public ?string $filterGruposPrograma = '';
+    public ?string $filterGruposTrayecto = '';
 
     public $archivosComponente = [];
 
@@ -94,6 +95,9 @@ class ProyectoManager extends Component
     /** Miembros del grupo seleccionado (para mostrar checkboxes) */
     public array $miembrosGrupo = [];
 
+    /** Grupos del docente para registro por selección */
+    public array $gruposDocente = [];
+
     public function placeholder()
     {
         return <<<'HTML'
@@ -120,51 +124,71 @@ class ProyectoManager extends Component
 
     public function mount(ProyectoGestionService $gestion): void
     {
-        $tab = request()->query('tab', 'gestion');
-        if (in_array($tab, ['gestion', 'validar'], true)) {
-            $this->listTab = $tab;
-        }
-
-        if (request()->boolean('registrar')) {
-            $this->listTab = 'gestion';
-            $this->iniciarRegistro();
-        }
-
         if ($editId = request()->query('edit')) {
-            $this->listTab = 'gestion';
             $this->edit((int) $editId, $gestion, app(GrupoProyectoService::class));
         }
 
         if ($detailsId = request()->query('details')) {
-            $this->listTab = 'validar';
             $this->openDetails((int) $detailsId, $gestion);
         }
+
+        $this->cargarGruposDocente($gestion);
     }
 
-    public function iniciarRegistro(): void
+    protected function cargarGruposDocente(ProyectoGestionService $gestion): void
+    {
+        $user = auth()->user();
+        if (!$user) return;
+
+        $userRoleService = app(UserRoleService::class);
+        $activeRole = $userRoleService->getActiveRole($user);
+
+        $rolesConAcceso = ['profesor proyecto', 'administrador', 'gestionador', 'coordinador'];
+        $puedeVer = false;
+        foreach ($rolesConAcceso as $rol) {
+            if ($userRoleService->roleMatches($rol, $activeRole)) {
+                $puedeVer = true;
+                break;
+            }
+        }
+
+        if (!$puedeVer) return;
+
+        $filtros = [];
+        if ($this->filterGruposLapso !== '') $filtros['lapso'] = $this->filterGruposLapso;
+        if (!in_array($activeRole, ['profesor proyecto'], true)) {
+            if ($this->filterGruposPrograma !== '') $filtros['programa'] = $this->filterGruposPrograma;
+            if ($this->filterGruposTrayecto !== '') $filtros['trayecto'] = $this->filterGruposTrayecto;
+        }
+
+        $grupos = $gestion->gruposDelDocente($user, $filtros);
+        $this->gruposDocente = $grupos->toArray();
+    }
+
+    public function registrarProyectoGrupo(int $grpCodigo): void
     {
         $gestion = app(ProyectoGestionService::class);
         $user = auth()->user();
+        if (!$user) return;
 
-        // Eliminamos la validación inicial para que siempre abra el formulario al hacer clic.
-        // Las validaciones de registro se realizarán al intentar guardar el formulario.
+        $proyecto = $gestion->registrarProyectoDesdeGrupo($grpCodigo, $user);
+        if (!$proyecto) {
+            $this->dispatch('notify', type: 'error', message: 'No se pudo registrar el proyecto. Grupo no encontrado.');
+            return;
+        }
 
-        $this->listTab = 'gestion';
-        $this->resetFormulario();
-        $this->fecha_subida = now()->format('Y-m-d');
-
-        $this->viewMode = 'form';
-        $this->aplicarSyncEquipo($gestion);
+        $this->dispatch('notify', type: 'success', message: 'Proyecto registrado exitosamente. Complete los datos del proyecto.');
+        $this->edit($proyecto->id, $gestion, app(GrupoProyectoService::class));
     }
 
-    public function irAListado(string $tab = 'gestion'): void
+    public function irAListado(): void
     {
-        $this->listTab = in_array($tab, ['gestion', 'validar'], true) ? $tab : 'gestion';
         $this->viewMode = 'list';
         $this->selectedProject = null;
         $this->selectedProjectId = null;
         $this->motivo_rechazo = '';
         $this->resetPage();
+        $this->cargarGruposDocente(app(ProyectoGestionService::class));
     }
 
     public function toggleTeamFilters(): void
@@ -205,12 +229,6 @@ class ProyectoManager extends Component
         ];
     }
 
-    /** @deprecated use iniciarRegistro() desde la vista */
-    public function create(): void
-    {
-        $this->iniciarRegistro();
-    }
-
     public function updatedEquipoSeccionClave(GrupoProyectoService $grupos, IntranetEquipoSeccionService $equipos): void
     {
         $clave = $this->equipo_seccion_clave ?? '';
@@ -243,6 +261,8 @@ class ProyectoManager extends Component
                 if (!empty($grupo->lap_codigo)) {
                     $this->filterLapsoEquipo = (string) $grupo->lap_codigo;
                 }
+                $this->filterProgramaEquipo = $grupo->pro_codigo !== null ? (string) $grupo->pro_codigo : '';
+                $this->filterSeccionEquipo = $grupo->sec_codigo !== null ? (string) $grupo->sec_codigo : '';
                 $this->programa_id_derived = $grupo->pro_codigo ?? null;
                 // Derive trayecto from grupo's seccion if available
                 if (!empty($grupo->sec_codigo) && !empty($grupo->lap_codigo)) {
@@ -293,8 +313,11 @@ class ProyectoManager extends Component
                 $this->titulo = trim('Sección ' . $row->sec_nombre . ' · ' . $row->lap_nombre);
                 $this->programa_id_derived = $row->pro_codigo ?? null;
                 $this->trayecto_derived = trim($row->tra_nombre ?? '');
+                $this->filterProgramaEquipo = $row->pro_codigo !== null ? (string) $row->pro_codigo : '';
+                $this->filterSeccionEquipo = (string) $partes['sec_codigo'];
             } else {
                 $this->titulo = 'Sección #' . $partes['sec_codigo'];
+                $this->filterSeccionEquipo = (string) $partes['sec_codigo'];
             }
         } catch (\Throwable) {
             $this->titulo = 'Sección #' . $partes['sec_codigo'];
@@ -317,6 +340,24 @@ class ProyectoManager extends Component
     public function updatingSearch(): void
     {
         $this->resetPage();
+    }
+
+    public function updatingFilterGruposLapso(): void
+    {
+        $this->filterGruposPrograma = '';
+        $this->filterGruposTrayecto = '';
+        $this->cargarGruposDocente(app(ProyectoGestionService::class));
+    }
+
+    public function updatingFilterGruposPrograma(): void
+    {
+        $this->filterGruposTrayecto = '';
+        $this->cargarGruposDocente(app(ProyectoGestionService::class));
+    }
+
+    public function updatingFilterGruposTrayecto(): void
+    {
+        $this->cargarGruposDocente(app(ProyectoGestionService::class));
     }
 
     protected function cargarMiembrosGrupo(GrupoProyectoService $grupos, string $clave): void
@@ -361,29 +402,16 @@ class ProyectoManager extends Component
         $this->resetPage();
     }
 
-    protected function aplicarSyncEquipo(ProyectoGestionService $gestion): void
-    {
-        if (! auth()->check() || app(ProyectoGestionService::class)->usuarioEsAdminEnSistema(auth()->user())) {
-            return;
-        }
-
-        $lap = $this->filterLapsoEquipo !== '' ? (int) $this->filterLapsoEquipo : null;
-        $sync = $gestion->sincronizarEquipoEstudiante(trim((string) auth()->user()->usu_cedula), $lap);
-
-        if ($sync['equipo_seccion_clave']) {
-            $this->equipo_seccion_clave = $sync['equipo_seccion_clave'];
-        }
-    }
-
     public function edit(int $id, ProyectoGestionService $gestion, GrupoProyectoService $grupos): void
     {
         $this->resetFormulario();
+        $this->showTeamFilters = true;
         $this->fill($gestion->cargarParaEdicion($id));
         $this->viewMode = 'form';
 
         // Detectar si el usuario actual es lider del proyecto
         $user = auth()->user();
-        $proyecto = Proyecto::find($id);
+        $proyecto = Proyecto::find($id, ['equipo_ref']);
         $this->esLider = $proyecto ? $gestion->usuarioEsLiderDelProyecto($user, $proyecto) : false;
         $this->modoActualizacion = $this->esLider && !$gestion->usuarioEsAdminEnSistema($user);
 
@@ -397,11 +425,11 @@ class ProyectoManager extends Component
                 if (!empty($grupo->com_codigo)) {
                     $comunidad = \App\Models\Comunidad::find($grupo->com_codigo);
                     $this->comunidadNombreGrupo = $comunidad?->nombre;
-                    // Si no tiene comunidad_id asignado, auto-rellenar
                     if (empty($this->comunidad_id)) {
                         $this->comunidad_id = (string) $grupo->com_codigo;
                     }
                 }
+                $this->cargarMiembrosGrupo($grupos, $clave);
             }
         }
     }
@@ -455,6 +483,7 @@ class ProyectoManager extends Component
         $this->viewMode = 'list';
         $this->dispatch('notify', type: 'success', message: $this->modoActualizacion ? 'Documentos subidos con éxito. El profesor será notificado.' : ($this->editingId ? 'Proyecto actualizado con éxito.' : 'Proyecto registrado con éxito.'));
         $this->resetFormulario();
+        $this->cargarGruposDocente(app(ProyectoGestionService::class));
         $this->dispatch('refresh-icons');
     }
 
@@ -505,7 +534,7 @@ class ProyectoManager extends Component
 
         try {
             $gestion->rechazar((int) $this->selectedProjectId, $this->motivo_rechazo);
-            $this->irAListado($this->listTab);
+            $this->irAListado();
             $this->dispatch('notify', type: 'success', message: 'Proyecto rechazado.');
         } catch (AuthorizationException $e) {
             $this->dispatch('notify', type: 'error', message: $e->getMessage());
@@ -538,7 +567,10 @@ class ProyectoManager extends Component
         $activeRole = $userRoleService->getActiveRole($user);
         if ($userRoleService->roleMatches('administrador', $activeRole)
             || $userRoleService->roleMatches('coordinador', $activeRole)) return false;
-        return $gestion->usuarioPuedeRegistrar($user);
+        if (!$this->editingId) return false;
+        $proyecto = Proyecto::find($this->editingId, ['equipo_ref']);
+        if (!$proyecto) return false;
+        return $gestion->usuarioEsLiderDelProyecto($user, $proyecto);
     }
 
     public function render(ProyectoGestionService $gestion)
@@ -554,22 +586,38 @@ class ProyectoManager extends Component
                 'search' => $this->search,
                 'estado' => $this->filterEstadoList,
                 'comunidad' => $this->filterComunidadList,
-            ], $page, $user, $this->listTab),
+                'lapso' => $this->filterGruposLapso,
+            ], $page, $user),
             'form' => $gestion->datosVistaFormulario($estado),
             default => ['comunidades' => $gestion->comunidadesOrdenadas()],
         };
 
+        // Catalogs for group filters
+        $equipoSeccion = app(IntranetEquipoSeccionService::class);
+        $lapsoFiltro = $this->filterGruposLapso !== '' ? (int) $this->filterGruposLapso : null;
+        $programaFiltro = $this->filterGruposPrograma !== '' ? (int) $this->filterGruposPrograma : null;
+        $lapsosFiltro = \App\Models\LapsoAcademico::activos()->orderByDesc('lap_codigo')->get();
+        $programasFiltro = $lapsoFiltro ? $equipoSeccion->programasEnLapso($lapsoFiltro) : collect();
+        $trayectosFiltro = $lapsoFiltro ? $equipoSeccion->trayectosEnLapso($lapsoFiltro, $programaFiltro) : collect();
+
+        $userRoleService = app(UserRoleService::class);
+        $activeRole = $userRoleService->getActiveRole($user);
+        $puedeFiltrarGrupos = true;
+
         return view('livewire.proyecto-manager', array_merge($datos, [
             'viewMode' => $this->viewMode,
-            'listTab' => $this->listTab,
             'editingId' => $this->editingId,
             'filterLapsoEquipo' => $this->filterLapsoEquipo,
             'archivos_actuales' => $this->archivos_actuales,
             'selectedProject' => $this->selectedProject,
-            'canRegister' => $gestion->usuarioPuedeRegistrar($user),
             'esAdmin' => $gestion->usuarioEsAdminEnSistema($user),
             'esLider' => $esLiderGlobal,
             'modoActualizacion' => $this->modoActualizacion,
+            'gruposDocente' => $this->gruposDocente,
+            'lapsosFiltro' => $lapsosFiltro,
+            'programasFiltro' => $programasFiltro,
+            'trayectosFiltro' => $trayectosFiltro,
+            'puedeFiltrarGrupos' => $puedeFiltrarGrupos,
         ]));
     }
 
@@ -598,6 +646,9 @@ class ProyectoManager extends Component
         $this->showAdvanced = false;
         $this->programa_id_derived = null;
         $this->trayecto_derived = '';
+        $this->filterGruposLapso = '';
+        $this->filterGruposPrograma = '';
+        $this->filterGruposTrayecto = '';
     }
 
     protected function estadoFormulario(): array

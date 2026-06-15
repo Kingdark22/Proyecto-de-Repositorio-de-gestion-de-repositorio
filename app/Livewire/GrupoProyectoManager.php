@@ -218,10 +218,10 @@ class GrupoProyectoManager extends Component
                     $lideresActuales++;
                 }
             }
-            if ($lideresActuales >= 2) {
-                session()->flash('message_error', 'Solo pueden haber hasta dos autores-líderes en el grupo.');
-                return;
-            }
+                    if ($lideresActuales >= 2) {
+                        session()->flash('message_error', 'Solo pueden haber hasta dos autores-líderes en el grupo.');
+                        return;
+                    }
         }
 
         $this->miembrosSeleccionados[] = [

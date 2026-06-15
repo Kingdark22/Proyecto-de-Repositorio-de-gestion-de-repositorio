@@ -12,9 +12,9 @@ use App\Models\TipoPublicacion;
 use App\Models\User;
 use App\Models\LapsoAcademico;
 use App\Models\ProyectoDocumento;
+use App\Services\GrupoProyectoService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Pagination\LengthAwarePaginator as PaginatorInstance;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -48,49 +48,47 @@ class ProyectoGestionService
     /**
      * @return array<string, mixed>
      */
-    public function datosVistaListado(array $filtros, int $page, ?User $user = null, string $listTab = 'gestion'): array
+    public function datosVistaListado(array $filtros, int $page, ?User $user = null): array
     {
         $canValidate = $user ? $this->usuarioPuedeValidar($user) : false;
 
+        // For profesor proyecto: auto-filter by their sections + creador
+        if ($user) {
+            $cedula = trim((string) $user->usu_cedula);
+            $userRoleService = app(UserRoleService::class);
+            $activeRole = $userRoleService->getActiveRole($user);
+            if ($userRoleService->roleMatches('profesor proyecto', $activeRole)) {
+                $filtros['creador_cedula'] = $cedula;
+                $lapFiltro = !empty($filtros['lapso']) ? (int) $filtros['lapso'] : null;
+                $clavesDocente = $this->profesorIntranet->clavesEquipoSeccionDocente($cedula, $lapFiltro);
+                if ($clavesDocente !== null && $clavesDocente !== []) {
+                    $pares = [];
+                    foreach ($clavesDocente as $claveSec) {
+                        $partes = $this->equipoSeccion->parsearClave($claveSec);
+                        if ($partes) {
+                            $pares[] = ['lap' => $partes['lap_codigo'], 'sec' => $partes['sec_codigo']];
+                        }
+                    }
+                    $gruposSvc = app(GrupoProyectoService::class);
+                    $grupos = $gruposSvc->tablaDisponible()
+                        ? $gruposSvc->listar()
+                        : collect();
+                    $clavesFiltradas = $grupos->filter(fn ($g) => collect($pares)->contains(
+                        fn ($p) => $g->lap_codigo === $p['lap'] && $g->sec_codigo === $p['sec']
+                    ))->pluck('clave')->toArray();
+                    if ($clavesFiltradas !== []) {
+                        $filtros['equipo_ref'] = $clavesFiltradas;
+                    }
+                }
+            }
+        }
+
         return [
             'comunidades' => $this->comunidadesOrdenadas(),
-            'proyectos' => $listTab === 'validar'
-                ? $this->paginarPendientes($filtros['search'] ?? '', $page, $user)
-                : $this->paginarProyectos($filtros, $page),
+            'proyectos' => $this->paginarProyectos($filtros, $page),
             'canRegister' => $user ? $this->usuarioPuedeRegistrar($user) : false,
             'canValidate' => $canValidate,
-            'listTab' => $listTab,
         ];
-    }
-
-    public function paginarPendientes(string $search, int $page, ?User $user = null): LengthAwarePaginator
-    {
-        $clavesDocente = $this->clavesEquipoFiltroValidacion($user);
-        if ($clavesDocente !== null && $clavesDocente === []) {
-            return new PaginatorInstance([], 0, 10, $page, [
-                'path' => request()->url(),
-                'query' => request()->query(),
-            ]);
-        }
-
-        $query = Proyecto::with($this->relacionesProyecto())
-            ->where('estado_validacion', 'pendiente')
-            ->where(function ($q) use ($search) {
-                if ($search === '') {
-                    return;
-                }
-                try {
-                    $q->whereRaw('to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)', [$search]);
-                } catch (\Throwable) {
-                    $q->whereRaw('pry_resumen ILIKE ?', ['%' . $search . '%']);
-                }
-            });
-
-        if ($clavesDocente !== null) {
-            $query->whereIn('pry_direccion_logica', $clavesDocente);
-        }
-
-        return $query->latest()->paginate(10, page: $page);
     }
 
     public function proyectoParaFicha(int $id): ?Proyecto
@@ -191,17 +189,6 @@ class ProyectoGestionService
     /**
      * @return array<string, string|null>
      */
-    public function sincronizarEquipoEstudiante(string $cedula, ?int $lapCodigo): array
-    {
-        $equipos = $this->equipoSeccion->equiposDelEstudiante($cedula, $lapCodigo);
-
-        if ($equipos->count() !== 1) {
-            return ['equipo_seccion_clave' => null];
-        }
-
-        return ['equipo_seccion_clave' => $equipos->first()->clave];
-    }
-
     /**
      * @return array<string, mixed>
      */
@@ -253,6 +240,8 @@ class ProyectoGestionService
             'comunidad_id' => (string) $item->comunidad_id,
             'equipo_seccion_clave' => $item->equipo_ref ?? '',
             'filterLapsoEquipo' => $partes ? (string) $partes['lap_codigo'] : '',
+            'filterProgramaEquipo' => $programaDerived !== null ? (string) $programaDerived : '',
+            'filterSeccionEquipo' => $partes ? (string) $partes['sec_codigo'] : '',
             'programa_id_derived' => $programaDerived,
             'trayecto_derived' => $trayectoDerived,
             'archivos_actuales' => $docsExistentes,
@@ -392,6 +381,105 @@ class ProyectoGestionService
     }
 
     /**
+     * @param  array{lapso?: int|null, programa?: int|null, trayecto?: string|null}  $filtros
+     * @return Collection<int, object>
+     */
+    public function gruposDelDocente(User $user, array $filtros = []): Collection
+    {
+        $gruposSvc = app(GrupoProyectoService::class);
+        if (!$gruposSvc->tablaDisponible()) {
+            return collect();
+        }
+
+        $cedula = trim((string) $user->usu_cedula);
+        $userRoleService = app(UserRoleService::class);
+        $activeRole = $userRoleService->getActiveRole($user);
+
+        $esProfesor = $userRoleService->roleMatches('profesor proyecto', $activeRole);
+
+        // Profesor: filtra por sus secciones asignadas en el lapso indicado (o vigente por defecto)
+        if ($esProfesor) {
+            $lapFiltro = !empty($filtros['lapso']) ? (int) $filtros['lapso'] : null;
+            $clavesDocente = $this->profesorIntranet->clavesEquipoSeccionDocente($cedula, $lapFiltro);
+            if ($clavesDocente === null || $clavesDocente === []) {
+                return collect();
+            }
+
+            $pares = [];
+            foreach ($clavesDocente as $clave) {
+                $partes = $this->equipoSeccion->parsearClave($clave);
+                if ($partes) {
+                    $pares[] = ['lap' => $partes['lap_codigo'], 'sec' => $partes['sec_codigo']];
+                }
+            }
+
+            $grupos = $gruposSvc->listar();
+            $gruposFiltrados = $grupos->filter(fn ($g) => collect($pares)->contains(
+                fn ($p) => $g->lap_codigo === $p['lap'] && $g->sec_codigo === $p['sec']
+            ));
+        } else {
+            // Admin, gestionador, coordinador: todos los grupos con filtros opcionales
+            $lapso = !empty($filtros['lapso']) ? (int) $filtros['lapso'] : null;
+            $programa = !empty($filtros['programa']) ? (int) $filtros['programa'] : null;
+            $trayecto = !empty($filtros['trayecto']) ? $filtros['trayecto'] : null;
+
+            $gruposFiltrados = $gruposSvc->listar([
+                'lapso' => $lapso,
+                'programa' => $programa,
+                'trayecto' => $trayecto,
+            ]);
+        }
+
+        $claves = $gruposFiltrados->pluck('clave');
+        $proyectoPorClave = Proyecto::whereIn('equipo_ref', $claves)->get()->keyBy('equipo_ref');
+
+        return $gruposFiltrados->map(fn ($g) => (object) [
+            'grp_codigo' => $g->grp_codigo,
+            'nombre' => $g->nombre,
+            'clave' => $g->clave,
+            'lap_nombre' => $g->lap_nombre,
+            'sec_nombre' => $g->sec_nombre,
+            'pro_siglas' => $g->pro_siglas,
+            'integrantes' => $g->integrantes ?? 0,
+            'com_codigo' => $g->com_codigo,
+            'tiene_proyecto' => $proyectoPorClave->has($g->clave),
+            'proyecto_id' => $proyectoPorClave->get($g->clave)?->id,
+            'proyecto_estado_validacion' => $proyectoPorClave->get($g->clave)?->estado_validacion,
+            'proyecto_estado_logico' => $proyectoPorClave->get($g->clave)?->estado_logico,
+        ])->values();
+    }
+
+    public function registrarProyectoDesdeGrupo(int $grpCodigo, User $user): ?Proyecto
+    {
+        $gruposSvc = app(GrupoProyectoService::class);
+        $grupo = $gruposSvc->obtener($grpCodigo);
+        if (!$grupo) {
+            return null;
+        }
+
+        $clave = $gruposSvc->construirClave($grpCodigo);
+
+        $existing = Proyecto::where('equipo_ref', $clave)->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        $proyecto = Proyecto::create([
+            'resumen' => 'Proyecto del grupo ' . $grupo->nombre,
+            'comunidad_id' => $grupo->com_codigo,
+            'equipo_ref' => $clave,
+            'estado_validacion' => 'pendiente',
+            'estado_logico' => false,
+            'creador_cedula' => trim((string) $user->usu_cedula),
+            'fecha_subida' => now()->format('Y-m-d'),
+        ]);
+
+        $this->registrarAuditoria($proyecto, 'registrar');
+
+        return $proyecto->fresh();
+    }
+
+    /**
      * @param  array<string, mixed>  $estado
      */
     public function reglasValidacion(array $estado, User $user, bool $esEdicion = false): array
@@ -452,6 +540,8 @@ class ProyectoGestionService
             })
             ->when(($filtros['estado'] ?? '') !== '', fn ($q) => $q->where('estado_validacion', $filtros['estado']))
             ->when(($filtros['comunidad'] ?? '') !== '', fn ($q) => $q->where('comunidad_id', $filtros['comunidad']))
+            ->when(($filtros['creador_cedula'] ?? '') !== '', fn ($q) => $q->where('creador_cedula', $filtros['creador_cedula']))
+            ->when(($filtros['equipo_ref'] ?? null) !== null, fn ($q) => $q->whereIn('equipo_ref', $filtros['equipo_ref']))
             ->latest()
             ->paginate(10, page: $page);
     }
@@ -459,7 +549,7 @@ class ProyectoGestionService
     public function comunidadesOrdenadas(): Collection
     {
         return Cache::remember('gestion_comunidades_ordenadas', now()->addMinutes(10), fn() =>
-            Comunidad::orderBy('nombre')->get()
+            Comunidad::orderBy('nombre')->get(['com_codigo', 'com_nombre'])
         );
     }
 
@@ -501,6 +591,30 @@ class ProyectoGestionService
         $equiposDisp = $gruposSvc->tablaDisponible()
             ? $gruposSvc->listar(['lapso' => $lapFiltro])
             : collect();
+
+        // Filter by professor's assigned sections
+        if (!$esAdmin && $cedula !== '') {
+            $userRoleService = app(UserRoleService::class);
+            $user = auth()->user();
+            $activeRole = $userRoleService->getActiveRole($user);
+            if ($userRoleService->roleMatches('profesor proyecto', $activeRole)) {
+                $clavesDocente = $this->profesorIntranet->clavesEquipoSeccionDocente($cedula, $lapFiltro);
+                if ($clavesDocente !== null && $clavesDocente !== []) {
+                    $pares = [];
+                    foreach ($clavesDocente as $claveSec) {
+                        $partes = $this->equipoSeccion->parsearClave($claveSec);
+                        if ($partes) {
+                            $pares[] = ['lap' => $partes['lap_codigo'], 'sec' => $partes['sec_codigo']];
+                        }
+                    }
+                    $equiposDisp = $equiposDisp->filter(fn ($g) => collect($pares)->contains(
+                        fn ($p) => $g->lap_codigo === $p['lap'] && $g->sec_codigo === $p['sec']
+                    ));
+                } else {
+                    $equiposDisp = collect();
+                }
+            }
+        }
 
         $clave = $estado['equipo_seccion_clave'] ?? '';
         $equipoValidado = null;
@@ -592,7 +706,10 @@ class ProyectoGestionService
         $activeRole = $userRoleService->getActiveRole($user);
 
         if ($activeRole !== null) {
-            if ($userRoleService->roleMatches('administrador', $activeRole)) {
+            if ($userRoleService->roleMatches('administrador', $activeRole) ||
+                $userRoleService->roleMatches('coordinador', $activeRole) ||
+                $userRoleService->roleMatches('profesor proyecto', $activeRole) ||
+                $userRoleService->roleMatches('gestionador', $activeRole)) {
                 return static::$roleCache[$key] = true;
             }
             if ($userRoleService->roleMatches('estudiante', $activeRole)) {
@@ -606,7 +723,10 @@ class ProyectoGestionService
 
         $availableDetectedRoles = array_keys($userRoleService->detectAvailableRoles($user));
 
-        if (in_array('administrador', $availableDetectedRoles, true)) {
+        if (in_array('administrador', $availableDetectedRoles, true) ||
+            in_array('coordinador', $availableDetectedRoles, true) ||
+            in_array('profesor proyecto', $availableDetectedRoles, true) ||
+            in_array('gestionador', $availableDetectedRoles, true)) {
             return static::$roleCache[$key] = true;
         }
 
@@ -681,11 +801,39 @@ class ProyectoGestionService
         if ($userRoleService->roleMatches('profesor proyecto', $activeRole)) {
             $clavesDocente = $this->clavesEquipoFiltroValidacion($user);
             if ($clavesDocente !== null) {
-                return in_array($proyecto->pry_direccion_logica, $clavesDocente, true);
+                $claveSeccion = $this->resolverClaveSeccionDesdeProyecto($proyecto);
+                return $claveSeccion !== null && in_array($claveSeccion, $clavesDocente, true);
             }
         }
 
         return false;
+    }
+
+    /**
+     * Resuelve la clave de sección (EQSEC:{lap}:{sec}) desde un proyecto.
+     * Si el proyecto usa equipo_ref EQGRP:{id}, busca el grupo y extrae lap_codigo/sec_codigo del contexto.
+     */
+    protected function resolverClaveSeccionDesdeProyecto(Proyecto $proyecto): ?string
+    {
+        $clave = $proyecto->equipo_ref;
+        if (!$clave) return null;
+
+        $partes = app(GrupoProyectoService::class)->parsearClave($clave);
+        if (($partes['tipo'] ?? '') !== GrupoProyectoService::PREFIJO || empty($partes['grp_codigo'])) {
+            return null;
+        }
+
+        $grupo = \App\Models\GrupoProyectoModulo::find($partes['grp_codigo']);
+        if (!$grupo) return null;
+
+        $contexto = $grupo->grp_contexto;
+        if (!$contexto instanceof \ArrayObject) return null;
+
+        $lap = $contexto['lap_codigo'] ?? null;
+        $sec = $contexto['sec_codigo'] ?? null;
+        if (!$lap || !$sec) return null;
+
+        return app(IntranetEquipoSeccionService::class)->construirClave((int) $lap, (int) $sec);
     }
 
     protected function autorizarValidacionProyecto(?User $user, Proyecto $proyecto): void
@@ -702,7 +850,7 @@ class ProyectoGestionService
      *
      * @return list<string>|null
      */
-    protected function clavesEquipoFiltroValidacion(?User $user): ?array
+    public function clavesEquipoFiltroValidacion(?User $user): ?array
     {
         if ($user === null) {
             return null;

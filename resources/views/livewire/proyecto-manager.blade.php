@@ -1,17 +1,28 @@
 <div class="pgm-wrap">
     <style>
-        .pgm-action-bar {
-            margin-bottom: 20px;
-        }
-        .pgm-btn-registrar {
-            background-color: #28a745;
-            color: #fff;
-            border: 1px solid #218838;
-            border-radius: 0;
-            padding: 6px 12px;
-            font-size: 12px;
-            font-weight: bold;
+        .cm-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            padding: 0.55rem 0.95rem;
+            font-size: 0.92rem;
+            font-weight: 600;
+            border: 1px solid transparent;
             cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+            text-decoration: none;
+        }
+        .cm-btn:hover {
+            transform: translateY(-1px);
+        }
+        .cm-btn-success {
+            background: #198754;
+            border-color: #166f43;
+            color: #fff;
+        }
+        .cm-btn-success:hover {
+            background: #146c43;
         }
         .pgm-btn-cancel {
             background-color: #dc3545;
@@ -37,110 +48,103 @@
     <h2 class="titulo" style="margin-bottom: 20px; font-weight: bolder; margin-top: 10px;">Gestión de Proyectos</h2>
 
     @if ($viewMode === 'list')
-        <div class="pgm-action-bar" style="display: flex; align-items: center; gap: 12px;">
-            @if (($esAdmin ?? false) || ($canRegister ?? false))
-                <button type="button" wire:click="iniciarRegistro" class="pgm-btn-registrar">
-                    + REGISTRAR NUEVO PROYECTO
-                </button>
-            @endif
-        </div>
-
-        @if (!empty($canValidate))
-            <div class="pgm-tabs" style="margin-bottom: 12px; font-size: 11px;">
-                <button type="button" wire:click="irAListado('gestion')"
-                    style="border: 1px solid #999; border-radius: 4px; padding: 4px 12px; margin-right: 6px; {{ $listTab === 'gestion' ? 'background:#8bb2b7;font-weight:bold;' : 'background:#f0f0f0;' }}">
-                    Listado general
-                </button>
-                <button type="button" wire:click="irAListado('validar')"
-                    style="border: 1px solid #999; border-radius: 4px; padding: 4px 12px; {{ $listTab === 'validar' ? 'background:#8bb2b7;font-weight:bold;' : 'background:#f0f0f0;' }}">
-                    Validar pendientes
-                </button>
-            </div>
-        @endif
-
-        @if ($listTab === 'validar')
-            <div style="margin-bottom: 15px;">
-                <b>Búsqueda (título):</b>
-                <input wire:model.live.debounce.300ms="search" type="text" style="width: 400px;" placeholder="Título del proyecto...">
-            </div>
-
-            <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
-                <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Revisión de
-                    expedientes pendientes</legend>
+        @if (!empty($gruposDocente))
+            <fieldset style="border: 2px solid #2e7d32; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
+                <legend style="color: #2e7d32; font-weight: bold; font-style: italic; padding: 0 5px;">Equipos disponibles para registrar proyecto</legend>
+                @if ($puedeFiltrarGrupos)
+                <div style="margin-bottom: 8px; font-size: 11px;">
+                    <table width="100%" border="0" cellpadding="4" cellspacing="0">
+                        <tr>
+                            <td width="33%"><b>Lapso:</b><br>
+                                <select wire:model.live="filterGruposLapso" style="width: 95%;">
+                                    <option value="">- Todos -</option>
+                                    @foreach ($lapsosFiltro as $l)
+                                        <option value="{{ $l->lap_codigo }}">{{ $l->lap_nombre }}</option>
+                                    @endforeach
+                                </select>
+                            </td>
+                            <td width="33%"><b>PNF / Programa:</b><br>
+                                <select wire:model.live="filterGruposPrograma" style="width: 95%;">
+                                    <option value="">- Todos -</option>
+                                    @foreach ($programasFiltro as $p)
+                                        <option value="{{ $p->pro_codigo }}">{{ $p->pro_siglas ?? $p->pro_nombre }}</option>
+                                    @endforeach
+                                </select>
+                            </td>
+                            <td width="34%"><b>Trayecto:</b><br>
+                                <select wire:model.live="filterGruposTrayecto" style="width: 95%;">
+                                    <option value="">- Todos -</option>
+                                    @foreach ($trayectosFiltro as $t)
+                                        <option value="{{ $t->tra_codigo }}">{{ $t->tra_nombre }}</option>
+                                    @endforeach
+                                </select>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                @endif
                 <table width="100%" border="1" cellpadding="4" cellspacing="0"
                     style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px;">
                     <thead>
-                        <tr style="background-color: #8bb2b7; color: #000; text-align: center; font-weight: bold;">
-                            <th width="35%">Título / resumen</th>
-                            <th width="20%">Equipo / comunidad</th>
-                            <th width="20%">Documentos</th>
-                            <th width="25%">Acciones</th>
+                        <tr style="background-color: #a5d6a7; color: #000; text-align: center; font-weight: bold;">
+                            <th width="25%">Nombre del equipo</th>
+                            <th width="15%">PNF / Sección</th>
+                            <th width="10%">Integrantes</th>
+                            <th width="25%">Proyecto</th>
+                            <th width="25%">Acción</th>
                         </tr>
                     </thead>
                     <tbody class="Texto">
-                        @foreach ($proyectos as $p)
-                            <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }};"
+                        @foreach ($gruposDocente as $g)
+                            @php $g = (object) $g; @endphp
+                            <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E8F5E9' : '#FFFFFF' }};"
                                 valign="top">
-                                <td style="padding: 5px;">
-                                    <span style="font-weight: bold;">{{ $p->titulo }}</span><br>
-                                    <span
-                                        style="font-size: 10px; color: #555;">{{ Str::limit($p->resumen, 60) }}</span><br>
-                                    <span style="font-size: 9px; color: #888;">Registrado:
-                                        {{ $p->created_at ? $p->created_at->format('d/m/Y') : '-' }}</span>
+                                <td style="padding: 5px; font-weight: bold;">{{ $g->nombre }}</td>
+                                <td style="padding: 5px; font-size: 10px;">
+                                    {{ $g->pro_siglas ?? '' }}@if($g->sec_nombre) · Secc. {{ $g->sec_nombre }}@endif
                                 </td>
-                                <td align="center" style="padding: 5px; font-size: 10px;">
-                                    {{ $p->equipo_resumen }}<br>
-                                    {{ $p->comunidad->nombre ?? 'N/A' }}
-                                </td>
+                                <td align="center" style="padding: 5px;">{{ $g->integrantes }}</td>
                                 <td align="center" style="padding: 5px;">
-                                    @php $docs = $p->documentos; @endphp
-                                    @if($docs->isNotEmpty())
-                                        @foreach ($docs as $doc)
-                                            <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}"
-                                                target="_blank"
-                                                style="color: #0000EE; font-size: 10px; display:block;">[{{ $doc->componente?->nombre ?? 'Documento' }}]</a>
-                                        @endforeach
+                                    @if ($g->tiene_proyecto)
+                                        @if ($g->proyecto_estado_validacion === 'aprobado')
+                                            <span style="color: #008000; font-weight: bold;">Aprobado</span>
+                                        @elseif($g->proyecto_estado_validacion === 'rechazado')
+                                            <span style="color: #FF0000; font-weight: bold;">Rechazado</span>
+                                        @else
+                                            <span style="color: #d4a017; font-weight: bold;">Pendiente</span>
+                                        @endif
                                     @else
-                                        <span style="color: #999;">Sin archivos</span>
+                                        <span style="color: #999;">Sin proyecto</span>
                                     @endif
-                                    <br>
-                                    <a href="#" wire:click.prevent="openDetails({{ $p->id }})"
-                                        style="color: #0000EE; font-size: 10px;">[Ficha técnica]</a>
                                 </td>
                                 <td align="center" style="padding: 5px;">
-                                    <div class="pgm-actions">
-                                        <button type="button" wire:click="approve({{ $p->id }})"
-                                            onclick="return confirm('¿Aprueba este proyecto?')"
+                                    @if ($g->tiene_proyecto)
+                                        <button type="button" wire:click="edit({{ $g->proyecto_id }})"
+                                            class="pgm-btn-action pgm-btn-action--edit">
+                                            Editar
+                                        </button>
+                                    @else
+                                        <button type="button" wire:click="registrarProyectoGrupo({{ $g->grp_codigo }})"
                                             class="pgm-btn-action pgm-btn-action--approve">
-                                            Aprobar
+                                            Registrar
                                         </button>
-                                        <button type="button" wire:click="openReject({{ $p->id }})"
-                                            class="pgm-btn-action pgm-btn-action--reject">
-                                            Rechazar
-                                        </button>
-                                    </div>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
-                        @if ($proyectos->isEmpty())
-                            <tr>
-                                <td colspan="4" align="center" style="padding: 20px; font-weight: bold;">No hay
-                                    expedientes pendientes de revisión.</td>
-                            </tr>
-                        @endif
                     </tbody>
                 </table>
-                <div style="margin-top: 10px;">{{ $proyectos->links() }}</div>
             </fieldset>
-        @else
-            <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
-                <legend style="font-weight: bold; font-size: 12px;">Filtros</legend>
-                <table width="100%" border="0" cellpadding="8" cellspacing="0" style="font-size: 11px;">
+        @endif
+            <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
+                <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Listado de proyectos
+                    institucionales</legend>
+                <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 11px; margin-bottom: 8px;">
                     <tr>
                         <td width="33%"><b>Título:</b><br>
                             <input wire:model.live.debounce.300ms="search" type="text" style="width: 95%;" placeholder="Buscar...">
                         </td>
-                        <td width="33%"><b>Estado validación:</b><br>
+                        <td width="33%"><b>Estado:</b><br>
                             <select wire:model.live="filterEstadoList" style="width: 95%;">
                                 <option value="">- Todos -</option>
                                 <option value="pendiente">Pendiente</option>
@@ -158,11 +162,6 @@
                         </td>
                     </tr>
                 </table>
-            </fieldset>
-
-            <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
-                <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Listado de proyectos
-                    institucionales</legend>
                 <table width="100%" border="1" cellpadding="4" cellspacing="0"
                     style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px;">
                     <thead>
@@ -238,20 +237,11 @@
                                                 Ficha
                                             </button>
                                         @endif
-                                        <button type="button" wire:click="edit({{ $p->id }})"
-                                            class="pgm-btn-action pgm-btn-action--edit">
-                                            {{ $esLider ? 'Actualizar' : 'Editar' }}
-                                        </button>
-                                        @if (!($esLider ?? false))
-                                        <button type="button" wire:click="toggleStatus({{ $p->id }})"
-                                            class="pgm-btn-action pgm-btn-action--toggle">
-                                            {{ $p->estado_logico ? 'Inhabilitar' : 'Habilitar' }}
-                                        </button>
-                                        <button type="button" wire:click="delete({{ $p->id }})"
-                                            wire:confirm="¿Eliminar este proyecto permanentemente?"
-                                            class="pgm-btn-action pgm-btn-action--delete">
-                                            Eliminar
-                                        </button>
+                                        @if ($esLider ?? false)
+                                            <button type="button" wire:click="edit({{ $p->id }})"
+                                                class="pgm-btn-action pgm-btn-action--edit">
+                                                Actualizar
+                                            </button>
                                         @endif
                                     </div>
                                 </td>
@@ -267,7 +257,6 @@
                 </table>
                 <div style="margin-top: 10px;">{{ $proyectos->links() }}</div>
             </fieldset>
-        @endif
     @elseif($viewMode === 'reject')
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Motivo de rechazo
@@ -279,7 +268,7 @@
                 <div class="obligatorio" style="font-size: 11px; margin-top: 5px;">{{ $message }}</div>
             @enderror
             <div style="margin-top: 20px;">
-                <button type="button" wire:click="irAListado('{{ $listTab }}')" class="pgm-btn-cancel" style="margin-right: 10px;">Cancelar</button>
+                <button type="button" wire:click="irAListado()" class="pgm-btn-cancel" style="margin-right: 10px;">Cancelar</button>
                 <button type="button" wire:click="confirmReject" class="pgm-btn-cancel" style="background-color: #f8d7da; color: #721c24; font-weight: bold;">Confirmar rechazo</button>
             </div>
         </fieldset>
@@ -321,7 +310,7 @@
                         Rechazar
                     </button>
                 @endif
-                <button type="button" wire:click="irAListado('{{ $listTab }}')"
+                <button type="button" wire:click="irAListado()"
                     class="pgm-btn-action pgm-btn-action--edit">Regresar al listado</button>
             </div>
         </fieldset>
@@ -338,7 +327,7 @@
 
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">
-                {{ $modoActualizacion ? 'Subir documentos del proyecto' : ($editingId ? 'Actualizar expediente' : 'Registrar proyecto') }}
+                {{ $modoActualizacion ? 'Subir documentos del proyecto' : 'Actualizar expediente' }}
             </legend>
             <form wire:submit="save">
 
@@ -429,28 +418,26 @@
                     </button>
                     @if ($showTeamFilters)
                         <div style="padding:10px;">
-                            @if ($esAdmin ?? false)
-                                <div style="padding:4px 0; margin-bottom:8px;">
-                                    <select wire:model.live="filterLapsoEquipo" style="width: 32%;">
-                                        <option value="">- Lapso -</option>
-                                        @foreach ($lapsos as $lap)
-                                            <option value="{{ $lap->id }}">{{ $lap->nombre }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select wire:model.live="filterProgramaEquipo" style="width: 32%;">
-                                        <option value="">- Programa -</option>
-                                        @foreach ($programasEquipo as $pro)
-                                            <option value="{{ $pro->pro_codigo }}">{{ trim($pro->pro_siglas) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select wire:model.live="filterSeccionEquipo" style="width: 32%;">
-                                        <option value="">- Sección -</option>
-                                        @foreach ($seccionesEquipo as $sec)
-                                            <option value="{{ $sec->sec_codigo }}">{{ trim($sec->sec_nombre) }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            @endif
+                            <div style="padding:4px 0; margin-bottom:8px;">
+                                <select wire:model.live="filterLapsoEquipo" style="width: 32%;">
+                                    <option value="">- Lapso -</option>
+                                    @foreach ($lapsos as $lap)
+                                        <option value="{{ $lap->id }}">{{ $lap->nombre }}</option>
+                                    @endforeach
+                                </select>
+                                <select wire:model.live="filterProgramaEquipo" style="width: 32%;">
+                                    <option value="">- Programa -</option>
+                                    @foreach ($programasEquipo as $pro)
+                                        <option value="{{ $pro->pro_codigo }}">{{ trim($pro->pro_siglas) }}</option>
+                                    @endforeach
+                                </select>
+                                <select wire:model.live="filterSeccionEquipo" style="width: 32%;">
+                                    <option value="">- Sección -</option>
+                                    @foreach ($seccionesEquipo as $sec)
+                                        <option value="{{ $sec->sec_codigo }}">{{ trim($sec->sec_nombre) }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
 
                             <div style="margin-bottom: 8px;">
                                 <b>Seleccione el grupo de proyecto:</b><span class="obligatorio">*</span>
@@ -474,9 +461,13 @@
                             @if (!empty($equipoValidado))
                                 <div style="margin: 6px 0; padding: 6px; background: #d4edda; font-size: 10px;">
                                     <b>Validado:</b> {{ $equipoValidado->nombre }}
-                                    @if (!empty($programa_id_derived) || !empty($trayecto_derived))
-                                        &nbsp;|&nbsp; Programa: {{ $programa_id_derived ?? '?' }}
-                                        , Trayecto: {{ $trayecto_derived ?: '?' }}
+                                    | Lapso: {{ $equipoValidado->lap_nombre ?? '?' }}
+                                    | Sección: {{ $equipoValidado->sec_nombre ?? '?' }}
+                                    @if (!empty($equipoValidado->pro_siglas))
+                                        | PNF: {{ $equipoValidado->pro_siglas }}
+                                    @endif
+                                    @if (!empty($trayecto_derived))
+                                        | Trayecto: {{ $trayecto_derived }}
                                     @endif
                                     ({{ ($integrantesEquipo ?? collect())->count() }} integrantes)
                                 </div>

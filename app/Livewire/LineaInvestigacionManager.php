@@ -84,6 +84,7 @@ class LineaInvestigacionManager extends Component
                 'descripcion' => $this->descripcion,
                 'area_de_investigacion' => $this->area_de_investigacion,
                 'programa_id' => $this->programa_id,
+                'activo' => true,
             ],
             $this->editingId,
         );

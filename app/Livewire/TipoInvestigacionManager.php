@@ -69,6 +69,7 @@ class TipoInvestigacionManager extends Component
             [
                 'nombre' => $this->nombre,
                 'descripcion' => $this->descripcion,
+                'estado_logico' => true,
             ],
             $this->editingId,
         );
