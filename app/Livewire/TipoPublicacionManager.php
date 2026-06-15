@@ -69,6 +69,7 @@ class TipoPublicacionManager extends Component
             [
                 'nombre' => $this->nombre,
                 'mencion_honorifica' => $this->mencion_honorifica,
+                'estado_logico' => true,
             ],
             $this->editingId,
         );

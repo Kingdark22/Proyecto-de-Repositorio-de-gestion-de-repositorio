@@ -28,8 +28,29 @@ class NotificacionService
 
             if ($isTeacher) {
                 $clavesDocente = app(ProyectoGestionService::class)->clavesEquipoFiltroValidacion($user);
-                if ($clavesDocente !== null) {
-                    $query->whereIn('pry_direccion_logica', $clavesDocente);
+                if ($clavesDocente !== null && $clavesDocente !== []) {
+                    // Resolver grupos del profesor para filtrar proyectos EQGRP
+                    $gruposProfesor = GrupoProyectoModulo::all()->filter(function ($g) use ($clavesDocente) {
+                        $ctx = $g->grp_contexto;
+                        if (!$ctx instanceof \ArrayObject) return false;
+                        $lap = $ctx['lap_codigo'] ?? null;
+                        $sec = $ctx['sec_codigo'] ?? null;
+                        if (!$lap || !$sec) return false;
+                        $claveSec = app(\App\Services\IntranetEquipoSeccionService::class)
+                            ->construirClave((int) $lap, (int) $sec);
+                        return in_array($claveSec, $clavesDocente, true);
+                    })->pluck('grp_codigo')
+                        ->map(fn($id) => \App\Services\GrupoProyectoService::PREFIJO . ':' . $id)
+                        ->toArray();
+
+                    $query->where(function ($q) use ($clavesDocente, $gruposProfesor) {
+                        // EQSEC direct matches (proyectos con equipo_ref = EQSEC:*)
+                        $q->whereIn('pry_direccion_logica', $clavesDocente);
+                        // EQGRP matches (proyectos con equipo_ref = EQGRP:*)
+                        if ($gruposProfesor) {
+                            $q->orWhereIn('pry_direccion_logica', $gruposProfesor);
+                        }
+                    });
                 }
             }
 
@@ -41,7 +62,7 @@ class NotificacionService
                         'type' => 'info',
                         'title' => 'Proyecto actualizado',
                         'mensaje' => 'Proyecto actualizado por el líder: ' . $p->titulo,
-                        'url' => route('proyectos.gestion', ['tab' => 'validar', 'details' => $p->id]),
+                        'url' => route('proyectos.gestion', ['details' => $p->id]),
                         'proyecto_id' => $p->id,
                     ];
                 } else {
@@ -49,7 +70,7 @@ class NotificacionService
                         'type' => 'info',
                         'title' => 'Proyecto registrado',
                         'mensaje' => 'Nuevo proyecto registrado: ' . $p->titulo,
-                        'url' => route('proyectos.gestion', ['tab' => 'validar', 'details' => $p->id]),
+                        'url' => route('proyectos.gestion', ['details' => $p->id]),
                         'proyecto_id' => $p->id,
                     ];
                 }

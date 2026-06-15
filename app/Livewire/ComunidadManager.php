@@ -182,12 +182,16 @@ class ComunidadManager extends Component
             'search' => trim($this->search),
         ], $this->getPage());
 
-        $formulario = $gestion->datosVistaFormulario($this->estado_id);
-
-        return array_merge($listado, $formulario, [
+        $result = array_merge($listado, [
             'puedeGestionar' => $this->puedeGestionar(),
             'lapsoVigente' => app(IntranetProfessorService::class)->lapsosActivos()->first(),
         ]);
+
+        if ($this->viewMode === 'form') {
+            $result = array_merge($result, $gestion->datosVistaFormulario($this->estado_id));
+        }
+
+        return $result;
     }
 
     public function render(ComunidadGestionService $gestion)
