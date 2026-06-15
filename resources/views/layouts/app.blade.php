@@ -202,10 +202,10 @@
             const content = document.getElementById('notifyModalContent');
             modal.style.display = 'flex';
             switch(type) {
-                case 'success': icon.innerHTML = '&#10004;'; icon.style.color = '#28a745'; title.textContent = 'Operaci&oacute;n exitosa'; content.style.borderTop = '5px solid #28a745'; break;
+                case 'success': icon.innerHTML = '&#10004;'; icon.style.color = '#28a745'; title.innerHTML = 'Operación exitosa'; content.style.borderTop = '5px solid #28a745'; break;
                 case 'error': icon.innerHTML = '&#10008;'; icon.style.color = '#dc3545'; title.textContent = 'Error'; content.style.borderTop = '5px solid #dc3545'; break;
                 case 'warning': icon.innerHTML = '&#9888;'; icon.style.color = '#ffc107'; title.textContent = 'Advertencia'; content.style.borderTop = '5px solid #ffc107'; break;
-                default: icon.innerHTML = '&#8505;'; icon.style.color = '#17a2b8'; title.textContent = 'Informaci&oacute;n'; content.style.borderTop = '5px solid #17a2b8';
+                default: icon.innerHTML = '&#8505;'; icon.style.color = '#17a2b8'; title.innerHTML = 'Información'; content.style.borderTop = '5px solid #17a2b8';
             }
             msg.innerHTML = message;
         }
