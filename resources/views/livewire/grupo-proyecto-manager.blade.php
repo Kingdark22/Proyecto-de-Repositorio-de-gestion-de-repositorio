@@ -148,7 +148,7 @@
                     <option value="{{ $l->lap_codigo }}">{{ $l->lap_nombre }}</option>
                 @endforeach
             </select>
-            <select wire:model.live="filterPrograma" class="grp-filter-select" @if (!$filterLapso) disabled @endif>
+            <select wire:model.live="filterPrograma" class="grp-filter-select" @if (!$filterLapso || $isProfessor) disabled @endif>
                 <option value="">PNF / Programa</option>
                 @foreach ($programas as $p)
                     <option value="{{ $p->pro_codigo }}">{{ $p->pro_siglas }}</option>
@@ -234,7 +234,7 @@
                                 @endforeach
                             </select>
                             <select wire:model.live="filterPrograma" class="grp-filter-select"
-                                @if (!$filterLapso) disabled @endif>
+                                @if (!$filterLapso || ($isProfessor && $viewMode === 'form')) disabled @endif>
                                 <option value="">PNF</option>
                                 @foreach ($programas as $p)
                                     <option value="{{ $p->pro_codigo }}">{{ $p->pro_siglas }}</option>
@@ -261,7 +261,7 @@
                             </div>
                         @else
                             <p style="font-size: 11px; color: #856404; margin-top:4px;">
-                                Seleccione lapso, PNF y sección para ver los estudiantes candidatos.
+                                Seleccione lapso, PNF y sección para ver los estudiantes candidatos (todas las secciones del PNF).
                             </p>
                         @endif
                     </td>
@@ -270,7 +270,7 @@
 
             @if ($filterSeccion !== '')
                 <div style="margin-top: 12px; padding: 8px; background: #f5f5f5; border: 1px solid #ccc;">
-                    <b>Agregar integrante (de la secci&oacute;n):</b><br>
+                    <b>Agregar integrante (del PNF):</b><br>
                     <div style="display: flex; gap: 16px; align-items: center; margin-top: 4px;">
                         <select wire:model="selectedCedula" class="grp-filter-select" style="flex: 1;">
                             <option value="">Estudiante inscrito&hellip;</option>
@@ -318,7 +318,7 @@
                     </tbody>
                 </table>
             @else
-                <p style="font-size: 11px; color: #856404;">Seleccione lapso y secci&oacute;n para ver estudiantes candidatos.
+                <p style="font-size: 11px; color: #856404;">Seleccione lapso y secci&oacute;n para ver estudiantes candidatos (todas las secciones del PNF).
                 </p>
             @endif
 

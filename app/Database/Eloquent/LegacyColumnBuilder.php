@@ -29,6 +29,11 @@ class LegacyColumnBuilder extends Builder
             }, $boolean);
         }
 
+        if (func_num_args() === 2) {
+            $value = $operator;
+            $operator = '=';
+        }
+
         [$column, $operator, $value] = $this->model->qualifyLegacyWhere($column, $operator, $value);
 
         return parent::where($column, $operator, $value, $boolean);

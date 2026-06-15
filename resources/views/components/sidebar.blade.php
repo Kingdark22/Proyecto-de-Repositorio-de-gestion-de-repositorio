@@ -90,7 +90,7 @@ $notificacionesCount = count($notificacionesList);
             </li>
             @endif
             
-            @if ($nav['canViewComunes'] ?? false)
+            @if ($nav['isGestionador'] ?? false)
             <li>
                 <div class="legacy-menu-item has-submenu">
                     Vinculación

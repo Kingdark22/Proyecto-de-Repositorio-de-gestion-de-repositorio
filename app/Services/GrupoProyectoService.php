@@ -127,7 +127,7 @@ class GrupoProyectoService
         }
 
         $payload['created_at'] = now();
-        $id = (int) GrupoProyectoModulo::insertGetId($payload);
+        $id = (int) (new GrupoProyectoModulo)->insertGetId($payload, $idCol);
 
         return $this->construirClave($id);
     }
@@ -167,7 +167,8 @@ class GrupoProyectoService
         $cacheKey = 'grp_listar_' . $version . '_' . md5(json_encode($filtros));
 
         return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(2), function () use ($filtros) {
-            $query = GrupoProyectoModulo::query();
+            $query = GrupoProyectoModulo::query()
+                ->select(['grp_codigo', 'grp_nombre', 'grp_contexto', 'grp_com_codigo', 'grp_creador_cedula', 'grp_miembros']);
 
             if (!empty($filtros['lapso'])) {
                 $query->whereRaw('CAST(grp_contexto AS jsonb)->>\'lap_codigo\' = ?', [(string) $filtros['lapso']]);
@@ -176,7 +177,15 @@ class GrupoProyectoService
                 $query->whereRaw('CAST(grp_contexto AS jsonb)->>\'pro_codigo\' = ?', [(string) $filtros['programa']]);
             }
             if (!empty($filtros['seccion'])) {
-                $query->whereRaw('CAST(grp_contexto AS jsonb)->>\'sec_codigo\' = ?', [(string) $filtros['seccion']]);
+                if (is_array($filtros['seccion'])) {
+                    $query->where(function ($q) use ($filtros) {
+                        foreach ($filtros['seccion'] as $sec) {
+                            $q->orWhereRaw('CAST(grp_contexto AS jsonb)->>\'sec_codigo\' = ?', [(string) $sec]);
+                        }
+                    });
+                } else {
+                    $query->whereRaw('CAST(grp_contexto AS jsonb)->>\'sec_codigo\' = ?', [(string) $filtros['seccion']]);
+                }
             }
             if (!empty($filtros['trayecto'])) {
                 $query->whereRaw('CAST(grp_contexto AS jsonb)->>\'tra_codigo\' = ?', [(string) $filtros['trayecto']]);
