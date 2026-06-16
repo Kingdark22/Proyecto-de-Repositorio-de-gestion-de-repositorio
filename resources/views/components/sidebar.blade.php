@@ -70,8 +70,8 @@ $notificacionesCount = count($notificacionesList);
                         class="{{ request()->routeIs('proyectos.buscar') ? 'active-sub' : '' }}">Explorar proyectos</a>
                     @if ($nav['canRegisterProject'] || $nav['canValidateProjects'])
                     <a href="{{ route('proyectos.gestion') }}"
-                        class="{{ request()->routeIs('proyectos.gestion', 'proyectos.crear', 'validaciones.index') ? 'active-sub' : '' }}">Gestión
-                        de proyectos</a>
+                        class="{{ request()->routeIs('proyectos.gestion', 'proyectos.crear', 'validaciones.index') ? 'active-sub' : '' }}">Subir
+                        proyecto</a>
                     @endif
                 </div>
             </li>
