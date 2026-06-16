@@ -142,13 +142,35 @@
 
     @if ($viewMode === 'list')
         <div style="margin-bottom: 10px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
-            <select wire:model.live="filterLapso" class="grp-filter-select">
+            <select wire:model.live="filterLapso" class="grp-filter-select" wire:loading.attr="disabled">
                 <option value="">Lapso</option>
                 @foreach ($lapsos as $l)
                     <option value="{{ $l->lap_codigo }}">{{ $l->lap_nombre }}</option>
                 @endforeach
             </select>
+<<<<<<< HEAD
+            <select wire:model.live="filterPrograma" class="grp-filter-select" @if (!$filterLapso || $isProfessor) disabled @endif wire:loading.attr="disabled">
+                <option value="">PNF / Programa</option>
+                @foreach ($programas as $p)
+                    <option value="{{ $p->pro_codigo }}">{{ $p->pro_siglas }}</option>
+                @endforeach
+            </select>
+            <select wire:model.live="filterSeccion" class="grp-filter-select" @if (!$filterLapso || !$filterPrograma) disabled @endif wire:loading.attr="disabled">
+                <option value="">Secci&oacute;n</option>
+                @foreach ($secciones as $s)
+                    <option value="{{ $s->sec_codigo }}">{{ $s->sec_nombre }}</option>
+                @endforeach
+            </select>
+            <select wire:model.live="filterSeccion" class="grp-filter-select" @if (!$filterLapso || !$filterPrograma) disabled @endif wire:loading.attr="disabled">
+                <option value="">Secci&oacute;n</option>
+                @foreach ($secciones as $s)
+                    <option value="{{ $s->sec_codigo }}">{{ $s->sec_nombre }}</option>
+                @endforeach
+            </select>
+            <select wire:model.live="filterPrograma" class="grp-filter-select" @if (!$filterLapso) disabled @endif>
+=======
             <select wire:model.live="filterPrograma" class="grp-filter-select" @if (!$filterLapso || $isProfessor) disabled @endif>
+>>>>>>> origin/main
                 <option value="">PNF / Programa</option>
                 @foreach ($programas as $p)
                     <option value="{{ $p->pro_codigo }}">{{ $p->pro_siglas }}</option>
@@ -230,21 +252,25 @@
                     <td colspan="2" style="padding-top:8px;">
                         <b>Contexto acad&eacute;mico:</b>
                         <div style="display: flex; gap: 16px; margin-top: 4px;">
-                            <select wire:model.live="filterLapso" class="grp-filter-select">
+                            <select wire:model.live="filterLapso" class="grp-filter-select" wire:loading.attr="disabled">
                                 <option value="">Lapso</option>
                                 @foreach ($lapsos as $l)
                                     <option value="{{ $l->lap_codigo }}">{{ $l->lap_nombre }}</option>
                                 @endforeach
                             </select>
                             <select wire:model.live="filterPrograma" class="grp-filter-select"
+<<<<<<< HEAD
+                                @if (!$filterLapso || ($isProfessor && $viewMode === 'form')) disabled @endif wire:loading.attr="disabled">
+=======
                                 @if (!$filterLapso || ($isProfessor && $viewMode === 'form')) disabled @endif>
+>>>>>>> origin/main
                                 <option value="">PNF</option>
                                 @foreach ($programas as $p)
                                     <option value="{{ $p->pro_codigo }}">{{ $p->pro_siglas }}</option>
                                 @endforeach
                             </select>
                             <select wire:model.live="filterSeccion" class="grp-filter-select"
-                                @if (!$filterLapso) disabled @endif>
+                                @if (!$filterLapso || !$filterPrograma) disabled @endif wire:loading.attr="disabled">
                                 <option value="">Secci&oacute;n</option>
                                 @foreach ($secciones as $s)
                                     <option value="{{ $s->sec_codigo }}">{{ $s->sec_nombre }}</option>
