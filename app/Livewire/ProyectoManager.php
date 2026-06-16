@@ -201,11 +201,6 @@ class ProyectoManager extends Component
         $this->showAdvanced = ! $this->showAdvanced;
     }
 
-    public function updatingListTab(): void
-    {
-        $this->resetPage();
-    }
-
     protected function messages(): array
     {
         return [
