@@ -65,9 +65,12 @@ class ComunidadGestionService
             'nombre' => $datos['nombre'],
             'rif' => $datos['rif'],
             'correo' => $datos['correo'],
-            'numero_telefono' => ($datos['prefijo_telefono'] ?? '') . ($datos['numero_telefono'] ?? ''),
             'direccion_id' => $direccionId,
         ];
+
+        if (($datos['numero_telefono'] ?? '') !== '') {
+            $payload['numero_telefono'] = ($datos['prefijo_telefono'] ?? '') . ($datos['numero_telefono'] ?? '');
+        }
  
         $comunidad = Comunidad::guardar($payload, $id);
  
