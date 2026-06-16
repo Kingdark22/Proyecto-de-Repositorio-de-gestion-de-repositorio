@@ -98,6 +98,9 @@ class ProyectoManager extends Component
     /** Grupos del docente para registro por selección */
     public array $gruposDocente = [];
 
+    /** True si el rol activo es profesor proyecto */
+    public bool $esProfesor = false;
+
     public function placeholder()
     {
         return <<<'HTML'
@@ -124,6 +127,13 @@ class ProyectoManager extends Component
 
     public function mount(ProyectoGestionService $gestion): void
     {
+        $user = auth()->user();
+        if ($user) {
+            $userRoleService = app(UserRoleService::class);
+            $activeRole = $userRoleService->getActiveRole($user);
+            $this->esProfesor = $userRoleService->roleMatches('profesor proyecto', $activeRole);
+        }
+
         if ($editId = request()->query('edit')) {
             $this->edit((int) $editId, $gestion, app(GrupoProyectoService::class));
         }
@@ -487,6 +497,24 @@ class ProyectoManager extends Component
         $this->dispatch('refresh-icons');
     }
 
+    /**
+     * Cierra el formulario del profesor, guarda los datos sin documentos
+     * y notifica a los líderes que deben subir los documentos del proyecto.
+     */
+    public function cerrarFormulario(ProyectoGestionService $gestion): void
+    {
+        $proyecto = $gestion->guardar(
+            $this->editingId,
+            $this->estadoFormulario(),
+            auth()->user(),
+            [], // No se suben documentos desde el formulario del profesor
+            $this->esGrupoRegistrado ? $this->selectedLeaders : [],
+        );
+
+        $this->dispatch('notify', type: 'success', message: 'Formulario cerrado. Los líderes serán notificados para subir los documentos del proyecto.');
+        $this->irAListado();
+    }
+
     public function toggleStatus(int $id, ProyectoGestionService $gestion): void
     {
         $gestion->alternarEstado($id);
@@ -581,14 +609,15 @@ class ProyectoManager extends Component
 
         $esLiderGlobal = $this->usuarioEsLider($gestion);
 
-        $datos = match ($this->viewMode) {
-            'list' => $gestion->datosVistaListado([
+        $datos = match (true) {
+            $this->viewMode === 'list' && !$this->esProfesor => $gestion->datosVistaListado([
                 'search' => $this->search,
                 'estado' => $this->filterEstadoList,
                 'comunidad' => $this->filterComunidadList,
                 'lapso' => $this->filterGruposLapso,
             ], $page, $user),
-            'form' => $gestion->datosVistaFormulario($estado),
+            $this->viewMode === 'list' && $this->esProfesor => ['comunidades' => $gestion->comunidadesOrdenadas()],
+            $this->viewMode === 'form' => $gestion->datosVistaFormulario($estado),
             default => ['comunidades' => $gestion->comunidadesOrdenadas()],
         };
 
@@ -618,6 +647,7 @@ class ProyectoManager extends Component
             'programasFiltro' => $programasFiltro,
             'trayectosFiltro' => $trayectosFiltro,
             'puedeFiltrarGrupos' => $puedeFiltrarGrupos,
+            'esProfesor' => $this->esProfesor,
         ]));
     }
 

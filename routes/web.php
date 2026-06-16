@@ -66,10 +66,13 @@ Route::middleware(['auth', 'active.role'])->group(function () {
 
     Route::redirect('/lapsos-academicos', '/dashboard')->name('lapsos-academicos');
 
-    Route::view('/proyectos', 'proyectos.index')->name('proyectos.index');
     Route::view('/proyectos/buscar', 'proyectos.buscar')->name('proyectos.buscar');
-    Route::view('/comunidades', 'comunidades.index')->name('comunidades.index');
-    Route::view('/grupos-proyecto', 'grupos_proyecto.index')->name('grupos-proyecto.index');
+
+    Route::middleware('role:administrador,coordinador,profesor proyecto,gestionador,estudiante')->group(function () {
+        Route::view('/proyectos', 'proyectos.index')->name('proyectos.index');
+        Route::view('/comunidades', 'comunidades.index')->name('comunidades.index');
+        Route::view('/grupos-proyecto', 'grupos_proyecto.index')->name('grupos-proyecto.index');
+    });
 
     Route::middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador')->group(function () {
         Route::view('/proyectos/gestion', 'proyectos.index')->name('proyectos.gestion');
@@ -99,7 +102,7 @@ Route::get('/documentos/{path}', function (string $path) {
         abort(404);
     }
     return Storage::disk('public')->response($path);
-})->where('path', '.*')->middleware('auth')->name('documentos.serve');
+})->where('path', '.*')->middleware(['auth', 'active.role'])->name('documentos.serve');
 
 Route::get('/publicaciones/publico', \App\Livewire\ProyectosPublicosManager::class)->name('publicaciones.publico')->middleware('auth', 'role:gestionador');
 

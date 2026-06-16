@@ -297,6 +297,7 @@ class GrupoProyectoManager extends Component
         session()->flash('message', 'Grupo registrado. Clave: ' . $clave);
         $this->viewMode = 'list';
         $this->resetFormulario();
+        $this->restablecerFiltros();
     }
 
     public function eliminarGrupo(int $grpCodigo): void
@@ -309,6 +310,7 @@ class GrupoProyectoManager extends Component
     {
         $this->viewMode = 'list';
         $this->resetFormulario();
+        $this->restablecerFiltros();
     }
 
     protected function resetFormulario(): void
@@ -318,6 +320,18 @@ class GrupoProyectoManager extends Component
         $this->comunidadId = '';
         $this->miembrosSeleccionados = [];
         $this->selectedCedula = '';
+    }
+
+    protected function restablecerFiltros(): void
+    {
+        $this->reset('filterPrograma', 'filterSeccion');
+        $this->loadSecciones();
+
+        $activeRole = app(UserRoleService::class)->getActiveRole(auth()->user());
+        if ($activeRole !== 'profesor proyecto') {
+            $this->filterLapso = '';
+            $this->loadProgramas();
+        }
     }
 
     public function updatedFilterLapso(): void

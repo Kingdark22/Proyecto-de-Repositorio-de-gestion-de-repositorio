@@ -136,6 +136,7 @@
                 </table>
             </fieldset>
         @endif
+            @if(!$esProfesor)
             <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
                 <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Listado de proyectos
                     institucionales</legend>
@@ -257,6 +258,7 @@
                 </table>
                 <div style="margin-top: 10px;">{{ $proyectos->links() }}</div>
             </fieldset>
+            @endif
     @elseif($viewMode === 'reject')
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Motivo de rechazo
@@ -374,8 +376,8 @@
                     @endif
                 </fieldset>
 
-                {{-- == SECCIÓN DOCUMENTOS POR COMPONENTE == --}}
-                @if(isset($componentes_disp) && $componentes_disp->isNotEmpty())
+                {{-- == SECCIÓN DOCUMENTOS POR COMPONENTE (oculta para profesor) == --}}
+                @if(!$esProfesor && isset($componentes_disp) && $componentes_disp->isNotEmpty())
                 <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
                     <legend style="font-weight: bold; font-size: 12px;">Documentos del proyecto por componente</legend>
                     <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 12px;">
@@ -410,7 +412,8 @@
                 @endif
 
                 @if (!$modoActualizacion)
-                {{-- == SECCIÓN EQUIPO Y COMUNIDAD (desplegable) == --}}
+                {{-- == SECCIÓN EQUIPO Y COMUNIDAD (desplegable, oculta para profesor) == --}}
+                @if(!$esProfesor)
                 <div style="margin-bottom: 15px; border: 1px solid #CCC; border-radius: 4px;">
                     <button type="button" wire:click="toggleTeamFilters"
                         style="width:100%; background:#f5f5f5; border:none; padding:8px 12px; text-align:left; font-weight:bold; font-size:12px; cursor:pointer;">
@@ -472,46 +475,55 @@
                                     ({{ ($integrantesEquipo ?? collect())->count() }} integrantes)
                                 </div>
                             @endif
-
-                            @if (!empty($miembrosGrupo) && ($esGrupoRegistrado ?? false))
-                                <div style="margin: 8px 0; padding: 8px; background: #f0f8ff; border: 1px solid #b8d4f0; border-radius: 4px; font-size: 12px;">
-                                    <b style="display:block; margin-bottom:6px;">Seleccionar líderes del grupo (máximo 2):</b>
-                                    @foreach ($miembrosGrupo as $miembro)
-                                        <label style="display:block; margin: 3px 0; cursor:pointer;">
-                                            <input type="checkbox" value="{{ $miembro['cedula'] }}"
-                                                wire:click="toggleLider('{{ $miembro['cedula'] }}')"
-                                                {{ in_array($miembro['cedula'], $selectedLeaders) ? 'checked' : '' }}>
-                                            {{ $miembro['nombre'] }} {{ $miembro['apellido'] }}
-                                            @if ((int) ($miembro['rol_id'] ?? 0) === \App\Services\IntranetEquipoSeccionService::ROL_LIDER)
-                                                <small style="color:#888;">(actual líder)</small>
-                                            @endif
-                                        </label>
-                                    @endforeach
-                                    <small style="color:#666;">Los líderes podrán subir los documentos del proyecto.</small>
-                                </div>
-                            @endif
-
-                            <div style="margin-top: 10px;">
-                                <b>Comunidad:</b>
-                                @if (($esGrupoRegistrado ?? false) && $comunidadNombreGrupo)
-                                    <div style="padding: 6px 0; font-size: 12px;">
-                                        <span style="background:#d4edda; border:1px solid #c3e6cb; padding: 4px 10px; border-radius:3px; font-weight:bold;">{{ $comunidadNombreGrupo }}</span>
-                                        <small style="color:#777; display:block; margin-top:3px;">Asignada automáticamente por el grupo de proyecto.</small>
-                                    </div>
-                                @elseif ($equipo_seccion_clave && ($esGrupoRegistrado ?? false))
-                                    <div style="background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; padding:10px; margin:4px 0; border-radius:4px; font-size:12px; font-weight:bold;">
-                                        El grupo de proyecto seleccionado no tiene una comunidad asignada. Debe asignarle una desde la gestión del grupo antes de registrar el proyecto.
-                                    </div>
-                                    @error('comunidad_id')
-                                        <br><span class="obligatorio">{{ $message }}</span>
-                                    @enderror
-                                @else
-                                    <span style="color:#999; font-size:11px;">(se asignará automáticamente al seleccionar un grupo)</span>
-                                @endif
-                            </div>
                         </div>
                     @endif
                 </div>
+                @endif
+
+                {{-- == SECCIÓN COMUNIDAD E INTEGRANTES (modo profesor) == --}}
+                @if($esProfesor)
+                <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
+                    <legend style="font-weight: bold; font-size: 12px;">Equipo y comunidad</legend>
+                    <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px;">
+                        <tr>
+                            <td width="20%"><b>Comunidad:</b></td>
+                            <td>
+                                @if($comunidadNombreGrupo)
+                                    <span style="background:#d4edda; border:1px solid #c3e6cb; padding:4px 10px; border-radius:3px; font-weight:bold;">{{ $comunidadNombreGrupo }}</span>
+                                @else
+                                    <span style="color:#999;">(asignada automáticamente del grupo)</span>
+                                @endif
+                            </td>
+                        </tr>
+                    </table>
+                    @if(!empty($miembrosGrupo))
+                    <div style="margin-top: 8px; font-size: 12px;">
+                        <b style="display:block; margin-bottom:4px;">Integrantes del equipo:</b>
+                        <table width="100%" cellpadding="3" cellspacing="0" style="font-size: 11px; border-collapse: collapse;">
+                            @foreach($miembrosGrupo as $miembro)
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td width="5%">
+                                    <input type="checkbox" value="{{ $miembro['cedula'] }}"
+                                        wire:click="toggleLider('{{ $miembro['cedula'] }}')"
+                                        {{ in_array($miembro['cedula'], $selectedLeaders) ? 'checked' : '' }}>
+                                </td>
+                                <td width="60%">{{ $miembro['nombre'] }} {{ $miembro['apellido'] }}</td>
+                                <td width="35%">
+                                    @if(in_array($miembro['cedula'], $selectedLeaders))
+                                        <span style="color:#0066cc; font-weight:bold;">Líder</span>
+                                    @else
+                                        <span style="color:#888;">Integrante</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </table>
+                        <small style="color:#666;">Seleccione hasta 2 líderes. Los líderes podrán subir los documentos del proyecto.</small>
+                    </div>
+                    @endif
+                </fieldset>
+                @endif
+
 
                 {{-- == SECCIÓN CLASIFICACIÓN (visible) == --}}
                 <div style="margin-bottom: 15px; border: 1px solid #CCC; border-radius: 4px; padding: 10px;">
@@ -571,7 +583,8 @@
                     </table>
                 </div>
 
-                {{-- == SECCIÓN AVANZADO (colapsable) == --}}
+                {{-- == SECCIÓN AVANZADO (colapsable, oculta para profesor) == --}}
+                @if(!$esProfesor)
                 <div style="margin-bottom: 15px; border: 1px solid #CCC; border-radius: 4px;">
                     <button type="button" wire:click="toggleAdvanced"
                         style="width:100%; background:#f5f5f5; border:none; padding:8px 12px; text-align:left; font-weight:bold; font-size:12px; cursor:pointer;">
@@ -604,6 +617,7 @@
                         </div>
                     @endif
                 </div>
+                @endif
                 @endif
 
                 <div style="text-align: center; margin-top: 20px;">

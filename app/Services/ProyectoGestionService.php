@@ -259,6 +259,7 @@ class ProyectoGestionService
         $existing = $editingId ? Proyecto::with('documentos')->find($editingId) : null;
 
         $payload = [
+            'titulo' => $datos['titulo'] ?? '',
             'resumen' => $datos['resumen'],
             'fecha_subida' => $datos['fecha_subida'],
             'calificacion' => ($datos['calificacion'] ?? '') !== '' ? (int) $datos['calificacion'] : null,
@@ -290,8 +291,8 @@ class ProyectoGestionService
 
         $this->guardarDocumentos($proyecto, $documentos, $existing);
 
-        // Actualizar roles de líderes en el grupo (solo si no es admin creando)
-        if (!empty($datos['equipo_seccion_clave']) && !$esAdmin && !$editingId) {
+        // Actualizar roles de líderes en el grupo (solo si hay líderes que asignar y no es admin)
+        if (!empty($datos['equipo_seccion_clave']) && !$esAdmin && !empty($leaders)) {
             $this->asignarLideresGrupo($datos['equipo_seccion_clave'], $leaders);
         }
 
@@ -431,7 +432,7 @@ class ProyectoGestionService
         }
 
         $claves = $gruposFiltrados->pluck('clave');
-        $proyectoPorClave = Proyecto::whereIn('equipo_ref', $claves)->get()->keyBy('equipo_ref');
+        $proyectoPorClave = Proyecto::whereIn('pry_direccion_logica', $claves)->get()->keyBy('equipo_ref');
 
         return $gruposFiltrados->map(fn ($g) => (object) [
             'grp_codigo' => $g->grp_codigo,
@@ -541,7 +542,7 @@ class ProyectoGestionService
             ->when(($filtros['estado'] ?? '') !== '', fn ($q) => $q->where('estado_validacion', $filtros['estado']))
             ->when(($filtros['comunidad'] ?? '') !== '', fn ($q) => $q->where('comunidad_id', $filtros['comunidad']))
             ->when(($filtros['creador_cedula'] ?? '') !== '', fn ($q) => $q->where('creador_cedula', $filtros['creador_cedula']))
-            ->when(($filtros['equipo_ref'] ?? null) !== null, fn ($q) => $q->whereIn('equipo_ref', $filtros['equipo_ref']))
+            ->when(($filtros['equipo_ref'] ?? null) !== null, fn ($q) => $q->whereIn('pry_direccion_logica', $filtros['equipo_ref']))
             ->latest()
             ->paginate(10, page: $page);
     }
