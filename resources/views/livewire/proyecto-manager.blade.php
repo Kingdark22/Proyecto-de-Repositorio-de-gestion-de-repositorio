@@ -121,12 +121,12 @@
                                     @if ($g->tiene_proyecto)
                                         <button type="button" wire:click="edit({{ $g->proyecto_id }})"
                                             class="pgm-btn-action pgm-btn-action--edit">
-                                            Editar
+                                            Actualizar
                                         </button>
                                     @else
                                         <button type="button" wire:click="registrarProyectoGrupo({{ $g->grp_codigo }})"
                                             class="pgm-btn-action pgm-btn-action--approve">
-                                            Registrar
+                                            Actualizar
                                         </button>
                                     @endif
                                 </td>
@@ -329,9 +329,117 @@
 
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">
-                {{ $modoActualizacion ? 'Subir documentos del proyecto' : 'Actualizar expediente' }}
+                {{ $esProfesor ? 'Registro de proyecto (docente)' : ($modoActualizacion ? 'Subir documentos del proyecto' : 'Actualizar expediente') }}
             </legend>
             <form wire:submit="save">
+
+                {{-- == SECCIÓN EQUIPO Y COMUNIDAD (arriba) == --}}
+                @if (!$modoActualizacion)
+                    @if(!$esProfesor)
+                    <div style="margin-bottom: 15px; border: 1px solid #CCC; border-radius: 4px;">
+                        <button type="button" wire:click="toggleTeamFilters"
+                            style="width:100%; background:#f5f5f5; border:none; padding:8px 12px; text-align:left; font-weight:bold; font-size:12px; cursor:pointer;">
+                            {{ $showTeamFilters ? '▼ Ocultar selección de equipo' : '▶ Seleccionar equipo / grupo de proyecto' }}
+                        </button>
+                        @if ($showTeamFilters)
+                            <div style="padding:10px;">
+                                <div style="padding:4px 0; margin-bottom:8px;">
+                                    <select wire:model.live="filterLapsoEquipo" style="width: 32%;">
+                                        <option value="">- Lapso -</option>
+                                        @foreach ($lapsos as $lap)
+                                            <option value="{{ $lap->id }}">{{ $lap->nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                    <select wire:model.live="filterProgramaEquipo" style="width: 32%;">
+                                        <option value="">- Programa -</option>
+                                        @foreach ($programasEquipo as $pro)
+                                            <option value="{{ $pro->pro_codigo }}">{{ trim($pro->pro_siglas) }}</option>
+                                        @endforeach
+                                    </select>
+                                    <select wire:model.live="filterSeccionEquipo" style="width: 32%;">
+                                        <option value="">- Sección -</option>
+                                        @foreach ($seccionesEquipo as $sec)
+                                            <option value="{{ $sec->sec_codigo }}">{{ trim($sec->sec_nombre) }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div style="margin-bottom: 8px;">
+                                    <b>Seleccione el grupo de proyecto:</b><span class="obligatorio">*</span>
+                                    <select wire:model.live="equipo_seccion_clave" style="width: 100%;">
+                                        <option value="">Seleccione grupo de proyecto…</option>
+                                        @foreach ($equipos_disp ?? [] as $eq)
+                                            <option value="{{ $eq->clave }}">
+                                                {{ $eq->nombre ?? $eq->clave }}
+                                                @if (!empty($eq->lapso_nombre))
+                                                    - {{ $eq->lapso_nombre }}
+                                                @endif
+                                                ({{ $eq->integrantes ?? '?' }} int.)
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('equipo_seccion_clave')
+                                        <span class="obligatorio">{{ $message }}</span>
+                                    @enderror
+                                </div>
+
+                                @if (!empty($equipoValidado))
+                                    <div style="margin: 6px 0; padding: 6px; background: #d4edda; font-size: 10px;">
+                                        <b>Validado:</b> {{ $equipoValidado->nombre }}
+                                        | Lapso: {{ $equipoValidado->lap_nombre ?? '?' }}
+                                        | Sección: {{ $equipoValidado->sec_nombre ?? '?' }}
+                                        @if (!empty($equipoValidado->pro_siglas))
+                                            | PNF: {{ $equipoValidado->pro_siglas }}
+                                        @endif
+                                        @if (!empty($trayecto_derived))
+                                            | Trayecto: {{ $trayecto_derived }}
+                                        @endif
+                                        ({{ ($integrantesEquipo ?? collect())->count() }} integrantes)
+                                    </div>
+                                @endif
+                            </div>
+                        @endif
+                    </div>
+                    @endif
+                @endif
+
+                @if($esProfesor)
+                <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
+                    <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Equipo y comunidad</legend>
+                    <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px;">
+                        <tr>
+                            <td width="20%"><b>Comunidad:</b></td>
+                            <td>
+                                @if($comunidadNombreGrupo)
+                                    <span style="background:#f9f2f2; border:1px solid #8b0000; padding:4px 10px; border-radius:4px; font-weight:bold; color:#8b0000;">{{ $comunidadNombreGrupo }}</span>
+                                @else
+                                    <span style="color:#999;">(asignada automáticamente del grupo)</span>
+                                @endif
+                            </td>
+                        </tr>
+                    </table>
+                    @if(!empty($miembrosGrupo))
+                    <div style="margin-top: 8px; padding: 8px; background: #fcf8f8; border: 1px solid #e9aaad; border-radius: 4px; font-size: 12px;">
+                        <b style="display:block; margin-bottom:4px; color:#8b0000;">Integrantes del equipo:</b>
+                        <table width="100%" cellpadding="3" cellspacing="0" style="font-size: 11px; border-collapse: collapse; border: 1px solid #e9aaad;">
+                            @foreach($miembrosGrupo as $miembro)
+                            <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#f9f2f2' : '#FFFFFF' }}; border-bottom: 1px solid #e9aaad;">
+                                <td width="5%" style="padding:4px; color:#8b0000; font-weight:bold;">{{ $loop->iteration }}.</td>
+                                <td width="60%" style="padding:4px;">{{ $miembro['nombre'] }} {{ $miembro['apellido'] }}</td>
+                                <td width="35%" style="padding:4px;">
+                                    @if(in_array($miembro['cedula'], $selectedLeaders))
+                                        <span style="color:#8b0000; font-weight:bold;">Líder</span>
+                                    @else
+                                        <span style="color:#666;">Integrante</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </table>
+                    </div>
+                    @endif
+                </fieldset>
+                @endif
 
                 {{-- == SECCIÓN PRINCIPAL == --}}
                 <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
@@ -376,8 +484,8 @@
                     @endif
                 </fieldset>
 
-                {{-- == SECCIÓN DOCUMENTOS POR COMPONENTE (oculta para profesor) == --}}
-                @if(!$esProfesor && isset($componentes_disp) && $componentes_disp->isNotEmpty())
+                {{-- == SECCIÓN DOCUMENTOS POR COMPONENTE == --}}
+                @if(isset($componentes_disp) && $componentes_disp->isNotEmpty())
                 <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
                     <legend style="font-weight: bold; font-size: 12px;">Documentos del proyecto por componente</legend>
                     <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 12px;">
@@ -410,120 +518,6 @@
                     </table>
                 </fieldset>
                 @endif
-
-                @if (!$modoActualizacion)
-                {{-- == SECCIÓN EQUIPO Y COMUNIDAD (desplegable, oculta para profesor) == --}}
-                @if(!$esProfesor)
-                <div style="margin-bottom: 15px; border: 1px solid #CCC; border-radius: 4px;">
-                    <button type="button" wire:click="toggleTeamFilters"
-                        style="width:100%; background:#f5f5f5; border:none; padding:8px 12px; text-align:left; font-weight:bold; font-size:12px; cursor:pointer;">
-                        {{ $showTeamFilters ? '▼ Ocultar selección de equipo' : '▶ Seleccionar equipo / grupo de proyecto' }}
-                    </button>
-                    @if ($showTeamFilters)
-                        <div style="padding:10px;">
-                            <div style="padding:4px 0; margin-bottom:8px;">
-                                <select wire:model.live="filterLapsoEquipo" style="width: 32%;">
-                                    <option value="">- Lapso -</option>
-                                    @foreach ($lapsos as $lap)
-                                        <option value="{{ $lap->id }}">{{ $lap->nombre }}</option>
-                                    @endforeach
-                                </select>
-                                <select wire:model.live="filterProgramaEquipo" style="width: 32%;">
-                                    <option value="">- Programa -</option>
-                                    @foreach ($programasEquipo as $pro)
-                                        <option value="{{ $pro->pro_codigo }}">{{ trim($pro->pro_siglas) }}</option>
-                                    @endforeach
-                                </select>
-                                <select wire:model.live="filterSeccionEquipo" style="width: 32%;">
-                                    <option value="">- Sección -</option>
-                                    @foreach ($seccionesEquipo as $sec)
-                                        <option value="{{ $sec->sec_codigo }}">{{ trim($sec->sec_nombre) }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div style="margin-bottom: 8px;">
-                                <b>Seleccione el grupo de proyecto:</b><span class="obligatorio">*</span>
-                                <select wire:model.live="equipo_seccion_clave" style="width: 100%;">
-                                    <option value="">Seleccione grupo de proyecto…</option>
-                                    @foreach ($equipos_disp ?? [] as $eq)
-                                        <option value="{{ $eq->clave }}">
-                                            {{ $eq->nombre ?? $eq->clave }}
-                                            @if (!empty($eq->lapso_nombre))
-                                                - {{ $eq->lapso_nombre }}
-                                            @endif
-                                            ({{ $eq->integrantes ?? '?' }} int.)
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('equipo_seccion_clave')
-                                    <span class="obligatorio">{{ $message }}</span>
-                                @enderror
-                            </div>
-
-                            @if (!empty($equipoValidado))
-                                <div style="margin: 6px 0; padding: 6px; background: #d4edda; font-size: 10px;">
-                                    <b>Validado:</b> {{ $equipoValidado->nombre }}
-                                    | Lapso: {{ $equipoValidado->lap_nombre ?? '?' }}
-                                    | Sección: {{ $equipoValidado->sec_nombre ?? '?' }}
-                                    @if (!empty($equipoValidado->pro_siglas))
-                                        | PNF: {{ $equipoValidado->pro_siglas }}
-                                    @endif
-                                    @if (!empty($trayecto_derived))
-                                        | Trayecto: {{ $trayecto_derived }}
-                                    @endif
-                                    ({{ ($integrantesEquipo ?? collect())->count() }} integrantes)
-                                </div>
-                            @endif
-                        </div>
-                    @endif
-                </div>
-                @endif
-
-                {{-- == SECCIÓN COMUNIDAD E INTEGRANTES (modo profesor) == --}}
-                @if($esProfesor)
-                <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
-                    <legend style="font-weight: bold; font-size: 12px;">Equipo y comunidad</legend>
-                    <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px;">
-                        <tr>
-                            <td width="20%"><b>Comunidad:</b></td>
-                            <td>
-                                @if($comunidadNombreGrupo)
-                                    <span style="background:#d4edda; border:1px solid #c3e6cb; padding:4px 10px; border-radius:3px; font-weight:bold;">{{ $comunidadNombreGrupo }}</span>
-                                @else
-                                    <span style="color:#999;">(asignada automáticamente del grupo)</span>
-                                @endif
-                            </td>
-                        </tr>
-                    </table>
-                    @if(!empty($miembrosGrupo))
-                    <div style="margin-top: 8px; font-size: 12px;">
-                        <b style="display:block; margin-bottom:4px;">Integrantes del equipo:</b>
-                        <table width="100%" cellpadding="3" cellspacing="0" style="font-size: 11px; border-collapse: collapse;">
-                            @foreach($miembrosGrupo as $miembro)
-                            <tr style="border-bottom: 1px solid #eee;">
-                                <td width="5%">
-                                    <input type="checkbox" value="{{ $miembro['cedula'] }}"
-                                        wire:click="toggleLider('{{ $miembro['cedula'] }}')"
-                                        {{ in_array($miembro['cedula'], $selectedLeaders) ? 'checked' : '' }}>
-                                </td>
-                                <td width="60%">{{ $miembro['nombre'] }} {{ $miembro['apellido'] }}</td>
-                                <td width="35%">
-                                    @if(in_array($miembro['cedula'], $selectedLeaders))
-                                        <span style="color:#0066cc; font-weight:bold;">Líder</span>
-                                    @else
-                                        <span style="color:#888;">Integrante</span>
-                                    @endif
-                                </td>
-                            </tr>
-                            @endforeach
-                        </table>
-                        <small style="color:#666;">Seleccione hasta 2 líderes. Los líderes podrán subir los documentos del proyecto.</small>
-                    </div>
-                    @endif
-                </fieldset>
-                @endif
-
 
                 {{-- == SECCIÓN CLASIFICACIÓN (visible) == --}}
                 <div style="margin-bottom: 15px; border: 1px solid #CCC; border-radius: 4px; padding: 10px;">
@@ -618,11 +612,14 @@
                     @endif
                 </div>
                 @endif
-                @endif
 
                 <div style="text-align: center; margin-top: 20px;">
                     <button type="button" wire:click="cancel" class="pgm-btn-cancel" style="margin-right: 10px;">Cancelar</button>
-                    <button type="submit" class="pgm-btn-save">{{ $modoActualizacion ? 'Subir documentos' : ($editingId ? 'Guardar cambios' : 'Registrar proyecto') }}</button>
+                    @if($esProfesor)
+                        <button type="button" wire:click="cerrarFormulario" class="pgm-btn-save">Cerrar formulario</button>
+                    @else
+                        <button type="submit" class="pgm-btn-save">{{ $modoActualizacion ? 'Subir documentos' : ($editingId ? 'Guardar cambios' : 'Registrar proyecto') }}</button>
+                    @endif
                 </div>
             </form>
         </fieldset>

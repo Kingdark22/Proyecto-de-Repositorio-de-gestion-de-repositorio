@@ -387,21 +387,6 @@ class ProyectoManager extends Component
         }
     }
 
-    public function toggleLider(string $cedula): void
-    {
-        $idx = array_search($cedula, $this->selectedLeaders, true);
-        if ($idx !== false) {
-            unset($this->selectedLeaders[$idx]);
-            $this->selectedLeaders = array_values($this->selectedLeaders);
-        } else {
-            if (count($this->selectedLeaders) >= 2) {
-                $this->dispatch('notify', type: 'error', message: 'Solo puede seleccionar hasta 2 líderes por grupo.');
-                return;
-            }
-            $this->selectedLeaders[] = $cedula;
-        }
-    }
-
     public function updatingFilterEstadoList(): void
     {
         $this->resetPage();
@@ -421,7 +406,7 @@ class ProyectoManager extends Component
 
         // Detectar si el usuario actual es lider del proyecto
         $user = auth()->user();
-        $proyecto = Proyecto::find($id, ['equipo_ref']);
+        $proyecto = Proyecto::find($id);
         $this->esLider = $proyecto ? $gestion->usuarioEsLiderDelProyecto($user, $proyecto) : false;
         $this->modoActualizacion = $this->esLider && !$gestion->usuarioEsAdminEnSistema($user);
 
@@ -464,12 +449,6 @@ class ProyectoManager extends Component
                 $gestion->reglasValidacion($estado, $user, $this->editingId !== null),
                 $this->messages()
             );
-
-            // Validar que se seleccione al menos 1 líder para grupos registrados
-            if ($this->esGrupoRegistrado && empty($this->selectedLeaders)) {
-                $this->dispatch('notify', type: 'error', message: 'Debe seleccionar al menos un líder para el grupo.');
-                return;
-            }
         }
 
         $proyecto = $gestion->guardar(
@@ -497,23 +476,29 @@ class ProyectoManager extends Component
         $this->dispatch('refresh-icons');
     }
 
-    /**
-     * Cierra el formulario del profesor, guarda los datos sin documentos
-     * y notifica a los líderes que deben subir los documentos del proyecto.
-     */
-    public function cerrarFormulario(ProyectoGestionService $gestion): void
-    {
-        $proyecto = $gestion->guardar(
-            $this->editingId,
-            $this->estadoFormulario(),
-            auth()->user(),
-            [], // No se suben documentos desde el formulario del profesor
-            $this->esGrupoRegistrado ? $this->selectedLeaders : [],
-        );
+     /**
+      * Cierra el formulario del profesor, guarda los datos y los documentos si se subieron,
+      * y notifica a los líderes para que completen los documentos faltantes.
+      */
+     public function cerrarFormulario(ProyectoGestionService $gestion): void
+     {
+         if (!empty($this->archivosComponente)) {
+             $this->validate([
+                 'archivosComponente.*' => 'nullable|file|max:20480|mimes:pdf',
+             ]);
+         }
 
-        $this->dispatch('notify', type: 'success', message: 'Formulario cerrado. Los líderes serán notificados para subir los documentos del proyecto.');
-        $this->irAListado();
-    }
+         $gestion->guardar(
+             $this->editingId,
+             $this->estadoFormulario(),
+             auth()->user(),
+             $this->archivosComponente,
+             $this->esGrupoRegistrado ? $this->selectedLeaders : [],
+         );
+ 
+         $this->dispatch('notify', type: 'success', message: 'Formulario guardado con éxito. Se han guardado los datos y documentos del proyecto.');
+         $this->irAListado();
+     }
 
     public function toggleStatus(int $id, ProyectoGestionService $gestion): void
     {
@@ -596,7 +581,7 @@ class ProyectoManager extends Component
         if ($userRoleService->roleMatches('administrador', $activeRole)
             || $userRoleService->roleMatches('coordinador', $activeRole)) return false;
         if (!$this->editingId) return false;
-        $proyecto = Proyecto::find($this->editingId, ['equipo_ref']);
+        $proyecto = Proyecto::find($this->editingId);
         if (!$proyecto) return false;
         return $gestion->usuarioEsLiderDelProyecto($user, $proyecto);
     }

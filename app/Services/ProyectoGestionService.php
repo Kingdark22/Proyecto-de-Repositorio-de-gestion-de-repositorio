@@ -259,7 +259,6 @@ class ProyectoGestionService
         $existing = $editingId ? Proyecto::with('documentos')->find($editingId) : null;
 
         $payload = [
-            'titulo' => $datos['titulo'] ?? '',
             'resumen' => $datos['resumen'],
             'fecha_subida' => $datos['fecha_subida'],
             'calificacion' => ($datos['calificacion'] ?? '') !== '' ? (int) $datos['calificacion'] : null,
