@@ -29,24 +29,29 @@ class NotificacionService
             if ($isTeacher) {
                 $clavesDocente = app(ProyectoGestionService::class)->clavesEquipoFiltroValidacion($user);
                 if ($clavesDocente !== null && $clavesDocente !== []) {
-                    // Resolver grupos del profesor para filtrar proyectos EQGRP
-                    $gruposProfesor = GrupoProyectoModulo::all()->filter(function ($g) use ($clavesDocente) {
-                        $ctx = $g->grp_contexto;
-                        if (!$ctx instanceof \ArrayObject) return false;
-                        $lap = $ctx['lap_codigo'] ?? null;
-                        $sec = $ctx['sec_codigo'] ?? null;
-                        if (!$lap || !$sec) return false;
-                        $claveSec = app(\App\Services\IntranetEquipoSeccionService::class)
-                            ->construirClave((int) $lap, (int) $sec);
-                        return in_array($claveSec, $clavesDocente, true);
-                    })->pluck('grp_codigo')
-                        ->map(fn($id) => \App\Services\GrupoProyectoService::PREFIJO . ':' . $id)
-                        ->toArray();
+                    // Separar claves EQSEC y buscar EQGRP relacionados via contexto JSONB (solo una consulta)
+                    $clavesEqsec = array_filter($clavesDocente, fn($c) => str_starts_with($c, \App\Services\IntranetEquipoSeccionService::PREFIJO_REF . ':'));
+
+                    $gruposProfesor = [];
+                    if ($clavesEqsec !== []) {
+                        $equipoService = app(\App\Services\IntranetEquipoSeccionService::class);
+                        $gruposProfesor = GrupoProyectoModulo::where(function ($q) use ($clavesEqsec, $equipoService) {
+                            foreach ($clavesEqsec as $clave) {
+                                $partes = $equipoService->parsearClave($clave);
+                                if ($partes) {
+                                    $q->orWhereRaw(
+                                        "CAST(grp_contexto AS jsonb)->>'lap_codigo' = ? AND CAST(grp_contexto AS jsonb)->>'sec_codigo' = ?",
+                                        [(string) $partes['lap_codigo'], (string) $partes['sec_codigo']]
+                                    );
+                                }
+                            }
+                        })->pluck('grp_codigo')
+                            ->map(fn($id) => \App\Services\GrupoProyectoService::PREFIJO . ':' . $id)
+                            ->toArray();
+                    }
 
                     $query->where(function ($q) use ($clavesDocente, $gruposProfesor) {
-                        // EQSEC direct matches (proyectos con equipo_ref = EQSEC:*)
                         $q->whereIn('pry_direccion_logica', $clavesDocente);
-                        // EQGRP matches (proyectos con equipo_ref = EQGRP:*)
                         if ($gruposProfesor) {
                             $q->orWhereIn('pry_direccion_logica', $gruposProfesor);
                         }

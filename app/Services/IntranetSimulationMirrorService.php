@@ -170,13 +170,37 @@ class IntranetSimulationMirrorService
         $intranet = 'intranet';
         $total = 0;
 
-        $usuario = User::on($intranet)
-            ->where('usu_cedula', $cedula)
-            ->first();
-        if ($usuario) {
-            $total += $this->mirrorRows('usuario', [$usuario]);
+        // ── FK ORDER (simulation DB) ──
+        // 1. persona, programa, trayecto, lapso_academico (sin FK)
+        // 2. malla            → programa, trayecto
+        // 3. unidad_curricular → malla
+        // 4. seccion           → lapso_academico, malla
+        // 5. estudiante        → persona, programa
+        // 6. usuario           → persona
+        // 7. inscripcion       → estudiante
+        // 8. seccion_unidad_docente (no tiene FK en simulación)
+        // ─────────────────────────────
+
+        // 1. CATÁLOGOS BASE (sin FK) — deben ir ANTES que estudiante
+        if (! isset(self::$mirroredCatalogs['programa']) && $this->simulationHasTable('programa')) {
+            self::$mirroredCatalogs['programa'] = true;
+            $total += $this->mirrorAllPrograms();
+        }
+        if (! isset(self::$mirroredCatalogs['trayecto']) && $this->simulationHasTable('trayecto')) {
+            self::$mirroredCatalogs['trayecto'] = true;
+            try {
+                if (!ini_get('safe_mode')) set_time_limit(120);
+                $total += $this->mirrorTable('trayecto');
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Espejo trayecto falló: ' . $e->getMessage());
+            }
+        }
+        if (! isset(self::$mirroredCatalogs['lapso_academico']) && $this->simulationHasTable('lapso_academico')) {
+            self::$mirroredCatalogs['lapso_academico'] = true;
+            $total += $this->mirrorActiveLapsos();
         }
 
+        // 2. Persona (sin FK, referenciada por usuario y estudiante)
         $persona = Persona::on($intranet)
             ->where('per_cedula', $cedula)
             ->first();
@@ -184,28 +208,33 @@ class IntranetSimulationMirrorService
             $total += $this->mirrorRows('persona', [$persona]);
         }
 
+        // 3-4. Malla y unidad_curricular se espejan dentro de mirrorInscripcionesForStudent
+        //       y mirrorDocenteAssignments, en el orden correcto (seccion después de malla/lapso).
+
+        // 5-6. Estudiante (needs persona, programa) y Usuario (needs persona)
+        $usuario = User::on($intranet)
+            ->where('usu_cedula', $cedula)
+            ->first();
+        if ($usuario) {
+            $total += $this->mirrorRows('usuario', [$usuario]);
+        }
+
         $estudiante = Estudiante::on($intranet)
             ->where('est_cedula', $cedula)
             ->first();
         if ($estudiante) {
+            // 5. estudiante (needs persona, programa — ya espejados arriba)
             $total += $this->mirrorRows('estudiante', [$estudiante]);
+            // 7. inscripcion (needs estudiante) + sus dependencias
             $total += $this->mirrorInscripcionesForStudent($cedula);
         }
 
+        // 8. Docente assignments
         if ($this->simulationHasTable('seccion_unidad_docente')) {
             $total += $this->mirrorDocenteAssignments($cedula);
         }
 
-        if (! isset(self::$mirroredCatalogs['lapso_academico']) && $this->simulationHasTable('lapso_academico')) {
-            self::$mirroredCatalogs['lapso_academico'] = true;
-            $total += $this->mirrorActiveLapsos();
-        }
-
-        if (! isset(self::$mirroredCatalogs['programa']) && $this->simulationHasTable('programa')) {
-            self::$mirroredCatalogs['programa'] = true;
-            $total += $this->mirrorAllPrograms();
-        }
-
+        // Rol (catálogo, sin FK)
         if (! isset(self::$mirroredCatalogs['rol']) && $this->simulationHasTable('rol')) {
             self::$mirroredCatalogs['rol'] = true;
             $total += $this->mirrorTable('rol');
@@ -446,6 +475,28 @@ class IntranetSimulationMirrorService
     }
 
     /**
+     * Mapa de conversión de valores: columna 'tabla.columna' => [valor_intranet => valor_simulacion].
+     * Necesario porque la BD de simulación (SOGAC) usa tipos ENUM con valores diferentes a intranet.
+     */
+    protected const VALUE_MAP = [
+        // persona.per_genero: intranet usa '0'/'1', simulación espera 'M'/'F'
+        'persona.per_genero' => [
+            '0' => 'M',
+            '1' => 'F',
+        ],
+    ];
+
+    /**
+     * Columnas a excluir del payload al insertar en simulación.
+     * Útil cuando la simulación tiene un PK auto-incremental (serial) que no debe incluirse,
+     * o columnas que existen en intranet pero causan conflictos en simulación.
+     */
+    protected const EXCLUDED_COLUMNS = [
+        // usuario: simulacion tiene usu_codigo como serial PK, intranet lo incluye como columna regular
+        'usuario' => ['usu_codigo'],
+    ];
+
+    /**
      * @return array<string, mixed>
      */
     protected function filterRowForConnection(string $connection, string $table, array $row): array
@@ -454,8 +505,21 @@ class IntranetSimulationMirrorService
         $allowed = array_flip($columns);
         $filtered = [];
 
+        // Columnas excluidas para esta tabla
+        $excluded = self::EXCLUDED_COLUMNS[$table] ?? [];
+        $excludedKeys = array_flip($excluded);
+
         foreach ($row as $key => $value) {
-            if (isset($allowed[$key])) {
+            if (isset($allowed[$key]) && ! isset($excludedKeys[$key])) {
+                // Recortar strings (intranet suele tener espacios al final)
+                if (is_string($value)) {
+                    $value = trim($value);
+                }
+                // Aplicar mapa de conversión de valores si existe para esta columna
+                $mapKey = $table . '.' . $key;
+                if (isset(self::VALUE_MAP[$mapKey]) && $value !== null) {
+                    $value = self::VALUE_MAP[$mapKey][$value] ?? $value;
+                }
                 $filtered[$key] = $value;
             }
         }

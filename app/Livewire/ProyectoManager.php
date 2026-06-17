@@ -101,6 +101,9 @@ class ProyectoManager extends Component
     /** True si el rol activo es profesor proyecto */
     public bool $esProfesor = false;
 
+    /** True si el rol activo es gestionador */
+    public bool $esGestionador = false;
+
     /** Modal crear línea de investigación */
     public bool $mostrarModalLinea = false;
 
@@ -116,26 +119,55 @@ class ProyectoManager extends Component
     /** Resultados de búsqueda */
     public Collection $lineasEncontradas;
 
+    /** Modal crear metodología */
+    public bool $mostrarModalMetodologia = false;
+
+    public string $modalMetodologiaNombre = '';
+
+    public string $modalMetodologiaDescripcion = '';
+
+    /** Búsqueda de metodologías */
+    public string $buscarMetodologia = '';
+
+    /** Resultados de búsqueda */
+    public Collection $metodologiasEncontradas;
+
     public function placeholder()
     {
         return <<<'HTML'
-        <div class="p-6 w-full bg-white rounded-lg shadow-sm border border-slate-100 dark:bg-slate-900 dark:border-slate-800">
-            <div class="animate-pulse space-y-6">
-                <div class="flex justify-between items-center font-semibold">
-                    <div class="h-6 bg-slate-200 dark:bg-slate-700 rounded w-1/3"></div>
-                    <div class="h-10 bg-slate-200 dark:bg-slate-700 rounded w-40"></div>
+        <div style="padding: 20px; margin: 10px 0;">
+            <style>
+                @keyframes pgmPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.85; } }
+                @keyframes pgmShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+            </style>
+            <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
+                <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Cargando m&oacute;dulo de gesti&oacute;n...</legend>
+                <div style="animation: pgmPulse 1.5s ease-in-out infinite;">
+                    <table width="100%" cellpadding="8" cellspacing="0" style="font-size: 12px;">
+                        <tr>
+                            <td width="20%" style="padding: 6px;">
+                                <div style="height: 14px; width: 80%; background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%); background-size: 200% 100%; animation: pgmShimmer 1.5s infinite; border-radius: 3px;"></div>
+                            </td>
+                            <td width="30%" style="padding: 6px;">
+                                <div style="height: 28px; width: 90%; background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%); background-size: 200% 100%; animation: pgmShimmer 1.5s infinite; border-radius: 3px;"></div>
+                            </td>
+                            <td width="20%" style="padding: 6px;">
+                                <div style="height: 14px; width: 80%; background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%); background-size: 200% 100%; animation: pgmShimmer 1.5s infinite; border-radius: 3px;"></div>
+                            </td>
+                            <td width="30%" style="padding: 6px;">
+                                <div style="height: 28px; width: 90%; background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%); background-size: 200% 100%; animation: pgmShimmer 1.5s infinite; border-radius: 3px;"></div>
+                            </td>
+                        </tr>
+                    </table>
+                    <div style="height: 18px; width: 40%; background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%); background-size: 200% 100%; animation: pgmShimmer 1.5s infinite; border-radius: 3px; margin: 12px 0;"></div>
+                    <div style="height: 40px; width: 100%; background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%); background-size: 200% 100%; animation: pgmShimmer 1.5s infinite; border-radius: 3px; margin: 6px 0;"></div>
+                    <div style="height: 40px; width: 100%; background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%); background-size: 200% 100%; animation: pgmShimmer 1.5s infinite; border-radius: 3px; margin: 6px 0;"></div>
+                    <div style="height: 40px; width: 100%; background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%); background-size: 200% 100%; animation: pgmShimmer 1.5s infinite; border-radius: 3px; margin: 6px 0;"></div>
                 </div>
-                <div class="grid grid-cols-4 gap-4">
-                    <div class="h-8 bg-slate-100 dark:bg-slate-800 rounded col-span-1"></div>
-                    <div class="h-8 bg-slate-100 dark:bg-slate-800 rounded col-span-1"></div>
-                    <div class="h-8 bg-slate-100 dark:bg-slate-800 rounded col-span-2"></div>
+                <div style="text-align: center; margin-top: 15px; font-size: 11px; color: #888;">
+                    Consultando datos del sistema...
                 </div>
-                <div class="space-y-3">
-                    <div class="h-20 bg-slate-50 dark:bg-slate-800/50 rounded w-full"></div>
-                    <div class="h-20 bg-slate-50 dark:bg-slate-800/50 rounded w-full"></div>
-                    <div class="h-20 bg-slate-50 dark:bg-slate-800/50 rounded w-full"></div>
-                </div>
-            </div>
+            </fieldset>
         </div>
         HTML;
     }
@@ -147,6 +179,7 @@ class ProyectoManager extends Component
             $userRoleService = app(UserRoleService::class);
             $activeRole = $userRoleService->getActiveRole($user);
             $this->esProfesor = $userRoleService->roleMatches('profesor proyecto', $activeRole);
+            $this->esGestionador = $userRoleService->roleMatches('gestionador', $activeRole);
         }
 
         if ($editId = request()->query('edit')) {
@@ -412,6 +445,58 @@ class ProyectoManager extends Component
         $this->mostrarModalLinea = false;
     }
 
+    public function abrirModalMetodologia(): void
+    {
+        $this->mostrarModalMetodologia = true;
+        $this->modalMetodologiaNombre = '';
+        $this->modalMetodologiaDescripcion = '';
+        $this->buscarMetodologia = '';
+        $this->metodologiasEncontradas = collect();
+    }
+
+    public function cerrarModalMetodologia(): void
+    {
+        $this->mostrarModalMetodologia = false;
+    }
+
+    public function updatedBuscarMetodologia(): void
+    {
+        $q = trim($this->buscarMetodologia);
+        if ($q === '') {
+            $this->metodologiasEncontradas = collect();
+            return;
+        }
+        $this->metodologiasEncontradas = \App\Models\MetodologiaInvestigacion::where('nombre', 'like', "%{$q}%")
+            ->orWhere('descripcion', 'like', "%{$q}%")
+            ->orderBy('nombre')
+            ->get();
+    }
+
+    public function seleccionarMetodologia(int $id): void
+    {
+        $this->metodologia_id = (string) $id;
+        $this->buscarMetodologia = '';
+        $this->metodologiasEncontradas = collect();
+    }
+
+    public function guardarMetodologiaModal(): void
+    {
+        $this->validate([
+            'modalMetodologiaNombre' => 'required|string|max:255',
+        ], [
+            'modalMetodologiaNombre.required' => 'El nombre de la metodología es obligatorio.',
+        ]);
+
+        $metodologia = \App\Models\MetodologiaInvestigacion::create([
+            'nombre' => $this->modalMetodologiaNombre,
+            'descripcion' => $this->modalMetodologiaDescripcion ?: null,
+            'estado_logico' => true,
+        ]);
+
+        $this->metodologia_id = (string) $metodologia->id;
+        $this->cerrarModalMetodologia();
+    }
+
     public function updatedBuscarLinea(): void
     {
         $q = trim($this->buscarLinea);
@@ -503,15 +588,36 @@ class ProyectoManager extends Component
         $user = auth()->user();
         $estado = $this->estadoFormulario();
 
+        $docRules = [
+            'archivosComponente.*' => 'nullable|file|max:20480|mimes:pdf',
+        ];
+
+        // Validar vigencia del estudiante líder (solo si está en modo actualización)
+        if ($this->modoActualizacion && $this->editingId) {
+            $userRoleService = app(\App\Services\UserRoleService::class);
+            $activeRole = $userRoleService->getActiveRole($user);
+            $esAdminOCoordinador = $userRoleService->roleMatches('administrador', $activeRole)
+                || $userRoleService->roleMatches('coordinador', $activeRole);
+
+            // Solo validar vigencia si NO es admin/coordinador
+            if (!$esAdminOCoordinador) {
+                $proyecto = \App\Models\Proyecto::find($this->editingId);
+                if ($proyecto && !$gestion->estudianteLiderVigente($user, $proyecto)) {
+                    $this->dispatch('notify', type: 'error', message: 'No puedes subir documentos porque ya no estás inscrito vigentemente en la sección/lapso de este proyecto. Contacta al coordinador o profesor.');
+                    return;
+                }
+            }
+        }
+
         if ($this->modoActualizacion) {
-            $this->validate([
-                'archivosComponente.*' => 'nullable|file|max:20480|mimes:pdf',
-            ]);
+            $this->validate($docRules);
         } else {
-            $this->validate(
-                $gestion->reglasValidacion($estado, $user, $this->editingId !== null),
-                $this->messages()
-            );
+            $rules = $gestion->reglasValidacion($estado, $user, $this->editingId !== null);
+            // Si hay archivos subidos, validarlos también
+            if (!empty(array_filter($this->archivosComponente))) {
+                $rules = array_merge($rules, $docRules);
+            }
+            $this->validate($rules, $this->messages());
         }
 
         $proyecto = $gestion->guardar(
@@ -642,7 +748,8 @@ class ProyectoManager extends Component
         $userRoleService = app(\App\Services\UserRoleService::class);
         $activeRole = $userRoleService->getActiveRole($user);
         if ($userRoleService->roleMatches('administrador', $activeRole)
-            || $userRoleService->roleMatches('coordinador', $activeRole)) return false;
+            || $userRoleService->roleMatches('coordinador', $activeRole)
+            || $userRoleService->roleMatches('gestionador', $activeRole)) return false;
         if (!$this->editingId) return false;
         $proyecto = Proyecto::find($this->editingId);
         if (!$proyecto) return false;
@@ -665,7 +772,8 @@ class ProyectoManager extends Component
             $userRoleService = app(UserRoleService::class);
             $activeRole = $userRoleService->getActiveRole($user);
             if (!$userRoleService->roleMatches('administrador', $activeRole)
-                && !$userRoleService->roleMatches('coordinador', $activeRole)) {
+                && !$userRoleService->roleMatches('coordinador', $activeRole)
+                && !$userRoleService->roleMatches('gestionador', $activeRole)) {
                 $esEstudianteLider = true;
                 $proyectosLiderIds = $gestion->proyectosDondeEsLider($user);
                 $proyectosLider = $gestion->proyectosLider($user);
@@ -713,6 +821,7 @@ class ProyectoManager extends Component
             'programasFiltro' => $programasFiltro,
             'trayectosFiltro' => $trayectosFiltro,
             'puedeFiltrarGrupos' => $puedeFiltrarGrupos,
+            'esGestionador' => $this->esGestionador,
             'esProfesor' => $this->esProfesor,
         ]));
     }

@@ -17,6 +17,16 @@ class UserRoleService
 
     protected const CACHE_TTL = 300;
 
+    protected const ACTIVE_ROLE_CACHE_TTL = 86400; // 24 horas - respaldo persistente por si la sesión se pierde
+
+    /**
+     * Clave de cache para respaldo persistente del rol activo.
+     */
+    protected function persistedActiveRoleKey(User $user): string
+    {
+        return 'active_role_persisted_' . trim((string) $user->usu_cedula);
+    }
+
     public function sessionKey(): string
     {
         return config('roles.session_key', 'active_role');
@@ -103,6 +113,13 @@ class UserRoleService
 
             if (app(IntranetProfessorService::class)->esProfesorProyectoVigente($cedula)) {
                 $roles['profesor proyecto'] = $this->label('profesor proyecto');
+
+                // Auto-habilitar al profesor en el módulo si aplica
+                try {
+                    app(IntranetProfessorService::class)->autoHabilitarProfesorEnModulo($cedula);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Auto-habilitar profesor falló: ' . $e->getMessage());
+                }
             }
         } catch (\Throwable $e) {
             \App\Helpers\DbHelper::handleQueryError($e);
@@ -140,27 +157,64 @@ class UserRoleService
         return $roles;
     }
 
+    /**
+     * Obtiene el rol activo desde la sesión, con respaldo desde cache persistente
+     * si la sesión se perdió (ej. timeout, contención de locks, etc.).
+     */
     public function getActiveRole(User $user): ?string
     {
         $active = Session::get($this->sessionKey());
-        if (! is_string($active) || $active === '') {
-            return null;
-        }
 
-        $active = strtolower(trim($active));
+        if (is_string($active) && $active !== '') {
+            $active = strtolower(trim($active));
 
-        if ($this->allowsFreeSessionRoles()) {
-            return in_array($active, $this->allowedSessionSlugs(), true) ? $active : null;
-        }
+            if ($this->allowsFreeSessionRoles()) {
+                if (in_array($active, $this->allowedSessionSlugs(), true)) {
+                    return $active;
+                }
+                return null;
+            }
 
-        $available = $this->detectAvailableRoles($user);
-        if (! array_key_exists($active, $available)) {
+            $available = $this->detectAvailableRoles($user);
+            if (array_key_exists($active, $available)) {
+                return $active;
+            }
+
             Session::forget($this->sessionKey());
-
             return null;
         }
 
-        return $active;
+        // La sesión está vacía — intentar restaurar desde cache persistente
+        return $this->restoreActiveRoleFromCache($user);
+    }
+
+    /**
+     * Intenta restaurar el rol activo desde cache persistente.
+     * Solo funciona si allowFreeSessionRoles() está activo.
+     */
+    protected function restoreActiveRoleFromCache(User $user): ?string
+    {
+        if (! $this->allowsFreeSessionRoles()) {
+            return null;
+        }
+
+        $cachedRole = Cache::get($this->persistedActiveRoleKey($user));
+
+        if (! is_string($cachedRole) || $cachedRole === '') {
+            return null;
+        }
+
+        $cachedRole = strtolower(trim($cachedRole));
+
+        if (! in_array($cachedRole, $this->allowedSessionSlugs(), true)) {
+            Cache::forget($this->persistedActiveRoleKey($user));
+            return null;
+        }
+
+        // Restaurar en sesión para que el resto del flujo funcione normal
+        Session::put($this->sessionKey(), $cachedRole);
+
+        return $cachedRole;
     }
 
     public function setActiveRole(User $user, string $role): bool
@@ -173,6 +227,10 @@ class UserRoleService
             }
 
             Session::put($this->sessionKey(), $role);
+
+            // Persistir en cache como respaldo por si la sesión se pierde
+            Cache::put($this->persistedActiveRoleKey($user), $role, now()->addSeconds(self::ACTIVE_ROLE_CACHE_TTL));
+
             $this->clearCache();
 
             // Exportar contexto y rol al seleccionar
@@ -191,6 +249,10 @@ class UserRoleService
         }
 
         Session::put($this->sessionKey(), $role);
+
+        // Persistir en cache como respaldo por si la sesión se pierde
+        Cache::put($this->persistedActiveRoleKey($user), $role, now()->addSeconds(self::ACTIVE_ROLE_CACHE_TTL));
+
         $this->clearCache();
         $this->clearPersistentCache($user->usu_cedula);
 
@@ -210,6 +272,14 @@ class UserRoleService
         $this->clearCache();
     }
 
+    /**
+     * Limpia también el cache persistente del rol (se necesita el usuario para la clave).
+     */
+    public function clearPersistedActiveRole(User $user): void
+    {
+        Cache::forget($this->persistedActiveRoleKey($user));
+    }
+
     public function clearUserCache(string $cedula): void
     {
         $this->clearCache();
@@ -218,6 +288,7 @@ class UserRoleService
 
     public function bootstrapSessionRole(User $user): void
     {
+        // Verificar si ya hay rol activo (incluye restauración desde cache)
         if ($this->getActiveRole($user) !== null) {
             return;
         }
@@ -225,6 +296,8 @@ class UserRoleService
         // Usuario 13354832 siempre inicia como gestionador
         if (trim((string) $user->usu_cedula) === '13354832') {
             Session::put($this->sessionKey(), 'gestionador');
+            // Persistir respaldo
+            Cache::put($this->persistedActiveRoleKey($user), 'gestionador', now()->addSeconds(self::ACTIVE_ROLE_CACHE_TTL));
             return;
         }
 
@@ -236,12 +309,16 @@ class UserRoleService
 
         // Priorizar 'administrador' si está disponible
         if (array_key_exists('administrador', $available)) {
-            Session::put($this->sessionKey(), 'administrador');
+            $role = 'administrador';
+            Session::put($this->sessionKey(), $role);
+            Cache::put($this->persistedActiveRoleKey($user), $role, now()->addSeconds(self::ACTIVE_ROLE_CACHE_TTL));
             return;
         }
 
         // Si no es administrador, asignar el primer rol detectado
-        Session::put($this->sessionKey(), array_key_first($available));
+        $role = array_key_first($available);
+        Session::put($this->sessionKey(), $role);
+        Cache::put($this->persistedActiveRoleKey($user), $role, now()->addSeconds(self::ACTIVE_ROLE_CACHE_TTL));
     }
 
     public function userHasRole(User $user, string ...$requestedRoles): bool

@@ -18,7 +18,7 @@ class DbHelper
 
     protected static ?int $intranetPort = null;
 
-    protected const CACHE_TTL = 60;
+    protected const CACHE_TTL = 10;
 
     protected const CACHE_KEY = 'dbhelper_intranet_available';
 
@@ -41,6 +41,14 @@ class DbHelper
 
         $cached = Cache::get(self::CACHE_KEY);
         if ($cached === 'intranet') {
+            // Verificacion rapida con socket antes de confiar en cache
+            if (!self::intranetAlcanzable()) {
+                Cache::forget(self::CACHE_KEY);
+                self::$connectionName = 'simulacion';
+                self::$usingIntranet = false;
+                self::$resolved = true;
+                return self::$connectionName;
+            }
             self::$connectionName = 'intranet';
             self::$usingIntranet = true;
             self::$resolved = true;
@@ -77,7 +85,7 @@ class DbHelper
     public static function handleQueryError(\Exception $e): void
     {
         $msg = $e->getMessage();
-        if (str_contains($msg, 'timeout expired') || str_contains($msg, '08006') || str_contains($msg, 'could not connect')) {
+        if (str_contains($msg, 'timeout expired') || str_contains($msg, '08006') || str_contains($msg, 'could not connect') || str_contains($msg, 'connection refused') || str_contains($msg, '08001')) {
             if (self::$usingIntranet || Cache::get(self::CACHE_KEY) === 'intranet') {
                 Log::warning('Intranet query falló, cambiando a simulación: ' . $msg);
                 self::reset();

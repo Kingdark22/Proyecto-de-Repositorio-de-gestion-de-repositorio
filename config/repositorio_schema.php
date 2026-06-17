@@ -9,6 +9,7 @@ return [
         'primary_key' => 'pry_codigo',
         'columns' => [
             'id'                  => 'pry_codigo',
+            // titulo es accessor derivado de equipo_ref
             'resumen'             => 'pry_resumen',
             'fecha_subida'        => 'pry_fecha_subida',
             'calificacion'        => 'pry_calificacion',
@@ -31,6 +32,7 @@ return [
                 'aprobado' => 'Aprobado',
                 'pendiente' => 'Pendiente',
                 'rechazado' => 'Rechazado',
+                'completado' => 'Completado',
             ],
         ],
     ],

@@ -9,6 +9,7 @@ class Proyecto extends RepositorioModel
     protected $table = 'proyectos';
 
     protected $fillable = [
+        // titulo es accessor - no se persiste en BD
         'resumen',
         'fecha_subida',
         'calificacion',
@@ -166,45 +167,5 @@ class Proyecto extends RepositorioModel
         }
     }
 
-    /**
-     * Aprueba el proyecto.
-     */
-    public function aprobar(): bool
-    {
-        return $this->update([
-            'estado_validacion' => 'aprobado',
-            'estado_logico' => true,
-        ]);
-    }
-
-    /**
-     * Rechaza el proyecto.
-     */
-    public function rechazar(string $motivo): bool
-    {
-        return $this->update([
-            'estado_validacion' => 'rechazado',
-            'motivo_rechazo' => $motivo,
-            'estado_logico' => false,
-        ]);
-    }
-
-    /**
-     * Obtiene proyectos pendientes para validación.
-     */
-    public static function pendientes(?string $search = null)
-    {
-        $query = self::with(['tipo_publicacion', 'linea_investigacion', 'comunidad', 'documentos'])
-            ->where('estado_validacion', 'pendiente');
-
-        if ($search) {
-            try {
-                $query->whereRaw('to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)', [$search]);
-            } catch (\Throwable) {
-                $query->whereRaw('pry_resumen ILIKE ?', ['%' . $search . '%']);
-            }
-        }
-
-        return $query;
-    }
+    // Aprobar y rechazar se manejan via ProyectoGestionService
 }

@@ -65,12 +65,21 @@
         </table>
     </fieldset>
 
-    <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
+    <style>
+        @keyframes ppmProgress {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(350%); }
+        }
+    </style>
+    <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0; position: relative;">
         <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Docentes en intranet (lapso seleccionado)</legend>
 
         <div wire:loading.flex wire:target="lapsoFilter, programaFilter, trayectoFilter, seccionFilter, search" 
-            style="position: absolute; background: rgba(255,255,255,0.7); width: 100%; height: 100%; z-index: 10; justify-content: center; align-items: center; font-weight: bold; color: #8b0000;">
-            Cargando...
+            style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); z-index: 10; justify-content: center; align-items: center; flex-direction: column; gap: 8px;">
+            <div style="width: 200px; height: 4px; background: #e0e0e0; border-radius: 2px; overflow: hidden;">
+                <div style="width: 40%; height: 100%; background: #8b0000; border-radius: 2px; animation: ppmProgress 1.2s ease-in-out infinite;"></div>
+            </div>
+            <span style="font-weight: bold; color: #8b0000; font-size: 12px;">Consultando docentes...</span>
         </div>
 
         <table width="100%" border="1" cellpadding="6" cellspacing="0" class="ppm-table" style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px; position: relative;">

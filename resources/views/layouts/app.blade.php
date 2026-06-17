@@ -185,12 +185,88 @@
         </div>
 
         <!-- Modal de notificaciones -->
-        <div id="notifyModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
-            <div id="notifyModalContent" style="background:#fff; border-radius:8px; padding:25px 35px; max-width:450px; width:90%; text-align:center; box-shadow: 0 5px 25px rgba(0,0,0,0.3); position:relative;">
-                <div id="notifyModalIcon" style="font-size:48px; margin-bottom:10px;"></div>
-                <div id="notifyModalTitle" style="font-size:18px; font-weight:bold; margin-bottom:8px;"></div>
-                <div id="notifyModalMessage" style="font-size:14px; color:#555; margin-bottom:15px;"></div>
-                <button onclick="closeNotifyModal()" style="background:#8b0000; color:#fff; border:none; padding:8px 25px; border-radius:4px; cursor:pointer; font-weight:bold; font-size:13px;">Aceptar</button>
+        <style>
+        @keyframes notifModalFadeIn {
+            from { opacity: 0; transform: scale(0.92) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes notifModalOverlayIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        #notifyModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.45);
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+            animation: notifModalOverlayIn 0.2s ease;
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+        }
+        #notifyModalContent {
+            background: #fff;
+            border-radius: 12px;
+            padding: 30px 35px 25px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+            position: relative;
+            animation: notifModalFadeIn 0.25s ease;
+        }
+        #notifyModalIcon {
+            font-size: 48px;
+            line-height: 1;
+            margin-bottom: 12px;
+        }
+        #notifyModalTitle {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #1e293b;
+        }
+        #notifyModalMessage {
+            font-size: 14px;
+            color: #475569;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        #notifyModalCloseBtn {
+            background: #8b0000;
+            color: #fff;
+            border: none;
+            padding: 10px 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+        #notifyModalCloseBtn:hover {
+            background: #a00000;
+            transform: translateY(-1px);
+        }
+        #notifyModalCloseBtn:active {
+            transform: translateY(0);
+        }
+        .notif-modal-top-bar {
+            position: absolute;
+            top: 0; left: 20px; right: 20px;
+            height: 4px;
+            border-radius: 0 0 4px 4px;
+        }
+        </style>
+        <div id="notifyModal">
+            <div id="notifyModalContent">
+                <div id="notifyModalTopBar" class="notif-modal-top-bar" style="background:#17a2b8;"></div>
+                <div id="notifyModalIcon"></div>
+                <div id="notifyModalTitle">Información</div>
+                <div id="notifyModalMessage"></div>
+                <button id="notifyModalCloseBtn" onclick="closeNotifyModal()">Aceptar</button>
             </div>
         </div>
         <script>
@@ -199,14 +275,38 @@
             const icon = document.getElementById('notifyModalIcon');
             const title = document.getElementById('notifyModalTitle');
             const msg = document.getElementById('notifyModalMessage');
-            const content = document.getElementById('notifyModalContent');
+            const topBar = document.getElementById('notifyModalTopBar');
             modal.style.display = 'flex';
+            let iconHtml, iconColor, barColor, titleText;
             switch(type) {
-                case 'success': icon.innerHTML = '&#10004;'; icon.style.color = '#28a745'; title.textContent = 'Operaci&oacute;n exitosa'; content.style.borderTop = '5px solid #28a745'; break;
-                case 'error': icon.innerHTML = '&#10008;'; icon.style.color = '#dc3545'; title.textContent = 'Error'; content.style.borderTop = '5px solid #dc3545'; break;
-                case 'warning': icon.innerHTML = '&#9888;'; icon.style.color = '#ffc107'; title.textContent = 'Advertencia'; content.style.borderTop = '5px solid #ffc107'; break;
-                default: icon.innerHTML = '&#8505;'; icon.style.color = '#17a2b8'; title.textContent = 'Informaci&oacute;n'; content.style.borderTop = '5px solid #17a2b8';
+                case 'success':
+                    iconHtml = '✔';
+                    iconColor = '#16a34a';
+                    barColor = '#16a34a';
+                    titleText = 'Operación exitosa';
+                    break;
+                case 'error':
+                    iconHtml = '✘';
+                    iconColor = '#dc2626';
+                    barColor = '#dc2626';
+                    titleText = 'Error';
+                    break;
+                case 'warning':
+                    iconHtml = '⚠';
+                    iconColor = '#d97706';
+                    barColor = '#d97706';
+                    titleText = 'Advertencia';
+                    break;
+                default:
+                    iconHtml = 'ℹ';
+                    iconColor = '#2563eb';
+                    barColor = '#2563eb';
+                    titleText = 'Información';
             }
+            icon.innerHTML = iconHtml;
+            icon.style.color = iconColor;
+            topBar.style.background = barColor;
+            title.textContent = titleText;
             msg.innerHTML = message;
         }
         function closeNotifyModal() {
@@ -243,6 +343,25 @@
 
     @livewireScripts
     <script>
+        // Heartbeat para mantener la sesión activa (cada 60 segundos)
+        (function() {
+            var keepaliveUrl = '{{ route('session.keepalive') }}';
+            function sessionKeepalive() {
+                fetch(keepaliveUrl, {
+                    method: 'GET',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    cache: 'no-store'
+                }).catch(function() {
+                    // Si falla el keepalive, reintentar en el próximo ciclo
+                });
+            }
+            window._keepaliveInterval = setInterval(sessionKeepalive, 60000);
+            document.addEventListener('click', function() {
+                clearInterval(window._keepaliveInterval);
+                window._keepaliveInterval = setInterval(sessionKeepalive, 60000);
+            });
+        })();
+
         lucide.createIcons();
         document.addEventListener('livewire:navigated', () => {
             lucide.createIcons();

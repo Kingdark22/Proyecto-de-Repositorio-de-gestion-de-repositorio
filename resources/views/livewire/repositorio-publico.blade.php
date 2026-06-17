@@ -23,10 +23,9 @@
                     <b>Lapso Acad&eacute;mico:</b><br>
                     <select wire:model.live="filterLapso" style="width: 95%;">
                         <option value="">Cualquier Lapso...</option>
-                        <option value="2024-II">2024-II</option>
-                        <option value="2025-I">2025-I</option>
-                        <option value="2025-II">2025-II</option>
-                        <option value="2026-I">2026-I</option>
+                        @foreach($lapsos as $l)
+                            <option value="{{ $l->lap_codigo }}">{{ $l->lap_nombre }}</option>
+                        @endforeach
                     </select>
                 </td>
             </tr>

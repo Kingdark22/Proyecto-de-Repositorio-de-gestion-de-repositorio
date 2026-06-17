@@ -399,7 +399,7 @@
 
                 {{-- == SECCIÓN EQUIPO Y COMUNIDAD (arriba) == --}}
                 @if (!$modoActualizacion)
-                    @if(!$esProfesor)
+                    @if(!$esProfesor && !$esGestionador)
                     <div style="margin-bottom: 15px; border: 1px solid #CCC; border-radius: 4px;">
                         <button type="button" wire:click="toggleTeamFilters"
                             style="width:100%; background:#f5f5f5; border:none; padding:8px 12px; text-align:left; font-weight:bold; font-size:12px; cursor:pointer;">
@@ -467,7 +467,7 @@
                     @endif
                 @endif
 
-                @if($esProfesor)
+                @if($esProfesor || $esGestionador)
                 <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
                     <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Equipo y comunidad</legend>
                     <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px;">
@@ -483,23 +483,42 @@
                         </tr>
                     </table>
                     @if(!empty($miembrosGrupo))
-                    <div style="margin-top: 8px; padding: 8px; background: #fcf8f8; border: 1px solid #e9aaad; border-radius: 4px; font-size: 12px;">
-                        <b style="display:block; margin-bottom:4px; color:#8b0000;">Integrantes del equipo:</b>
-                        <table width="100%" cellpadding="3" cellspacing="0" style="font-size: 11px; border-collapse: collapse; border: 1px solid #e9aaad;">
-                            @foreach($miembrosGrupo as $miembro)
-                            <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#f9f2f2' : '#FFFFFF' }}; border-bottom: 1px solid #e9aaad;">
-                                <td width="5%" style="padding:4px; color:#8b0000; font-weight:bold;">{{ $loop->iteration }}.</td>
-                                <td width="60%" style="padding:4px;">{{ $miembro['nombre'] }} {{ $miembro['apellido'] }}</td>
-                                <td width="35%" style="padding:4px;">
-                                    @if(in_array($miembro['cedula'], $selectedLeaders))
-                                        <span style="color:#8b0000; font-weight:bold;">Líder</span>
+                    <div style="margin-top: 8px; padding: 0; background: #fff; border: 1px solid #e9aaad; border-radius: 6px; font-size: 12px; overflow: hidden;">
+                        <div style="background: linear-gradient(135deg, #8b0000, #a52a2a); color: #fff; padding: 6px 12px; font-weight: bold; font-size: 13px; letter-spacing: 0.3px;">
+                            👥 Integrantes del equipo ({{ count($miembrosGrupo) }})
+                        </div>
+                        <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 12px;">
+                            @foreach($miembrosGrupo as $idx => $miembro)
+                            @php
+                                $esLider = in_array($miembro['cedula'], $selectedLeaders);
+                            @endphp
+                            <tr style="background-color: {{ $idx % 2 == 0 ? '#fafafa' : '#FFFFFF' }}; border-bottom: 1px solid #f0e6e6;">
+                                <td width="36" style="padding: 6px 4px 6px 12px; text-align:center;">
+                                    <div style="width:28px; height:28px; border-radius:50%; background:{{ $esLider ? '#8b0000' : '#d4c5c5' }}; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;">
+                                        {{ $idx + 1 }}
+                                    </div>
+                                </td>
+                                <td width="40" style="padding: 6px 2px;">
+                                    @if($esLider)
+                                        <span style="display:inline-block; background:#8b0000; color:#fff; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:bold; letter-spacing:0.5px;">LÍDER</span>
                                     @else
-                                        <span style="color:#666;">Integrante</span>
+                                        <span style="display:inline-block; background:#e8e0e0; color:#666; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:bold;">AUTOR</span>
                                     @endif
+                                </td>
+                                <td style="padding: 6px 4px; font-weight:{{ $esLider ? 'bold' : 'normal' }}; color:{{ $esLider ? '#8b0000' : '#333' }};">
+                                    {{ $miembro['nombre'] }} {{ $miembro['apellido'] }}
+                                    <span style="color:#999; font-size:10px; font-weight:normal;"> ({{ $miembro['cedula'] }})</span>
                                 </td>
                             </tr>
                             @endforeach
                         </table>
+                        @if(count($selectedLeaders) > 0)
+                        <div style="padding: 6px 12px; background: #f9f2f2; border-top: 1px solid #e9aaad; font-size: 10px; color: #8b0000;">
+                            @php $lideresNombres = array_filter($miembrosGrupo, fn($m) => in_array($m['cedula'], $selectedLeaders)); @endphp
+                            <b>Líder{{ count($lideresNombres) > 1 ? 'es' : '' }}:</b>
+                            {{ implode(', ', array_map(fn($m) => $m['nombre'] . ' ' . $m['apellido'], $lideresNombres)) }}
+                        </div>
+                        @endif
                     </div>
                     @endif
                 </fieldset>
@@ -604,12 +623,15 @@
                             </td>
                             <td width="20%"><b>Metodolog&iacute;a:</b></td>
                             <td width="30%">
-                                <select wire:model="metodologia_id" style="width: 95%;">
-                                    <option value="">Seleccione...</option>
-                                    @foreach ($metodologias ?? [] as $m)
-                                        <option value="{{ $m->id }}">{{ $m->nombre }}</option>
-                                    @endforeach
-                                </select>
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <select wire:model="metodologia_id" style="flex:1;">
+                                        <option value="">Seleccione...</option>
+                                        @foreach ($metodologias ?? [] as $m)
+                                            <option value="{{ $m->id }}">{{ $m->nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" wire:click="abrirModalMetodologia" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap; padding: 4px 8px; font-size: 11px;" title="Buscar o crear nueva metodología">+</button>
+                                </div>
                                 @error('metodologia_id')
                                     <br><span class="obligatorio">{{ $message }}</span>
                                 @enderror
@@ -646,50 +668,115 @@
 
                 {{-- == MODAL LÍNEA DE INVESTIGACIÓN == --}}
                 @if ($mostrarModalLinea)
-                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;">
-                        <div style="background:#fff;border-radius:8px;padding:20px;max-width:500px;width:90%;max-height:90vh;overflow-y:auto;">
-                            <h3 style="margin-top:0;font-size:16px;">Línea de Investigación</h3>
+                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;">
+                        <div style="background:#fff;border-radius:10px;padding:24px;max-width:520px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #8b0000;">
+                                <div style="width:36px;height:36px;border-radius:50%;background:#8b0000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;">🔬</div>
+                                <h3 style="margin:0;font-size:16px;font-weight:bold;color:#333;">Línea de Investigación</h3>
+                            </div>
 
                             {{-- Buscar línea existente --}}
-                            <div style="margin-bottom: 12px;">
-                                <b style="font-size:12px;">Buscar línea existente:</b>
-                                <input wire:model.live="buscarLinea" type="text" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;margin-top:4px;" placeholder="Escriba nombre o descripción...">
+                            <div style="margin-bottom: 14px;">
+                                <b style="font-size:12px;color:#555;">Buscar línea existente:</b>
+                                <input wire:model.live="buscarLinea" type="text" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;margin-top:4px;font-size:13px;" placeholder="Escriba nombre o descripción...">
                                 @if($lineasEncontradas->isNotEmpty())
-                                    <div style="margin-top:4px;border:1px solid #ccc;border-radius:4px;max-height:150px;overflow-y:auto;">
+                                    <div style="margin-top:6px;border:1px solid #e0e0e0;border-radius:6px;max-height:180px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
                                         @foreach($lineasEncontradas as $l)
-                                            <div wire:click="seleccionarLinea({{ $l->id }})" style="padding:6px 8px;cursor:pointer;border-bottom:1px solid #eee;font-size:11px;"
-                                                 onmouseover="this.style.background='#e8f5e9'" onmouseout="this.style.background=''">
-                                                <b>{{ $l->nombre_investigacion }}</b>
-                                                @if($l->descripcion)<br><small style="color:#666;">{{ $l->descripcion }}</small>@endif
+                                            <div wire:click="seleccionarLinea({{ $l->id }})" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:12px;transition:background 0.15s;"
+                                                 onmouseover="this.style.background='#f5f0f0';this.style.borderLeft='3px solid #8b0000'" onmouseout="this.style.background='';this.style.borderLeft=''">
+                                                <b style="color:#8b0000;">{{ $l->nombre_investigacion }}</b>
+                                                @if($l->descripcion)<br><small style="color:#888;">{{ Str::limit($l->descripcion, 80) }}</small>@endif
                                             </div>
                                         @endforeach
                                     </div>
                                 @endif
+                                @if($buscarLinea && $lineasEncontradas->isEmpty())
+                                    <div style="margin-top:4px;font-size:11px;color:#999;padding:4px 0;">No se encontraron líneas. Cree una nueva abajo.</div>
+                                @endif
                             </div>
 
-                            <hr style="border:none;border-top:1px solid #ddd;margin:12px 0;">
+                            <hr style="border:none;border-top:1px solid #e8e8e8;margin:14px 0;">
 
                             {{-- Crear nueva --}}
-                            <b style="font-size:12px;">O crear nueva:</b>
-                            <table width="100%" style="font-size:11px;margin-top:6px;">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                                <div style="width:24px;height:24px;border-radius:50%;background:#198754;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;">+</div>
+                                <b style="font-size:13px;color:#333;">O crear nueva línea</b>
+                            </div>
+                            <table width="100%" style="font-size:12px;margin-top:4px;border-collapse:separate;border-spacing:0 6px;">
                                 <tr>
                                     <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
-                                    <td><input wire:model="modalLineaNombre" type="text" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;"></td>
+                                    <td><input wire:model="modalLineaNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
                                 </tr>
-                                @error('modalLineaNombre') <tr><td></td><td style="color:red;font-size:10px;">{{ $message }}</td></tr> @enderror
+                                @error('modalLineaNombre') <tr><td></td><td style="color:#dc3545;font-size:11px;">⚠ {{ $message }}</td></tr> @enderror
                                 <tr>
                                     <td valign="top"><b>Descripción:</b></td>
-                                    <td><textarea wire:model="modalLineaDescripcion" rows="2" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;"></textarea></td>
+                                    <td><textarea wire:model="modalLineaDescripcion" rows="2" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></textarea></td>
                                 </tr>
                                 <tr>
                                     <td><b>Área:</b></td>
-                                    <td><input wire:model="modalLineaArea" type="text" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;"></td>
+                                    <td><input wire:model="modalLineaArea" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
                                 </tr>
                             </table>
 
-                            <div style="margin-top:15px;text-align:center;display:flex;gap:10px;justify-content:center;">
-                                <button type="button" class="cm-btn cm-btn-success" wire:click="guardarLineaModal">Guardar línea</button>
-                                <button type="button" class="cm-btn cm-btn-danger" wire:click="cerrarModalLinea">Cancelar</button>
+                            <div style="margin-top:20px;text-align:center;display:flex;gap:10px;justify-content:center;">
+                                <button type="button" class="cm-btn cm-btn-success" wire:click="guardarLineaModal" style="padding:8px 20px;font-size:13px;">Guardar línea</button>
+                                <button type="button" class="cm-btn cm-btn-danger" wire:click="cerrarModalLinea" style="padding:8px 20px;font-size:13px;">Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- == MODAL METODOLOGÍA == --}}
+                @if ($mostrarModalMetodologia)
+                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;">
+                        <div style="background:#fff;border-radius:10px;padding:24px;max-width:520px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #8b0000;">
+                                <div style="width:36px;height:36px;border-radius:50%;background:#8b0000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;">📋</div>
+                                <h3 style="margin:0;font-size:16px;font-weight:bold;color:#333;">Metodología de Investigación</h3>
+                            </div>
+
+                            {{-- Buscar metodología existente --}}
+                            <div style="margin-bottom: 14px;">
+                                <b style="font-size:12px;color:#555;">Buscar metodología existente:</b>
+                                <input wire:model.live="buscarMetodologia" type="text" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;margin-top:4px;font-size:13px;" placeholder="Escriba nombre o descripción...">
+                                @if($metodologiasEncontradas->isNotEmpty())
+                                    <div style="margin-top:6px;border:1px solid #e0e0e0;border-radius:6px;max-height:180px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                                        @foreach($metodologiasEncontradas as $m)
+                                            <div wire:click="seleccionarMetodologia({{ $m->id }})" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:12px;transition:background 0.15s;"
+                                                 onmouseover="this.style.background='#f5f0f0';this.style.borderLeft='3px solid #8b0000'" onmouseout="this.style.background='';this.style.borderLeft=''">
+                                                <b style="color:#8b0000;">{{ $m->nombre }}</b>
+                                                @if($m->descripcion)<br><small style="color:#888;">{{ Str::limit($m->descripcion, 80) }}</small>@endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                                @if($buscarMetodologia && $metodologiasEncontradas->isEmpty())
+                                    <div style="margin-top:4px;font-size:11px;color:#999;padding:4px 0;">No se encontraron metodologías. Cree una nueva abajo.</div>
+                                @endif
+                            </div>
+
+                            <hr style="border:none;border-top:1px solid #e8e8e8;margin:14px 0;">
+
+                            {{-- Crear nueva --}}
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                                <div style="width:24px;height:24px;border-radius:50%;background:#198754;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;">+</div>
+                                <b style="font-size:13px;color:#333;">O crear nueva metodología</b>
+                            </div>
+                            <table width="100%" style="font-size:12px;margin-top:4px;border-collapse:separate;border-spacing:0 6px;">
+                                <tr>
+                                    <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
+                                    <td><input wire:model="modalMetodologiaNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
+                                </tr>
+                                @error('modalMetodologiaNombre') <tr><td></td><td style="color:#dc3545;font-size:11px;">⚠ {{ $message }}</td></tr> @enderror
+                                <tr>
+                                    <td valign="top"><b>Descripción:</b></td>
+                                    <td><textarea wire:model="modalMetodologiaDescripcion" rows="2" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></textarea></td>
+                                </tr>
+                            </table>
+
+                            <div style="margin-top:20px;text-align:center;display:flex;gap:10px;justify-content:center;">
+                                <button type="button" class="cm-btn cm-btn-success" wire:click="guardarMetodologiaModal" style="padding:8px 20px;font-size:13px;">Guardar metodología</button>
+                                <button type="button" class="cm-btn cm-btn-danger" wire:click="cerrarModalMetodologia" style="padding:8px 20px;font-size:13px;">Cancelar</button>
                             </div>
                         </div>
                     </div>
@@ -697,7 +784,7 @@
 
                 <div style="text-align: center; margin-top: 20px;">
                     <button type="button" wire:click="cancel" class="pgm-btn-cancel" style="margin-right: 10px;">Cancelar</button>
-                    @if($esProfesor)
+                    @if($esProfesor && !$esGestionador)
                         <button type="button" wire:click="cerrarFormulario" class="pgm-btn-save">Cerrar formulario</button>
                     @else
                         <button type="submit" class="pgm-btn-save">{{ $modoActualizacion ? 'Subir documentos' : ($editingId ? 'Guardar cambios' : 'Registrar proyecto') }}</button>

@@ -19,6 +19,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ProyectoGestionService
@@ -275,6 +276,7 @@ class ProyectoGestionService
 
         $payload = [
             'resumen' => $datos['resumen'],
+            // titulo no se persiste - es accessor derivado de equipo_ref
             'fecha_subida' => $datos['fecha_subida'],
             'calificacion' => ($datos['calificacion'] ?? '') !== '' ? (int) $datos['calificacion'] : null,
             'fecha_aprobacion' => ($datos['fecha_aprobacion'] ?? '') !== '' ? $datos['fecha_aprobacion'] : now()->format('Y-m-d'),
@@ -492,6 +494,61 @@ class ProyectoGestionService
         $this->registrarAuditoria($proyecto, 'registrar');
 
         return $proyecto->fresh();
+    }
+
+    /**
+     * Verifica si un estudiante líder sigue vigente (inscripción activa) en el equipo del proyecto.
+     * Retorna true si está vigente, false si no.
+     */
+    public function estudianteLiderVigente(User $user, Proyecto $proyecto): bool
+    {
+        $cedula = trim((string) $user->usu_cedula);
+        if ($cedula === '') {
+            return false;
+        }
+
+        $clave = $proyecto->equipo_ref ?? '';
+        if ($clave === '') {
+            return false;
+        }
+
+        // Verificar que el estudiante pertenece al equipo con rol de líder
+        $gruposSvc = app(GrupoProyectoService::class);
+        if (!$gruposSvc->estudianteEnGrupo($cedula, $clave, IntranetEquipoSeccionService::ROL_LIDER)) {
+            return false;
+        }
+
+        // Obtener lap_codigo/sec_codigo del contexto del equipo
+        $partes = $gruposSvc->parsearClave($clave);
+        if (!$partes || ($partes['tipo'] ?? '') !== GrupoProyectoService::PREFIJO) {
+            // Si es EQSEC, verificar directamente
+            $partesEq = $this->equipoSeccion->parsearClave($clave);
+            if (!$partesEq) {
+                return false;
+            }
+            return $this->equipoSeccion->estudiantePerteneceEquipo($cedula, $clave);
+        }
+
+        // Es EQGRP - obtener contexto del grupo
+        $grupo = \App\Models\GrupoProyectoModulo::find($partes['grp_codigo'] ?? 0);
+        if (!$grupo) {
+            return false;
+        }
+
+        $ctx = $grupo->grp_contexto;
+        if (!$ctx instanceof \ArrayObject) {
+            return false;
+        }
+
+        $lapCodigo = (int) ($ctx['lap_codigo'] ?? 0);
+        $secCodigo = (int) ($ctx['sec_codigo'] ?? 0);
+        if ($lapCodigo <= 0 || $secCodigo <= 0) {
+            return false;
+        }
+
+        // Verificar inscripción activa del estudiante en esa sección/lapso
+        $claveSec = $this->equipoSeccion->construirClave($lapCodigo, $secCodigo);
+        return $this->equipoSeccion->estudiantePerteneceEquipo($cedula, $claveSec);
     }
 
     /**
