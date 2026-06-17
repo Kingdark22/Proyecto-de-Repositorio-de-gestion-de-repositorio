@@ -221,10 +221,7 @@ class GrupoProyectoManager extends Component
                     $lideresActuales++;
                 }
             }
-            if ($lideresActuales >= 2) {
-                session()->flash('message_error', 'Solo puede haber hasta 2 líderes en el grupo.');
-                return;
-            }
+
         }
 
         $this->miembrosSeleccionados[] = [
@@ -417,7 +414,8 @@ class GrupoProyectoManager extends Component
             'dir_nombre' => $this->modalDirNombre,
         ]);
 
-        $this->comunidades = Comunidad::query()->orderBy('nombre')->get();
+        Cache::forget('grupos_comunidades');
+        $this->comunidades = Comunidad::query()->orderBy('nombre')->get(['com_codigo', 'com_nombre']);
         $this->comunidadId = (string) $id;
         $this->cerrarModalComunidad();
 
@@ -441,7 +439,6 @@ class GrupoProyectoManager extends Component
         $this->filterPrograma = '';
         $this->filterSeccion = '';
         $this->loadProgramas();
-        $this->loadSecciones();
     }
 
     public function updatedFilterPrograma(): void
@@ -465,21 +462,14 @@ class GrupoProyectoManager extends Component
 
     protected function candidatosActuales()
     {
-        if ($this->filterLapso === '' || $this->secciones->isEmpty()) {
+        if ($this->filterSeccion === '' || $this->filterLapso === '' || $this->secciones->isEmpty()) {
             return collect();
         }
 
         $grupos = app(GrupoProyectoService::class);
         $lapCodigo = (int) $this->filterLapso;
-        $candidatos = collect();
 
-        foreach ($this->secciones as $sec) {
-            $candidatos = $candidatos->merge(
-                $grupos->candidatosSeccion($lapCodigo, (int) $sec->sec_codigo)
-            );
-        }
-
-        return $candidatos->unique('cedula')->values();
+        return $grupos->candidatosSeccion($lapCodigo, (int) $this->filterSeccion);
     }
 
     /**

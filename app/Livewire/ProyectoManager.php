@@ -772,7 +772,7 @@ class ProyectoManager extends Component
         }
 
         $this->viewMode = 'list';
-        $this->dispatch('notify', type: 'success', message: $this->modoActualizacion ? 'Documentos subidos con exito. El profesor sera notificado.' : ($this->editingId ? 'Proyecto actualizado con exito.' : 'Proyecto registrado con exito.'));
+        $this->dispatch('notify', type: 'success', message: $this->modoActualizacion ? 'Documentos subidos con éxito. El profesor será notificado.' : ($this->editingId ? 'Proyecto actualizado con éxito.' : 'Proyecto registrado con éxito.'));
         $this->resetFormulario();
         $this->cargarGruposDocente(app(ProyectoGestionService::class));
         $this->dispatch('refresh-icons');
@@ -820,7 +820,7 @@ class ProyectoManager extends Component
     {
         try {
             $gestion->aprobar($id);
-            $this->dispatch('notify', type: 'success', message: 'Proyecto aprobado con exito.');
+            $this->dispatch('notify', type: 'success', message: 'Proyecto aprobado con éxito.');
         } catch (AuthorizationException $e) {
             $this->dispatch('notify', type: 'error', message: $e->getMessage());
         }
@@ -862,7 +862,7 @@ class ProyectoManager extends Component
         try {
             $gestion->aprobar($id);
             $this->irAListado();
-            $this->dispatch('notify', type: 'success', message: 'Proyecto aprobado con exito.');
+            $this->dispatch('notify', type: 'success', message: 'Proyecto aprobado con éxito.');
         } catch (AuthorizationException $e) {
             $this->dispatch('notify', type: 'error', message: $e->getMessage());
         }
