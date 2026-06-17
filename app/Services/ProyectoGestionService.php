@@ -96,6 +96,21 @@ class ProyectoGestionService
         return Proyecto::with($this->relacionesProyecto())->find($id);
     }
 
+    /**
+     * @return \Illuminate\Support\Collection<int, Proyecto>
+     */
+    public function proyectosLider(User $user): \Illuminate\Support\Collection
+    {
+        $ids = $this->proyectosDondeEsLider($user);
+        if (empty($ids)) {
+            return collect();
+        }
+
+        return Proyecto::with($this->relacionesProyecto())
+            ->whereIn('pry_codigo', $ids)
+            ->get();
+    }
+
     public function aprobar(int $id, ?User $user = null): void
     {
         $user = $user ?? auth()->user();
@@ -769,6 +784,37 @@ class ProyectoGestionService
         }
 
         return false;
+    }
+
+    /**
+     * @return array<int> IDs de proyectos donde el usuario es líder
+     */
+    public function proyectosDondeEsLider(User $user): array
+    {
+        $cedula = trim((string) $user->usu_cedula);
+        if ($cedula === '') {
+            return [];
+        }
+
+        try {
+            $grupos = \App\Models\GrupoProyectoModulo::whereRaw(
+                "CAST(grp_miembros AS jsonb) @> ?",
+                ['[{"cedula":"' . $cedula . '","rol_id":1}]']
+            )->get(['grp_codigo']);
+
+            $claves = $grupos->map(fn ($g) => 'EQGRP:' . $g->grp_codigo)->toArray();
+            if (empty($claves)) {
+                return [];
+            }
+
+            return Proyecto::whereIn('pry_direccion_logica', $claves)
+                ->get()
+                ->pluck('id')
+                ->map(fn ($v) => (int) $v)
+                ->toArray();
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     public function usuarioPuedeValidar(?User $user): bool

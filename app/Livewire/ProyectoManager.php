@@ -3,11 +3,13 @@
 namespace App\Livewire;
 
 use App\Models\Proyecto;
+use App\Models\LineaInvestigacion;
 use App\Services\GrupoProyectoService;
 use App\Services\IntranetEquipoSeccionService;
 use App\Services\ProyectoGestionService;
 use App\Services\UserRoleService;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Collection;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
@@ -59,8 +61,6 @@ class ProyectoManager extends Component
 
     public bool $showTeamFilters = false;
 
-    public bool $showAdvanced = false;
-
     public ?string $programa_id_derived = null;
 
     public ?string $trayecto_derived = '';
@@ -100,6 +100,21 @@ class ProyectoManager extends Component
 
     /** True si el rol activo es profesor proyecto */
     public bool $esProfesor = false;
+
+    /** Modal crear línea de investigación */
+    public bool $mostrarModalLinea = false;
+
+    public string $modalLineaNombre = '';
+
+    public string $modalLineaDescripcion = '';
+
+    public string $modalLineaArea = '';
+
+    /** Búsqueda de líneas */
+    public string $buscarLinea = '';
+
+    /** Resultados de búsqueda */
+    public Collection $lineasEncontradas;
 
     public function placeholder()
     {
@@ -204,11 +219,6 @@ class ProyectoManager extends Component
     public function toggleTeamFilters(): void
     {
         $this->showTeamFilters = ! $this->showTeamFilters;
-    }
-
-    public function toggleAdvanced(): void
-    {
-        $this->showAdvanced = ! $this->showAdvanced;
     }
 
     public function updatingListTab(): void
@@ -387,6 +397,59 @@ class ProyectoManager extends Component
         }
     }
 
+    public function abrirModalLinea(): void
+    {
+        $this->mostrarModalLinea = true;
+        $this->modalLineaNombre = '';
+        $this->modalLineaDescripcion = '';
+        $this->modalLineaArea = '';
+        $this->buscarLinea = '';
+        $this->lineasEncontradas = collect();
+    }
+
+    public function cerrarModalLinea(): void
+    {
+        $this->mostrarModalLinea = false;
+    }
+
+    public function updatedBuscarLinea(): void
+    {
+        $q = trim($this->buscarLinea);
+        if ($q === '') {
+            $this->lineasEncontradas = collect();
+            return;
+        }
+        $this->lineasEncontradas = LineaInvestigacion::where('nombre_investigacion', 'like', "%{$q}%")
+            ->orWhere('descripcion', 'like', "%{$q}%")
+            ->orderBy('nombre_investigacion')
+            ->get();
+    }
+
+    public function seleccionarLinea(int $id): void
+    {
+        $this->linea_investigacion_id = (string) $id;
+        $this->buscarLinea = '';
+        $this->lineasEncontradas = collect();
+    }
+
+    public function guardarLineaModal(): void
+    {
+        $this->validate([
+            'modalLineaNombre' => 'required|string|max:255',
+        ], [
+            'modalLineaNombre.required' => 'El nombre de la línea es obligatorio.',
+        ]);
+
+        $linea = LineaInvestigacion::create([
+            'nombre_investigacion' => $this->modalLineaNombre,
+            'descripcion' => $this->modalLineaDescripcion ?: null,
+            'area_de_investigacion' => $this->modalLineaArea ?: null,
+        ]);
+
+        $this->linea_investigacion_id = (string) $linea->id;
+        $this->cerrarModalLinea();
+    }
+
     public function updatingFilterEstadoList(): void
     {
         $this->resetPage();
@@ -459,13 +522,13 @@ class ProyectoManager extends Component
             $this->esGrupoRegistrado ? $this->selectedLeaders : [],
         );
 
-        // Si lider actualizo, marcar y devolver a pendiente de validacion
+        // Si lider actualizo, marcar como completado (listo para revision)
         if ($this->modoActualizacion && $proyecto) {
             $proyecto->update([
                 'actualizado_por_estudiante' => true,
                 'fecha_actualizacion_estudiante' => now(),
-                'estado_validacion' => 'pendiente',
-                'estado_logico' => false,
+                'estado_validacion' => 'completado',
+                'estado_logico' => true,
             ]);
         }
 
@@ -594,14 +657,29 @@ class ProyectoManager extends Component
 
         $esLiderGlobal = $this->usuarioEsLider($gestion);
 
+        // Detectar si es estudiante líder (no admin, no coord, no prof)
+        $esEstudianteLider = false;
+        $proyectosLiderIds = [];
+        $proyectosLider = collect();
+        if ($user && !$this->esProfesor) {
+            $userRoleService = app(UserRoleService::class);
+            $activeRole = $userRoleService->getActiveRole($user);
+            if (!$userRoleService->roleMatches('administrador', $activeRole)
+                && !$userRoleService->roleMatches('coordinador', $activeRole)) {
+                $esEstudianteLider = true;
+                $proyectosLiderIds = $gestion->proyectosDondeEsLider($user);
+                $proyectosLider = $gestion->proyectosLider($user);
+            }
+        }
+
         $datos = match (true) {
-            $this->viewMode === 'list' && !$this->esProfesor => $gestion->datosVistaListado([
+            $this->viewMode === 'list' && !$this->esProfesor && !$esEstudianteLider => $gestion->datosVistaListado([
                 'search' => $this->search,
                 'estado' => $this->filterEstadoList,
                 'comunidad' => $this->filterComunidadList,
                 'lapso' => $this->filterGruposLapso,
             ], $page, $user),
-            $this->viewMode === 'list' && $this->esProfesor => ['comunidades' => $gestion->comunidadesOrdenadas()],
+            $this->viewMode === 'list' && ($this->esProfesor || $esEstudianteLider) => ['comunidades' => $gestion->comunidadesOrdenadas()],
             $this->viewMode === 'form' => $gestion->datosVistaFormulario($estado),
             default => ['comunidades' => $gestion->comunidadesOrdenadas()],
         };
@@ -626,6 +704,9 @@ class ProyectoManager extends Component
             'selectedProject' => $this->selectedProject,
             'esAdmin' => $gestion->usuarioEsAdminEnSistema($user),
             'esLider' => $esLiderGlobal,
+            'proyectosLiderIds' => $proyectosLiderIds,
+            'proyectosLider' => $proyectosLider,
+            'esEstudianteLider' => $esEstudianteLider,
             'modoActualizacion' => $this->modoActualizacion,
             'gruposDocente' => $this->gruposDocente,
             'lapsosFiltro' => $lapsosFiltro,
@@ -658,7 +739,6 @@ class ProyectoManager extends Component
         $this->esGrupoRegistrado = false;
         $this->comunidadNombreGrupo = null;
         $this->showTeamFilters = false;
-        $this->showAdvanced = false;
         $this->programa_id_derived = null;
         $this->trayecto_derived = '';
         $this->filterGruposLapso = '';

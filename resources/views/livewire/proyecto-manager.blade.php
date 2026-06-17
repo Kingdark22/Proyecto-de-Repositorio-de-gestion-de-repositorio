@@ -136,7 +136,70 @@
                 </table>
             </fieldset>
         @endif
-            @if(!$esProfesor)
+            @if($esEstudianteLider)
+            <fieldset style="border: 2px solid #2e7d32; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
+                <legend style="color: #2e7d32; font-weight: bold; font-style: italic; padding: 0 5px;">Mis proyectos</legend>
+                @if($proyectosLider->isNotEmpty())
+                <table width="100%" border="1" cellpadding="4" cellspacing="0"
+                    style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px;">
+                    <thead>
+                        <tr style="background-color: #a5d6a7; color: #000; text-align: center; font-weight: bold;">
+                            <th width="30%">Proyecto</th>
+                            <th width="20%">Comunidad</th>
+                            <th width="20%">Validación</th>
+                            <th width="30%">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody class="Texto">
+                        @foreach ($proyectosLider as $p)
+                            <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E8F5E9' : '#FFFFFF' }};"
+                                valign="top">
+                                <td style="padding: 5px; font-weight: bold;">
+                                    {{ $p->titulo }}
+                                    <br><span style="font-size: 9px; font-weight: normal;">Subido:
+                                        {{ $p->fecha_subida?->format('d/m/Y') ?? '-' }}</span>
+                                    @if ($p->documentos->isNotEmpty())
+                                        <div style="margin-top: 3px;">
+                                            @foreach ($p->documentos as $doc)
+                                                <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}"
+                                                    target="_blank"
+                                                    style="color: #0000EE; font-size: 10px; display:block;">[{{ $doc->componente?->nombre ?? 'Documento' }}]</a>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </td>
+                                <td style="padding: 5px;">
+                                    <span style="font-size: 10px;">{{ $p->comunidad->nombre ?? 'N/A' }}</span>
+                                </td>
+                                <td align="center" style="padding: 5px;">
+                                    @if ($p->estado_validacion === 'pendiente')
+                                        <span style="color: #d4a017; font-weight: bold;">Pendiente</span>
+                                    @elseif($p->estado_validacion === 'completado')
+                                        <span style="color: #2e7d32; font-weight: bold;">Completado</span>
+                                    @elseif($p->estado_validacion === 'aprobado')
+                                        <span style="color: #008000; font-weight: bold;">Aprobado</span>
+                                    @elseif($p->estado_validacion === 'rechazado')
+                                        <span style="color: #FF0000; font-weight: bold;"
+                                            title="{{ $p->motivo_rechazo }}">Rechazado</span>
+                                    @endif
+                                </td>
+                                <td align="center" style="padding: 5px;">
+                                    <button type="button" wire:click="edit({{ $p->id }})"
+                                        class="cm-btn cm-btn-success cm-btn-sm">
+                                        Actualizar
+                                    </button>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                @else
+                    <p style="font-size: 11px; color: #666; padding: 10px;">No tienes proyectos asignados como líder.</p>
+                @endif
+            </fieldset>
+            @endif
+
+            @if(!$esProfesor && !$esEstudianteLider)
             <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
                 <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Listado de proyectos
                     institucionales</legend>
@@ -149,6 +212,7 @@
                             <select wire:model.live="filterEstadoList" style="width: 95%;">
                                 <option value="">- Todos -</option>
                                 <option value="pendiente">Pendiente</option>
+                                <option value="completado">Completado</option>
                                 <option value="aprobado">Aprobado</option>
                                 <option value="rechazado">Rechazado</option>
                             </select>
@@ -168,8 +232,8 @@
                     <thead>
                         <tr style="background-color: #8bb2b7; color: #000; text-align: center; font-weight: bold;">
                             <th width="25%">Título del proyecto</th>
-                            <th width="20%">Comunidad / línea inv.</th>
-                            <th width="15%">Validación / C&amp;T</th>
+                            <th width="20%">Comunidad / equipo</th>
+                            <th width="15%">Validación</th>
                             <th width="10%">Estado</th>
                             <th width="30%">Acciones</th>
                         </tr>
@@ -197,16 +261,16 @@
                                     <span style="font-size: 11px; font-weight: bold; color: #8b0000;">Equipo:
                                         {{ $p->equipo_resumen }}</span><br>
                                     <span style="font-size: 10px;">Comunidad:
-                                        {{ $p->comunidad->nombre ?? 'N/A' }}</span><br>
-                                    <span style="font-size: 10px;">Línea:
-                                        {{ $p->linea_investigacion?->nombre_investigacion ?? '' }}</span>
+                                        {{ $p->comunidad->nombre ?? 'N/A' }}</span>
                                     @if ($p->actualizado_por_estudiante)
                                         <br><span style="background:#ffc107; padding:1px 6px; border-radius:3px; font-size:9px; font-weight:bold; color:#000;">Actualizado por líder</span>
                                     @endif
                                 </td>
                                 <td align="center" style="padding: 5px;">
                                     @if ($p->estado_validacion === 'pendiente')
-                                        <span style="color: #d4a017; font-weight: bold;">En revisión</span>
+                                        <span style="color: #d4a017; font-weight: bold;">Pendiente</span>
+                                    @elseif($p->estado_validacion === 'completado')
+                                        <span style="color: #2e7d32; font-weight: bold;">Completado</span>
                                     @elseif($p->estado_validacion === 'rechazado')
                                         <span style="color: #FF0000; font-weight: bold;"
                                             title="{{ $p->motivo_rechazo }}">Rechazado</span>
@@ -223,7 +287,7 @@
                                 </td>
                                 <td align="center" style="padding: 5px;">
                                     <div class="pgm-actions">
-                                        @if (!empty($canValidate) && $p->estado_validacion === 'pendiente')
+                                        @if (!empty($canValidate) && in_array($p->estado_validacion, ['pendiente', 'completado']))
                                             <button type="button" wire:click="approve({{ $p->id }})"
                                                 onclick="return confirm('¿Aprueba este proyecto?')"
                                                 class="pgm-btn-action pgm-btn-action--approve">
@@ -238,7 +302,7 @@
                                                 Ficha
                                             </button>
                                         @endif
-                                        @if ($esLider ?? false)
+                                        @if (in_array($p->id, $proyectosLiderIds))
                                             <button type="button" wire:click="edit({{ $p->id }})"
                                                 class="pgm-btn-action pgm-btn-action--edit">
                                                 Actualizar
@@ -519,18 +583,21 @@
                 </fieldset>
                 @endif
 
-                {{-- == SECCIÓN CLASIFICACIÓN (visible) == --}}
+                {{-- == SECCIÓN CLASIFICACIÓN == --}}
                 <div style="margin-bottom: 15px; border: 1px solid #CCC; border-radius: 4px; padding: 10px;">
                     <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px;">
                         <tr>
                             <td width="20%"><b>L&iacute;nea de Investigaci&oacute;n:</b></td>
                             <td width="30%">
-                                <select wire:model="linea_investigacion_id" style="width: 95%;">
-                                    <option value="">Seleccione...</option>
-                                    @foreach ($lineas ?? [] as $l)
-                                        <option value="{{ $l->id }}">{{ $l->nombre_investigacion }}</option>
-                                    @endforeach
-                                </select>
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <select wire:model="linea_investigacion_id" style="flex:1;">
+                                        <option value="">Seleccione...</option>
+                                        @foreach ($lineas ?? [] as $l)
+                                            <option value="{{ $l->id }}">{{ $l->nombre_investigacion }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" wire:click="abrirModalLinea" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap; padding: 4px 8px; font-size: 11px;" title="Buscar o crear nueva línea">+</button>
+                                </div>
                                 @error('linea_investigacion_id')
                                     <br><span class="obligatorio">{{ $message }}</span>
                                 @enderror
@@ -577,40 +644,55 @@
                     </table>
                 </div>
 
-                {{-- == SECCIÓN AVANZADO (colapsable, oculta para profesor) == --}}
-                @if(!$esProfesor)
-                <div style="margin-bottom: 15px; border: 1px solid #CCC; border-radius: 4px;">
-                    <button type="button" wire:click="toggleAdvanced"
-                        style="width:100%; background:#f5f5f5; border:none; padding:8px 12px; text-align:left; font-weight:bold; font-size:12px; cursor:pointer;">
-                        {{ $showAdvanced ? '▼ Ocultar opciones avanzadas' : '▶ Opciones avanzadas (C&T, nota, fecha aprobación)' }}
-                    </button>
-                    @if ($showAdvanced)
-                        <div style="padding:10px;">
-                            <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px;">
-                                <tr>
-                                    @if ($editingId)
-                                        <td width="20%"><b>Nota (1-20):</b></td>
-                                        <td width="30%"><input wire:model="calificacion" type="number" min="1" max="20"
-                                                style="width: 60px;"> @error('calificacion')
-                                                <span class="obligatorio">{{ $message }}</span>
-                                            @enderror
-                                        </td>
-                                    @endif
-                                </tr>
-                                @if ($editingId)
-                                    <tr>
-                                        <td><b>Fecha aprobación:</b></td>
-                                        <td colspan="3"><input wire:model="fecha_aprobacion" type="date">
-                                            @error('fecha_aprobacion')
-                                                <span class="obligatorio">{{ $message }}</span>
-                                            @enderror
-                                        </td>
-                                    </tr>
+                {{-- == MODAL LÍNEA DE INVESTIGACIÓN == --}}
+                @if ($mostrarModalLinea)
+                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;">
+                        <div style="background:#fff;border-radius:8px;padding:20px;max-width:500px;width:90%;max-height:90vh;overflow-y:auto;">
+                            <h3 style="margin-top:0;font-size:16px;">Línea de Investigación</h3>
+
+                            {{-- Buscar línea existente --}}
+                            <div style="margin-bottom: 12px;">
+                                <b style="font-size:12px;">Buscar línea existente:</b>
+                                <input wire:model.live="buscarLinea" type="text" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;margin-top:4px;" placeholder="Escriba nombre o descripción...">
+                                @if($lineasEncontradas->isNotEmpty())
+                                    <div style="margin-top:4px;border:1px solid #ccc;border-radius:4px;max-height:150px;overflow-y:auto;">
+                                        @foreach($lineasEncontradas as $l)
+                                            <div wire:click="seleccionarLinea({{ $l->id }})" style="padding:6px 8px;cursor:pointer;border-bottom:1px solid #eee;font-size:11px;"
+                                                 onmouseover="this.style.background='#e8f5e9'" onmouseout="this.style.background=''">
+                                                <b>{{ $l->nombre_investigacion }}</b>
+                                                @if($l->descripcion)<br><small style="color:#666;">{{ $l->descripcion }}</small>@endif
+                                            </div>
+                                        @endforeach
+                                    </div>
                                 @endif
+                            </div>
+
+                            <hr style="border:none;border-top:1px solid #ddd;margin:12px 0;">
+
+                            {{-- Crear nueva --}}
+                            <b style="font-size:12px;">O crear nueva:</b>
+                            <table width="100%" style="font-size:11px;margin-top:6px;">
+                                <tr>
+                                    <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
+                                    <td><input wire:model="modalLineaNombre" type="text" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;"></td>
+                                </tr>
+                                @error('modalLineaNombre') <tr><td></td><td style="color:red;font-size:10px;">{{ $message }}</td></tr> @enderror
+                                <tr>
+                                    <td valign="top"><b>Descripción:</b></td>
+                                    <td><textarea wire:model="modalLineaDescripcion" rows="2" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;"></textarea></td>
+                                </tr>
+                                <tr>
+                                    <td><b>Área:</b></td>
+                                    <td><input wire:model="modalLineaArea" type="text" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;"></td>
+                                </tr>
                             </table>
+
+                            <div style="margin-top:15px;text-align:center;display:flex;gap:10px;justify-content:center;">
+                                <button type="button" class="cm-btn cm-btn-success" wire:click="guardarLineaModal">Guardar línea</button>
+                                <button type="button" class="cm-btn cm-btn-danger" wire:click="cerrarModalLinea">Cancelar</button>
+                            </div>
                         </div>
-                    @endif
-                </div>
+                    </div>
                 @endif
 
                 <div style="text-align: center; margin-top: 20px;">
