@@ -215,6 +215,7 @@ class ProyectoGestionService
             'metodologia_id' => (string) ($item->metodologia_id ?? ''),
             'tipo_publicacion_id' => (string) ($item->tipo_publicacion_id ?? ''),
             'tipo_investigacion_id' => (string) ($item->tipo_investigacion_id ?? ''),
+            'objetivo_investigacion_id' => (string) ($item->objetivo_investigacion_id ?? ''),
             'comunidad_id' => (string) $item->comunidad_id,
             'equipo_seccion_clave' => $item->equipo_ref ?? '',
             'filterLapsoEquipo' => $partes ? (string) $partes['lap_codigo'] : '',
@@ -245,6 +246,7 @@ class ProyectoGestionService
             'metodologia_id' => $datos['metodologia_id'] ?? null,
             'tipo_publicacion_id' => $datos['tipo_publicacion_id'] ?? null,
             'tipo_investigacion_id' => $datos['tipo_investigacion_id'] ?? null,
+            'objetivo_investigacion_id' => $datos['objetivo_investigacion_id'] ?? null,
             'comunidad_id' => $datos['comunidad_id'],
             'equipo_ref' => $datos['equipo_seccion_clave'],
             'estado_validacion' => $editingId 
@@ -484,6 +486,7 @@ class ProyectoGestionService
             'metodologia_id' => ['nullable', Rule::exists('\App\Models\MetodologiaInvestigacion', (new \App\Models\MetodologiaInvestigacion())->getKeyName())],
             'tipo_publicacion_id' => ['nullable', Rule::exists('\App\Models\TipoPublicacion', (new \App\Models\TipoPublicacion())->getKeyName())],
             'tipo_investigacion_id' => ['nullable', Rule::exists('\App\Models\TipoInvestigacion', (new \App\Models\TipoInvestigacion())->getKeyName())],
+            'objetivo_investigacion_id' => ['nullable', Rule::exists('\App\Models\ObjetivoInvestigacion', (new \App\Models\ObjetivoInvestigacion())->getKeyName())],
             'comunidad_id' => ['required', Rule::exists('\App\Models\Comunidad', (new \App\Models\Comunidad())->getKeyName())],
             'equipo_seccion_clave' => [
                 'required',

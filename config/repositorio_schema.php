@@ -99,6 +99,16 @@ return [
         ],
     ],
 
+    'objetivo_investigacions' => [
+        'primary_key' => 'obi_codigo',
+        'columns' => [
+            'id' => 'obi_codigo',
+            'nombre' => 'obi_nombre',
+            'descripcion' => 'obi_descripcion',
+            'estado_logico' => 'obi_estado_logico',
+        ],
+    ],
+
     'componentes' => [
         'primary_key' => 'comp_codigo',
         'columns' => [
