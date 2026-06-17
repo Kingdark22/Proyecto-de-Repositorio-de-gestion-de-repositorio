@@ -132,6 +132,32 @@ class ProyectoManager extends Component
     /** Resultados de búsqueda */
     public Collection $metodologiasEncontradas;
 
+    /** Modal crear tipo de investigación */
+    public bool $mostrarModalTipoInvestigacion = false;
+
+    public string $modalTipoInvNombre = '';
+
+    public string $modalTipoInvDescripcion = '';
+
+    /** Búsqueda de tipos de investigación */
+    public string $buscarTipoInvestigacion = '';
+
+    /** Resultados de búsqueda */
+    public Collection $tiposInvestigacionEncontradas;
+
+    /** Modal crear tipo de publicación */
+    public bool $mostrarModalTipoPublicacion = false;
+
+    public string $modalTipoPubNombre = '';
+
+    public bool $modalTipoPubMencionHonorifica = false;
+
+    /** Búsqueda de tipos de publicación */
+    public string $buscarTipoPublicacion = '';
+
+    /** Resultados de búsqueda */
+    public Collection $tiposPublicacionEncontradas;
+
     public function placeholder()
     {
         return <<<'HTML'
@@ -496,6 +522,113 @@ class ProyectoManager extends Component
         $this->metodologia_id = (string) $metodologia->id;
         $this->cerrarModalMetodologia();
     }
+
+    // ─── Tipo de Investigación ───────────────────────────────
+    public function abrirModalTipoInvestigacion(): void
+    {
+        $this->mostrarModalTipoInvestigacion = true;
+        $this->modalTipoInvNombre = '';
+        $this->modalTipoInvDescripcion = '';
+        $this->buscarTipoInvestigacion = '';
+        $this->tiposInvestigacionEncontradas = collect();
+    }
+
+    public function cerrarModalTipoInvestigacion(): void
+    {
+        $this->mostrarModalTipoInvestigacion = false;
+    }
+
+    public function updatedBuscarTipoInvestigacion(): void
+    {
+        $q = trim($this->buscarTipoInvestigacion);
+        if ($q === '') {
+            $this->tiposInvestigacionEncontradas = collect();
+            return;
+        }
+        $this->tiposInvestigacionEncontradas = \App\Models\TipoInvestigacion::where('nombre', 'like', "%{$q}%")
+            ->orWhere('descripcion', 'like', "%{$q}%")
+            ->orderBy('nombre')
+            ->get();
+    }
+
+    public function seleccionarTipoInvestigacion(int $id): void
+    {
+        $this->tipo_investigacion_id = (string) $id;
+        $this->buscarTipoInvestigacion = '';
+        $this->tiposInvestigacionEncontradas = collect();
+    }
+
+    public function guardarTipoInvestigacionModal(): void
+    {
+        $this->validate([
+            'modalTipoInvNombre' => 'required|string|max:255',
+        ], [
+            'modalTipoInvNombre.required' => 'El nombre del tipo de investigación es obligatorio.',
+        ]);
+
+        $tipo = \App\Models\TipoInvestigacion::create([
+            'nombre' => $this->modalTipoInvNombre,
+            'descripcion' => $this->modalTipoInvDescripcion ?: null,
+            'estado_logico' => true,
+        ]);
+
+        $this->tipo_investigacion_id = (string) $tipo->id;
+        $this->cerrarModalTipoInvestigacion();
+    }
+
+    // ─── Tipo de Publicación ────────────────────────────────
+    public function abrirModalTipoPublicacion(): void
+    {
+        $this->mostrarModalTipoPublicacion = true;
+        $this->modalTipoPubNombre = '';
+        $this->modalTipoPubMencionHonorifica = false;
+        $this->buscarTipoPublicacion = '';
+        $this->tiposPublicacionEncontradas = collect();
+    }
+
+    public function cerrarModalTipoPublicacion(): void
+    {
+        $this->mostrarModalTipoPublicacion = false;
+    }
+
+    public function updatedBuscarTipoPublicacion(): void
+    {
+        $q = trim($this->buscarTipoPublicacion);
+        if ($q === '') {
+            $this->tiposPublicacionEncontradas = collect();
+            return;
+        }
+        $this->tiposPublicacionEncontradas = \App\Models\TipoPublicacion::where('nombre', 'like', "%{$q}%")
+            ->orderBy('nombre')
+            ->get();
+    }
+
+    public function seleccionarTipoPublicacion(int $id): void
+    {
+        $this->tipo_publicacion_id = (string) $id;
+        $this->buscarTipoPublicacion = '';
+        $this->tiposPublicacionEncontradas = collect();
+    }
+
+    public function guardarTipoPublicacionModal(): void
+    {
+        $this->validate([
+            'modalTipoPubNombre' => 'required|string|max:255',
+        ], [
+            'modalTipoPubNombre.required' => 'El nombre del tipo de publicación es obligatorio.',
+        ]);
+
+        $tipo = \App\Models\TipoPublicacion::create([
+            'nombre' => $this->modalTipoPubNombre,
+            'mencion_honorifica' => $this->modalTipoPubMencionHonorifica,
+            'estado_logico' => true,
+        ]);
+
+        $this->tipo_publicacion_id = (string) $tipo->id;
+        $this->cerrarModalTipoPublicacion();
+    }
+
+    // ─────────────────────────────────────────────────────────
 
     public function updatedBuscarLinea(): void
     {
