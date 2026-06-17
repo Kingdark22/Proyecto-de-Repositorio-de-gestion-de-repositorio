@@ -142,35 +142,13 @@
 
     @if ($viewMode === 'list')
         <div style="margin-bottom: 10px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
-            <select wire:model.live="filterLapso" class="grp-filter-select" wire:loading.attr="disabled">
+            <select wire:model.live="filterLapso" class="grp-filter-select">
                 <option value="">Lapso</option>
                 @foreach ($lapsos as $l)
                     <option value="{{ $l->lap_codigo }}">{{ $l->lap_nombre }}</option>
                 @endforeach
             </select>
-<<<<<<< HEAD
-            <select wire:model.live="filterPrograma" class="grp-filter-select" @if (!$filterLapso || $isProfessor) disabled @endif wire:loading.attr="disabled">
-                <option value="">PNF / Programa</option>
-                @foreach ($programas as $p)
-                    <option value="{{ $p->pro_codigo }}">{{ $p->pro_siglas }}</option>
-                @endforeach
-            </select>
-            <select wire:model.live="filterSeccion" class="grp-filter-select" @if (!$filterLapso || !$filterPrograma) disabled @endif wire:loading.attr="disabled">
-                <option value="">Secci&oacute;n</option>
-                @foreach ($secciones as $s)
-                    <option value="{{ $s->sec_codigo }}">{{ $s->sec_nombre }}</option>
-                @endforeach
-            </select>
-            <select wire:model.live="filterSeccion" class="grp-filter-select" @if (!$filterLapso || !$filterPrograma) disabled @endif wire:loading.attr="disabled">
-                <option value="">Secci&oacute;n</option>
-                @foreach ($secciones as $s)
-                    <option value="{{ $s->sec_codigo }}">{{ $s->sec_nombre }}</option>
-                @endforeach
-            </select>
-            <select wire:model.live="filterPrograma" class="grp-filter-select" @if (!$filterLapso) disabled @endif>
-=======
             <select wire:model.live="filterPrograma" class="grp-filter-select" @if (!$filterLapso || $isProfessor) disabled @endif>
->>>>>>> origin/main
                 <option value="">PNF / Programa</option>
                 @foreach ($programas as $p)
                     <option value="{{ $p->pro_codigo }}">{{ $p->pro_siglas }}</option>
@@ -237,13 +215,26 @@
                     <td width="50%"><b>Nombre del proyecto:</b><br><input wire:model="nombreGrupo" type="text"
                             class="grp-filter-input" style="width:90%;"></td>
                     <td><b>Comunidad:</b><br>
-                        <div style="display: flex; gap: 4px; align-items: center;">
-                            <select wire:model="comunidadId" class="grp-filter-select" style="flex:1;">
-                                <option value="">&mdash;</option>
-                                @foreach ($comunidades as $c)
-                                    <option value="{{ $c->id }}">{{ $c->nombre }}</option>
-                                @endforeach
-                            </select>
+                        <div style="display: flex; gap: 4px; align-items: center;" x-data="{ open: false }">
+                            <div style="flex: 1; position: relative;">
+                                <input wire:model.live="buscarComunidad" type="text" class="grp-filter-input" style="width: 100%;" placeholder="Buscar comunidad..." @focus="open = true" @click.away="open = false">
+                                <div x-show="open" style="position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-radius: 4px; z-index: 1000; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                    @if($comunidadesEncontradas->isNotEmpty())
+                                        @foreach($comunidadesEncontradas as $com)
+                                            <div wire:click="seleccionarComunidad({{ $com->id }})" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee; font-size: 11px;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">
+                                                <b>{{ $com->nombre }}</b> @if($com->rif) <small style="color: #666;">({{ $com->rif }})</small> @endif
+                                            </div>
+                                        @endforeach
+                                    @else
+                                        <div style="padding: 8px 12px; font-size: 11px; color: #666;">No se encontraron comunidades.</div>
+                                    @endif
+                                </div>
+                            </div>
+                            @if($comunidadId)
+                                <span style="background:#e8f5e9; border:1px solid #2e7d32; padding:4px 10px; border-radius:4px; font-weight:bold; color:#2e7d32; font-size:11px; white-space:nowrap;">
+                                    {{ $comunidades->firstWhere('id', (int)$comunidadId)?->nombre ?? 'Seleccionada' }}
+                                </span>
+                            @endif
                             <button type="button" wire:click="abrirModalComunidad" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap;" title="Crear nueva comunidad">+</button>
                         </div>
                     </td>
@@ -252,25 +243,21 @@
                     <td colspan="2" style="padding-top:8px;">
                         <b>Contexto acad&eacute;mico:</b>
                         <div style="display: flex; gap: 16px; margin-top: 4px;">
-                            <select wire:model.live="filterLapso" class="grp-filter-select" wire:loading.attr="disabled">
+                            <select wire:model.live="filterLapso" class="grp-filter-select">
                                 <option value="">Lapso</option>
                                 @foreach ($lapsos as $l)
                                     <option value="{{ $l->lap_codigo }}">{{ $l->lap_nombre }}</option>
                                 @endforeach
                             </select>
                             <select wire:model.live="filterPrograma" class="grp-filter-select"
-<<<<<<< HEAD
-                                @if (!$filterLapso || ($isProfessor && $viewMode === 'form')) disabled @endif wire:loading.attr="disabled">
-=======
                                 @if (!$filterLapso || ($isProfessor && $viewMode === 'form')) disabled @endif>
->>>>>>> origin/main
                                 <option value="">PNF</option>
                                 @foreach ($programas as $p)
                                     <option value="{{ $p->pro_codigo }}">{{ $p->pro_siglas }}</option>
                                 @endforeach
                             </select>
                             <select wire:model.live="filterSeccion" class="grp-filter-select"
-                                @if (!$filterLapso || !$filterPrograma) disabled @endif wire:loading.attr="disabled">
+                                @if (!$filterLapso) disabled @endif>
                                 <option value="">Secci&oacute;n</option>
                                 @foreach ($secciones as $s)
                                     <option value="{{ $s->sec_codigo }}">{{ $s->sec_nombre }}</option>

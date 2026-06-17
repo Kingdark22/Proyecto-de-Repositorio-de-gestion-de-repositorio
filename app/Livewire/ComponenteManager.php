@@ -15,14 +15,12 @@ class ComponenteManager extends Component
     use WithPagination;
 
     public $search = '';
-    public $filterPrograma = '';
     public $viewMode = 'list';
     public $editingId = null;
 
-    public $programa_id = '';
-
     public $nombre = '';
     public $es_obligatorio = true;
+
 
     public $rows = [];
 
@@ -34,17 +32,13 @@ class ComponenteManager extends Component
     protected function rules()
     {
         return [
-            'programa_id' => 'required',
             'rows.*.nombre' => 'required|min:3',
             'rows.*.es_obligatorio' => 'boolean',
-            'pnfSeleccionados' => 'array',
-            'pnfSeleccionados.*' => 'integer',
         ];
     }
 
     protected $messages = [
         'rows.*.nombre.required' => 'Debe nombrar el documento en esta fila.',
-        'programa_id.required' => 'Debe asignar un Programa.',
     ];
 
     public function updatingSearch()
@@ -52,12 +46,8 @@ class ComponenteManager extends Component
         $this->resetPage();
     }
 
-    public function updatingFilterPrograma()
-    {
-        $this->resetPage();
-    }
-
     public function create()
+
     {
         $this->resetValidation();
         $this->resetFields();
@@ -91,8 +81,6 @@ class ComponenteManager extends Component
             abort(404);
         }
 
-        $this->programa_id = (string) $comp->programa_id;
-
         $this->rows = [
             [
                 'id' => $comp->id,
@@ -114,65 +102,8 @@ class ComponenteManager extends Component
     {
         $this->editingId = null;
         $this->nombre = '';
-        $this->programa_id = '';
         $this->es_obligatorio = true;
         $this->rows = [];
-        $this->showPnfModal = false;
-        $this->pnfComponenteId = null;
-        $this->pnfSeleccionados = [];
-    }
-
-    public function abrirModalPnf($id)
-    {
-        $comp = Componente::find($id);
-        if (! $comp) {
-            return;
-        }
-        $this->pnfComponenteId = $id;
-        $this->pnfSeleccionados = ComponentePrograma::where('comp_codigo', $id)
-            ->pluck('pro_codigo')
-            ->map(fn($v) => (int) $v)
-            ->toArray();
-        $this->showPnfModal = true;
-    }
-
-    public function cerrarModalPnf()
-    {
-        $this->showPnfModal = false;
-        $this->pnfComponenteId = null;
-        $this->pnfSeleccionados = [];
-    }
-
-    public function guardarAsignacionPnf()
-    {
-        if (! $this->pnfComponenteId) {
-            return;
-        }
-        $this->validate(['pnfSeleccionados' => 'array', 'pnfSeleccionados.*' => 'integer']);
-
-        $comp = Componente::find($this->pnfComponenteId);
-        if (! $comp) {
-            return;
-        }
-
-        // Sync pivot: remove old, insert new
-        ComponentePrograma::where('comp_codigo', $this->pnfComponenteId)->delete();
-        $toInsert = [];
-        foreach ($this->pnfSeleccionados as $proCodigo) {
-            $toInsert[] = [
-                'comp_codigo' => $this->pnfComponenteId,
-                'pro_codigo' => (int) $proCodigo,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
-        if (! empty($toInsert)) {
-            ComponentePrograma::insert($toInsert);
-        }
-
-        session()->flash('message', 'Asignación de PNFs actualizada correctamente.');
-        $this->cerrarModalPnf();
-        $this->dispatch('refresh-icons');
     }
 
     public function save()
@@ -186,15 +117,14 @@ class ComponenteManager extends Component
             return;
         }
 
-        // Validate unique names against existing DB records per program
+        // Validate unique names against existing DB records
         foreach ($this->rows as $row) {
-            $query = Componente::where('programa_id', $this->programa_id)
-                ->whereRaw('TRIM(comp_nombre) = ?', [trim($row['nombre'])]);
+            $query = Componente::whereRaw('TRIM(comp_nombre) = ?', [trim($row['nombre'])]);
             if (!empty($row['id'])) {
                 $query->where('id', '!=', $row['id']);
             }
             if ($query->exists()) {
-                $this->addError('rows', "El componente '{$row['nombre']}' ya existe para este programa.");
+                $this->addError('rows', "El componente '{$row['nombre']}' ya existe.");
                 return;
             }
         }
@@ -207,19 +137,15 @@ class ComponenteManager extends Component
                     if ($comp) {
                         $comp->update([
                             'nombre' => $row['nombre'],
-                            'programa_id' => $this->programa_id,
                             'es_obligatorio' => $row['es_obligatorio'],
                         ]);
                     }
                 } else {
                     $comp = Componente::create([
                         'nombre' => $row['nombre'],
-                        'programa_id' => $this->programa_id,
                         'es_obligatorio' => $row['es_obligatorio'],
                         'estado_logico' => true,
                     ]);
-                    // Sync pivot
-                    ComponentePrograma::create(['comp_codigo' => $comp->id, 'pro_codigo' => $this->programa_id]);
                     $createdCount++;
                 }
             }
@@ -231,14 +157,11 @@ class ComponenteManager extends Component
             }
         } else {
             foreach ($this->rows as $row) {
-                $comp = Componente::create([
+                Componente::create([
                     'nombre' => $row['nombre'],
-                    'programa_id' => $this->programa_id,
                     'es_obligatorio' => $row['es_obligatorio'],
                     'estado_logico' => true,
                 ]);
-                // Sync pivot
-                ComponentePrograma::create(['comp_codigo' => $comp->id, 'pro_codigo' => $this->programa_id]);
             }
             session()->flash('message', count($this->rows) . ' Componentes creados con éxito.');
         }
@@ -266,7 +189,7 @@ class ComponenteManager extends Component
 
     public function with()
     {
-        $query = Componente::with('programas');
+        $query = Componente::query();
 
         if ($this->search !== '') {
             $query->where(function ($q) {
@@ -274,39 +197,12 @@ class ComponenteManager extends Component
             });
         }
 
-        if ($this->filterPrograma !== '') {
-            $query->where(function ($q) {
-                $q->whereHas('programas', fn($q2) => $q2->where('pro_codigo', $this->filterPrograma));
-            });
-        }
-
         $items = $query->latest('id')->paginate(10);
-        $this->cargarNombresPrograma($items);
 
         return [
             'listaRegistros' => $items,
             'programas' => app(AcademicCatalog::class)->programasForSelect(),
         ];
-    }
-
-    protected function cargarNombresPrograma($items): void
-    {
-        $ids = $items->flatMap(fn($c) => $c->programas->pluck('pro_codigo'))
-            ->filter()->unique()->values()->toArray();
-        if (empty($ids)) {
-            return;
-        }
-        try {
-            $progs = DB::connection(DbHelper::connection())
-                ->table('programa')
-                ->whereIn('pro_codigo', $ids)
-                ->pluck('pro_nombre', 'pro_codigo');
-            $items->each(function ($item) use ($progs) {
-                $nombres = $item->programas->map(fn($p) => $progs[$p->pro_codigo] ?? "Programa #{$p->pro_codigo}")->implode(' | ');
-                $item->setAttribute('nombre_programa_cache', $nombres ?: 'N/A');
-            });
-        } catch (\Throwable) {
-        }
     }
 
     public function render()

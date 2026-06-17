@@ -27,8 +27,9 @@ class GrupoProyectoManager extends Component
     public string $filterPrograma = '';
 
     public string $filterSeccion = '';
-
     public string $filterEquipo = '';
+    public ?string $buscarComunidad = '';
+    public Collection $comunidadesEncontradas;
 
     public Collection $lapsos;
 
@@ -80,6 +81,26 @@ class GrupoProyectoManager extends Component
         $this->resetPage();
     }
 
+    public function updatedBuscarComunidad(): void
+    {
+        $q = trim($this->buscarComunidad);
+        if ($q === '') {
+            $this->comunidadesEncontradas = $this->comunidades;
+            return;
+        }
+        $this->comunidadesEncontradas = Comunidad::where('nombre', 'like', "%{$q}%")
+            ->orWhere('rif', 'like', "%{$q}%")
+            ->orderBy('nombre')
+            ->get();
+    }
+
+    public function seleccionarComunidad(int $id): void
+    {
+        $this->comunidadId = (string) $id;
+        $this->buscarComunidad = '';
+        $this->comunidadesEncontradas = $this->comunidades;
+    }
+
     public ?int $editingGrpCodigo = null;
 
     public string $nombreGrupo = '';
@@ -100,6 +121,7 @@ class GrupoProyectoManager extends Component
         $this->comunidades = Cache::remember('grupos_comunidades', 3600, fn () =>
             Comunidad::query()->orderBy('nombre')->get(['com_codigo', 'com_nombre'])
         );
+        $this->comunidadesEncontradas = $this->comunidades;
 
         $user = auth()->user();
         $activeRole = app(UserRoleService::class)->getActiveRole($user);
@@ -218,10 +240,10 @@ class GrupoProyectoManager extends Component
                     $lideresActuales++;
                 }
             }
-                    if ($lideresActuales >= 2) {
-                        session()->flash('message_error', 'Solo pueden haber hasta dos autores-líderes en el grupo.');
-                        return;
-                    }
+            if ($lideresActuales >= 2) {
+                session()->flash('message_error', 'Solo puede haber hasta 2 líderes en el grupo.');
+                return;
+            }
         }
 
         $this->miembrosSeleccionados[] = [
@@ -322,6 +344,7 @@ class GrupoProyectoManager extends Component
         session()->flash('message', 'Grupo registrado. Clave: ' . $clave);
         $this->viewMode = 'list';
         $this->resetFormulario();
+        $this->restablecerFiltros();
     }
 
     public function eliminarGrupo(int $grpCodigo): void
@@ -334,6 +357,7 @@ class GrupoProyectoManager extends Component
     {
         $this->viewMode = 'list';
         $this->resetFormulario();
+        $this->restablecerFiltros();
     }
 
     protected function resetFormulario(): void
@@ -346,7 +370,8 @@ class GrupoProyectoManager extends Component
         $this->filterLapso = '';
         $this->filterPrograma = '';
         $this->filterSeccion = '';
-        $this->secciones = collect();
+        $this->loadProgramas();
+        $this->loadSecciones();
     }
 
     public function abrirModalComunidad(): void
@@ -406,12 +431,23 @@ class GrupoProyectoManager extends Component
             'dir_nombre' => $this->modalDirNombre,
         ]);
 
-        Cache::forget('grupos_comunidades');
-        $this->comunidades = Comunidad::query()->orderBy('nombre')->get(['com_codigo', 'com_nombre']);
+        $this->comunidades = Comunidad::query()->orderBy('nombre')->get();
         $this->comunidadId = (string) $id;
         $this->cerrarModalComunidad();
 
         session()->flash('message', 'Comunidad creada correctamente.');
+    }
+
+    protected function restablecerFiltros(): void
+    {
+        $this->reset('filterPrograma', 'filterSeccion');
+        $this->loadSecciones();
+
+        $activeRole = app(UserRoleService::class)->getActiveRole(auth()->user());
+        if ($activeRole !== 'profesor proyecto') {
+            $this->filterLapso = '';
+            $this->loadProgramas();
+        }
     }
 
     public function updatedFilterLapso(): void
@@ -419,6 +455,7 @@ class GrupoProyectoManager extends Component
         $this->filterPrograma = '';
         $this->filterSeccion = '';
         $this->loadProgramas();
+        $this->loadSecciones();
     }
 
     public function updatedFilterPrograma(): void
@@ -442,15 +479,16 @@ class GrupoProyectoManager extends Component
 
     protected function candidatosActuales()
     {
-        if ($this->filterSeccion === '' || $this->filterLapso === '' || $this->secciones->isEmpty()) {
+        if ($this->filterLapso === '' || $this->secciones->isEmpty()) {
             return collect();
         }
-
-        $grupos = app(GrupoProyectoService::class);
+        
         $lapCodigo = (int) $this->filterLapso;
-
-        return $grupos->candidatosSeccion($lapCodigo, (int) $this->filterSeccion);
+        $secCodigos = $this->secciones->pluck('sec_codigo')->map(fn($id) => (int)$id)->toArray();
+        
+        return app(GrupoProyectoService::class)->candidatosDeSecciones($lapCodigo, $secCodigos);
     }
+
 
     /**
      * @return array{lap_nombre: string, sec_nombre: string, pro_siglas: string, pro_nombre: string}

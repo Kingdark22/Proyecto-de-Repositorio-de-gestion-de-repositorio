@@ -1,4 +1,4 @@
-# Session Summary — Jun 9, 2026
+# Session Summary — Jun 15, 2026
 
 ## Problems Solved
 
@@ -106,3 +106,20 @@
 - **Leader assignment on save**: `ProyectoGestionService::guardar()` accepts `$leaders` param. When creating a new project (non-admin), `asignarLideresGrupo()` delegates to `GrupoProyectoService::asignarLideres()` which updates `grp_miembros` JSON on `grupo_proyecto_modulo`.
 - **Notification for leaders**: `NotificacionService` shows "Has sido seleccionado como líder del proyecto. Sube los documentos: {title}" for projects with `actualizado_por_estudiante = false` where the current user is a leader (checks `GrupoProyectoModulo::grp_miembros` JSON for cedula with `rol_id = 1`).
 - **Validation**: At least 1 leader required when registering a new group project (EQGRP:).
+
+### 19. Professor project management flow
+- **Concept**: Professor's "Gestión de proyectos" view shows only their teams (not the full project list). Each team has "Actualizar"/"Registrar" buttons. "Registrar" creates a draft project via `registrarProyectoDesdeGrupo()` and opens the edit form. Professor fills data (title auto-filled, resumen, fecha_subida, lineas, metodologias, tipos, comunidad read-only) and selects leaders — NO documents. "Cerrar formulario" saves with relaxed validation (only requires at least 1 leader for groups), notifies leaders via the existing `NotificacionService` mechanism, and returns to the team list.
+- **Files modified**: `app/Livewire/ProyectoManager.php`, `app/Services/ProyectoGestionService.php`, `resources/views/livewire/proyecto-manager.blade.php`
+- **ProyectoGestionService::guardar()**: Added `'titulo'` to payload (previously missing — titulo was never persisted). Changed leader assignment condition from `!$esAdmin && !$editingId` to `!$esAdmin && !empty($leaders)` so leaders are reassigned on every save (including professor updates), not only on creation.
+- **ProyectoManager::mount()**: Detects `profesor proyecto` role and sets `$esProfesor` flag.
+- **ProyectoManager::render()**: For professor in `list` mode, skips `datosVistaListado()` (no project list query) and only passes community catalog. For `form` mode, calls `datosVistaFormulario()` as usual.
+- **ProyectoManager::cerrarFormulario()**: New Livewire action. Validates at least 1 leader for groups, calls `guardar()` with empty documents array, dispatches success notification, and calls `irAListado()`.
+- **ProyectoManager::edit()**: Fixed `Proyecto::find($id, ['equipo_ref'])` → `Proyecto::find($id)` (select() bypasses LegacyColumnBuilder, would cause SQL error on PostgreSQL).
+- **ProyectoManager::usuarioEsLider()**: Same fix — `Proyecto::find($id)` instead of `find($id, ['equipo_ref'])`.
+- **View changes**: Project list fieldset wrapped in `@if(!$esProfesor)`. Form: documents section hidden, team filter collapsible hidden, new "Equipo y comunidad" section shows comunidad (read-only badge) + integrantes table with leader checkboxes, classification fields remain visible, advanced section hidden, button changed to "Cerrar formulario" for professors.
+- **Leader notification flow**: Notification fires via `NotificacionService::listar()` on every page load for student role. Projects with `actualizado_por_estudiante = false` trigger "Sube los documentos" notification to leaders (checked via `grp_miembros` JSON with `rol_id = 1`). This is the same existing mechanism — the project becomes visible from when `registrarProyectoDesdeGrupo()` creates it, not only after "Cerrar formulario".
+
+## Key Patterns (new)
+- `ProyectoManager::render()` for professor bypasses `datosVistaListado()` entirely to avoid loading projects they don't need to see.
+- `cerrarFormulario()` is a separate Livewire action from `save()` — it skips full validation (only checks leader requirement) and passes no documents.
+- Leader assignment in `guardar()` now fires on every save (not just creation), using `!empty($leaders)` instead of `!$editingId`.

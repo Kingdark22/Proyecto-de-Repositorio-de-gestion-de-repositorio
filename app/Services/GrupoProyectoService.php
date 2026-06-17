@@ -309,6 +309,11 @@ class GrupoProyectoService
         );
     }
 
+    public function candidatosDeSecciones(int $lapCodigo, array $secCodigos): Collection
+    {
+        return $this->equipos->integrantesDeSecciones($lapCodigo, $secCodigos);
+    }
+
     /**
      * @return Collection<int, object{cedula: string, nombre: string, apellido: string, rol: string, rol_id: int}>
      */

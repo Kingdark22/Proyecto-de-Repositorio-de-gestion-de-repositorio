@@ -39,6 +39,36 @@ class LegacyColumnBuilder extends Builder
         return parent::where($column, $operator, $value, $boolean);
     }
 
+    public function whereIn($column, $values, $boolean = 'and', $not = false)
+    {
+        $legacyColumn = $column;
+        $column = $this->model->mapLegacyColumn($column);
+
+        if (is_array($values) && $legacyColumn !== $column) {
+            $values = array_map(
+                fn ($v) => $this->model->mapLegacyValueForQuery($legacyColumn, $v),
+                $values
+            );
+        }
+
+        return parent::whereIn($column, $values, $boolean, $not);
+    }
+
+    public function whereNotIn($column, $values, $boolean = 'and')
+    {
+        $legacyColumn = $column;
+        $column = $this->model->mapLegacyColumn($column);
+
+        if (is_array($values) && $legacyColumn !== $column) {
+            $values = array_map(
+                fn ($v) => $this->model->mapLegacyValueForQuery($legacyColumn, $v),
+                $values
+            );
+        }
+
+        return parent::whereNotIn($column, $values, $boolean);
+    }
+
     public function orderBy($column, $direction = 'asc')
     {
         $column = $this->model->mapLegacyColumn($column);

@@ -289,17 +289,17 @@ class IntranetEquipoSeccionService
     public function integrantes(string $equipoClave): Collection
     {
         $cacheKey = 'eq_int_' . md5($equipoClave . '_' . $this->academicConnection());
-
+    
         return Cache::remember($cacheKey, 300, function () use ($equipoClave) {
         if (str_starts_with($equipoClave, GrupoProyectoService::PREFIJO.':')) {
             return app(GrupoProyectoService::class)->integrantesDesdeClave($equipoClave);
         }
-
+    
         $partes = $this->parsearClave($equipoClave);
         if ($partes === null) {
             return collect();
         }
-
+    
         if ($this->tablaGrupoProyectoExisteInternal()) {
             try {
                 $rows = DB::connection($this->academicConnection())
@@ -313,7 +313,7 @@ class IntranetEquipoSeccionService
                     ->selectRaw('gpe.gpe_rol_id as rol_id')
                     ->distinct()
                     ->get();
-
+    
                 if ($rows->isNotEmpty()) {
                     return $rows->map(fn ($r) => (object) [
                         'cedula' => trim((string) $r->cedula),
@@ -326,7 +326,7 @@ class IntranetEquipoSeccionService
                 //
             }
         }
-
+    
         try {
             $rows = $this->baseInscripcionQuery()
                 ->join('persona as p', DB::raw('TRIM(p.per_cedula)'), '=', DB::raw('TRIM(ins.ins_cedula)'))
@@ -339,12 +339,12 @@ class IntranetEquipoSeccionService
                 ->orderBy('apellido')
                 ->orderBy('nombre')
                 ->get();
-
+    
             $lideres = $this->cedulasLideresEnSeccion($partes);
-
+    
             return $rows->map(function ($r) use ($lideres) {
                 $cedula = trim((string) $r->cedula);
-
+    
                 return (object) [
                     'cedula' => $cedula,
                     'nombre' => trim((string) $r->nombre),
@@ -357,6 +357,53 @@ class IntranetEquipoSeccionService
         }
         });
     }
+
+    public function integrantesDeSecciones(int $lapCodigo, array $secCodigos): Collection
+    {
+        if (empty($secCodigos)) {
+            return collect();
+        }
+
+        try {
+            $rows = $this->baseInscripcionQuery()
+                ->join('persona as p', DB::raw('TRIM(p.per_cedula)'), '=', DB::raw('TRIM(ins.ins_cedula)'))
+                ->where('lap.lap_codigo', $lapCodigo)
+                ->whereIn('sec.sec_codigo', $secCodigos)
+                ->selectRaw('TRIM(ins.ins_cedula) as cedula')
+                ->selectRaw('TRIM(p.per_nombres) as nombre')
+                ->selectRaw('TRIM(p.per_apellidos) as apellido')
+                ->distinct()
+                ->orderBy('apellido')
+                ->orderBy('nombre')
+                ->get();
+
+            // Para los roles, obtenemos todos los líderes de estas secciones en una sola consulta si la tabla existe
+            $lideres = [];
+            if ($this->tablaGrupoProyectoExisteInternal()) {
+                $lideres = DB::connection($this->academicConnection())
+                    ->table('grupo_proyecto_estudiante')
+                    ->where('gpe_cod_lapso', $lapCodigo)
+                    ->whereIn('gpe_cod_seccion', $secCodigos)
+                    ->where('gpe_rol_id', self::ROL_LIDER)
+                    ->pluck(DB::raw('TRIM(gpe_ced_estudiante)'))
+                    ->map(fn($c) => trim((string)$c))
+                    ->all();
+            }
+
+            return $rows->map(function ($r) use ($lideres) {
+                $cedula = trim((string) $r->cedula);
+                return (object) [
+                    'cedula' => $cedula,
+                    'nombre' => trim((string) $r->nombre),
+                    'apellido' => trim((string) $r->apellido),
+                    'rol' => in_array($cedula, $lideres, true) ? 'Líder' : 'Integrante',
+                ];
+            });
+        } catch (\Throwable) {
+            return collect();
+        }
+    }
+
 
     public function resumenEquipo(?string $equipoClave): string
     {

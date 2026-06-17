@@ -96,6 +96,21 @@ class ProyectoGestionService
         return Proyecto::with($this->relacionesProyecto())->find($id);
     }
 
+    /**
+     * @return \Illuminate\Support\Collection<int, Proyecto>
+     */
+    public function proyectosLider(User $user): \Illuminate\Support\Collection
+    {
+        $ids = $this->proyectosDondeEsLider($user);
+        if (empty($ids)) {
+            return collect();
+        }
+
+        return Proyecto::with($this->relacionesProyecto())
+            ->whereIn('pry_codigo', $ids)
+            ->get();
+    }
+
     public function aprobar(int $id, ?User $user = null): void
     {
         $user = $user ?? auth()->user();
@@ -290,8 +305,8 @@ class ProyectoGestionService
 
         $this->guardarDocumentos($proyecto, $documentos, $existing);
 
-        // Actualizar roles de líderes en el grupo (solo si no es admin creando)
-        if (!empty($datos['equipo_seccion_clave']) && !$esAdmin && !$editingId) {
+        // Actualizar roles de líderes en el grupo (solo si hay líderes que asignar y no es admin)
+        if (!empty($datos['equipo_seccion_clave']) && !$esAdmin && !empty($leaders)) {
             $this->asignarLideresGrupo($datos['equipo_seccion_clave'], $leaders);
         }
 
@@ -431,7 +446,7 @@ class ProyectoGestionService
         }
 
         $claves = $gruposFiltrados->pluck('clave');
-        $proyectoPorClave = Proyecto::whereIn('equipo_ref', $claves)->get()->keyBy('equipo_ref');
+        $proyectoPorClave = Proyecto::whereIn('pry_direccion_logica', $claves)->get()->keyBy('equipo_ref');
 
         return $gruposFiltrados->map(fn ($g) => (object) [
             'grp_codigo' => $g->grp_codigo,
@@ -541,7 +556,7 @@ class ProyectoGestionService
             ->when(($filtros['estado'] ?? '') !== '', fn ($q) => $q->where('estado_validacion', $filtros['estado']))
             ->when(($filtros['comunidad'] ?? '') !== '', fn ($q) => $q->where('comunidad_id', $filtros['comunidad']))
             ->when(($filtros['creador_cedula'] ?? '') !== '', fn ($q) => $q->where('creador_cedula', $filtros['creador_cedula']))
-            ->when(($filtros['equipo_ref'] ?? null) !== null, fn ($q) => $q->whereIn('equipo_ref', $filtros['equipo_ref']))
+            ->when(($filtros['equipo_ref'] ?? null) !== null, fn ($q) => $q->whereIn('pry_direccion_logica', $filtros['equipo_ref']))
             ->latest()
             ->paginate(10, page: $page);
     }
@@ -565,10 +580,7 @@ class ProyectoGestionService
             'tipos_publicacion' => Cache::remember('gestion_cat_tipos_publicacion', $ttl, fn() => TipoPublicacion::where('estado_logico', true)->get()),
             'tipos_investigacion' => Cache::remember('gestion_cat_tipos_investigacion', $ttl, fn() => TipoInvestigacion::where('estado_logico', true)->get()),
             'lapsos' => Cache::remember('gestion_cat_lapsos', $ttl, fn() => LapsoAcademico::activos()->orderByDesc('lap_codigo')->get()),
-            'componentes_disp' => $programaId
-                ? Componente::whereHas('programas', fn($q) => $q->where('pro_codigo', $programaId))
-                    ->where('estado_logico', true)->orderBy('nombre')->get()
-                : collect(),
+            'componentes_disp' => Componente::where('estado_logico', true)->orderBy('nombre')->get(),
         ];
     }
 
@@ -769,6 +781,37 @@ class ProyectoGestionService
         }
 
         return false;
+    }
+
+    /**
+     * @return array<int> IDs de proyectos donde el usuario es líder
+     */
+    public function proyectosDondeEsLider(User $user): array
+    {
+        $cedula = trim((string) $user->usu_cedula);
+        if ($cedula === '') {
+            return [];
+        }
+
+        try {
+            $grupos = \App\Models\GrupoProyectoModulo::whereRaw(
+                "CAST(grp_miembros AS jsonb) @> ?",
+                ['[{"cedula":"' . $cedula . '","rol_id":1}]']
+            )->get(['grp_codigo']);
+
+            $claves = $grupos->map(fn ($g) => 'EQGRP:' . $g->grp_codigo)->toArray();
+            if (empty($claves)) {
+                return [];
+            }
+
+            return Proyecto::whereIn('pry_direccion_logica', $claves)
+                ->get()
+                ->pluck('id')
+                ->map(fn ($v) => (int) $v)
+                ->toArray();
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     public function usuarioPuedeValidar(?User $user): bool

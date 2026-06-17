@@ -24,7 +24,7 @@ class NotificacionService
         $notificaciones = [];
 
         if ($isAdmin || $isCoordinator || $isTeacher) {
-            $query = Proyecto::where('estado_validacion', 'pendiente');
+            $query = Proyecto::whereIn('estado_validacion', ['pendiente', 'completado']);
 
             if ($isTeacher) {
                 $clavesDocente = app(ProyectoGestionService::class)->clavesEquipoFiltroValidacion($user);

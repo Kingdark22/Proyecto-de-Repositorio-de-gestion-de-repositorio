@@ -72,12 +72,6 @@
 
     @if ($viewMode === 'list')
         <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 12px;">
-            <select wire:model.live="filterPrograma" style="padding: 4px; min-width: 200px;">
-                <option value="">Todos los programas</option>
-                @foreach ($programas as $p)
-                    <option value="{{ $p->id }}">{{ $p->siglas }} - {{ $p->nombre }}</option>
-                @endforeach
-            </select>
             <b>Buscar:</b>
             <input wire:model.live.debounce.300ms="search" type="text" style="width: 350px; padding: 4px 6px; border-radius: 4px; border: 1px solid #999;"
                 placeholder="Componente...">
@@ -95,11 +89,10 @@
                 <thead>
                     <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
                         <th width="5%">N&deg;</th>
-                        <th width="35%">Nombre del Documento Exigido</th>
-                        <th width="30%">Coordinaci&oacute;n Asociada</th>
-                        <th width="10%">Obligatorio</th>
-                        <th width="10%">Estatus</th>
-                        <th width="10%">Configurar</th>
+                        <th width="55%">Nombre del Documento Exigido</th>
+                        <th width="15%">Obligatorio</th>
+                        <th width="15%">Estatus</th>
+                        <th width="15%">Configurar</th>
                     </tr>
                 </thead>
                 <tbody class="Texto">
@@ -109,9 +102,6 @@
                             <td align="center">{{ $loop->iteration }}</td>
                             <td align="center" style="font-weight: bold; padding: 8px;">
                                 {{ $item->nombre }}</td>
-                            <td align="center" style="font-weight: bold; font-style: italic; padding: 8px;">
-                                {{ $item->nombre_programa }}
-                            </td>
                             <td align="center">
                                 {!! $item->es_obligatorio
                                     ? '<span style="color: #FF0000; font-weight:bold;">S&Iacute;</span>'
@@ -167,30 +157,17 @@
                     {{ $message }}
                 </div>
             @enderror
-            <form wire:submit="save" style="margin: 0;">
-                <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 12px;">
-                    <tr>
-                        <td width="30%"><b>Programa Titular:</b></td>
-                        <td width="70%">
-                            @if (auth()->user()->hasRole('administrador'))
-                                <select wire:model.live="programa_id" style="width: 80%; padding: 4px;">
-                                    <option value="">Seleccione a qui&eacute;n pertenece esta regla...</option>
-                                    @foreach ($programas as $p)
-                                        <option value="{{ $p->id }}">{{ $p->siglas }} -
-                                            {{ $p->nombre }}</option>
-                                    @endforeach
-                                </select>
-                            @else
-                                <div
-                                    style="padding: 4px 8px; background-color: #f5f5f5; border: 1px solid #ddd; width: 80%; font-weight:bold; color: #555;">
-                                    {{ collect($programas)->firstWhere('id', $programa_id)?->nombre ?? '[COORDINACI&Oacute;N AUTOASIGNADA]' }}
+                <form wire:submit="save" style="margin: 0;">
+                    <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 12px;">
+                        <tr>
+                            <td width="30%"><b>Componentes:</b></td>
+                            <td width="70%">
+                                <div style="padding: 4px 0; font-weight: bold; font-size: 14px;">
+                                    Defina los documentos requeridos para el proyecto.
                                 </div>
-                            @endif
-                            @error('programa_id')
-                                <br><span style="color:red; font-size:10px;">{{ $message }}</span>
-                            @enderror
-                        </td>
-                    </tr>
+                            </td>
+                        </tr>
+
                 </table>
 
                 <div style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px;">
