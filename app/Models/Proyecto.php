@@ -18,6 +18,7 @@ class Proyecto extends RepositorioModel
         'metodologia_id',
         'tipo_publicacion_id',
         'tipo_investigacion_id',
+        'objetivo_investigacion_id',
         'estado_logico',
         'estado_validacion',
         'motivo_rechazo',
@@ -130,6 +131,11 @@ class Proyecto extends RepositorioModel
     public function tipo_investigacion()
     {
         return $this->belongsTo(TipoInvestigacion::class, 'tin_codigo', 'tin_codigo');
+    }
+
+    public function objetivo_investigacion()
+    {
+        return $this->belongsTo(ObjetivoInvestigacion::class, 'obi_codigo', 'obi_codigo');
     }
 
     public function comunidad()

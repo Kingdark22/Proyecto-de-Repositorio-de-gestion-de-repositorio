@@ -7,6 +7,7 @@ use App\Models\ComponentePrograma;
 use App\Models\LapsoAcademico;
 use App\Models\LineaInvestigacion;
 use App\Models\MetodologiaInvestigacion;
+use App\Models\ObjetivoInvestigacion;
 use App\Models\TipoInvestigacion;
 use App\Models\TipoPublicacion;
 use App\Helpers\DualDatabase;
@@ -28,6 +29,7 @@ class CatalogoRepository
             'metodologias' => Cache::remember('gestion_cat_metodologias', $ttl, fn() => $this->metodologiasActivas()),
             'tipos_publicacion' => Cache::remember('gestion_cat_tipos_publicacion', $ttl, fn() => $this->tiposPublicacionActivos()),
             'tipos_investigacion' => Cache::remember('gestion_cat_tipos_investigacion', $ttl, fn() => $this->tiposInvestigacionActivos()),
+            'objetivos_investigacion' => Cache::remember('gestion_cat_objetivos_investigacion', $ttl, fn() => $this->objetivosInvestigacionActivos()),
             'lapsos' => Cache::remember('gestion_cat_lapsos', $ttl, fn() => $this->lapsosActivos()),
             'componentes_disp' => $this->componentesPorProgramaYTrayecto($programaId, $trayectoCodigo),
         ];
@@ -53,6 +55,11 @@ class CatalogoRepository
     public function tiposInvestigacionActivos(): Collection
     {
         return TipoInvestigacion::where('estado_logico', true)->get();
+    }
+
+    public function objetivosInvestigacionActivos(): Collection
+    {
+        return ObjetivoInvestigacion::where('estado_logico', true)->get();
     }
 
     public function lapsosActivos(): Collection
@@ -215,6 +222,9 @@ class CatalogoRepository
         }
         if (($datos['tipos_investigacion'] ?? collect())->isEmpty()) {
             $faltantes[] = 'tipos de investigación';
+        }
+        if (($datos['objetivos_investigacion'] ?? collect())->isEmpty()) {
+            $faltantes[] = 'objetivos de investigación';
         }
 
         return $faltantes;
