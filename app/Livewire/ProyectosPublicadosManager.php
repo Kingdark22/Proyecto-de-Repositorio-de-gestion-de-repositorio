@@ -66,7 +66,7 @@ class ProyectosPublicadosManager extends Component
             ->where('estado_logico', true);
 
         if ($this->filterComunidadId !== '') {
-            $query->where('com_codigo', (int) $this->filterComunidadId);
+            $query->where('comunidad_id', (int) $this->filterComunidadId);
         }
 
         if ($this->search !== '') {

@@ -78,7 +78,7 @@
                                     <div style="font-size:11px;color:#555;">
                                         Direcci&oacute;n: {{ $dir->dir_calle ?? '' }},
                                         {{ $dir->municipio->mun_nombre ?? '' }},
-                                        {{ $dir->municipio->estado->est_nombre ?? '' }}
+                                        {{ $dir->municipio?->estado?->est_nombre ?? '' }}
                                     </div>
                                 @endif
                                 <button type="button" wire:click="quitarComunidad" style="font-size:10px;color:#c62828;border:none;background:none;cursor:pointer;margin-top:4px;">&times; Quitar comunidad</button>

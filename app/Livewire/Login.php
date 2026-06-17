@@ -100,7 +100,20 @@ class Login extends Component
 
         } catch (\Throwable $e) {
             Log::error('Login error: ' . $e->getMessage());
-            $this->error = 'Error de conexión. Por favor intente de nuevo.';
+
+            // Invalidar cache de intranet si es error de conexion
+            try {
+                \App\Helpers\DbHelper::handleQueryError($e);
+            } catch (\Throwable $inner) {
+                // No fallar por errores al limpiar cache
+            }
+
+            $msg = $e->getMessage();
+            if (str_contains($msg, 'timeout expired') || str_contains($msg, '08006') || str_contains($msg, 'could not connect') || str_contains($msg, 'connection refused')) {
+                $this->error = 'El sistema de intranet no está disponible en este momento. Se está usando la base de datos de respaldo. Intente de nuevo o contacte al administrador.';
+            } else {
+                $this->error = 'Error de conexión. Por favor intente de nuevo.';
+            }
             $this->cargando = false;
         }
     }

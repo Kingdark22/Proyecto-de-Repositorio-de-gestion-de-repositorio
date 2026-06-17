@@ -13,6 +13,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\Attributes\Lazy;
+
+#[Lazy]
 
 class GrupoProyectoManager extends Component
 {
@@ -218,10 +221,7 @@ class GrupoProyectoManager extends Component
                     $lideresActuales++;
                 }
             }
-                    if ($lideresActuales >= 2) {
-                        session()->flash('message_error', 'Solo pueden haber hasta dos autores-líderes en el grupo.');
-                        return;
-                    }
+
         }
 
         $this->miembrosSeleccionados[] = [
@@ -319,9 +319,15 @@ class GrupoProyectoManager extends Component
             return;
         }
 
-        session()->flash('message', 'Grupo registrado. Clave: ' . $clave);
+        $nombresMiembros = collect($this->miembrosSeleccionados)
+            ->map(fn($m) => trim($m['nombre'] . ' ' . $m['apellido']))
+            ->filter()
+            ->implode(', ');
+
+        session()->flash('message', 'Grupo registrado. Clave: ' . $clave . '. Los integrantes (' . $nombresMiembros . ') recibirán notificación al recargar su pantalla.');
         $this->viewMode = 'list';
         $this->resetFormulario();
+        $this->restablecerFiltros();
     }
 
     public function eliminarGrupo(int $grpCodigo): void
@@ -334,6 +340,7 @@ class GrupoProyectoManager extends Component
     {
         $this->viewMode = 'list';
         $this->resetFormulario();
+        $this->restablecerFiltros();
     }
 
     protected function resetFormulario(): void
@@ -346,7 +353,8 @@ class GrupoProyectoManager extends Component
         $this->filterLapso = '';
         $this->filterPrograma = '';
         $this->filterSeccion = '';
-        $this->secciones = collect();
+        $this->loadProgramas();
+        $this->loadSecciones();
     }
 
     public function abrirModalComunidad(): void
@@ -412,6 +420,18 @@ class GrupoProyectoManager extends Component
         $this->cerrarModalComunidad();
 
         session()->flash('message', 'Comunidad creada correctamente.');
+    }
+
+    protected function restablecerFiltros(): void
+    {
+        $this->reset('filterPrograma', 'filterSeccion');
+        $this->loadSecciones();
+
+        $activeRole = app(UserRoleService::class)->getActiveRole(auth()->user());
+        if ($activeRole !== 'profesor proyecto') {
+            $this->filterLapso = '';
+            $this->loadProgramas();
+        }
     }
 
     public function updatedFilterLapso(): void
@@ -522,6 +542,35 @@ class GrupoProyectoManager extends Component
             'tablaLista' => $tablaOk,
             'isProfessor' => $activeRole === 'profesor proyecto',
         ];
+    }
+
+    public function placeholder()
+    {
+        return <<<'HTML'
+        <div style="padding: 20px; margin: 10px 0;">
+            <style>
+                @keyframes grpPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.85; } }
+                @keyframes grpShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+            </style>
+            <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
+                <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Cargando equipos de proyecto...</legend>
+                <div style="animation: grpPulse 1.5s ease-in-out infinite;">
+                    <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+                        <div style="height: 32px; width: 160px; background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%); background-size: 200% 100%; animation: grpShimmer 1.5s infinite; border-radius: 3px;"></div>
+                        <div style="height: 32px; width: 160px; background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%); background-size: 200% 100%; animation: grpShimmer 1.5s infinite; border-radius: 3px;"></div>
+                        <div style="height: 32px; width: 160px; background: linear-gradient(90deg, #e0e0e0 25%, #f5f5f5 50%, #e0e0e0 75%); background-size: 200% 100%; animation: grpShimmer 1.5s infinite; border-radius: 3px;"></div>
+                    </div>
+                    <div style="height: 18px; width: 100%; background: linear-gradient(90deg, #f0f0f0 25%, #fafafa 50%, #f0f0f0 75%); background-size: 200% 100%; animation: grpShimmer 1.5s infinite; border-radius: 3px; margin-bottom: 8px;"></div>
+                    <div style="height: 18px; width: 100%; background: linear-gradient(90deg, #f0f0f0 25%, #fafafa 50%, #f0f0f0 75%); background-size: 200% 100%; animation: grpShimmer 1.5s infinite; border-radius: 3px; margin-bottom: 8px;"></div>
+                    <div style="height: 18px; width: 90%; background: linear-gradient(90deg, #f0f0f0 25%, #fafafa 50%, #f0f0f0 75%); background-size: 200% 100%; animation: grpShimmer 1.5s infinite; border-radius: 3px; margin-bottom: 8px;"></div>
+                    <div style="height: 18px; width: 75%; background: linear-gradient(90deg, #f0f0f0 25%, #fafafa 50%, #f0f0f0 75%); background-size: 200% 100%; animation: grpShimmer 1.5s infinite; border-radius: 3px;"></div>
+                </div>
+                <div style="text-align: center; margin-top: 15px; font-size: 11px; color: #888;">
+                    Consultando secciones y grupos de proyecto...
+                </div>
+            </fieldset>
+        </div>
+        HTML;
     }
 
     public function render()

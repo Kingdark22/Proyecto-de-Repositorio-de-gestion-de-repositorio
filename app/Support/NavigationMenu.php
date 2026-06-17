@@ -100,6 +100,9 @@ class NavigationMenu
                 case 'gestionador':
                     $flags['canViewAcademic'] = true;
                     $flags['canViewComunes'] = true;
+                    $flags['canManageCatalogs'] = true;
+                    $flags['canManageComponents'] = true;
+                    $flags['canManageSystemConfig'] = true;
                     $flags['canRegisterProject'] = true;
                     $flags['canViewPublicaciones'] = true;
                     break;

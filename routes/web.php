@@ -57,7 +57,7 @@ Route::middleware(['auth', 'active.role'])->group(function () {
     Route::view('/dashboard', 'dashboard')->name('dashboard');
     Route::view('/configuracion', 'configuracion.index')->name('configuracion');
 
-    Route::middleware('role:administrador,coordinador')->group(function () {
+    Route::middleware('role:administrador,coordinador,gestionador')->group(function () {
         Route::view('/lineas-investigacion', 'lineas.index')->name('lineas-investigacion');
         Route::view('/tipos-investigacion', 'tipo_investigacion.index')->name('tipos-investigacion');
         Route::view('/metodologia-investigacion', 'metodologia_investigacion.index')->name('metodologia-investigacion');
@@ -66,10 +66,13 @@ Route::middleware(['auth', 'active.role'])->group(function () {
 
     Route::redirect('/lapsos-academicos', '/dashboard')->name('lapsos-academicos');
 
-    Route::view('/proyectos', 'proyectos.index')->name('proyectos.index');
     Route::view('/proyectos/buscar', 'proyectos.buscar')->name('proyectos.buscar');
-    Route::view('/comunidades', 'comunidades.index')->name('comunidades.index');
-    Route::view('/grupos-proyecto', 'grupos_proyecto.index')->name('grupos-proyecto.index');
+
+    Route::middleware('role:administrador,coordinador,profesor proyecto,gestionador,estudiante')->group(function () {
+        Route::view('/proyectos', 'proyectos.index')->name('proyectos.index');
+        Route::view('/comunidades', 'comunidades.index')->name('comunidades.index');
+        Route::view('/grupos-proyecto', 'grupos_proyecto.index')->name('grupos-proyecto.index');
+    });
 
     Route::middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador')->group(function () {
         Route::view('/proyectos/gestion', 'proyectos.index')->name('proyectos.gestion');
@@ -80,13 +83,13 @@ Route::middleware(['auth', 'active.role'])->group(function () {
 
     Route::get('/proyectos/crear', function () {
         return redirect()->route('proyectos.gestion', request()->query());
-    })->middleware('role:administrador,estudiante,coordinador,profesor proyecto')->name('proyectos.crear');
+    })->middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador')->name('proyectos.crear');
 
     Route::get('/validaciones', function () {
         return redirect('/proyectos/gestion');
     })->middleware('role:gestionador,administrador,coordinador,profesor proyecto')->name('validaciones.index');
 
-    Route::middleware('role:administrador,coordinador')->group(function () {
+    Route::middleware('role:administrador,coordinador,gestionador')->group(function () {
         Route::view('/configuracion/profesores-proyecto', 'profesores_proyecto.index')->name('profesores-proyecto.index');
         Route::view('/configuracion/componentes', 'componentes.index')->name('componentes.index');
     });
@@ -99,11 +102,19 @@ Route::get('/documentos/{path}', function (string $path) {
         abort(404);
     }
     return Storage::disk('public')->response($path);
-})->where('path', '.*')->middleware('auth')->name('documentos.serve');
+})->where('path', '.*')->middleware(['auth', 'active.role'])->name('documentos.serve');
 
 Route::get('/publicaciones/publico', \App\Livewire\ProyectosPublicosManager::class)->name('publicaciones.publico')->middleware('auth', 'role:gestionador');
 
+Route::get('/session/keepalive', function () {
+    return response()->json(['ok' => true]);
+})->middleware('auth')->name('session.keepalive');
+
 Route::post('/logout', function () {
+    $user = Auth::user();
+    if ($user) {
+        app(App\Services\UserRoleService::class)->clearPersistedActiveRole($user);
+    }
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();

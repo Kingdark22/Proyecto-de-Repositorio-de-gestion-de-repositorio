@@ -323,6 +323,71 @@ class IntranetProfessorService
     }
 
     /**
+     * Obtiene la primera asignación SUD del profesor en UC de proyecto para auto-habilitación.
+     *
+     * @return array{sud_codigo: int, anio: string, seccion: string}|null
+     */
+    protected function getPrimeraAsignacionProfesor(string $cedula, int $lapCodigo): ?array
+    {
+        try {
+            $row = $this->baseProfesorProyectoQuery($lapCodigo)
+                ->where('sud.sud_ced_docente', $cedula)
+                ->select([
+                    'sud.sud_codigo',
+                    'sec.sec_codigo',
+                    'sec.sec_nombre',
+                    'tra.tra_nombre',
+                ])
+                ->orderByDesc('sud.sud_codigo')
+                ->first();
+
+            if (!$row) {
+                return null;
+            }
+
+            return [
+                'sud_codigo' => (int) $row->sud_codigo,
+                'anio' => trim($row->tra_nombre ?? ''),
+                'seccion' => trim($row->sec_nombre ?? ''),
+            ];
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Error obteniendo asignación profesor: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Auto-habilita al profesor en el módulo si no lo está ya.
+     * Se invoca automáticamente al detectar el rol o al iniciar sesión.
+     */
+    public function autoHabilitarProfesorEnModulo(string $cedula, ?int $lapCodigo = null): bool
+    {
+        $cedula = trim($cedula);
+        $lapCodigo = $lapCodigo ?? $this->lapsoVigenteCodigo();
+
+        if ($cedula === '' || $lapCodigo === null) {
+            return false;
+        }
+
+        // Si ya está habilitado, no repetir
+        if ($this->habilitadoEnModulo($cedula, $lapCodigo)) {
+            return true;
+        }
+
+        // Verificar que el profesor existe en intranet
+        if (!$this->esProfesorProyectoEnLapso($cedula, $lapCodigo)) {
+            return false;
+        }
+
+        $asignacion = $this->getPrimeraAsignacionProfesor($cedula, $lapCodigo);
+        if (!$asignacion) {
+            return false;
+        }
+
+        return $this->habilitarEnModulo($cedula, $lapCodigo, $asignacion);
+    }
+
+    /**
      * @param  array{programa?: int|null, trayecto?: int|null, seccion?: int|null}  $filtros
      */
     public function paginateDocentes(

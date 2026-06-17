@@ -227,6 +227,24 @@ class ComponenteManager extends Component
             if ($createdCount > 0) {
                 session()->flash('message', "Componente actualizado y {$createdCount} nuevos componentes agregados con éxito.");
             } else {
+                // Sincronizar pivote del componente principal si cambió el programa
+                $compPrincipal = Componente::find($this->editingId);
+                if ($compPrincipal) {
+                    // Limpiar pivotes antiguos que ya no correspondan
+                    ComponentePrograma::where('comp_codigo', $this->editingId)
+                        ->where('pro_codigo', '!=', (int) $this->programa_id)
+                        ->delete();
+                    // Asegurar que exista el pivote para el programa actual
+                    $pivotExists = ComponentePrograma::where('comp_codigo', $this->editingId)
+                        ->where('pro_codigo', $this->programa_id)
+                        ->exists();
+                    if (!$pivotExists) {
+                        ComponentePrograma::create([
+                            'comp_codigo' => $this->editingId,
+                            'pro_codigo' => $this->programa_id,
+                        ]);
+                    }
+                }
                 session()->flash('message', 'Componente documental actualizado.');
             }
         } else {
