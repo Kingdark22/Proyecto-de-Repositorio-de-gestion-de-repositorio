@@ -5,9 +5,16 @@ namespace App\Services;
 use App\Models\GrupoProyectoModulo;
 use App\Models\Proyecto;
 use App\Models\User;
+use App\Repositories\GrupoProyectoRepository;
+use App\Repositories\ProyectoRepository;
 
 class NotificacionService
 {
+    public function __construct(
+        protected ProyectoRepository $proyectoRepo,
+        protected GrupoProyectoRepository $grupoRepo,
+    ) {}
+
     public function listar(?User $user): array
     {
         if (!$user) {
@@ -86,17 +93,14 @@ class NotificacionService
 
             // 0. Notificar si el estudiante fue agregado a un equipo sin proyecto aún
             try {
-                $gruposEstudiante = GrupoProyectoModulo::whereRaw(
-                    "CAST(grp_miembros AS jsonb) @> ?",
-                    ['[{"cedula":"' . $cedula . '"}]']
-                )->get();
+                $gruposEstudiante = $this->grupoRepo->findByMiembroCedula($cedula);
 
                 if ($gruposEstudiante->isNotEmpty()) {
                     $clavesGrupos = $gruposEstudiante->pluck('grp_codigo')
                         ->map(fn($id) => GrupoProyectoService::PREFIJO . ':' . $id)
                         ->toArray();
 
-                    $proyectosExistentes = Proyecto::whereNotNull('pry_direccion_logica')
+                    $proyectosExistentes = $this->proyectoRepo->conEquipoRefNotNull()
                         ->whereIn('pry_direccion_logica', $clavesGrupos)
                         ->pluck('pry_direccion_logica')
                         ->toArray();
@@ -118,16 +122,10 @@ class NotificacionService
             }
 
             // 1. Proyectos nuevos que necesitan subir documentos
-            $proyectosNuevos = Proyecto::where('actualizado_por_estudiante', false)
-                ->where('estado_validacion', '!=', 'aprobado')
-                ->where('estado_validacion', '!=', 'rechazado')
-                ->whereNotNull('pry_direccion_logica')
-                ->get();
+            $proyectosNuevos = $this->proyectoRepo->pendientesEstudiante();
 
             // 2. Proyectos rechazados que necesitan correcciones
-            $proyectosRechazados = Proyecto::where('estado_validacion', 'rechazado')
-                ->whereNotNull('pry_direccion_logica')
-                ->get();
+            $proyectosRechazados = $this->proyectoRepo->rechazados();
 
             foreach ($proyectosNuevos as $p) {
                 if ($this->esLiderDelProyecto($p, $cedula, $gruposSvc)) {

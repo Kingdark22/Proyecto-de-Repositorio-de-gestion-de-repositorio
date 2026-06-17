@@ -217,6 +217,11 @@ class ProyectoManager extends Component
         }
 
         $this->cargarGruposDocente($gestion);
+
+        $this->lineasEncontradas = collect();
+        $this->metodologiasEncontradas = collect();
+        $this->tiposInvestigacionEncontradas = collect();
+        $this->tiposPublicacionEncontradas = collect();
     }
 
     protected function cargarGruposDocente(ProyectoGestionService $gestion): void
@@ -491,10 +496,9 @@ class ProyectoManager extends Component
         if ($q === '') {
             $this->metodologiasEncontradas = collect();
             return;
-        }
-        $this->metodologiasEncontradas = \App\Models\MetodologiaInvestigacion::where('nombre', 'like', "%{$q}%")
-            ->orWhere('descripcion', 'like', "%{$q}%")
-            ->orderBy('nombre')
+        }            $this->metodologiasEncontradas = \App\Models\MetodologiaInvestigacion::whereRaw('mei_nombre ILIKE ?', ["%{$q}%"])
+            ->orWhereRaw('mei_descripcion ILIKE ?', ["%{$q}%"])
+            ->orderByRaw('mei_nombre')
             ->get();
     }
 
@@ -545,9 +549,9 @@ class ProyectoManager extends Component
             $this->tiposInvestigacionEncontradas = collect();
             return;
         }
-        $this->tiposInvestigacionEncontradas = \App\Models\TipoInvestigacion::where('nombre', 'like', "%{$q}%")
-            ->orWhere('descripcion', 'like', "%{$q}%")
-            ->orderBy('nombre')
+        $this->tiposInvestigacionEncontradas = \App\Models\TipoInvestigacion::whereRaw('tin_nombre ILIKE ?', ["%{$q}%"])
+            ->orWhereRaw('tin_descripcion ILIKE ?', ["%{$q}%"])
+            ->orderByRaw('tin_nombre')
             ->get();
     }
 
@@ -598,8 +602,8 @@ class ProyectoManager extends Component
             $this->tiposPublicacionEncontradas = collect();
             return;
         }
-        $this->tiposPublicacionEncontradas = \App\Models\TipoPublicacion::where('nombre', 'like', "%{$q}%")
-            ->orderBy('nombre')
+        $this->tiposPublicacionEncontradas = \App\Models\TipoPublicacion::whereRaw('tpu_nombre ILIKE ?', ["%{$q}%"])
+            ->orderByRaw('tpu_nombre')
             ->get();
     }
 
@@ -637,9 +641,9 @@ class ProyectoManager extends Component
             $this->lineasEncontradas = collect();
             return;
         }
-        $this->lineasEncontradas = LineaInvestigacion::where('nombre_investigacion', 'like', "%{$q}%")
-            ->orWhere('descripcion', 'like', "%{$q}%")
-            ->orderBy('nombre_investigacion')
+        $this->lineasEncontradas = LineaInvestigacion::whereRaw('lin_nombre_investigacion ILIKE ?', ["%{$q}%"])
+            ->orWhereRaw('lin_descripcion ILIKE ?', ["%{$q}%"])
+            ->orderByRaw('lin_nombre_investigacion')
             ->get();
     }
 
@@ -662,6 +666,7 @@ class ProyectoManager extends Component
             'nombre_investigacion' => $this->modalLineaNombre,
             'descripcion' => $this->modalLineaDescripcion ?: null,
             'area_de_investigacion' => $this->modalLineaArea ?: null,
+            'activo' => true,
         ]);
 
         $this->linea_investigacion_id = (string) $linea->id;
@@ -721,9 +726,24 @@ class ProyectoManager extends Component
         $user = auth()->user();
         $estado = $this->estadoFormulario();
 
-        $docRules = [
-            'archivosComponente.*' => 'nullable|file|max:20480|mimes:pdf',
-        ];
+        // Generar reglas de validación dinámicas por componente (tipo archivo y tamaño máximo)
+        $docRules = [];
+        if (!empty($this->archivosComponente)) {
+            $componentes = \App\Models\Componente::whereIn('id', array_keys($this->archivosComponente))->get()->keyBy('id');
+            foreach ($this->archivosComponente as $compId => $file) {
+                if (!$file) continue;
+                $comp = $componentes->get((int) $compId);
+                $maxKb = $comp ? ($comp->tamano_maximo_mb ?? 10) * 1024 : 10240;
+                $mimes = $comp ? $comp->tipo_archivo ?? 'pdf' : 'pdf';
+                // Solo validar mimes si es un tipo conocido (pdf, zip, rar, doc, docx, xls, xlsx)
+                $mimesList = array_intersect(explode(',', $mimes), ['pdf', 'zip', 'rar', 'doc', 'docx', 'xls', 'xlsx']);
+                $rule = 'nullable|file|max:' . $maxKb;
+                if (!empty($mimesList)) {
+                    $rule .= '|mimes:' . implode(',', $mimesList);
+                }
+                $docRules['archivosComponente.' . $compId] = $rule;
+            }
+        }
 
         // Validar vigencia del estudiante líder (solo si está en modo actualización)
         if ($this->modoActualizacion && $this->editingId) {
@@ -785,9 +805,22 @@ class ProyectoManager extends Component
      public function cerrarFormulario(ProyectoGestionService $gestion): void
      {
          if (!empty($this->archivosComponente)) {
-             $this->validate([
-                 'archivosComponente.*' => 'nullable|file|max:20480|mimes:pdf',
-             ]);
+             // Usar las mismas reglas dinámicas que save()
+             $componentes = \App\Models\Componente::whereIn('id', array_keys($this->archivosComponente))->get()->keyBy('id');
+             $docRules = [];
+             foreach ($this->archivosComponente as $compId => $file) {
+                 if (!$file) continue;
+                 $comp = $componentes->get((int) $compId);
+                 $maxKb = $comp ? ($comp->tamano_maximo_mb ?? 10) * 1024 : 10240;
+                 $mimes = $comp ? $comp->tipo_archivo ?? 'pdf' : 'pdf';
+                 $mimesList = array_intersect(explode(',', $mimes), ['pdf', 'zip', 'rar', 'doc', 'docx', 'xls', 'xlsx']);
+                 $rule = 'nullable|file|max:' . $maxKb;
+                 if (!empty($mimesList)) {
+                     $rule .= '|mimes:' . implode(',', $mimesList);
+                 }
+                 $docRules['archivosComponente.' . $compId] = $rule;
+             }
+             $this->validate($docRules);
          }
 
          $gestion->guardar(

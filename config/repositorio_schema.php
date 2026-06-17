@@ -107,6 +107,8 @@ return [
             'programa_id' => 'coord_codigo',
             'es_obligatorio' => 'comp_es_obligatorio',
             'estado_logico' => 'comp_estado_logico',
+            'tipo_archivo' => 'comp_tipo_archivo',
+            'tamano_maximo_mb' => 'comp_tamano_maximo_mb',
         ],
         'values' => [
             'es_obligatorio' => [

@@ -13,6 +13,11 @@ return new class extends Migration
 
     public function up(): void
     {
+        // Evitar error si la tabla ya existe (entorno actual)
+        if (Schema::connection($this->conn())->hasTable('sessions')) {
+            return;
+        }
+
         Schema::connection($this->conn())->create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->foreignId('user_id')->nullable()->index();
