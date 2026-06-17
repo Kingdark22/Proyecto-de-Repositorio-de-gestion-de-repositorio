@@ -683,6 +683,23 @@
                                 @enderror
                             </td>
                         </tr>
+                        <tr>
+                            <td><b>Objetivo de Investigaci&oacute;n:</b></td>
+                            <td colspan="3">
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <select wire:model="objetivo_investigacion_id" style="flex:1;">
+                                        <option value="">Seleccione...</option>
+                                        @foreach ($objetivos_investigacion ?? [] as $oi)
+                                            <option value="{{ $oi->id }}">{{ $oi->nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" wire:click="abrirModalObjetivo" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap; padding: 4px 8px; font-size: 11px;" title="Buscar o crear nuevo objetivo de investigación">+</button>
+                                </div>
+                                @error('objetivo_investigacion_id')
+                                    <br><span class="obligatorio">{{ $message }}</span>
+                                @enderror
+                            </td>
+                        </tr>
                     </table>
                 </div>
 
@@ -914,6 +931,62 @@
                             <div style="margin-top:20px;text-align:center;display:flex;gap:10px;justify-content:center;">
                                 <button type="button" class="cm-btn cm-btn-success" wire:click="guardarTipoPublicacionModal" style="padding:8px 20px;font-size:13px;">Guardar tipo</button>
                                 <button type="button" class="cm-btn cm-btn-danger" wire:click="cerrarModalTipoPublicacion" style="padding:8px 20px;font-size:13px;">Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                {{-- == MODAL OBJETIVO DE INVESTIGACIÓN == --}}
+                @if ($mostrarModalObjetivo)
+                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;">
+                        <div style="background:#fff;border-radius:10px;padding:24px;max-width:520px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #8b0000;">
+                                <div style="width:36px;height:36px;border-radius:50%;background:#8b0000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;">🎯</div>
+                                <h3 style="margin:0;font-size:16px;font-weight:bold;color:#333;">Objetivo de Investigación</h3>
+                            </div>
+
+                            {{-- Buscar existente --}}
+                            <div style="margin-bottom: 14px;">
+                                <b style="font-size:12px;color:#555;">Buscar objetivo existente:</b>
+                                <input wire:model.live="buscarObjetivo" type="text" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;margin-top:4px;font-size:13px;" placeholder="Escriba nombre o descripción...">
+                                @if($objetivosEncontrados->isNotEmpty())
+                                    <div style="margin-top:6px;border:1px solid #e0e0e0;border-radius:6px;max-height:180px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                                        @foreach($objetivosEncontrados as $oi)
+                                            <div wire:click="seleccionarObjetivo({{ $oi->id }})" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:12px;transition:background 0.15s;"
+                                                 onmouseover="this.style.background='#f5f0f0';this.style.borderLeft='3px solid #8b0000'" onmouseout="this.style.background='';this.style.borderLeft=''">
+                                                <b style="color:#8b0000;">{{ $oi->nombre }}</b>
+                                                @if($oi->descripcion)<br><small style="color:#888;">{{ Str::limit($oi->descripcion, 80) }}</small>@endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                                @if($buscarObjetivo && $objetivosEncontrados->isEmpty())
+                                    <div style="margin-top:4px;font-size:11px;color:#999;padding:4px 0;">No se encontraron objetivos. Cree uno nuevo abajo.</div>
+                                @endif
+                            </div>
+
+                            <hr style="border:none;border-top:1px solid #e8e8e8;margin:14px 0;">
+
+                            {{-- Crear nuevo --}}
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                                <div style="width:24px;height:24px;border-radius:50%;background:#198754;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;">+</div>
+                                <b style="font-size:13px;color:#333;">O crear nuevo objetivo</b>
+                            </div>
+                            <table width="100%" style="font-size:12px;margin-top:4px;border-collapse:separate;border-spacing:0 6px;">
+                                <tr>
+                                    <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
+                                    <td><input wire:model="modalObjetivoNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
+                                </tr>
+                                @error('modalObjetivoNombre') <tr><td></td><td style="color:#dc3545;font-size:11px;">⚠ {{ $message }}</td></tr> @enderror
+                                <tr>
+                                    <td valign="top"><b>Descripción:</b></td>
+                                    <td><textarea wire:model="modalObjetivoDescripcion" rows="2" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></textarea></td>
+                                </tr>
+                            </table>
+
+                            <div style="margin-top:20px;text-align:center;display:flex;gap:10px;justify-content:center;">
+                                <button type="button" class="cm-btn cm-btn-success" wire:click="guardarObjetivoModal" style="padding:8px 20px;font-size:13px;">Guardar objetivo</button>
+                                <button type="button" class="cm-btn cm-btn-danger" wire:click="cerrarModalObjetivo" style="padding:8px 20px;font-size:13px;">Cancelar</button>
                             </div>
                         </div>
                     </div>

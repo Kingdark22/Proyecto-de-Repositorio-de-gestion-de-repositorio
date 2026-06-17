@@ -46,6 +46,7 @@ return [
         'linea_investigacions',
         'metodologia_investigacions',
         'tipo_investigacions',
+        'objetivo_investigacions',
         'tipo_publicacions',
         'grupo_proyecto_modulo',
         'profesor_proyecto_modulo',

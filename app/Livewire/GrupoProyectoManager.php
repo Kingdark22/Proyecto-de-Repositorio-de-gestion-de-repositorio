@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Cache;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Lazy;
+use Livewire\Attributes\Computed;
 
 #[Lazy]
 
@@ -40,6 +41,8 @@ class GrupoProyectoManager extends Component
     public Collection $secciones;
 
     public Collection $comunidades;
+    public string $searchComunidad = '';
+    public bool $mostrarDropdownComunidad = false;
 
     public bool $mostrarModalComunidad = false;
 
@@ -101,7 +104,7 @@ class GrupoProyectoManager extends Component
         $profesores = app(IntranetProfessorService::class);
         $this->lapsos = $profesores->lapsosActivos();
         $this->comunidades = Cache::remember('grupos_comunidades', 3600, fn () =>
-            Comunidad::query()->orderBy('nombre')->get(['com_codigo', 'com_nombre'])
+            Comunidad::query()->orderBy('nombre')->get(['com_codigo', 'com_nombre', 'com_rif'])
         );
 
         $user = auth()->user();
@@ -113,6 +116,33 @@ class GrupoProyectoManager extends Component
         $this->loadProgramas();
         $this->loadSecciones();
     }
+
+    public function updatedSearchComunidad(): void
+    {
+        $this->mostrarDropdownComunidad = true;
+    }
+
+    public function selectComunidad(string $id): void
+    {
+        $this->comunidadId = $id;
+        $this->searchComunidad = $this->comunidades->firstWhere('com_codigo', $id)?->com_nombre ?? '';
+        $this->mostrarDropdownComunidad = false;
+    }
+
+    #[Computed]
+    public function comunidadesFiltradas()
+    {
+        if ($this->searchComunidad === '') {
+            return $this->comunidades;
+        }
+
+        $search = strtolower($this->searchComunidad);
+        return $this->comunidades->filter(fn($c) => 
+            str_contains(strtolower($c->com_nombre), $search) || 
+            str_contains(strtolower($c->com_rif ?? ''), $search)
+        )->values();
+    }
+
 
     public function crearGrupo(): void
     {
@@ -169,6 +199,11 @@ class GrupoProyectoManager extends Component
         $this->loadSecciones();
         $this->filterSeccion = (string) $g->sec_codigo;
         $this->comunidadId = $g->com_codigo ? (string) $g->com_codigo : '';
+        
+        // Set searchComunidad to the name of the selected community
+        $com = $this->comunidades->firstWhere('com_codigo', $this->comunidadId);
+        $this->searchComunidad = $com ? $com->com_nombre : '';
+
         $this->miembrosSeleccionados = array_map(
             fn($m) => [
                 'cedula' => $m['cedula'],
@@ -348,6 +383,8 @@ class GrupoProyectoManager extends Component
         $this->editingGrpCodigo = null;
         $this->nombreGrupo = '';
         $this->comunidadId = '';
+        $this->searchComunidad = '';
+        $this->mostrarDropdownComunidad = false;
         $this->miembrosSeleccionados = [];
         $this->selectedCedula = '';
         $this->filterLapso = '';

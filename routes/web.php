@@ -59,6 +59,7 @@ Route::middleware(['auth', 'active.role'])->group(function () {
     Route::middleware('role:administrador,coordinador,gestionador')->group(function () {
         Route::view('/lineas-investigacion', 'lineas.index')->name('lineas-investigacion');
         Route::view('/tipos-investigacion', 'tipo_investigacion.index')->name('tipos-investigacion');
+        Route::view('/objetivos-investigacion', 'objetivo_investigacion.index')->name('objetivos-investigacion');
         Route::view('/metodologia-investigacion', 'metodologia_investigacion.index')->name('metodologia-investigacion');
         Route::view('/tipos-publicacion', 'tipo_publicacion.index')->name('tipos-publicacion');
     });

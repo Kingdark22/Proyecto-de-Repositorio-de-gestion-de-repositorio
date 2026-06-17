@@ -52,6 +52,9 @@ $notificacionesCount = count($notificacionesList);
                     <a href="{{ route('tipos-publicacion') }}"
                         class="{{ request()->routeIs('tipos-publicacion') ? 'active-sub' : '' }}">Tipos de
                         publicación</a>
+                    <a href="{{ route('objetivos-investigacion') }}"
+                        class="{{ request()->routeIs('objetivos-investigacion') ? 'active-sub' : '' }}">Objetivos de
+                        investigación</a>
                     @endif
 
                     @if ($nav['canManageComponents'])
@@ -72,7 +75,7 @@ $notificacionesCount = count($notificacionesList);
                         class="{{ request()->routeIs('proyectos.buscar') ? 'active-sub' : '' }}">Explorar proyectos</a>
                     @if ($nav['canRegisterProject'] || $nav['canValidateProjects'])
                     <a href="{{ route('proyectos.gestion') }}"
-                        class="{{ request()->routeIs('proyectos.gestion', 'proyectos.crear', 'validaciones.index') ? 'active-sub' : '' }}">Subir
+                        class="{{ request()->routeIs('proyectos.gestion', 'proyectos.crear', 'validaciones.index') ? 'active-sub' : '' }}">Deposito
                         proyecto</a>
                     @endif
                 </div>
