@@ -114,6 +114,36 @@
         .grp-filter-input {
             width: 160px;
         }
+        .comunidad-search-container {
+            position: relative;
+            flex: 1;
+        }
+        .comunidad-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-top: none;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 0 0 4px 4px;
+        }
+        .comunidad-option {
+            padding: 6px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .comunidad-option:hover {
+            background-color: #f0f7f0;
+        }
+        .comunidad-option:last-child {
+            border-bottom: none;
+        }
     </style>
     <h2 class="titulo" style="margin-bottom: 10px; font-weight: bolder;">Equipos de proyecto</h2>
 
@@ -155,17 +185,6 @@
                 @endforeach
             </select>
             <select wire:model.live="filterSeccion" class="grp-filter-select" @if (!$filterLapso || !$filterPrograma) disabled @endif wire:loading.attr="disabled">
-                <option value="">Secci&oacute;n</option>
-                @foreach ($secciones as $s)
-                    <option value="{{ $s->sec_codigo }}">{{ $s->sec_nombre }}</option>
-                @endforeach
-            </select>
-                <option value="">PNF / Programa</option>
-                @foreach ($programas as $p)
-                    <option value="{{ $p->pro_codigo }}">{{ $p->pro_siglas }}</option>
-                @endforeach
-            </select>
-            <select wire:model.live="filterSeccion" class="grp-filter-select" @if (!$filterLapso) disabled @endif>
                 <option value="">Secci&oacute;n</option>
                 @foreach ($secciones as $s)
                     <option value="{{ $s->sec_codigo }}">{{ $s->sec_nombre }}</option>
@@ -225,17 +244,39 @@
                 <tr>
                     <td width="50%"><b>Nombre del proyecto:</b><br><input wire:model="nombreGrupo" type="text"
                             class="grp-filter-input" style="width:90%;"></td>
-                    <td><b>Comunidad:</b><br>
-                        <div style="display: flex; gap: 4px; align-items: center;">
-                            <select wire:model="comunidadId" class="grp-filter-select" style="flex:1;">
-                                <option value="">&mdash;</option>
-                                @foreach ($comunidades as $c)
-                                    <option value="{{ $c->id }}">{{ $c->nombre }}</option>
-                                @endforeach
-                            </select>
-                            <button type="button" wire:click="abrirModalComunidad" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap;" title="Crear nueva comunidad">+</button>
-                        </div>
-                    </td>
+                     <td><b>Comunidad:</b><br>
+                         <div style="display: flex; gap: 4px; align-items: center;">
+                              <div class="comunidad-search-container" id="comunidad-search-container">
+                                  <input wire:model.live.debounce.300ms="searchComunidad" 
+                                         type="text" 
+                                         class="grp-filter-input" 
+                                         style="width: 100%;" 
+                                         placeholder="Buscar comunidad..."
+                                         autocomplete="off"
+                                         wire:focus="$set('mostrarDropdownComunidad', true)">
+                                 
+                                 @if($mostrarDropdownComunidad)
+                                     <div class="comunidad-dropdown">
+                                         @forelse($this->comunidadesFiltradas as $c)
+                                             <div class="comunidad-option" 
+                                                  wire:click="selectComunidad('{{ $c->com_codigo }}')">
+                                                 {{ $c->com_nombre }} 
+                                                 @if($c->com_rif)
+                                                     <span style="color:#888; font-size:10px; margin-left:5px;">({{ $c->com_rif }})</span>
+                                                 @endif
+                                             </div>
+                                         @empty
+                                             <div class="comunidad-option" style="color:#888; cursor:default;">
+                                                 No se encontraron comunidades.
+                                             </div>
+                                         @endforelse
+                                     </div>
+                                 @endif
+                             </div>
+                             <button type="button" wire:click="abrirModalComunidad" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap;" title="Crear nueva comunidad">+</button>
+                         </div>
+                     </td>
+
                 </tr>
                 <tr>
                     <td colspan="2" style="padding-top:8px;">
@@ -417,3 +458,12 @@
         </fieldset>
     @endif
 </div>
+
+<script>
+document.addEventListener('click', function(e) {
+    var container = document.getElementById('comunidad-search-container');
+    if (container && !container.contains(e.target)) {
+        @this.set('mostrarDropdownComunidad', false);
+    }
+});
+</script>

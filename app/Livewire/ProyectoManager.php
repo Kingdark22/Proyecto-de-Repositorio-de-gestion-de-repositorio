@@ -36,10 +36,10 @@ class ProyectoManager extends Component
     public ?string $metodologia_id = '';
 
     public ?string $tipo_publicacion_id = '';
-
     public ?string $tipo_investigacion_id = '';
-
+    public ?string $objetivo_investigacion_id = '';
     public ?string $comunidad_id = '';
+
 
     public ?string $equipo_seccion_clave = '';
 
@@ -158,6 +158,13 @@ class ProyectoManager extends Component
     /** Resultados de búsqueda */
     public Collection $tiposPublicacionEncontradas;
 
+    /** Modal crear objetivo de investigación */
+    public bool $mostrarModalObjetivo = false;
+    public string $modalObjetivoNombre = '';
+    public string $modalObjetivoDescripcion = '';
+    public string $buscarObjetivo = '';
+    public Collection $objetivosEncontrados;
+
     public function placeholder()
     {
         return <<<'HTML'
@@ -222,6 +229,7 @@ class ProyectoManager extends Component
         $this->metodologiasEncontradas = collect();
         $this->tiposInvestigacionEncontradas = collect();
         $this->tiposPublicacionEncontradas = collect();
+        $this->objetivosEncontrados = collect();
     }
 
     protected function cargarGruposDocente(ProyectoGestionService $gestion): void
@@ -588,6 +596,58 @@ class ProyectoManager extends Component
         $this->modalTipoPubMencionHonorifica = false;
         $this->buscarTipoPublicacion = '';
         $this->tiposPublicacionEncontradas = collect();
+    }
+
+    public function abrirModalObjetivo(): void
+    {
+        $this->mostrarModalObjetivo = true;
+        $this->modalObjetivoNombre = '';
+        $this->modalObjetivoDescripcion = '';
+        $this->buscarObjetivo = '';
+        $this->objetivosEncontrados = collect();
+    }
+
+    public function cerrarModalObjetivo(): void
+    {
+        $this->mostrarModalObjetivo = false;
+    }
+
+    public function updatedBuscarObjetivo(): void
+    {
+        $q = trim($this->buscarObjetivo);
+        if ($q === '') {
+            $this->objetivosEncontrados = collect();
+            return;
+        }
+        $this->objetivosEncontrados = \App\Models\ObjetivoInvestigacion::whereRaw('obi_nombre ILIKE ?', ["%{$q}%"])
+            ->orWhereRaw('obi_descripcion ILIKE ?', ["%{$q}%"])
+            ->orderByRaw('obi_nombre')
+            ->get();
+    }
+
+    public function seleccionarObjetivo(int $id): void
+    {
+        $this->objetivo_investigacion_id = (string) $id;
+        $this->buscarObjetivo = '';
+        $this->objetivosEncontrados = collect();
+    }
+
+    public function guardarObjetivoModal(): void
+    {
+        $this->validate([
+            'modalObjetivoNombre' => 'required|string|max:255',
+        ], [
+            'modalObjetivoNombre.required' => 'El nombre del objetivo es obligatorio.',
+        ]);
+
+        $objetivo = \App\Models\ObjetivoInvestigacion::create([
+            'nombre' => $this->modalObjetivoNombre,
+            'descripcion' => $this->modalObjetivoDescripcion ?: null,
+            'estado_logico' => true,
+        ]);
+
+        $this->objetivo_investigacion_id = (string) $objetivo->id;
+        $this->cerrarModalObjetivo();
     }
 
     public function cerrarModalTipoPublicacion(): void
@@ -1003,6 +1063,7 @@ class ProyectoManager extends Component
         $this->metodologia_id = '';
         $this->tipo_publicacion_id = '';
         $this->tipo_investigacion_id = '';
+        $this->objetivo_investigacion_id = '';
         $this->comunidad_id = '';
         $this->equipo_seccion_clave = '';
         $this->filterLapsoEquipo = '';
@@ -1040,9 +1101,11 @@ class ProyectoManager extends Component
             'fecha_aprobacion' => $this->fecha_aprobacion,
             'linea_investigacion_id' => $this->linea_investigacion_id,
             'metodologia_id' => $this->metodologia_id,
-            'tipo_publicacion_id' => $this->tipo_publicacion_id,
-            'tipo_investigacion_id' => $this->tipo_investigacion_id,
-            'comunidad_id' => $this->comunidad_id,
+        'tipo_publicacion_id' => $this->tipo_publicacion_id,
+        'tipo_investigacion_id' => $this->tipo_investigacion_id,
+        'objetivo_investigacion_id' => $this->objetivo_investigacion_id,
+        'comunidad_id' => $this->comunidad_id,
+
         ];
     }
 }
