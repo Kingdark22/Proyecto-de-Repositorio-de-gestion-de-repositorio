@@ -72,7 +72,17 @@ class IntranetProfessorService
             return false;
         }
 
-        return $this->esProfesorProyectoEnLapso($cedula, $lapCodigo);
+        // 1) Debe tener asignación activa en UC de proyecto
+        if (!$this->esProfesorProyectoEnLapso($cedula, $lapCodigo)) {
+            return false;
+        }
+
+        // 2) Debe tener al menos un programa (PNF) asociado a esa asignación
+        //    Esto evita que un docente con asignaciones huérfanas (sin malla/programa)
+        //    sea detectado como profesor de proyecto.
+        $programas = $this->programasDelDocente($cedula, $lapCodigo);
+
+        return !empty($programas);
     }
 
     /**
