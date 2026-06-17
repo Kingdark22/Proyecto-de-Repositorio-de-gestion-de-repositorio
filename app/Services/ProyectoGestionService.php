@@ -2,23 +2,18 @@
 
 namespace App\Services;
 
-use App\Models\Comunidad;
-use App\Models\Componente;
-use App\Models\LineaInvestigacion;
-use App\Models\MetodologiaInvestigacion;
 use App\Models\Proyecto;
-use App\Models\TipoInvestigacion;
-use App\Models\TipoPublicacion;
 use App\Models\User;
-use App\Models\LapsoAcademico;
-use App\Models\ProyectoDocumento;
-use App\Services\GrupoProyectoService;
+use App\Repositories\AuditoriaRepository;
+use App\Repositories\CatalogoRepository;
+use App\Repositories\ComunidadRepository;
+use App\Repositories\GrupoProyectoRepository;
+use App\Repositories\ProyectoRepository;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -31,20 +26,12 @@ class ProyectoGestionService
     public function __construct(
         protected IntranetEquipoSeccionService $equipoSeccion,
         protected IntranetProfessorService $profesorIntranet,
+        protected ProyectoRepository $proyectoRepo,
+        protected CatalogoRepository $catalogoRepo,
+        protected ComunidadRepository $comunidadRepo,
+        protected AuditoriaRepository $auditoriaRepo,
+        protected GrupoProyectoRepository $grupoRepo,
     ) {}
-
-    protected function conexionRepositorio(): string
-    {
-        return (string) config('dual_database.repositorio_connection', 'pgsql');
-    }
-
-    /**
-     * @return list<string>
-     */
-    protected function relacionesProyecto(): array
-    {
-        return ['tipo_publicacion', 'linea_investigacion', 'comunidad', 'metodologia', 'tipo_investigacion', 'documentos.componente'];
-    }
 
     /**
      * @return array<string, mixed>
@@ -70,10 +57,10 @@ class ProyectoGestionService
                             $pares[] = ['lap' => $partes['lap_codigo'], 'sec' => $partes['sec_codigo']];
                         }
                     }
-                    $gruposSvc = app(GrupoProyectoService::class);
-                    $grupos = $gruposSvc->tablaDisponible()
-                        ? $gruposSvc->listar()
+                    $grupos = $this->grupoRepo->tablaDisponible()
+                        ? $this->grupoRepo->listar()
                         : collect();
+                    $grupoSvc = app(GrupoProyectoService::class);
                     $clavesFiltradas = $grupos->filter(fn ($g) => collect($pares)->contains(
                         fn ($p) => $g->lap_codigo === $p['lap'] && $g->sec_codigo === $p['sec']
                     ))->pluck('clave')->toArray();
@@ -85,8 +72,8 @@ class ProyectoGestionService
         }
 
         return [
-            'comunidades' => $this->comunidadesOrdenadas(),
-            'proyectos' => $this->paginarProyectos($filtros, $page),
+            'comunidades' => $this->comunidadRepo->allOrdered(),
+            'proyectos' => $this->proyectoRepo->paginate($filtros, $page),
             'canRegister' => $user ? $this->usuarioPuedeRegistrar($user) : false,
             'canValidate' => $canValidate,
         ];
@@ -94,7 +81,12 @@ class ProyectoGestionService
 
     public function proyectoParaFicha(int $id): ?Proyecto
     {
-        return Proyecto::with($this->relacionesProyecto())->find($id);
+        return $this->proyectoRepo->findWithRelations($id);
+    }
+
+    public function comunidadesOrdenadas(): \Illuminate\Support\Collection
+    {
+        return $this->comunidadRepo->allOrdered();
     }
 
     /**
@@ -107,18 +99,16 @@ class ProyectoGestionService
             return collect();
         }
 
-        return Proyecto::with($this->relacionesProyecto())
-            ->whereIn('pry_codigo', $ids)
-            ->get();
+        return $this->proyectoRepo->findWhereIn('pry_codigo', $ids);
     }
 
     public function aprobar(int $id, ?User $user = null): void
     {
         $user = $user ?? auth()->user();
-        $proyecto = Proyecto::findOrFail($id);
+        $proyecto = $this->proyectoRepo->findOrFail($id);
         $this->autorizarValidacionProyecto($user, $proyecto);
 
-        $proyecto->update([
+        $this->proyectoRepo->update($id, [
             'estado_validacion' => 'aprobado',
             'estado_logico' => true,
         ]);
@@ -128,10 +118,10 @@ class ProyectoGestionService
     public function rechazar(int $id, string $motivo, ?User $user = null): void
     {
         $user = $user ?? auth()->user();
-        $proyecto = Proyecto::findOrFail($id);
+        $proyecto = $this->proyectoRepo->findOrFail($id);
         $this->autorizarValidacionProyecto($user, $proyecto);
 
-        $proyecto->update([
+        $this->proyectoRepo->update($id, [
             'estado_validacion' => 'rechazado',
             'motivo_rechazo' => $motivo,
             'estado_logico' => false,
@@ -153,9 +143,11 @@ class ProyectoGestionService
             ? (int) $estado['filterLapsoEquipo']
             : null;
 
-        $programaId = $this->resolverProgramaDesdeClave($estado['equipo_seccion_clave'] ?? '');
+        $programaId = !empty($estado['programa_id'])
+            ? (int) $estado['programa_id']
+            : $this->resolverProgramaDesdeClave($estado['equipo_seccion_clave'] ?? '');
 
-        $datos = array_merge($this->catalogos($programaId), $equipoCtx, [
+        $datos = array_merge($this->catalogoRepo->catalogos($programaId), $equipoCtx, [
             'canRegister' => $user ? $this->usuarioPuedeRegistrar($user) : false,
             'esAdmin' => $esAdmin,
             'programasEquipo' => $lapCodigoFiltro
@@ -167,50 +159,20 @@ class ProyectoGestionService
                     ($estado['filterProgramaEquipo'] ?? '') !== '' ? (int) $estado['filterProgramaEquipo'] : null
                 )
                 : collect(),
-            'comunidades' => $this->comunidadesOrdenadas(),
+            'comunidades' => $this->comunidadRepo->allOrdered(),
         ]);
 
-        $datos['catalogosVacios'] = $this->catalogosVacios($datos);
+        $datos['catalogosVacios'] = $this->catalogoRepo->catalogoVacios($datos);
 
         return $datos;
     }
 
     /**
-     * @param  array<string, mixed>  $datos
-     * @return list<string>
-     */
-    public function catalogosVacios(array $datos): array
-    {
-        $faltantes = [];
-
-        if (($datos['comunidades'] ?? collect())->isEmpty()) {
-            $faltantes[] = 'comunidades';
-        }
-        if (($datos['lineas'] ?? collect())->isEmpty()) {
-            $faltantes[] = 'líneas de investigación';
-        }
-        if (($datos['metodologias'] ?? collect())->isEmpty()) {
-            $faltantes[] = 'metodologías';
-        }
-        if (($datos['tipos_publicacion'] ?? collect())->isEmpty()) {
-            $faltantes[] = 'tipos de publicación';
-        }
-        if (($datos['tipos_investigacion'] ?? collect())->isEmpty()) {
-            $faltantes[] = 'tipos de investigación';
-        }
-
-        return $faltantes;
-    }
-
-    /**
-     * @return array<string, string|null>
-     */
-    /**
      * @return array<string, mixed>
      */
     public function cargarParaEdicion(int $id): array
     {
-        $item = Proyecto::with('documentos')->findOrFail($id);
+        $item = $this->proyectoRepo->findWithDocuments($id);
 
         $partes = $this->equipoSeccion->parsearClave($item->equipo_ref);
 
@@ -218,7 +180,7 @@ class ProyectoGestionService
         $trayectoDerived = '';
         if ($partes) {
             try {
-                $row = \Illuminate\Support\Facades\DB::connection($this->equipoSeccion->academicConnection())
+                $row = DB::connection($this->equipoSeccion->academicConnection())
                     ->table('seccion as sec')
                     ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
                     ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
@@ -272,11 +234,10 @@ class ProyectoGestionService
         array $leaders = [],
     ): Proyecto {
         $esAdmin = $this->usuarioEsAdminEnSistema($user);
-        $existing = $editingId ? Proyecto::with('documentos')->find($editingId) : null;
+        $existing = $editingId ? $this->proyectoRepo->findWithDocuments($editingId) : null;
 
         $payload = [
             'resumen' => $datos['resumen'],
-            // titulo no se persiste - es accessor derivado de equipo_ref
             'fecha_subida' => $datos['fecha_subida'],
             'calificacion' => ($datos['calificacion'] ?? '') !== '' ? (int) $datos['calificacion'] : null,
             'fecha_aprobacion' => ($datos['fecha_aprobacion'] ?? '') !== '' ? $datos['fecha_aprobacion'] : now()->format('Y-m-d'),
@@ -299,15 +260,14 @@ class ProyectoGestionService
         }
 
         if ($editingId) {
-            $proyecto = Proyecto::findOrFail($editingId);
-            $proyecto->update($payload);
+            $this->proyectoRepo->update($editingId, $payload);
+            $proyecto = $this->proyectoRepo->find($editingId);
         } else {
-            $proyecto = Proyecto::create($payload);
+            $proyecto = $this->proyectoRepo->create($payload);
         }
 
         $this->guardarDocumentos($proyecto, $documentos, $existing);
 
-        // Actualizar roles de líderes en el grupo (solo si hay líderes que asignar y no es admin)
         if (!empty($datos['equipo_seccion_clave']) && !$esAdmin && !empty($leaders)) {
             $this->asignarLideresGrupo($datos['equipo_seccion_clave'], $leaders);
         }
@@ -319,11 +279,11 @@ class ProyectoGestionService
 
     protected function asignarLideresGrupo(string $clave, array $leaders): void
     {
-        if (!str_starts_with($clave, \App\Services\GrupoProyectoService::PREFIJO . ':')) {
+        if (!str_starts_with($clave, GrupoProyectoService::PREFIJO . ':')) {
             return;
         }
         try {
-            app(\App\Services\GrupoProyectoService::class)->asignarLideres($clave, $leaders);
+            app(GrupoProyectoService::class)->asignarLideres($clave, $leaders);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Error asignando lideres de grupo: ' . $e->getMessage());
         }
@@ -341,60 +301,41 @@ class ProyectoGestionService
             $compCodigo = (int) $compCodigo;
             $path = $file->store('proyectos/' . $proyecto->id, 'public');
 
-            // Si ya existe un documento para este componente, reemplazarlo
             if ($docsActuales->has($compCodigo)) {
                 $docViejo = $docsActuales->get($compCodigo);
-                Storage::disk('public')->delete($docViejo->pd_archivo_path);
-                $docViejo->update([
+                $this->proyectoRepo->eliminarDocumentoViejo($docViejo->pd_archivo_path);
+                $this->proyectoRepo->actualizarDocumento($docViejo->id, [
                     'pd_archivo_path' => $path,
                     'pd_orden' => 0,
                 ]);
             } else {
-                ProyectoDocumento::create([
-                    'pry_codigo' => $proyecto->id,
-                    'comp_codigo' => $compCodigo,
-                    'pd_archivo_path' => $path,
-                    'pd_orden' => 0,
-                ]);
+                $this->proyectoRepo->crearDocumento($proyecto->id, $compCodigo, $path);
             }
         }
     }
 
     protected function registrarAuditoria(Proyecto $proyecto, string $accion): void
     {
-        if (! Schema::connection($this->conexionRepositorio())->hasTable('auditorias')) {
-            return;
-        }
+        $audId = $this->auditoriaRepo->registrar(
+            $proyecto->id,
+            $accion,
+            request()->ip(),
+            (string) request()->userAgent(),
+        );
 
-        try {
-            $audId = DB::connection($this->conexionRepositorio())->table('auditorias')->insertGetId([
-                'pry_codigo' => $proyecto->id,
-                'aud_accion' => $accion,
-                'aud_modulo' => 'proyectos',
-                'ip' => request()->ip(),
-                'aud_user_agent' => substr((string) request()->userAgent(), 0, 500),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-            DB::connection($this->conexionRepositorio())
-                ->table('proyectos')
-                ->where('pry_codigo', $proyecto->id)
-                ->update(['aud_codigo' => $audId]);
-        } catch (\Throwable) {
-            // No bloquear el registro si falla la auditoría
+        if ($audId !== null) {
+            $this->auditoriaRepo->actualizarProyecto($proyecto->id, $audId);
         }
     }
 
     public function alternarEstado(int $id): void
     {
-        $item = Proyecto::findOrFail($id);
-        $item->update(['estado_logico' => ! $item->estado_logico]);
+        $this->proyectoRepo->alternarEstado($id);
     }
 
     public function eliminar(int $id): void
     {
-        Proyecto::findOrFail($id)->delete();
+        $this->proyectoRepo->delete($id);
     }
 
     /**
@@ -414,7 +355,6 @@ class ProyectoGestionService
 
         $esProfesor = $userRoleService->roleMatches('profesor proyecto', $activeRole);
 
-        // Profesor: filtra por sus secciones asignadas en el lapso indicado (o vigente por defecto)
         if ($esProfesor) {
             $lapFiltro = !empty($filtros['lapso']) ? (int) $filtros['lapso'] : null;
             $clavesDocente = $this->profesorIntranet->clavesEquipoSeccionDocente($cedula, $lapFiltro);
@@ -422,20 +362,11 @@ class ProyectoGestionService
                 return collect();
             }
 
-            $pares = [];
-            foreach ($clavesDocente as $clave) {
-                $partes = $this->equipoSeccion->parsearClave($clave);
-                if ($partes) {
-                    $pares[] = ['lap' => $partes['lap_codigo'], 'sec' => $partes['sec_codigo']];
-                }
-            }
-
             $grupos = $gruposSvc->listar();
-            $gruposFiltrados = $grupos->filter(fn ($g) => collect($pares)->contains(
-                fn ($p) => $g->lap_codigo === $p['lap'] && $g->sec_codigo === $p['sec']
+            $gruposFiltrados = $grupos->filter(fn ($g) => collect($clavesDocente)->contains(
+                fn ($clave) => str_contains($clave, ':' . $g->lap_codigo . ':' . $g->sec_codigo)
             ));
         } else {
-            // Admin, gestionador, coordinador: todos los grupos con filtros opcionales
             $lapso = !empty($filtros['lapso']) ? (int) $filtros['lapso'] : null;
             $programa = !empty($filtros['programa']) ? (int) $filtros['programa'] : null;
             $trayecto = !empty($filtros['trayecto']) ? $filtros['trayecto'] : null;
@@ -447,8 +378,8 @@ class ProyectoGestionService
             ]);
         }
 
-        $claves = $gruposFiltrados->pluck('clave');
-        $proyectoPorClave = Proyecto::whereIn('pry_direccion_logica', $claves)->get()->keyBy('equipo_ref');
+        $claves = $gruposFiltrados->pluck('clave')->toArray();
+        $proyectoPorClave = $this->proyectoRepo->findByEquipos($claves)->keyBy('equipo_ref');
 
         return $gruposFiltrados->map(fn ($g) => (object) [
             'grp_codigo' => $g->grp_codigo,
@@ -476,12 +407,12 @@ class ProyectoGestionService
 
         $clave = $gruposSvc->construirClave($grpCodigo);
 
-        $existing = Proyecto::where('equipo_ref', $clave)->first();
+        $existing = $this->proyectoRepo->findFirstByEquipoRef($clave);
         if ($existing) {
             return $existing;
         }
 
-        $proyecto = Proyecto::create([
+        $proyecto = $this->proyectoRepo->create([
             'resumen' => 'Proyecto del grupo ' . $grupo->nombre,
             'comunidad_id' => $grupo->com_codigo,
             'equipo_ref' => $clave,
@@ -496,10 +427,6 @@ class ProyectoGestionService
         return $proyecto->fresh();
     }
 
-    /**
-     * Verifica si un estudiante líder sigue vigente (inscripción activa) en el equipo del proyecto.
-     * Retorna true si está vigente, false si no.
-     */
     public function estudianteLiderVigente(User $user, Proyecto $proyecto): bool
     {
         $cedula = trim((string) $user->usu_cedula);
@@ -512,16 +439,13 @@ class ProyectoGestionService
             return false;
         }
 
-        // Verificar que el estudiante pertenece al equipo con rol de líder
         $gruposSvc = app(GrupoProyectoService::class);
         if (!$gruposSvc->estudianteEnGrupo($cedula, $clave, IntranetEquipoSeccionService::ROL_LIDER)) {
             return false;
         }
 
-        // Obtener lap_codigo/sec_codigo del contexto del equipo
         $partes = $gruposSvc->parsearClave($clave);
         if (!$partes || ($partes['tipo'] ?? '') !== GrupoProyectoService::PREFIJO) {
-            // Si es EQSEC, verificar directamente
             $partesEq = $this->equipoSeccion->parsearClave($clave);
             if (!$partesEq) {
                 return false;
@@ -529,8 +453,7 @@ class ProyectoGestionService
             return $this->equipoSeccion->estudiantePerteneceEquipo($cedula, $clave);
         }
 
-        // Es EQGRP - obtener contexto del grupo
-        $grupo = \App\Models\GrupoProyectoModulo::find($partes['grp_codigo'] ?? 0);
+        $grupo = $this->grupoRepo->find($partes['grp_codigo'] ?? 0);
         if (!$grupo) {
             return false;
         }
@@ -546,14 +469,10 @@ class ProyectoGestionService
             return false;
         }
 
-        // Verificar inscripción activa del estudiante en esa sección/lapso
         $claveSec = $this->equipoSeccion->construirClave($lapCodigo, $secCodigo);
         return $this->equipoSeccion->estudiantePerteneceEquipo($cedula, $claveSec);
     }
 
-    /**
-     * @param  array<string, mixed>  $estado
-     */
     public function reglasValidacion(array $estado, User $user, bool $esEdicion = false): array
     {
         $rules = [
@@ -561,11 +480,11 @@ class ProyectoGestionService
             'resumen' => 'required|min:10',
             'fecha_subida' => 'required|date',
 
-            'linea_investigacion_id' => ['nullable', Rule::exists(LineaInvestigacion::class, (new LineaInvestigacion())->getKeyName())],
-            'metodologia_id' => ['nullable', Rule::exists(MetodologiaInvestigacion::class, (new MetodologiaInvestigacion())->getKeyName())],
-            'tipo_publicacion_id' => ['nullable', Rule::exists(TipoPublicacion::class, (new TipoPublicacion())->getKeyName())],
-            'tipo_investigacion_id' => ['nullable', Rule::exists(TipoInvestigacion::class, (new TipoInvestigacion())->getKeyName())],
-            'comunidad_id' => ['required', Rule::exists(Comunidad::class, (new Comunidad())->getKeyName())],
+            'linea_investigacion_id' => ['nullable', Rule::exists('\App\Models\LineaInvestigacion', (new \App\Models\LineaInvestigacion())->getKeyName())],
+            'metodologia_id' => ['nullable', Rule::exists('\App\Models\MetodologiaInvestigacion', (new \App\Models\MetodologiaInvestigacion())->getKeyName())],
+            'tipo_publicacion_id' => ['nullable', Rule::exists('\App\Models\TipoPublicacion', (new \App\Models\TipoPublicacion())->getKeyName())],
+            'tipo_investigacion_id' => ['nullable', Rule::exists('\App\Models\TipoInvestigacion', (new \App\Models\TipoInvestigacion())->getKeyName())],
+            'comunidad_id' => ['required', Rule::exists('\App\Models\Comunidad', (new \App\Models\Comunidad())->getKeyName())],
             'equipo_seccion_clave' => [
                 'required',
                 function ($attribute, $value, $fail) use ($user) {
@@ -582,7 +501,6 @@ class ProyectoGestionService
                     }
                 },
             ],
-
         ];
 
         if ($esEdicion) {
@@ -594,54 +512,6 @@ class ProyectoGestionService
         }
 
         return $rules;
-    }
-
-    /**
-     * @param  array<string, mixed>  $filtros
-     */
-    public function paginarProyectos(array $filtros, int $page): LengthAwarePaginator
-    {
-        return Proyecto::with($this->relacionesProyecto())
-            ->when(($filtros['search'] ?? '') !== '', function ($q) use ($filtros) {
-                $s = $filtros['search'];
-                try {
-                    $q->whereRaw('to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)', [$s]);
-                } catch (\Throwable) {
-                    $q->whereRaw('pry_resumen ILIKE ?', ['%' . $s . '%']);
-                }
-            })
-            ->when(($filtros['estado'] ?? '') !== '', fn ($q) => $q->where('estado_validacion', $filtros['estado']))
-            ->when(($filtros['comunidad'] ?? '') !== '', fn ($q) => $q->where('comunidad_id', $filtros['comunidad']))
-            ->when(($filtros['creador_cedula'] ?? '') !== '', fn ($q) => $q->where('creador_cedula', $filtros['creador_cedula']))
-            ->when(($filtros['equipo_ref'] ?? null) !== null, fn ($q) => $q->whereIn('pry_direccion_logica', $filtros['equipo_ref']))
-            ->latest()
-            ->paginate(10, page: $page);
-    }
-
-    public function comunidadesOrdenadas(): Collection
-    {
-        return Cache::remember('gestion_comunidades_ordenadas', now()->addMinutes(10), fn() =>
-            Comunidad::orderBy('nombre')->get(['com_codigo', 'com_nombre'])
-        );
-    }
-
-    /**
-     * @return array<string, Collection>
-     */
-    protected function catalogos(?int $programaId = null): array
-    {
-        $ttl = now()->addMinutes(10);
-        return [
-            'lineas' => Cache::remember('gestion_cat_lineas', $ttl, fn() => app(ModuloRepositorioService::class)->lineasInvestigacionActivas()),
-            'metodologias' => Cache::remember('gestion_cat_metodologias', $ttl, fn() => MetodologiaInvestigacion::where('estado_logico', true)->get()),
-            'tipos_publicacion' => Cache::remember('gestion_cat_tipos_publicacion', $ttl, fn() => TipoPublicacion::where('estado_logico', true)->get()),
-            'tipos_investigacion' => Cache::remember('gestion_cat_tipos_investigacion', $ttl, fn() => TipoInvestigacion::where('estado_logico', true)->get()),
-            'lapsos' => Cache::remember('gestion_cat_lapsos', $ttl, fn() => LapsoAcademico::activos()->orderByDesc('lap_codigo')->get()),
-            'componentes_disp' => $programaId
-                ? Componente::whereHas('programas', fn($q) => $q->where('pro_codigo', $programaId))
-                    ->where('estado_logico', true)->orderBy('nombre')->get()
-                : collect(),
-        ];
     }
 
     /**
@@ -660,11 +530,10 @@ class ProyectoGestionService
             ? (int) $estado['filterLapsoEquipo']
             : null;
 
-        $equiposDisp = $gruposSvc->tablaDisponible()
-            ? $gruposSvc->listar(['lapso' => $lapFiltro])
+        $equiposDisp = $this->grupoRepo->tablaDisponible()
+            ? $this->grupoRepo->listar(['lapso' => $lapFiltro])
             : collect();
 
-        // Filter by professor's assigned sections
         if (!$esAdmin && $cedula !== '') {
             $userRoleService = app(UserRoleService::class);
             $user = auth()->user();
@@ -724,7 +593,7 @@ class ProyectoGestionService
         }
 
         try {
-            $row = \Illuminate\Support\Facades\DB::connection($this->equipoSeccion->academicConnection())
+            $row = DB::connection($this->equipoSeccion->academicConnection())
                 ->table('seccion as sec')
                 ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
                 ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
@@ -821,12 +690,13 @@ class ProyectoGestionService
             return false;
         }
 
-        $partes = app(GrupoProyectoService::class)->parsearClave($clave);
+        $gruposSvc = app(GrupoProyectoService::class);
+        $partes = $gruposSvc->parsearClave($clave);
         if (!$partes || ($partes['tipo'] ?? '') !== GrupoProyectoService::PREFIJO) {
             return false;
         }
 
-        $grupo = \App\Models\GrupoProyectoModulo::find($partes['grp_codigo'] ?? 0);
+        $grupo = $this->grupoRepo->find($partes['grp_codigo'] ?? 0);
         if (!$grupo) {
             return false;
         }
@@ -854,19 +724,14 @@ class ProyectoGestionService
         }
 
         try {
-            $grupos = \App\Models\GrupoProyectoModulo::whereRaw(
-                "CAST(grp_miembros AS jsonb) @> ?",
-                ['[{"cedula":"' . $cedula . '","rol_id":1}]']
-            )->get(['grp_codigo']);
+            $grupos = $this->grupoRepo->findLiderByCedula($cedula);
 
             $claves = $grupos->map(fn ($g) => 'EQGRP:' . $g->grp_codigo)->toArray();
             if (empty($claves)) {
                 return [];
             }
 
-            return Proyecto::whereIn('pry_direccion_logica', $claves)
-                ->get()
-                ->pluck('id')
+            return $this->proyectoRepo->findLiderIds($claves)
                 ->map(fn ($v) => (int) $v)
                 ->toArray();
         } catch (\Throwable) {
@@ -912,21 +777,18 @@ class ProyectoGestionService
         return false;
     }
 
-    /**
-     * Resuelve la clave de sección (EQSEC:{lap}:{sec}) desde un proyecto.
-     * Si el proyecto usa equipo_ref EQGRP:{id}, busca el grupo y extrae lap_codigo/sec_codigo del contexto.
-     */
     protected function resolverClaveSeccionDesdeProyecto(Proyecto $proyecto): ?string
     {
         $clave = $proyecto->equipo_ref;
         if (!$clave) return null;
 
-        $partes = app(GrupoProyectoService::class)->parsearClave($clave);
+        $gruposSvc = app(GrupoProyectoService::class);
+        $partes = $gruposSvc->parsearClave($clave);
         if (($partes['tipo'] ?? '') !== GrupoProyectoService::PREFIJO || empty($partes['grp_codigo'])) {
             return null;
         }
 
-        $grupo = \App\Models\GrupoProyectoModulo::find($partes['grp_codigo']);
+        $grupo = $this->grupoRepo->find($partes['grp_codigo']);
         if (!$grupo) return null;
 
         $contexto = $grupo->grp_contexto;
@@ -936,7 +798,7 @@ class ProyectoGestionService
         $sec = $contexto['sec_codigo'] ?? null;
         if (!$lap || !$sec) return null;
 
-        return app(IntranetEquipoSeccionService::class)->construirClave((int) $lap, (int) $sec);
+        return $this->equipoSeccion->construirClave((int) $lap, (int) $sec);
     }
 
     protected function autorizarValidacionProyecto(?User $user, Proyecto $proyecto): void

@@ -4,12 +4,14 @@ namespace App\Services;
 
 use App\Models\Comunidad;
 use App\Models\Direccion;
-use App\Models\Estado;
-use App\Models\Municipio;
-use Illuminate\Support\Facades\Cache;
+use App\Repositories\ComunidadRepository;
 
 class ComunidadGestionService
 {
+    public function __construct(
+        protected ComunidadRepository $comunidadRepo,
+    ) {}
+
     /**
      * Reglas de validación para el formulario de comunidades.
      */
@@ -22,6 +24,8 @@ class ComunidadGestionService
             'municipio_id' => 'required|integer|exists:municipios,mun_codigo',
             'dir_nombre' => 'required|string|max:500',
             'correo' => 'nullable|email|max:150',
+            'prefijo_telefono' => 'nullable|string|max:4',
+            'numero_telefono' => 'nullable|string|max:15',
         ];
     }
 
@@ -30,10 +34,9 @@ class ComunidadGestionService
      */
     public function cargarParaEdicion(int $id): array
     {
-        $comunidad = Comunidad::with(['direccion.municipio.estado'])->whereKey($id)->firstOrFail();
- 
+        $comunidad = $this->comunidadRepo->findWithDireccion($id);
         $direccion = $comunidad->direccion;
- 
+
         return [
             'nombre' => $comunidad->nombre,
             'rif' => $comunidad->rif,
@@ -51,7 +54,7 @@ class ComunidadGestionService
     public function guardar(?int $id, array $datos): int
     {
         $dirNombre = trim($datos['dir_nombre'] ?? '');
- 
+
         if ($dirNombre !== '' && !empty($datos['municipio_id'])) {
             $direccion = Direccion::firstOrCreate(
                 ['dir_calle' => $dirNombre, 'mun_codigo' => $datos['municipio_id'], 'dir_parroquia' => '', 'dir_sector' => '']
@@ -60,7 +63,7 @@ class ComunidadGestionService
         } else {
             $direccionId = null;
         }
- 
+
         $payload = [
             'nombre' => $datos['nombre'],
             'rif' => $datos['rif'],
@@ -71,9 +74,9 @@ class ComunidadGestionService
         if (($datos['numero_telefono'] ?? '') !== '') {
             $payload['numero_telefono'] = ($datos['prefijo_telefono'] ?? '') . ($datos['numero_telefono'] ?? '');
         }
- 
-        $comunidad = Comunidad::guardar($payload, $id);
- 
+
+        $comunidad = $this->comunidadRepo->guardar($payload, $id);
+
         return $comunidad->getKey();
     }
 
@@ -82,12 +85,7 @@ class ComunidadGestionService
      */
     public function eliminar(int $id): void
     {
-        $comunidad = Comunidad::findOrFail($id);
-        $direccionId = $comunidad->direccion_id;
-        $comunidad->delete();
-        if ($direccionId) {
-            Direccion::where('dir_codigo', $direccionId)->whereDoesntHave('comunidad')->delete();
-        }
+        $this->comunidadRepo->delete($id);
     }
 
     /**
@@ -95,18 +93,8 @@ class ComunidadGestionService
      */
     public function datosVistaListado(array $filtros, int $page): array
     {
-        $termino = trim($filtros['search'] ?? '');
-
-        $comunidades = Comunidad::with('direccion.municipio.estado')
-            ->when($termino !== '', function ($q) use ($termino) {
-                $q->where('nombre', 'ILIKE', '%' . $termino . '%')
-                    ->orWhere('rif', 'ILIKE', '%' . $termino . '%');
-            })
-            ->orderByDesc((new Comunidad())->getKeyName())
-            ->paginate(10, ['*'], 'page', $page);
-
         return [
-            'comunidades' => $comunidades,
+            'comunidades' => $this->comunidadRepo->paginate($filtros, $page),
         ];
     }
 
@@ -115,11 +103,11 @@ class ComunidadGestionService
      */
     public function datosVistaFormulario(?string $estadoId = null): array
     {
-        $estados = Cache::remember('comunidad_estados', 86400, fn() => Estado::orderBy('est_nombre')->get());
+        $estados = $this->comunidadRepo->estados();
         $municipios = collect();
 
         if ($estadoId) {
-            $municipios = Municipio::where('est_codigo', $estadoId)->orderBy('mun_nombre')->get();
+            $municipios = $this->comunidadRepo->municipiosPorEstado((int) $estadoId);
         }
 
         return [

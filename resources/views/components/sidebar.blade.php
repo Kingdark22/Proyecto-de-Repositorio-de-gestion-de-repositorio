@@ -33,6 +33,8 @@ $notificacionesCount = count($notificacionesList);
                     @if ($nav['canViewComunes'])
                     <a href="{{ route('comunidades.index') }}"
                         class="{{ request()->routeIs('comunidades.index') ? 'active-sub' : '' }}">Comunidades</a>
+                    @endif
+                    @if ($nav['canViewGruposProyecto'])
                     <a href="{{ route('grupos-proyecto.index') }}"
                         class="{{ request()->routeIs('grupos-proyecto.index') ? 'active-sub' : '' }}">Equipos de
                         proyecto</a>
@@ -125,13 +127,8 @@ $notificacionesCount = count($notificacionesList);
             @endif
 
             <li>
-                <div class="legacy-menu-item has-submenu">
+                <div class="legacy-menu-item" style="padding: 6px 12px;">
                     Mi cuenta
-                    <div class="arrow-icon"></div>
-                </div>
-                <div class="legacy-submenu">
-                    <a href="{{ route('configuracion') }}"
-                        class="{{ request()->routeIs('configuracion') ? 'active-sub' : '' }}">Perfil</a>
                 </div>
             </li>
 

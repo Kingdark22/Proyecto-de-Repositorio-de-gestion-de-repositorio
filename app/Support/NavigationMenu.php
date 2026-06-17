@@ -56,6 +56,7 @@ class NavigationMenu
             'isGestionador'        => $activeRole === 'gestionador',
             'canViewAcademic'      => false,
             'canViewComunes'       => false,
+            'canViewGruposProyecto'=> false,
             'canManageCatalogs'    => false,
             'canManageComponents'  => false,
             'canValidateProjects'  => false,
@@ -70,6 +71,7 @@ class NavigationMenu
                 case 'administrador':
                     $flags['canViewAcademic'] = true;
                     $flags['canViewComunes'] = true;
+                    $flags['canViewGruposProyecto'] = true;
                     $flags['canManageCatalogs'] = true;
                     $flags['canManageComponents'] = true;
                     $flags['canManageSystemConfig'] = true;
@@ -79,6 +81,7 @@ class NavigationMenu
                 case 'coordinador':
                     $flags['canViewAcademic'] = true;
                     $flags['canViewComunes'] = true;
+                    $flags['canViewGruposProyecto'] = true;
                     $flags['canManageCatalogs'] = true;
                     $flags['canManageComponents'] = true;
                     $flags['canManageSystemConfig'] = true;
@@ -87,6 +90,7 @@ class NavigationMenu
                 case 'profesor proyecto':
                     $flags['canViewAcademic'] = true;
                     $flags['canViewComunes'] = true;
+                    $flags['canViewGruposProyecto'] = true;
                     break;
 
                 case 'estudiante':
@@ -100,6 +104,7 @@ class NavigationMenu
                 case 'gestionador':
                     $flags['canViewAcademic'] = true;
                     $flags['canViewComunes'] = true;
+                    $flags['canViewGruposProyecto'] = true;
                     $flags['canManageCatalogs'] = true;
                     $flags['canManageComponents'] = true;
                     $flags['canManageSystemConfig'] = true;

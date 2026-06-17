@@ -397,7 +397,52 @@
             </legend>
             <form wire:submit="save">
 
-                {{-- == SECCIÓN EQUIPO Y COMUNIDAD (arriba) == --}}
+                {{-- == SECCIÓN DATOS DEL PROYECTO (PRIMERO) == --}}
+                <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
+                    <legend style="font-weight: bold; font-size: 12px;">Datos del proyecto</legend>
+                    <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 12px;">
+                        <tr>
+                            <td width="20%"><b>Comunidad:</b></td>
+                            <td colspan="3">
+                                @if($comunidadNombreGrupo)
+                                    <span style="background:#f9f2f2; border:1px solid #8b0000; padding:4px 10px; border-radius:4px; font-weight:bold; color:#8b0000;">{{ $comunidadNombreGrupo }}</span>
+                                @else
+                                    <span style="color:#999;">(asignada autom&aacute;ticamente del grupo)</span>
+                                @endif
+                            </td>
+                        </tr>
+                        <tr>
+                            <td width="20%"><b>T&iacute;tulo:</b></td>
+                            <td colspan="3">
+                                <div style="padding: 4px 0; font-weight: bold; font-size: 14px;">
+                                    {{ $titulo ?: '(seleccione un equipo para auto-llenar el t&iacute;tulo)' }}
+                                </div>
+                                @error('titulo')
+                                    <span class="obligatorio" style="font-size: 11px;">{{ $message }}</span>
+                                @enderror
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top"><b>Resumen:</b></td>
+                            <td colspan="3">
+                                <textarea wire:model="resumen" rows="3" style="width: 95%;"></textarea><span class="obligatorio">*</span>
+                                @error('resumen')
+                                    <br><span class="obligatorio" style="font-size: 11px;">{{ $message }}</span>
+                                @enderror
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><b>Fecha subida:</b></td>
+                            <td colspan="3"><input wire:model="fecha_subida" type="date"><span
+                                    class="obligatorio">*</span> @error('fecha_subida')
+                                    <span class="obligatorio">{{ $message }}</span>
+                                @enderror
+                            </td>
+                        </tr>
+                    </table>
+                </fieldset>
+
+                {{-- == SECCIÓN EQUIPO / GRUPO == --}}
                 @if (!$modoActualizacion)
                     @if(!$esProfesor && !$esGestionador)
                     <div style="margin-bottom: 15px; border: 1px solid #CCC; border-radius: 4px;">
@@ -469,19 +514,7 @@
 
                 @if($esProfesor || $esGestionador)
                 <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
-                    <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Equipo y comunidad</legend>
-                    <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px;">
-                        <tr>
-                            <td width="20%"><b>Comunidad:</b></td>
-                            <td>
-                                @if($comunidadNombreGrupo)
-                                    <span style="background:#f9f2f2; border:1px solid #8b0000; padding:4px 10px; border-radius:4px; font-weight:bold; color:#8b0000;">{{ $comunidadNombreGrupo }}</span>
-                                @else
-                                    <span style="color:#999;">(asignada automáticamente del grupo)</span>
-                                @endif
-                            </td>
-                        </tr>
-                    </table>
+                    <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Equipo</legend>
                     @if(!empty($miembrosGrupo))
                     <div style="margin-top: 8px; padding: 0; background: #fff; border: 1px solid #e9aaad; border-radius: 6px; font-size: 12px; overflow: hidden;">
                         <div style="background: linear-gradient(135deg, #8b0000, #a52a2a); color: #fff; padding: 6px 12px; font-weight: bold; font-size: 13px; letter-spacing: 0.3px;">
@@ -524,64 +557,34 @@
                 </fieldset>
                 @endif
 
-                {{-- == SECCIÓN PRINCIPAL == --}}
-                <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
-                    <legend style="font-weight: bold; font-size: 12px;">Datos del proyecto</legend>
-                    @if ($modoActualizacion)
-                        <div style="font-size: 12px; padding: 4px 0;">
-                            <b>Título:</b> {{ $titulo }}<br>
-                            <b>Resumen:</b> {{ $resumen }}<br>
-                            <b>Fecha subida:</b> {{ $fecha_subida }}
-                        </div>
-                    @else
-                    <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 12px;">
-                        <tr>
-                            <td width="20%"><b>Título:</b></td>
-                            <td colspan="3">
-                                <div style="padding: 4px 0; font-weight: bold; font-size: 14px;">
-                                    {{ $titulo ?: '(seleccione un equipo para auto-llenar el título)' }}
-                                </div>
-                                @error('titulo')
-                                    <span class="obligatorio" style="font-size: 11px;">{{ $message }}</span>
-                                @enderror
-                            </td>
-                        </tr>
-                        <tr>
-                            <td valign="top"><b>Resumen:</b></td>
-                            <td colspan="3">
-                                <textarea wire:model="resumen" rows="3" style="width: 95%;"></textarea><span class="obligatorio">*</span>
-                                @error('resumen')
-                                    <br><span class="obligatorio" style="font-size: 11px;">{{ $message }}</span>
-                                @enderror
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><b>Fecha subida:</b></td>
-                            <td colspan="3"><input wire:model="fecha_subida" type="date"><span
-                                    class="obligatorio">*</span> @error('fecha_subida')
-                                    <span class="obligatorio">{{ $message }}</span>
-                                @enderror
-                            </td>
-                        </tr>
-                    </table>
-                    @endif
-                </fieldset>
-
                 {{-- == SECCIÓN DOCUMENTOS POR COMPONENTE == --}}
-                @if(isset($componentes_disp) && $componentes_disp->isNotEmpty())
+                @php
+                    $tieneComponentes = isset($componentes_disp) && $componentes_disp->isNotEmpty();
+                @endphp
                 <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
-                    <legend style="font-weight: bold; font-size: 12px;">Documentos del proyecto por componente</legend>
+                    <legend style="font-weight: bold; font-size: 12px;">Documentos del proyecto por componente
+                        @if($tieneComponentes)
+                            <span style="font-weight:normal;font-size:10px;color:#666;"> ({{ $componentes_disp->count() }} componente(s))</span>
+                        @endif
+                    </legend>
+
+                    @if($tieneComponentes)
                     <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 12px;">
                         @foreach($componentes_disp as $comp)
                             @php
                                 $docActual = $archivos_actuales[$comp->id] ?? null;
+                                $acceptStr = $comp->accept ?? '.pdf';
+                                $maxMb = $comp->tamano_maximo_mb ?? 10;
+                                $maxKb = $maxMb * 1024;
                             @endphp
                             <tr>
-                                <td width="25%" valign="middle"><b>{{ $comp->nombre }}</b>
+                                <td width="25%" valign="middle">
+                                    <b>{{ $comp->nombre }}</b>
                                     @if($comp->es_obligatorio)<span class="obligatorio">*</span>@endif
+                                    <br><span style="font-size:9px;color:#666;">{{ strtoupper($comp->tipo_archivo ?? 'PDF') }} &middot; M&aacute;x {{ $maxMb }}MB</span>
                                 </td>
                                 <td width="45%">
-                                    <input type="file" wire:model="archivosComponente.{{ $comp->id }}" accept=".pdf,application/pdf" style="width: 100%;">
+                                    <input type="file" wire:model="archivosComponente.{{ $comp->id }}" accept="{{ $acceptStr }}" style="width: 100%;">
                                     @error('archivosComponente.' . $comp->id)
                                         <br><span class="obligatorio">{{ $message }}</span>
                                     @enderror
@@ -592,15 +595,26 @@
                                     @if($docActual)
                                         <a href="{{ route('documentos.serve', ['path' => $docActual['path']]) }}" target="_blank"
                                             style="color:#0000EE; font-size:11px; font-weight:bold;">[VER {{ $comp->nombre }}]</a>
+
                                     @else
-                                        <span style="color:#999; font-size:10px;">Sin documento</span>
+                                        <div style="display:flex;flex-direction:column;gap:2px;">
+                                            <span style="color:#999; font-size:10px;">Sin documento</span>
+                                            <span style="font-size:9px;color:#bbb;">({{ $comp->tipo_archivo ?? 'pdf' }} &middot; max {{ $maxMb }}MB)</span>
+                                        </div>
                                     @endif
                                 </td>
                             </tr>
                         @endforeach
                     </table>
+                    @else
+                        <div style="padding: 12px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 4px; font-size: 11px; color: #6d4c00;">
+                            <b>⚠ No hay componentes configurados para este programa.</b><br>
+                            Un administrador debe ir a <b>Configuración &gt; Componentes</b> y crear los
+                            componentes documentales (ej. "Informe Final", "Plan de Trabajo", etc.)
+                            asociados al programa correspondiente.
+                        </div>
+                    @endif
                 </fieldset>
-                @endif
 
                 {{-- == SECCIÓN CLASIFICACIÓN == --}}
                 <div style="margin-bottom: 15px; border: 1px solid #CCC; border-radius: 4px; padding: 10px;">

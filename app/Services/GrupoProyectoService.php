@@ -2,10 +2,9 @@
 
 namespace App\Services;
 
-use App\Helpers\DualDatabase;
+use App\Repositories\GrupoProyectoRepository;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Cache;
 use App\Models\GrupoProyectoModulo;
 
 /**
@@ -19,22 +18,17 @@ class GrupoProyectoService
 
     public function __construct(
         protected IntranetEquipoSeccionService $equipos,
+        protected GrupoProyectoRepository $repo,
     ) {}
 
     public function tablaDisponible(): bool
     {
-        return \Illuminate\Support\Facades\Cache::remember('grp_tabla_disponible', 3600, function () {
-            try {
-                return Schema::connection($this->conexionRepositorio())->hasTable('grupo_proyecto_modulo');
-            } catch (\Throwable) {
-                return false;
-            }
-        });
+        return $this->repo->tablaDisponible();
     }
 
     public function conexionRepositorio(): string
     {
-        return (string) config('dual_database.repositorio_connection', 'pgsql');
+        return $this->repo->conexionRepositorio();
     }
 
     public function usaGruposIntranet(): bool
@@ -116,18 +110,16 @@ class GrupoProyectoService
             'updated_at' => now(),
         ];
 
-        $idCol = $this->columnaId();
-
-        \Illuminate\Support\Facades\Cache::put('grp_cache_version', time(), now()->addDays(1));
+        $this->repo->invalidarCache();
 
         if ($grpCodigo) {
-            GrupoProyectoModulo::where($idCol, $grpCodigo)->update($payload);
+            $this->repo->update($grpCodigo, $payload);
 
             return $this->construirClave($grpCodigo);
         }
 
         $payload['created_at'] = now();
-        $id = (int) (new GrupoProyectoModulo)->insertGetId($payload, $idCol);
+        $id = $this->repo->create($payload);
 
         return $this->construirClave($id);
     }
@@ -148,7 +140,8 @@ class GrupoProyectoService
             return null;
         }
 
-        $row = GrupoProyectoModulo::where($this->columnaId(), $grpCodigo)->first();
+        $idCol = $this->repo->columnaId();
+        $row = GrupoProyectoModulo::where($idCol, $grpCodigo)->first();
 
         return $row ? $this->enriquecerEtiquetasAcademicas($this->mapearFila($row)) : null;
     }
@@ -163,51 +156,12 @@ class GrupoProyectoService
             return collect();
         }
 
-        $version = \Illuminate\Support\Facades\Cache::get('grp_cache_version') ?? 1;
-        $cacheKey = 'grp_listar_' . $version . '_' . md5(json_encode($filtros));
+        $cacheEtiquetas = [];
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(2), function () use ($filtros) {
-            $query = GrupoProyectoModulo::query()
-                ->select(['grp_codigo', 'grp_nombre', 'grp_contexto', 'grp_com_codigo', 'grp_creador_cedula', 'grp_miembros']);
-
-            if (!empty($filtros['lapso'])) {
-                $query->whereRaw('CAST(grp_contexto AS jsonb)->>\'lap_codigo\' = ?', [(string) $filtros['lapso']]);
-            }
-            if (!empty($filtros['programa'])) {
-                $query->whereRaw('CAST(grp_contexto AS jsonb)->>\'pro_codigo\' = ?', [(string) $filtros['programa']]);
-            }
-            if (!empty($filtros['seccion'])) {
-                if (is_array($filtros['seccion'])) {
-                    $query->where(function ($q) use ($filtros) {
-                        foreach ($filtros['seccion'] as $sec) {
-                            $q->orWhereRaw('CAST(grp_contexto AS jsonb)->>\'sec_codigo\' = ?', [(string) $sec]);
-                        }
-                    });
-                } else {
-                    $query->whereRaw('CAST(grp_contexto AS jsonb)->>\'sec_codigo\' = ?', [(string) $filtros['seccion']]);
-                }
-            }
-            if (!empty($filtros['trayecto'])) {
-                $query->whereRaw('CAST(grp_contexto AS jsonb)->>\'tra_codigo\' = ?', [(string) $filtros['trayecto']]);
-            }
-            if (!empty($filtros['equipo'])) {
-                $query->whereJsonContains('grp_miembros', ['cedula' => $filtros['equipo']]);
-            }
-            if (!empty($filtros['busqueda'])) {
-                $term = '%' . mb_strtolower(trim((string) $filtros['busqueda'])) . '%';
-                $query->whereRaw('LOWER(grp_nombre) LIKE ?', [$term]);
-            }
-
-            $cacheEtiquetas = [];
-
-            return $query->orderByDesc($this->columnaId())
-                ->get()
-                ->map(fn ($r) => $this->enriquecerEtiquetasAcademicas($this->mapearFila($r), $cacheEtiquetas))
-                ->values();
-        });
+        return $this->repo->listar($filtros)
+            ->map(fn ($r) => $this->enriquecerEtiquetasAcademicas($this->mapearFila($r), $cacheEtiquetas))
+            ->values();
     }
-
-
 
     /**
      * Grupos registrados en repositorio (para listados del módulo).
@@ -226,11 +180,8 @@ class GrupoProyectoService
             return;
         }
 
-        \Illuminate\Support\Facades\Cache::put('grp_cache_version', time(), now()->addDays(1));
-
-        DualDatabase::repositorioTable('grupo_proyecto_modulo')
-            ->where($this->columnaId(), $grpCodigo)
-            ->delete();
+        $this->repo->invalidarCache();
+        $this->repo->delete($grpCodigo);
     }
 
     /**
@@ -372,15 +323,9 @@ class GrupoProyectoService
         ];
     }
 
-    protected function columnaId(): string
+    public function columnaId(): string
     {
-        return \Illuminate\Support\Facades\Cache::remember('grp_columna_id', 3600, function () {
-            $conn = $this->conexionRepositorio();
-
-            return Schema::connection($conn)->hasColumn('grupo_proyecto_modulo', 'grp_codigo')
-                ? 'grp_codigo'
-                : 'gpb_codigo';
-        });
+        return $this->repo->columnaId();
     }
 
     /**
@@ -642,7 +587,7 @@ class GrupoProyectoService
 
         $model = GrupoProyectoModulo::find($grupo->grp_codigo);
         if ($model) {
-            $model->update(['grp_miembros' => $miembros]);
+            $this->repo->updateMiembros($model->id, $miembros);
         }
     }
 }

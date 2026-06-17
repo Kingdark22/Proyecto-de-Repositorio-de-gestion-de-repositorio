@@ -55,7 +55,6 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'active.role'])->group(function () {
     Route::view('/dashboard', 'dashboard')->name('dashboard');
-    Route::view('/configuracion', 'configuracion.index')->name('configuracion');
 
     Route::middleware('role:administrador,coordinador,gestionador')->group(function () {
         Route::view('/lineas-investigacion', 'lineas.index')->name('lineas-investigacion');
@@ -71,6 +70,9 @@ Route::middleware(['auth', 'active.role'])->group(function () {
     Route::middleware('role:administrador,coordinador,profesor proyecto,gestionador,estudiante')->group(function () {
         Route::view('/proyectos', 'proyectos.index')->name('proyectos.index');
         Route::view('/comunidades', 'comunidades.index')->name('comunidades.index');
+    });
+
+    Route::middleware('role:administrador,coordinador,profesor proyecto,gestionador')->group(function () {
         Route::view('/grupos-proyecto', 'grupos_proyecto.index')->name('grupos-proyecto.index');
     });
 
