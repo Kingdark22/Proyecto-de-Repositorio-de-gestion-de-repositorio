@@ -56,13 +56,6 @@
     <h2 class="titulo" style="margin-bottom: 20px; font-weight: bolder; margin-top: 10px;">Gestión de Tipos de
         Investigación</h2>
 
-    @if (session()->has('message'))
-        <div
-            style="background-color: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border: 1px solid #c3e6cb; border-radius: 4px; font-weight: bold; text-align: center;">
-            {{ session('message') }}
-        </div>
-    @endif
-
     @if ($viewMode === 'list')
         <div style="margin-bottom: 15px; display: flex; align-items: center;">
             <div>
@@ -150,7 +143,7 @@
                             <input wire:model="nombre" type="text" style="width: 90%;">
                             <span class="obligatorio">*</span>
                             @error('nombre')
-                                <br><span class="obligatorio" style="font-size: 11px;">{{ $message }}</span>
+                                <br><span class="validation-error">{{ $message }}</span>
                             @enderror
                         </td>
                     </tr>
@@ -160,7 +153,7 @@
                             <textarea wire:model="descripcion" rows="4" style="width: 90%;"></textarea>
                             <span class="obligatorio">*</span>
                             @error('descripcion')
-                                <br><span class="obligatorio" style="font-size: 11px;">{{ $message }}</span>
+                                <br><span class="validation-error">{{ $message }}</span>
                             @enderror
                         </td>
                     </tr>

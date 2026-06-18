@@ -27,8 +27,9 @@
             </table>
 
             @if($error)
-                <div style="color: red; font-weight: bold; margin-bottom: 20px;">
-                    {{ $error }}
+                <div style="background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #dc2626; color: #991b1b; padding: 12px 16px; margin-bottom: 20px; border-radius: 6px; font-size: 13px; font-weight: 600; text-align: center; box-shadow: 0 2px 8px rgba(220,38,38,0.08); display: flex; align-items: center; justify-content: center; gap: 10px; max-width: 380px; margin-left: auto; margin-right: auto;">
+                    <span style="font-size: 18px;">✘</span>
+                    <span>{{ $error }}</span>
                 </div>
             @endif
 

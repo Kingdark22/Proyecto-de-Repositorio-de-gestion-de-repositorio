@@ -61,7 +61,9 @@ class ComunidadRepository
 
     public function municipiosPorEstado(int $estadoId): Collection
     {
-        return Municipio::where('est_codigo', $estadoId)->orderBy('mun_nombre')->get();
+        return Cache::remember('comunidad_municipios_estado_' . $estadoId, 86400, fn() =>
+            Municipio::where('est_codigo', $estadoId)->orderBy('mun_nombre')->get()
+        );
     }
 
     public function guardar(array $payload, ?int $id = null): Comunidad

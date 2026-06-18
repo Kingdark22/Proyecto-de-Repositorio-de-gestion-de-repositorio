@@ -45,8 +45,7 @@ class IntranetSimulationMirrorService
     public function shouldMirrorFromIntranet(): bool
     {
         return $this->enabled()
-            && DbHelper::connection() === 'intranet'
-            && DbHelper::isUsingIntranet();
+            && DbHelper::intranetAvailable();
     }
 
     /**
@@ -133,6 +132,17 @@ class IntranetSimulationMirrorService
         $sim = $this->simulationConnection();
         $cedula = trim($cedula);
         
+        // Verificar si la columna usu_cod_rol existe en simulación (puede que no, como en simulacion_sogac)
+        try {
+            $simColumns = Schema::connection($sim)->getColumnListing('usuario');
+            if (! in_array('usu_cod_rol', $simColumns, true)) {
+                return; // La columna no existe en simulación, no se puede actualizar
+            }
+        } catch (\Throwable $e) {
+            Log::warning("No se pudo verificar columnas de usuario en simulación: {$e->getMessage()}");
+            return;
+        }
+
         // Mapeo inverso slug -> código (basado en config/roles.php)
         $map = array_flip(config('roles.usu_cod_rol_map', []));
         $codRol = $map[$roleSlug] ?? null;
@@ -252,7 +262,8 @@ class IntranetSimulationMirrorService
     }
 
     /**
-     * Espeja una tabla completa desde intranet a simulación con optimización de tiempo.
+     * Espeja una tabla completa desde intranet a simulación.
+     * Usa chunking para tablas grandes para evitar saturar la memoria.
      */
     public function mirrorTable(string $table): int
     {
@@ -261,15 +272,27 @@ class IntranetSimulationMirrorService
         }
 
         try {
-            // Aumentar tiempo de ejecución para procesos largos de espejo
             if (!ini_get('safe_mode')) {
-                set_time_limit(300); 
+                set_time_limit(300);
             }
 
-            // Si la tabla es muy grande, podríamos paginarla, pero por ahora traemos lo básico
-            $rows = DB::connection('intranet')->table($table)->get();
+            $pk = $this->primaryKey($table);
+            $total = 0;
 
-            return $this->mirrorRows($table, $rows);
+            // Usar chunkById para tablas con PK definida, así evitamos cargar todo en memoria
+            if ($pk) {
+                DB::connection('intranet')->table($table)
+                    ->orderBy($pk)
+                    ->chunkById(500, function ($rows) use ($table, &$total) {
+                        $total += $this->mirrorRows($table, $rows);
+                    }, $pk);
+            } else {
+                // Fallback: sin PK conocida, traer todo (tablas pequeñas)
+                $rows = DB::connection('intranet')->table($table)->get();
+                $total = $this->mirrorRows($table, $rows);
+            }
+
+            return $total;
         } catch (\Throwable $e) {
             Log::warning("Espejo de tabla {$table} falló: {$e->getMessage()}");
             return 0;

@@ -30,6 +30,19 @@ class NavigationMenu
             return $this->emptyFlags();
         }
 
+        try {
+            return $this->buildFlags($user);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Error building nav flags: ' . $e->getMessage());
+            return $this->emptyFlags();
+        }
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    protected function buildFlags(User $user): array
+    {
         $cacheKey = $user->usu_cedula . '_' . session($this->roles->sessionKey(), 'none');
 
         if (isset($this->cache[$cacheKey])) {
@@ -37,26 +50,35 @@ class NavigationMenu
         }
 
         $sessionKey = 'nav_flags_' . $cacheKey;
-        $cached = Cache::get($sessionKey);
-        if ($cached !== null) {
-            $this->cache[$cacheKey] = $cached;
-            return $cached;
+        try {
+            $cached = Cache::get($sessionKey);
+            if ($cached !== null) {
+                $this->cache[$cacheKey] = $cached;
+                return $cached;
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('NavFlags cache read error: ' . $e->getMessage());
         }
 
         $activeRole = $this->roles->getActiveRole($user);
         $isStudent = $activeRole === 'estudiante';
 
-        $pendingUpdatesCount = app(NotificacionService::class)->contarPendientes($user);
+        $pendingUpdatesCount = 0;
+        try {
+            $pendingUpdatesCount = app(NotificacionService::class)->contarPendientes($user);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('NavFlags notificaciones error: ' . $e->getMessage());
+        }
 
         $flags = [
             'isAdmin'              => $activeRole === 'administrador',
             'isCoordinator'        => $activeRole === 'coordinador',
             'isTeacher'            => $activeRole === 'profesor proyecto',
+            'isDocente'            => $activeRole === 'docente',
             'isStudent'            => $isStudent,
             'isGestionador'        => $activeRole === 'gestionador',
             'canViewAcademic'      => false,
             'canViewComunes'       => false,
-            'canViewGruposProyecto'=> false,
             'canManageCatalogs'    => false,
             'canManageComponents'  => false,
             'canValidateProjects'  => false,
@@ -71,7 +93,6 @@ class NavigationMenu
                 case 'administrador':
                     $flags['canViewAcademic'] = true;
                     $flags['canViewComunes'] = true;
-                    $flags['canViewGruposProyecto'] = true;
                     $flags['canManageCatalogs'] = true;
                     $flags['canManageComponents'] = true;
                     $flags['canManageSystemConfig'] = true;
@@ -81,7 +102,6 @@ class NavigationMenu
                 case 'coordinador':
                     $flags['canViewAcademic'] = true;
                     $flags['canViewComunes'] = true;
-                    $flags['canViewGruposProyecto'] = true;
                     $flags['canManageCatalogs'] = true;
                     $flags['canManageComponents'] = true;
                     $flags['canManageSystemConfig'] = true;
@@ -90,7 +110,11 @@ class NavigationMenu
                 case 'profesor proyecto':
                     $flags['canViewAcademic'] = true;
                     $flags['canViewComunes'] = true;
-                    $flags['canViewGruposProyecto'] = true;
+                    break;
+
+                case 'docente':
+                    $flags['canViewAcademic'] = true;
+                    $flags['canViewComunes'] = true;
                     break;
 
                 case 'estudiante':
@@ -104,7 +128,6 @@ class NavigationMenu
                 case 'gestionador':
                     $flags['canViewAcademic'] = true;
                     $flags['canViewComunes'] = true;
-                    $flags['canViewGruposProyecto'] = true;
                     $flags['canManageCatalogs'] = true;
                     $flags['canManageComponents'] = true;
                     $flags['canManageSystemConfig'] = true;
@@ -115,12 +138,25 @@ class NavigationMenu
         }
 
         // canValidateProjects y canRegisterProject usan servicios especializados
-        $flags['canValidateProjects'] = app(ProyectoGestionService::class)->usuarioPuedeValidar($user);
+        try {
+            $flags['canValidateProjects'] = app(ProyectoGestionService::class)->usuarioPuedeValidar($user);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('NavFlags canValidateProjects error: ' . $e->getMessage());
+            $flags['canValidateProjects'] = false;
+        }
         if ($flags['canRegisterProject'] === false) {
-            $flags['canRegisterProject'] = $user->puedeRegistrarProyecto();
+            try {
+                $flags['canRegisterProject'] = $user->puedeRegistrarProyecto();
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('NavFlags canRegisterProject error: ' . $e->getMessage());
+            }
         }
 
-        Cache::put($sessionKey, $flags, now()->addSeconds(self::CACHE_TTL));
+        try {
+            Cache::put($sessionKey, $flags, now()->addSeconds(self::CACHE_TTL));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('NavFlags cache write error: ' . $e->getMessage());
+        }
 
         $this->cache[$cacheKey] = $flags;
 
@@ -136,8 +172,9 @@ class NavigationMenu
             'isAdmin', 'isCoordinator', 'isTeacher', 'isStudent', 'isGestionador',
             'canViewAcademic', 'canViewComunes', 'canManageCatalogs',
             'canManageComponents', 'canValidateProjects', 'canRegisterProject',
-            'canManageSystemConfig', 'canManageCoordinators',
+            'canManageSystemConfig',
             'canViewPublicaciones',
+            'pendingUpdatesCount' => 0,
         ], false);
     }
 }

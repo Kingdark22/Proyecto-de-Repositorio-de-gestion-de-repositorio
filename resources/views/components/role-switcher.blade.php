@@ -74,23 +74,6 @@
 </style>
 
 <div style="font-family: Verdana, Arial, sans-serif;">
-    @if (session()->has('message'))
-        <div style="background: #d4edda; color: #155724; padding: 10px; margin-bottom: 12px; border: 1px solid #c3e6cb; text-align: center; max-width: 520px; margin-left: auto; margin-right: auto;">
-            {{ session('message') }}
-        </div>
-    @endif
-
-    @if (session()->has('message_error'))
-        <div style="background: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 12px; border: 1px solid #f5c6cb; text-align: center; max-width: 520px; margin-left: auto; margin-right: auto;">
-            {{ session('message_error') }}
-        </div>
-    @endif
-
-    @if (session()->has('error'))
-        <div style="background: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 12px; border: 1px solid #f5c6cb; text-align: center; max-width: 520px; margin-left: auto; margin-right: auto;">
-            {{ session('error') }}
-        </div>
-    @endif
 
     <div class="rol-ventana">
         <div class="rol-ventana-titulo">Simular acceso por rol</div>

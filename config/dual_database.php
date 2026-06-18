@@ -31,6 +31,10 @@ return [
         'rol',
         'grupo_proyecto_estudiante',
         'grupo_proyecto',
+        'rol',
+        'estado',
+        'municipio',
+        'parroquia',
     ],
 
     /*

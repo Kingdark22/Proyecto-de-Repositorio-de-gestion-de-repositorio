@@ -18,78 +18,60 @@ class DbHelper
 
     protected static ?int $intranetPort = null;
 
-    protected const CACHE_TTL = 10;
+    protected const CACHE_TTL = 60;
 
     protected const CACHE_KEY = 'dbhelper_intranet_available';
 
     /**
-     * Retorna el nombre de la conexión activa. Si la intranet está caída, retorna 'simulacion' como fallback.
+     * Conexión por defecto para TODAS las LECTURAS.
+     *
+     * Ahora retorna SIEMPRE 'simulacion' como predeterminado.
+     * La intranet SOLO se usa para espejar datos en segundo plano (mirroring),
+     * NUNCA para lecturas en línea. Esto elimina la oscilación entre conexiones
+     * cuando el internet es lento o intermitente.
      */
-    public static function connection()
+    public static function connection(): string
     {
         if (self::$resolved && self::$connectionName !== null) {
             return self::$connectionName;
         }
 
-        if (!self::intranetAlcanzable()) {
-            self::$connectionName = 'simulacion';
-            self::$usingIntranet = false;
-            self::$resolved = true;
-            Cache::forget(self::CACHE_KEY);
-            return self::$connectionName;
-        }
-
-        $cached = Cache::get(self::CACHE_KEY);
-        if ($cached === 'intranet') {
-            // Verificacion rapida con socket antes de confiar en cache
-            if (!self::intranetAlcanzable()) {
-                Cache::forget(self::CACHE_KEY);
-                self::$connectionName = 'simulacion';
-                self::$usingIntranet = false;
-                self::$resolved = true;
-                return self::$connectionName;
-            }
-            self::$connectionName = 'intranet';
-            self::$usingIntranet = true;
-            self::$resolved = true;
-            return self::$connectionName;
-        }
-
-        try {
-            $pdo = DB::connection('intranet')->getPdo();
-            $pdo->query('SELECT 1')->fetch();
-            self::$connectionName = 'intranet';
-            self::$usingIntranet = true;
-            Cache::put(self::CACHE_KEY, 'intranet', now()->addSeconds(self::CACHE_TTL));
-            try {
-                $pdo->exec('SET statement_timeout = 1000');
-            } catch (\Exception $e) {
-                Log::warning('No se pudo ajustar statement_timeout (no crítico): ' . $e->getMessage());
-            }
-        } catch (\Exception $e) {
-            Log::warning('Intranet no disponible (PDO/query): ' . $e->getMessage());
-            self::$connectionName = 'simulacion';
-            self::$usingIntranet = false;
-            Cache::forget(self::CACHE_KEY);
-        }
-
+        self::$connectionName = 'simulacion';
+        self::$usingIntranet = self::intranetAlcanzable();
         self::$resolved = true;
 
         return self::$connectionName;
     }
 
     /**
+     * Verifica si la intranet está disponible para MIRRORING (copia de datos en segundo plano).
+     * NO afecta las lecturas del sistema — esas siempre van a 'simulacion'.
+     */
+    public static function intranetAvailable(): bool
+    {
+        return self::intranetAlcanzable();
+    }
+
+    /**
+     * Retorna true si la intranet está alcanzable. Se usa para decidir
+     * si se debe ejecutar mirroring (copia de datos intranet → simulación).
+     */
+    public static function isUsingIntranet(): bool
+    {
+        return self::intranetAlcanzable();
+    }
+
+    /**
      * Verifica si un error de base de datos es por timeout/caída de intranet.
-     * Si es así, resetea el cache para que la siguiente petición pruebe simulación.
+     * Ya no cambia la conexión de lectura (siempre es 'simulacion'),
+     * solo limpia el cache de disponibilidad.
      */
     public static function handleQueryError(\Exception $e): void
     {
         $msg = $e->getMessage();
-        if (str_contains($msg, 'timeout expired') || str_contains($msg, '08006') || str_contains($msg, 'could not connect') || str_contains($msg, 'connection refused') || str_contains($msg, '08001')) {
-            if (self::$usingIntranet || Cache::get(self::CACHE_KEY) === 'intranet') {
-                Log::warning('Intranet query falló, cambiando a simulación: ' . $msg);
-                self::reset();
-            }
+        if (str_contains($msg, 'timeout expired') || str_contains($msg, '08006') || str_contains($msg, 'could not connect')) {
+            Log::warning('Error de conexión a intranet detectado: ' . $msg);
+            // Ya no se resetea la conexión — siempre usamos simulación para lecturas
         }
     }
 
@@ -107,32 +89,28 @@ class DbHelper
             return false;
         }
 
-        $errno = null;
-        $errstr = '';
-        $fp = @fsockopen(self::$intranetHost, self::$intranetPort, $errno, $errstr, 0.3);
+        try {
+            $errno = null;
+            $errstr = '';
+            $fp = @fsockopen(self::$intranetHost, self::$intranetPort, $errno, $errstr, 0.3);
 
-        if ($fp) {
-            fclose($fp);
-            return true;
+            if ($fp) {
+                fclose($fp);
+                return true;
+            }
+        } catch (\Throwable) {
+            // Silently fail - intranet not reachable
         }
 
         return false;
-    }
-
-    public static function isUsingIntranet(): bool
-    {
-        self::connection();
-
-        return self::$usingIntranet;
     }
 
     public static function reset(): void
     {
         self::$connectionName = null;
         self::$resolved = false;
-        self::$usingIntranet = false;
         self::$intranetHost = null;
         self::$intranetPort = null;
-        Cache::forget(self::CACHE_KEY);
     }
 }
+
