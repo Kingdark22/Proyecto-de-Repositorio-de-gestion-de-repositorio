@@ -33,6 +33,8 @@ $notificacionesCount = count($notificacionesList);
                     @if ($nav['canViewComunes'])
                     <a href="{{ route('comunidades.index') }}"
                         class="{{ request()->routeIs('comunidades.index') ? 'active-sub' : '' }}">Comunidades</a>
+                    @endif
+                    @if ($nav['canViewGruposProyecto'])
                     <a href="{{ route('grupos-proyecto.index') }}"
                         class="{{ request()->routeIs('grupos-proyecto.index') ? 'active-sub' : '' }}">Equipos de
                         proyecto</a>
@@ -50,8 +52,6 @@ $notificacionesCount = count($notificacionesList);
                     <a href="{{ route('tipos-publicacion') }}"
                         class="{{ request()->routeIs('tipos-publicacion') ? 'active-sub' : '' }}">Tipos de
                         publicación</a>
-                    <a href="{{ route('objetivos.index') }}"
-                        class="{{ request()->routeIs('objetivos.index') ? 'active-sub' : '' }}">Objetivos</a>
                     <a href="{{ route('objetivos-investigacion') }}"
                         class="{{ request()->routeIs('objetivos-investigacion') ? 'active-sub' : '' }}">Objetivos de
                         investigación</a>
@@ -75,7 +75,7 @@ $notificacionesCount = count($notificacionesList);
                         class="{{ request()->routeIs('proyectos.buscar') ? 'active-sub' : '' }}">Explorar proyectos</a>
                     @if ($nav['canRegisterProject'] || $nav['canValidateProjects'])
                     <a href="{{ route('proyectos.gestion') }}"
-                        class="{{ request()->routeIs('proyectos.gestion', 'proyectos.crear', 'validaciones.index') ? 'active-sub' : '' }}">Cargar
+                        class="{{ request()->routeIs('proyectos.gestion', 'proyectos.crear', 'validaciones.index') ? 'active-sub' : '' }}">Deposito
                         proyecto</a>
                     @endif
                 </div>
@@ -113,30 +113,25 @@ $notificacionesCount = count($notificacionesList);
             @if ($nav['canViewPublicaciones'] ?? false)
             <li>
                 <div class="legacy-menu-item has-submenu">
-                    Publicaciones de proyectos
+                    Publicaciones
                     <div class="arrow-icon"></div>
                 </div>
                 <div class="legacy-submenu">
                     <a href="{{ route('publicaciones.index') }}"
                         class="{{ request()->routeIs('publicaciones.index') ? 'active-sub' : '' }}">
-                        Proyectos subidos
+                        Proyectos Publicados
                     </a>
                     <a href="{{ route('publicaciones.publico') }}"
                         class="{{ request()->routeIs('publicaciones.publico') ? 'active-sub' : '' }}">
-                        Vista Pública
+                        Vista P&uacute;blica
                     </a>
                 </div>
             </li>
             @endif
 
             <li>
-                <div class="legacy-menu-item has-submenu">
+                <div class="legacy-menu-item" style="padding: 6px 12px;">
                     Mi cuenta
-                    <div class="arrow-icon"></div>
-                </div>
-                <div class="legacy-submenu">
-                    <a href="{{ route('configuracion') }}"
-                        class="{{ request()->routeIs('configuracion') ? 'active-sub' : '' }}">Perfil</a>
                 </div>
             </li>
 
