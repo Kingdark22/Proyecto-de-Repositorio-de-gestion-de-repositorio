@@ -19,17 +19,37 @@ class EnsureActiveRole
 
         $roleService = app(UserRoleService::class);
 
+        // Si es una petición AJAX/Livewire, nunca redirigir (rompe la UI)
+        $isAjax = $request->ajax() || $request->wantsJson();
+
         // Intentar obtener el rol activo — ahora con restauración desde cache persistente
-        $activeRole = $roleService->getActiveRole($user);
+        try {
+            $activeRole = $roleService->getActiveRole($user);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('EnsureActiveRole: error obteniendo rol activo: ' . $e->getMessage());
+            if ($isAjax) {
+                return $next($request);
+            }
+            return redirect()->route('acceso-rol.index');
+        }
 
         if ($activeRole !== null) {
-            if (! $roleService->rolActivoSigueSiendoValido($user)) {
-                $roleService->clearActiveRole();
-                $roleService->clearPersistedActiveRole($user);
+            try {
+                if (! $roleService->rolActivoSigueSiendoValido($user)) {
+                    $roleService->clearActiveRole();
+                    $roleService->clearPersistedActiveRole($user);
 
-                return redirect()
-                    ->route('acceso-rol.index')
-                    ->with('message_error', 'Su rol en sesión ya no es válido (revise inscripción o asignación docente en intranet).');
+                    if ($isAjax) {
+                        return $next($request);
+                    }
+
+                    return redirect()
+                        ->route('acceso-rol.index')
+                        ->with('message_error', 'Su rol en sesión ya no es válido (revise inscripción o asignación docente en intranet).');
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('EnsureActiveRole: error validando rol: ' . $e->getMessage());
+                // Si falla la validación, permitir continuar con el rol actual
             }
 
             return $next($request);
@@ -39,27 +59,47 @@ class EnsureActiveRole
         if ($roleService->allowsFreeSessionRoles()) {
             // Con free session roles, permitir acceso a la pantalla de selección de rol
             // pero no redirigir si es una petición AJAX (Livewire) para evitar UI rota
-            if ($request->ajax() || $request->wantsJson()) {
+            if ($isAjax) {
+                return $next($request);
+            }
+
+            // Evitar redirect loop: si ya estamos en acceso-rol, no redirigir
+            if ($request->routeIs('acceso-rol.index')) {
                 return $next($request);
             }
 
             return redirect()->route('acceso-rol.index');
         }
 
-        $available = $roleService->detectAvailableRoles($user);
+        try {
+            $available = $roleService->detectAvailableRoles($user);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('EnsureActiveRole: error detectando roles: ' . $e->getMessage());
+            if ($isAjax) {
+                return $next($request);
+            }
+            return redirect()->route('acceso-rol.index');
+        }
 
         if ($available === []) {
             return $next($request);
         }
 
         if (count($available) === 1) {
-            $roleService->setActiveRole($user, array_key_first($available));
-
+            try {
+                $roleService->setActiveRole($user, array_key_first($available));
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('EnsureActiveRole: error asignando rol: ' . $e->getMessage());
+            }
             return $next($request);
         }
 
         // Múltiples roles disponibles — redirigir a selección (excepto AJAX)
-        if ($request->ajax() || $request->wantsJson()) {
+        if ($isAjax) {
+            return $next($request);
+        }
+
+        if ($request->routeIs('acceso-rol.index')) {
             return $next($request);
         }
 

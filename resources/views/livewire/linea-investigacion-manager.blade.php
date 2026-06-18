@@ -56,13 +56,6 @@
     <h2 class="titulo" style="margin-bottom: 20px; font-weight: bolder; margin-top: 10px;">Gestión de Líneas de
         Investigación</h2>
 
-    @if (session()->has('message'))
-        <div
-            style="background-color: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border: 1px solid #c3e6cb; border-radius: 4px; font-weight: bold; text-align: center;">
-            {{ session('message') }}
-        </div>
-    @endif
-
     @if ($viewMode === 'list')
         <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
             <div>
@@ -155,7 +148,7 @@
                             <input wire:model="nombre_investigacion" type="text" style="width: 90%;">
                             <span class="obligatorio">*</span>
                             @error('nombre_investigacion')
-                                <br><span class="obligatorio" style="font-size: 11px;">{{ $message }}</span>
+                                <br><span class="validation-error">{{ $message }}</span>
                             @enderror
                         </td>
                     </tr>
@@ -165,7 +158,7 @@
                             <input wire:model="area_de_investigacion" type="text" style="width: 90%;">
                             <span class="obligatorio">*</span>
                             @error('area_de_investigacion')
-                                <br><span class="obligatorio" style="font-size: 11px;">{{ $message }}</span>
+                                <br><span class="validation-error">{{ $message }}</span>
                             @enderror
                         </td>
                     </tr>
@@ -181,7 +174,7 @@
                             </select>
                             <span class="obligatorio">*</span>
                             @error('programa_id')
-                                <br><span class="obligatorio" style="font-size: 11px;">{{ $message }}</span>
+                                <br><span class="validation-error">{{ $message }}</span>
                             @enderror
                         </td>
                     </tr>
@@ -191,7 +184,7 @@
                             <textarea wire:model="descripcion" rows="3" style="width: 90%;"></textarea>
                             <span class="obligatorio">*</span>
                             @error('descripcion')
-                                <br><span class="obligatorio" style="font-size: 11px;">{{ $message }}</span>
+                                <br><span class="validation-error">{{ $message }}</span>
                             @enderror
                         </td>
                     </tr>

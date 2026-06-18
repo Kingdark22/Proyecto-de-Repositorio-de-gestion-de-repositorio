@@ -331,7 +331,7 @@
             </div>
             <textarea wire:model="motivo_rechazo" rows="6" style="width: 100%; max-width: 600px; padding: 5px;"></textarea>
             @error('motivo_rechazo')
-                <div class="obligatorio" style="font-size: 11px; margin-top: 5px;">{{ $message }}</div>
+                <div class="validation-error">{{ $message }}</div>
             @enderror
             <div style="margin-top: 20px;">
                 <button type="button" wire:click="irAListado()" class="pgm-btn-cancel" style="margin-right: 10px;">Cancelar</button>
@@ -418,7 +418,7 @@
                                     {{ $titulo ?: '(seleccione un equipo para auto-llenar el t&iacute;tulo)' }}
                                 </div>
                                 @error('titulo')
-                                    <span class="obligatorio" style="font-size: 11px;">{{ $message }}</span>
+                                    <span class="validation-error">{{ $message }}</span>
                                 @enderror
                             </td>
                         </tr>
@@ -427,7 +427,7 @@
                             <td colspan="3">
                                 <textarea wire:model="resumen" rows="3" style="width: 95%;"></textarea><span class="obligatorio">*</span>
                                 @error('resumen')
-                                    <br><span class="obligatorio" style="font-size: 11px;">{{ $message }}</span>
+                                    <br><span class="validation-error">{{ $message }}</span>
                                 @enderror
                             </td>
                         </tr>
@@ -439,6 +439,7 @@
                                 @enderror
                             </td>
                         </tr>
+
                     </table>
                 </fieldset>
 
@@ -667,6 +668,18 @@
                                     <br><span class="obligatorio">{{ $message }}</span>
                                 @enderror
                             </td>
+                            <td><b>Objetivo:</b></td>
+                            <td>
+                                <select wire:model="objetivo_id" style="width: 100%;">
+                                    <option value="">Seleccione...</option>
+                                    @foreach ($objetivos ?? [] as $obj)
+                                        <option value="{{ $obj->id }}">{{ $obj->nombre }}</option>
+                                    @endforeach
+                                </select>
+                                @error('objetivo_id')
+                                    <br><span class="obligatorio">{{ $message }}</span>
+                                @enderror
+                            </td>
                             <td><b>Tipo de Investigaci&oacute;n:</b></td>
                             <td>
                                 <div style="display: flex; gap: 4px; align-items: center;">
@@ -744,7 +757,7 @@
                                     <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
                                     <td><input wire:model="modalLineaNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
                                 </tr>
-                                @error('modalLineaNombre') <tr><td></td><td style="color:#dc3545;font-size:11px;">⚠ {{ $message }}</td></tr> @enderror
+                                @error('modalLineaNombre') <tr><td></td><td class="validation-error">⚠ {{ $message }}</td></tr> @enderror
                                 <tr>
                                     <td valign="top"><b>Descripción:</b></td>
                                     <td><textarea wire:model="modalLineaDescripcion" rows="2" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></textarea></td>
@@ -804,7 +817,7 @@
                                     <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
                                     <td><input wire:model="modalMetodologiaNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
                                 </tr>
-                                @error('modalMetodologiaNombre') <tr><td></td><td style="color:#dc3545;font-size:11px;">⚠ {{ $message }}</td></tr> @enderror
+                                @error('modalMetodologiaNombre') <tr><td></td><td class="validation-error">⚠ {{ $message }}</td></tr> @enderror
                                 <tr>
                                     <td valign="top"><b>Descripción:</b></td>
                                     <td><textarea wire:model="modalMetodologiaDescripcion" rows="2" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></textarea></td>
@@ -860,7 +873,7 @@
                                     <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
                                     <td><input wire:model="modalTipoInvNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
                                 </tr>
-                                @error('modalTipoInvNombre') <tr><td></td><td style="color:#dc3545;font-size:11px;">⚠ {{ $message }}</td></tr> @enderror
+                                @error('modalTipoInvNombre') <tr><td></td><td class="validation-error">⚠ {{ $message }}</td></tr> @enderror
                                 <tr>
                                     <td valign="top"><b>Descripción:</b></td>
                                     <td><textarea wire:model="modalTipoInvDescripcion" rows="2" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></textarea></td>
@@ -916,7 +929,7 @@
                                     <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
                                     <td><input wire:model="modalTipoPubNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
                                 </tr>
-                                @error('modalTipoPubNombre') <tr><td></td><td style="color:#dc3545;font-size:11px;">⚠ {{ $message }}</td></tr> @enderror
+                                @error('modalTipoPubNombre') <tr><td></td><td class="validation-error">⚠ {{ $message }}</td></tr> @enderror
                                 <tr>
                                     <td><b>Men. honorífica:</b></td>
                                     <td>

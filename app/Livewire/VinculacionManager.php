@@ -17,6 +17,8 @@ class VinculacionManager extends Component
     public string $search = '';
 
     public $selectedProyecto = null;
+    public $vinculacionTitulo = '';
+    public $vinculacionDescripcion = '';
     public $vinculacionTipo = '';
     public $vinculacionObservaciones = '';
     public $vinculacionExistente = null;
@@ -52,7 +54,9 @@ class VinculacionManager extends Component
 
     public function vincular($proyectoId): void
     {
-        $proyecto = Proyecto::with('comunidad')->find($proyectoId);
+        $proyecto = Proyecto::with(['comunidad', 'documentos.componente',
+            'linea_investigacion', 'metodologia', 'tipo_publicacion', 'tipo_investigacion'])
+            ->find($proyectoId);
         if (!$proyecto) {
             $this->tipoMensaje = 'error';
             $this->mensaje = 'Proyecto no encontrado.';
@@ -64,10 +68,14 @@ class VinculacionManager extends Component
         $this->vinculacionExistente = Vinculacion::with('comunidad')->where('proyecto_id', $proyectoId)->first();
 
         if ($this->vinculacionExistente) {
+            $this->vinculacionTitulo = $this->vinculacionExistente->titulo;
+            $this->vinculacionDescripcion = $this->vinculacionExistente->descripcion;
             $this->vinculacionTipo = $this->vinculacionExistente->tipo ?? '';
             $this->vinculacionObservaciones = $this->vinculacionExistente->observaciones ?? '';
             $this->vinculacionComunidadId = (string) ($this->vinculacionExistente->comunidad_id ?? '');
         } else {
+            $this->vinculacionTitulo = '';
+            $this->vinculacionDescripcion = '';
             $this->vinculacionTipo = '';
             $this->vinculacionObservaciones = '';
             $this->vinculacionComunidadId = '';
@@ -79,6 +87,8 @@ class VinculacionManager extends Component
     {
         $this->selectedProyecto = null;
         $this->vinculacionExistente = null;
+        $this->vinculacionTitulo = '';
+        $this->vinculacionDescripcion = '';
         $this->vinculacionTipo = '';
         $this->vinculacionObservaciones = '';
         $this->vinculacionComunidadId = '';
@@ -91,16 +101,18 @@ class VinculacionManager extends Component
             return;
         }
 
-        $tipo = trim($this->vinculacionTipo);
-        if ($tipo === '') {
+        $titulo = trim($this->vinculacionTitulo);
+        if ($titulo === '') {
             $this->tipoMensaje = 'error';
-            $this->mensaje = 'Debe escribir un tipo de vinculación.';
+            $this->mensaje = 'Debe escribir un título para la vinculación.';
             return;
         }
 
         $data = [
             'proyecto_id' => $this->selectedProyecto->id,
-            'tipo' => $tipo,
+            'vin_titulo' => $titulo,
+            'vin_descripcion' => trim($this->vinculacionDescripcion) ?: null,
+            'tipo' => trim($this->vinculacionTipo) ?: null,
             'observaciones' => trim($this->vinculacionObservaciones) ?: null,
             'comunidad_id' => $this->vinculacionComunidadId !== '' ? (int) $this->vinculacionComunidadId : null,
         ];
@@ -108,11 +120,11 @@ class VinculacionManager extends Component
         if ($this->vinculacionExistente) {
             $this->vinculacionExistente->update($data);
             $this->tipoMensaje = 'success';
-            $this->mensaje = "Vinculación «{$tipo}» actualizada.";
+            $this->mensaje = "Vinculación «{$titulo}» actualizada.";
         } else {
             $this->vinculacionExistente = Vinculacion::create($data);
             $this->tipoMensaje = 'success';
-            $this->mensaje = "Vinculación «{$tipo}» creada.";
+            $this->mensaje = "Vinculación «{$titulo}» creada.";
         }
     }
 

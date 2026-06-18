@@ -99,6 +99,7 @@ class UserRoleService
                     $roles['administrador'] = $this->label('administrador');
                 }
 
+                // usu_cod_rol puede no existir en la BD de simulación (simulacion_sogac no tiene esa columna)
                 $codRol = $userExt->usu_cod_rol ?? null;
                 $mapped = config('roles.usu_cod_rol_map', []);
                 if ($codRol !== null && isset($mapped[(int) $codRol])) {
@@ -119,6 +120,22 @@ class UserRoleService
                     app(IntranetProfessorService::class)->autoHabilitarProfesorEnModulo($cedula);
                 } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::warning('Auto-habilitar profesor falló: ' . $e->getMessage());
+                }
+            }
+
+            // Detectar docentes académicos generales (no necesariamente de proyecto)
+            if (!isset($roles['profesor proyecto'])) {
+                try {
+                    $esDocente = DB::connection($conn)
+                        ->table('seccion_unidad_docente')
+                        ->whereRaw('TRIM(sud_ced_docente) = ?', [$cedula])
+                        ->exists();
+
+                    if ($esDocente) {
+                        $roles['docente'] = $this->label('docente');
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Error detectando docente académico: ' . $e->getMessage());
                 }
             }
         } catch (\Throwable $e) {
@@ -220,6 +237,11 @@ class UserRoleService
     public function setActiveRole(User $user, string $role): bool
     {
         $role = strtolower(trim($role));
+
+        // El rol gestionador es exclusivo del usuario gestionador (cédula 13354832)
+        if ($role === 'gestionador' && !$this->esGestionador($user)) {
+            return false;
+        }
 
         if ($this->allowsFreeSessionRoles()) {
             if (! in_array($role, $this->allowedSessionSlugs(), true)) {
@@ -395,10 +417,17 @@ class UserRoleService
     {
         $active = $this->getActiveRole($user);
         $detectados = $this->detectAvailableRoles($user);
+        $esGestionador = $this->esGestionador($user);
         $buttons = [];
 
         foreach (config('roles.module_buttons', []) as $key => $meta) {
             $slug = $meta['slug'];
+
+            // El rol gestionador es exclusivo del usuario gestionador (cédula 13354832)
+            if ($slug === 'gestionador' && !$esGestionador) {
+                continue;
+            }
+
             $buttons[] = [
                 'key' => $key,
                 'label' => $meta['label'],

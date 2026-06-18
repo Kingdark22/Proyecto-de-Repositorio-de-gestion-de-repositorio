@@ -220,6 +220,7 @@ class ProyectoGestionService
             'tipo_publicacion_id' => (string) ($item->tipo_publicacion_id ?? ''),
             'tipo_investigacion_id' => (string) ($item->tipo_investigacion_id ?? ''),
             'objetivo_investigacion_id' => (string) ($item->objetivo_investigacion_id ?? ''),
+            'objetivo_id' => (string) ($item->objetivo_id ?? ''),
             'comunidad_id' => (string) $item->comunidad_id,
             'equipo_seccion_clave' => $item->equipo_ref ?? '',
             'filterLapsoEquipo' => $partes ? (string) $partes['lap_codigo'] : '',
@@ -251,6 +252,7 @@ class ProyectoGestionService
             'tipo_publicacion_id' => $datos['tipo_publicacion_id'] ?? null,
             'tipo_investigacion_id' => $datos['tipo_investigacion_id'] ?? null,
             'objetivo_investigacion_id' => $datos['objetivo_investigacion_id'] ?? null,
+            'objetivo_id' => $datos['objetivo_id'] ?? null,
             'comunidad_id' => $datos['comunidad_id'],
             'equipo_ref' => $datos['equipo_seccion_clave'],
             'estado_validacion' => $editingId 
@@ -491,6 +493,7 @@ class ProyectoGestionService
             'tipo_publicacion_id' => ['nullable', Rule::exists('\App\Models\TipoPublicacion', (new \App\Models\TipoPublicacion())->getKeyName())],
             'tipo_investigacion_id' => ['nullable', Rule::exists('\App\Models\TipoInvestigacion', (new \App\Models\TipoInvestigacion())->getKeyName())],
             'objetivo_investigacion_id' => ['nullable', Rule::exists('\App\Models\ObjetivoInvestigacion', (new \App\Models\ObjetivoInvestigacion())->getKeyName())],
+            'objetivo_id' => ['nullable', Rule::exists('\App\Models\Objetivo', (new \App\Models\Objetivo())->getKeyName())],
             'comunidad_id' => ['required', Rule::exists('\App\Models\Comunidad', (new \App\Models\Comunidad())->getKeyName())],
             'equipo_seccion_clave' => [
                 'required',
@@ -721,6 +724,43 @@ class ProyectoGestionService
     }
 
     /**
+     * Proyectos donde el usuario es miembro del equipo (no necesariamente líder)
+     * y el proyecto está aprobado o solventado (para ver solvencia).
+     *
+     * @return \Illuminate\Support\Collection<int, Proyecto>
+     */
+    public function proyectosDondeEsMiembro(User $user, array $excludeIds = []): \Illuminate\Support\Collection
+    {
+        $cedula = trim((string) $user->usu_cedula);
+        if ($cedula === '') {
+            return collect();
+        }
+
+        try {
+            $grupos = $this->grupoRepo->findByMiembroCedula($cedula);
+
+            $claves = $grupos->map(fn ($g) => 'EQGRP:' . $g->grp_codigo)->toArray();
+            if (empty($claves)) {
+                return collect();
+            }
+
+            $proyectos = \App\Models\Proyecto::whereIn('pry_direccion_logica', $claves)
+                ->whereIn('estado_validacion', ['aprobado', 'solventado'])
+                ->with($this->proyectoRepo->getRelations())
+                ->get();
+
+            // Excluir proyectos donde ya es líder
+            if (!empty($excludeIds)) {
+                $proyectos = $proyectos->reject(fn ($p) => in_array($p->id, $excludeIds, true));
+            }
+
+            return $proyectos->values();
+        } catch (\Throwable) {
+            return collect();
+        }
+    }
+
+    /**
      * @return array<int> IDs de proyectos donde el usuario es líder
      */
     public function proyectosDondeEsLider(User $user): array
@@ -753,7 +793,7 @@ class ProyectoGestionService
         }
 
         return $this->usuarioEsAdminEnSistema($user)
-            || $user->hasRole('coordinador', 'profesor proyecto');
+            || $user->hasRole('coordinador', 'profesor proyecto', 'gestionador');
     }
 
     public function usuarioPuedeValidarProyecto(?User $user, Proyecto $proyecto): bool

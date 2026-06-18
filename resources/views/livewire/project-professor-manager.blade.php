@@ -1,18 +1,6 @@
 <div class="ppm-manager">
     <h2 class="titulo" style="margin-bottom: 20px; font-weight: bolder; margin-top: 10px;">Gestión de Profesores de Proyecto</h2>
 
-    @if (session()->has('message'))
-        <div style="background-color: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border: 1px solid #c3e6cb; border-radius: 4px; font-weight: bold; text-align: center;">
-            {{ session('message') }}
-        </div>
-    @endif
-
-    @if (session()->has('message_error'))
-        <div style="background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px; font-weight: bold; text-align: center;">
-            {{ session('message_error') }}
-        </div>
-    @endif
-
     {{-- Mensaje de aviso solo si no hay datos en absoluto --}}
     @if(! $intranetDisponible && $docentes->isEmpty() && $search === '' && ! $programaFilter)
         <div style="background-color: #fff3cd; color: #856404; padding: 10px; border: 1px solid #ffeeba; border-radius: 4px; margin-bottom: 15px; font-size: 13px; text-align: center;">

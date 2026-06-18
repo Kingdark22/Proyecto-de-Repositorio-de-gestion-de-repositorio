@@ -27,6 +27,7 @@ class Proyecto extends RepositorioModel
         'creador_cedula',
         'comunidad_id',
         'equipo_ref',
+        'objetivo_id',
     ];
 
     protected static array $resumenEquipoCache = [];
@@ -143,6 +144,11 @@ class Proyecto extends RepositorioModel
         return $this->belongsTo(Comunidad::class, 'com_codigo', 'com_codigo');
     }
 
+    public function objetivo()
+    {
+        return $this->belongsTo(Objetivo::class, 'obj_codigo', 'obj_codigo');
+    }
+
     public function documentos()
     {
         return $this->hasMany(ProyectoDocumento::class, 'pry_codigo', 'pry_codigo')->orderBy('pd_orden');
@@ -173,5 +179,67 @@ class Proyecto extends RepositorioModel
         }
     }
 
-    // Aprobar y rechazar se manejan via ProyectoGestionService
+    // ─── Scopes y métodos para ValidacionesManager ────────────────
+
+    /**
+     * Proyectos pendientes o completados (listos para revisión).
+     */
+    public function scopePendientes(Builder $query, ?string $search = null): Builder
+    {
+        $query->whereIn('estado_validacion', ['pendiente', 'completado']);
+
+        if ($search !== null && $search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('pry_direccion_logica', 'ILIKE', "%{$search}%");
+                try {
+                    $q->orWhereRaw('pry_resumen ILIKE ?', ["%{$search}%"]);
+                } catch (\Throwable) {
+                    // fallback
+                }
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * Aprueba el proyecto directamente.
+     */
+    public function aprobar(): void
+    {
+        $this->update([
+            'estado_validacion' => 'aprobado',
+            'estado_logico' => true,
+        ]);
+    }
+
+    /**
+     * Rechaza el proyecto con un motivo.
+     */
+    public function rechazar(string $motivo): void
+    {
+        $this->update([
+            'estado_validacion' => 'rechazado',
+            'motivo_rechazo' => $motivo,
+            'estado_logico' => false,
+        ]);
+    }
+
+    /**
+     * Proyectos rechazados (para notificaciones).
+     */
+    public function scopeRechazados(Builder $query): Builder
+    {
+        return $query->where('estado_validacion', 'rechazado')
+            ->where('actualizado_por_estudiante', false);
+    }
+
+    /**
+     * Proyectos pendientes de documentos por parte del estudiante.
+     */
+    public function scopePendientesEstudiante(Builder $query): Builder
+    {
+        return $query->where('actualizado_por_estudiante', false)
+            ->whereIn('estado_validacion', ['pendiente', 'aprobado']);
+    }
 }

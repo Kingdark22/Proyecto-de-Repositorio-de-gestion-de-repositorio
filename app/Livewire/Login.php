@@ -32,16 +32,40 @@ class Login extends Component
         }
 
         try {
-            $connection = DbHelper::connection();
+            $cedula = '';
+            $extUser = null;
+            $fromIntranet = false;
 
-            $extUser = \Illuminate\Support\Facades\DB::connection($connection)
-                ->table('usuario')
-                ->where(function ($q) use ($inputTrim) {
-                    $q->whereRaw('TRIM(usu_nombre) = ?', [$inputTrim])
-                      ->orWhereRaw('TRIM(usu_cedula) = ?', [$inputTrim]);
-                })
-                ->select(['usu_cedula', 'usu_nombre', 'usu_clave'])
-                ->first();
+            // 1. Buscar en SIMULACIÓN primero (rápido, sin red)
+            try {
+                $extUser = \Illuminate\Support\Facades\DB::connection('simulacion')
+                    ->table('usuario')
+                    ->where(function ($q) use ($inputTrim) {
+                        $q->whereRaw('TRIM(usu_nombre) = ?', [$inputTrim])
+                          ->orWhereRaw('TRIM(usu_cedula) = ?', [$inputTrim]);
+                    })
+                    ->select(['usu_cedula', 'usu_nombre', 'usu_clave'])
+                    ->first();
+            } catch (\Throwable $simError) {
+                Log::warning('Error consultando simulación para login: ' . $simError->getMessage());
+            }
+
+            // 2. Si no está en simulación e intranet disponible, buscar en intranet
+            if (! $extUser && DbHelper::intranetAvailable()) {
+                try {
+                    $extUser = \Illuminate\Support\Facades\DB::connection('intranet')
+                        ->table('usuario')
+                        ->where(function ($q) use ($inputTrim) {
+                            $q->whereRaw('TRIM(usu_nombre) = ?', [$inputTrim])
+                              ->orWhereRaw('TRIM(usu_cedula) = ?', [$inputTrim]);
+                        })
+                        ->select(['usu_cedula', 'usu_nombre', 'usu_clave'])
+                        ->first();
+                    $fromIntranet = true;
+                } catch (\Throwable $intError) {
+                    Log::warning('Error consultando intranet para login: ' . $intError->getMessage());
+                }
+            }
 
             if (! $extUser) {
                 $this->error = 'Usuario o contraseña incorrectos.';
@@ -74,7 +98,22 @@ class Login extends Component
 
             $cedula = trim($extUser->usu_cedula);
 
-            $user = User::on($connection)->whereRaw('TRIM(usu_cedula) = ?', [$cedula])->first();
+            // 3. Si vino de intranet, espejar PRIMERO antes de buscar el modelo
+            if ($fromIntranet) {
+                try {
+                    app(IntranetSimulationMirrorService::class)->mirrorUserContext($cedula);
+                } catch (\Throwable $e) {
+                    Log::warning('Error espejando usuario a simulación: ' . $e->getMessage());
+                }
+            }
+
+            // 4. Buscar el modelo User (siempre en simulación después del mirroring)
+            $user = User::on('simulacion')->whereRaw('TRIM(usu_cedula) = ?', [$cedula])->first();
+
+            // 5. Si vino de intranet pero el mirroring no copió el usuario, caer en intranet
+            if (! $user && $fromIntranet) {
+                $user = User::on('intranet')->whereRaw('TRIM(usu_cedula) = ?', [$cedula])->first();
+            }
 
             if (! $user) {
                 $this->error = 'No se pudo cargar el usuario. Intente de nuevo.';
@@ -84,10 +123,6 @@ class Login extends Component
 
             Auth::login($user);
             request()->session()->regenerate();
-
-            try {
-                app(IntranetSimulationMirrorService::class)->mirrorUserContext($cedula);
-            } catch (\Throwable) {}
 
             $roleService = app(UserRoleService::class);
             $roleService->bootstrapSessionRole($user);
@@ -100,13 +135,6 @@ class Login extends Component
 
         } catch (\Throwable $e) {
             Log::error('Login error: ' . $e->getMessage());
-
-            // Invalidar cache de intranet si es error de conexion
-            try {
-                \App\Helpers\DbHelper::handleQueryError($e);
-            } catch (\Throwable $inner) {
-                // No fallar por errores al limpiar cache
-            }
 
             $msg = $e->getMessage();
             if (str_contains($msg, 'timeout expired') || str_contains($msg, '08006') || str_contains($msg, 'could not connect') || str_contains($msg, 'connection refused')) {

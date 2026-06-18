@@ -24,6 +24,7 @@ return [
             'actualizado_por_estudiante' => 'pry_actualizado_por_estudiante',
             'fecha_actualizacion_estudiante' => 'pry_fecha_actualizacion_estudiante',
             'creador_cedula' => 'pry_creador_cedula',
+            'objetivo_id' => 'obj_codigo',
             'comunidad_id' => 'com_codigo',
             'equipo_ref' => 'pry_direccion_logica',
         ],
@@ -136,7 +137,25 @@ return [
         ],
     ],
 
-'departamento' => [
+    'objetivos' => [
+        'primary_key' => 'obj_codigo',
+        'columns' => [
+            'id'            => 'obj_codigo',
+            'nombre'        => 'obj_nombre',
+            'descripcion'   => 'obj_descripcion',
+            'estado_logico' => 'obj_estado_logico',
+        ],
+        'values' => [
+            'estado_logico' => [
+                true => 1,
+                false => 0,
+                1 => 1,
+                0 => 0,
+            ],
+        ],
+    ],
+
+    'departamento' => [
         'primary_key' => 'dep_codigo',
         'columns' => [
             'id'               => 'dep_codigo',

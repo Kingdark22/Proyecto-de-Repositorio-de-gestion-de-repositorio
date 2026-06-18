@@ -11,6 +11,7 @@ return [
         'administrador'   => 'Administrador',
         'estudiante'      => 'Estudiante',
         'profesor proyecto' => 'Docente',
+        'docente'          => 'Docente Académico',
         'coordinador'     => 'Coordinación',
         'gestionador'     => 'Gestionador',
     ],
@@ -24,8 +25,9 @@ return [
         'estudiante'   => ['slug' => 'estudiante',        'label' => 'Estudiante'],
         'administrador'=> ['slug' => 'administrador',     'label' => 'Administrador'],
         'coordinacion' => ['slug' => 'coordinador',       'label' => 'Coordinación'],
-        'docente'      => ['slug' => 'profesor proyecto',  'label' => 'Docente'],
-        'gestionador'  => ['slug' => 'gestionador',       'label' => 'Gestionador'],
+        'docente'       => ['slug' => 'profesor proyecto',  'label' => 'Docente'],
+        'docente_academico' => ['slug' => 'docente',      'label' => 'Docente Académico'],
+        'gestionador'   => ['slug' => 'gestionador',        'label' => 'Gestionador'],
     ],
 
     /*
@@ -36,6 +38,7 @@ return [
     'aliases' => [
         'coordinador'      => ['coordinador', 'coordinacion', 'coordinador coordinacion'],
         'profesor proyecto' => ['profesor proyecto', 'profesor', 'docente'],
+        'docente'          => ['docente', 'docente academico'],
         'administrador'    => ['administrador', 'admin'],
         'gestionador'      => ['gestionador'],
     ],

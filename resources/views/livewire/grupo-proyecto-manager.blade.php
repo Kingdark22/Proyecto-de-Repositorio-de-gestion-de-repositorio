@@ -152,14 +152,6 @@
         Queda identificado con la clave <code>EQGRP:&hellip;</code> para usarlo al registrar el expediente.
     </p>
 
-    @if (session()->has('message'))
-        <div style="background: #d4edda; color: #155724; padding: 10px; margin-bottom: 10px; font-size: 12px;">
-            {{ session('message') }}</div>
-    @endif
-    @if (session()->has('message_error'))
-        <div style="background: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 10px; font-size: 12px;">
-            {{ session('message_error') }}</div>
-    @endif
 
     @if (!$tablaLista)
         <div style="background: #fff3cd; padding: 10px; font-size: 11px; margin-bottom: 12px;">
@@ -390,7 +382,7 @@
                     <div style="background:#fff;border-radius:8px;padding:20px;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;">
                         <h3 style="margin-top:0;font-size:16px;">Registrar nueva comunidad</h3>
 
-                        @error('modalNombre') <div style="color:red;font-size:10px;margin-bottom:4px;">{{ $message }}</div> @enderror
+                        @error('modalNombre') <div class="validation-error">{{ $message }}</div> @enderror
                         <table width="100%" style="font-size:11px;">
                             <tr>
                                 <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
