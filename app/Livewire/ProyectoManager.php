@@ -38,7 +38,6 @@ class ProyectoManager extends Component
     public ?string $tipo_publicacion_id = '';
     public ?string $tipo_investigacion_id = '';
     public ?string $objetivo_investigacion_id = '';
-    public ?string $objetivo_id = '';
     public ?string $comunidad_id = '';
 
 
@@ -145,20 +144,6 @@ class ProyectoManager extends Component
 
     /** Resultados de búsqueda */
     public Collection $tiposInvestigacionEncontradas;
-
-    /** Mapeo de MIME types a extensiones para la regla 'mimes' de Laravel */
-    private const MIME_TO_EXT = [
-        'application/pdf' => 'pdf',
-        'application/zip' => 'zip',
-        'application/vnd.rar' => 'rar',
-        'application/msword' => 'doc',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
-        'application/vnd.ms-excel' => 'xls',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
-        'image/jpeg' => 'jpg',
-        'image/png' => 'png',
-        'image/gif' => 'gif',
-    ];
 
     /** Modal crear tipo de publicación */
     public bool $mostrarModalTipoPublicacion = false;
@@ -803,40 +788,20 @@ class ProyectoManager extends Component
 
         // Generar reglas de validación dinámicas por componente (tipo archivo y tamaño máximo)
         $docRules = [];
-        $docMessages = [];
         if (!empty($this->archivosComponente)) {
             $componentes = \App\Models\Componente::whereIn('id', array_keys($this->archivosComponente))->get()->keyBy('id');
             foreach ($this->archivosComponente as $compId => $file) {
                 if (!$file) continue;
                 $comp = $componentes->get((int) $compId);
-                $compNombre = $comp ? $comp->nombre : "Componente #{$compId}";
                 $maxKb = $comp ? ($comp->tamano_maximo_mb ?? 10) * 1024 : 10240;
-                $maxMb = $comp ? ($comp->tamano_maximo_mb ?? 10) : 10;
-
-                // Usar el método getMimeTypesAttribute() del modelo Componente
-                // que ya mapea correctamente todos los tipos (pdf, zip, rar, doc, docx, xls, xlsx, img)
+                $mimes = $comp ? $comp->tipo_archivo ?? 'pdf' : 'pdf';
+                // Solo validar mimes si es un tipo conocido (pdf, zip, rar, doc, docx, xls, xlsx)
+                $mimesList = array_intersect(explode(',', $mimes), ['pdf', 'zip', 'rar', 'doc', 'docx', 'xls', 'xlsx']);
                 $rule = 'nullable|file|max:' . $maxKb;
-
-                if ($comp && $comp->tipo_archivo) {
-                    $mimesFromAttr = $comp->mime_types; // usa getMimeTypesAttribute()
-                    if (!empty($mimesFromAttr)) {
-                        $extList = [];
-                        foreach (explode(',', $mimesFromAttr) as $mime) {
-                            $mime = trim($mime);
-                            if (isset(self::MIME_TO_EXT[$mime])) {
-                                $extList[] = self::MIME_TO_EXT[$mime];
-                            }
-                        }
-                        if (!empty($extList)) {
-                            $rule .= '|mimes:' . implode(',', array_unique($extList));
-                        }
-                    }
+                if (!empty($mimesList)) {
+                    $rule .= '|mimes:' . implode(',', $mimesList);
                 }
-
                 $docRules['archivosComponente.' . $compId] = $rule;
-                $docMessages['archivosComponente.' . $compId . '.mimes'] = "El archivo para «{$compNombre}» debe ser un formato válido ({$comp->tipo_archivo}).";
-                $docMessages['archivosComponente.' . $compId . '.max'] = "El archivo para «{$compNombre}» no debe superar los {$maxMb} MB.";
-                $docMessages['archivosComponente.' . $compId . '.file'] = "El archivo para «{$compNombre}» debe ser un archivo válido.";
             }
         }
 
@@ -857,16 +822,16 @@ class ProyectoManager extends Component
             }
         }
 
-        // Siempre validar campos del formulario (título, resumen, fecha, clasificación)
-        // para que SUBIR = GUARDAR sin perder datos
-        $rules = $gestion->reglasValidacion($estado, $user, $this->editingId !== null);
-        // Si hay archivos subidos, validarlos también
-        // Combinar mensajes personalizados de documentos con los del formulario
-        $allMessages = array_merge($this->messages(), $docMessages);
-        if (!empty(array_filter($this->archivosComponente))) {
-            $rules = array_merge($rules, $docRules);
+        if ($this->modoActualizacion) {
+            $this->validate($docRules);
+        } else {
+            $rules = $gestion->reglasValidacion($estado, $user, $this->editingId !== null);
+            // Si hay archivos subidos, validarlos también
+            if (!empty(array_filter($this->archivosComponente))) {
+                $rules = array_merge($rules, $docRules);
+            }
+            $this->validate($rules, $this->messages());
         }
-        $this->validate($rules, $allMessages);
 
         $proyecto = $gestion->guardar(
             $this->editingId,
@@ -876,7 +841,7 @@ class ProyectoManager extends Component
             $this->esGrupoRegistrado ? $this->selectedLeaders : [],
         );
 
-        // Si el líder actualizó, marcar como completado (listo para revisión)
+        // Si lider actualizo, marcar como completado (listo para revision)
         if ($this->modoActualizacion && $proyecto) {
             $proyecto->update([
                 'actualizado_por_estudiante' => true,
@@ -899,38 +864,23 @@ class ProyectoManager extends Component
       */
      public function cerrarFormulario(ProyectoGestionService $gestion): void
      {
-         $docRules = [];
-         $docMessages = [];
          if (!empty($this->archivosComponente)) {
+             // Usar las mismas reglas dinámicas que save()
              $componentes = \App\Models\Componente::whereIn('id', array_keys($this->archivosComponente))->get()->keyBy('id');
+             $docRules = [];
              foreach ($this->archivosComponente as $compId => $file) {
                  if (!$file) continue;
                  $comp = $componentes->get((int) $compId);
-                 $compNombre = $comp ? $comp->nombre : "Componente #{$compId}";
                  $maxKb = $comp ? ($comp->tamano_maximo_mb ?? 10) * 1024 : 10240;
-                 $maxMb = $comp ? ($comp->tamano_maximo_mb ?? 10) : 10;
+                 $mimes = $comp ? $comp->tipo_archivo ?? 'pdf' : 'pdf';
+                 $mimesList = array_intersect(explode(',', $mimes), ['pdf', 'zip', 'rar', 'doc', 'docx', 'xls', 'xlsx']);
                  $rule = 'nullable|file|max:' . $maxKb;
-                 if ($comp && $comp->tipo_archivo) {
-                     $mimesFromAttr = $comp->mime_types;
-                     if (!empty($mimesFromAttr)) {
-                         $extList = [];
-                         foreach (explode(',', $mimesFromAttr) as $mime) {
-                             $mime = trim($mime);
-                             if (isset(self::MIME_TO_EXT[$mime])) {
-                                 $extList[] = self::MIME_TO_EXT[$mime];
-                             }
-                         }
-                         if (!empty($extList)) {
-                             $rule .= '|mimes:' . implode(',', array_unique($extList));
-                         }
-                     }
+                 if (!empty($mimesList)) {
+                     $rule .= '|mimes:' . implode(',', $mimesList);
                  }
                  $docRules['archivosComponente.' . $compId] = $rule;
-                 $docMessages['archivosComponente.' . $compId . '.mimes'] = "El archivo para «{$compNombre}» debe ser un formato válido ({$comp->tipo_archivo}).";
-                 $docMessages['archivosComponente.' . $compId . '.max'] = "El archivo para «{$compNombre}» no debe superar los {$maxMb} MB.";
-                 $docMessages['archivosComponente.' . $compId . '.file'] = "El archivo para «{$compNombre}» debe ser un archivo válido.";
              }
-             $this->validate($docRules, $docMessages);
+             $this->validate($docRules);
          }
 
          $gestion->guardar(
@@ -1017,52 +967,6 @@ class ProyectoManager extends Component
         $this->openReject($id);
     }
 
-    /**
-     * Emite la solvencia para un proyecto aprobado.
-     */
-    public function emitirSolvencia(int $id)
-    {
-        $user = auth()->user();
-        if (!$user) return;
-
-        $gestion = app(ProyectoGestionService::class);
-        if (!$gestion->usuarioPuedeValidar($user)) {
-            $this->dispatch('notify', type: 'error', message: 'No tienes permisos para emitir solvencias.');
-            return;
-        }
-
-        $proyecto = \App\Models\Proyecto::find($id);
-        if (!$proyecto) {
-            $this->dispatch('notify', type: 'error', message: 'Proyecto no encontrado.');
-            return;
-        }
-        if ($proyecto->estado_validacion === 'solventado') {
-            $this->dispatch('notify', type: 'warning', message: 'La solvencia ya fue emitida anteriormente para este proyecto.');
-            // Si ya existe, redirigir a la descarga
-            $solvenciaExistente = \App\Models\Solvencia::where('pry_codigo', $id)->first();
-            if ($solvenciaExistente) {
-                $this->redirect(route('solvencias.download', $solvenciaExistente->id));
-            }
-            return;
-        }
-        if ($proyecto->estado_validacion !== 'aprobado') {
-            $this->dispatch('notify', type: 'error', message: 'El proyecto debe estar aprobado para emitir la solvencia.');
-            return;
-        }
-
-        try {
-            $service = app(\App\Services\SolvenciaService::class);
-            $result = $service->emitirSolvencia($proyecto, $user);
-            $this->dispatch('notify', type: 'success', message: 'Solvencia emitida con éxito: ' . $result['solvencia']->sol_numero);
-            // Redirigir a la descarga del PDF
-            $this->redirect(route('solvencias.download', $result['solvencia']->id));
-            return;
-        } catch (\Throwable $e) {
-            $this->dispatch('notify', type: 'error', message: 'Error al emitir solvencia: ' . $e->getMessage());
-        }
-        $this->dispatch('refresh-icons');
-    }
-
     protected function usuarioEsLider(ProyectoGestionService $gestion): bool
     {
         $user = auth()->user();
@@ -1090,19 +994,15 @@ class ProyectoManager extends Component
         $esEstudianteLider = false;
         $proyectosLiderIds = [];
         $proyectosLider = collect();
-        $proyectosMiembro = collect();
         if ($user && !$this->esProfesor) {
             $userRoleService = app(UserRoleService::class);
             $activeRole = $userRoleService->getActiveRole($user);
-            $esAdminOCoordOGestionador = $userRoleService->roleMatches('administrador', $activeRole)
-                || $userRoleService->roleMatches('coordinador', $activeRole)
-                || $userRoleService->roleMatches('gestionador', $activeRole);
-            if (!$esAdminOCoordOGestionador) {
+            if (!$userRoleService->roleMatches('administrador', $activeRole)
+                && !$userRoleService->roleMatches('coordinador', $activeRole)
+                && !$userRoleService->roleMatches('gestionador', $activeRole)) {
                 $esEstudianteLider = true;
                 $proyectosLiderIds = $gestion->proyectosDondeEsLider($user);
                 $proyectosLider = $gestion->proyectosLider($user);
-                // También buscar proyectos donde es miembro (no líder)
-                $proyectosMiembro = $gestion->proyectosDondeEsMiembro($user, $proyectosLiderIds);
             }
         }
 
@@ -1130,21 +1030,6 @@ class ProyectoManager extends Component
         $activeRole = $userRoleService->getActiveRole($user);
         $puedeFiltrarGrupos = true;
 
-        // Cargar solvencias de una vez para evitar N+1
-        $todosProyectosIds = collect();
-        if ($proyectosLider->isNotEmpty()) {
-            $todosProyectosIds = $todosProyectosIds->merge($proyectosLider->pluck('id'));
-        }
-        if ($proyectosMiembro->isNotEmpty()) {
-            $todosProyectosIds = $todosProyectosIds->merge($proyectosMiembro->pluck('id'));
-        }
-        $solvenciasMap = collect();
-        if ($todosProyectosIds->isNotEmpty()) {
-            $solvenciasMap = \App\Models\Solvencia::whereIn('pry_codigo', $todosProyectosIds->unique()->values()->all())
-                ->get()
-                ->keyBy('pry_codigo');
-        }
-
         return view('livewire.proyecto-manager', array_merge($datos, [
             'viewMode' => $this->viewMode,
             'editingId' => $this->editingId,
@@ -1156,7 +1041,6 @@ class ProyectoManager extends Component
             'proyectosLiderIds' => $proyectosLiderIds,
             'proyectosLider' => $proyectosLider,
             'esEstudianteLider' => $esEstudianteLider,
-            'proyectosMiembro' => $proyectosMiembro,
             'modoActualizacion' => $this->modoActualizacion,
             'gruposDocente' => $this->gruposDocente,
             'lapsosFiltro' => $lapsosFiltro,
@@ -1165,7 +1049,6 @@ class ProyectoManager extends Component
             'puedeFiltrarGrupos' => $puedeFiltrarGrupos,
             'esGestionador' => $this->esGestionador,
             'esProfesor' => $this->esProfesor,
-            'solvenciasMap' => $solvenciasMap,
         ]));
     }
 
@@ -1181,7 +1064,6 @@ class ProyectoManager extends Component
         $this->tipo_publicacion_id = '';
         $this->tipo_investigacion_id = '';
         $this->objetivo_investigacion_id = '';
-        $this->objetivo_id = '';
         $this->comunidad_id = '';
         $this->equipo_seccion_clave = '';
         $this->filterLapsoEquipo = '';
@@ -1219,11 +1101,11 @@ class ProyectoManager extends Component
             'fecha_aprobacion' => $this->fecha_aprobacion,
             'linea_investigacion_id' => $this->linea_investigacion_id,
             'metodologia_id' => $this->metodologia_id,
-            'tipo_publicacion_id' => $this->tipo_publicacion_id,
-            'tipo_investigacion_id' => $this->tipo_investigacion_id,
-            'objetivo_investigacion_id' => $this->objetivo_investigacion_id,
-            'objetivo_id' => $this->objetivo_id,
-            'comunidad_id' => $this->comunidad_id,
+        'tipo_publicacion_id' => $this->tipo_publicacion_id,
+        'tipo_investigacion_id' => $this->tipo_investigacion_id,
+        'objetivo_investigacion_id' => $this->objetivo_investigacion_id,
+        'comunidad_id' => $this->comunidad_id,
+
         ];
     }
 }
