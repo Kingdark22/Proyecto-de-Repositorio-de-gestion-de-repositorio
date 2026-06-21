@@ -23,11 +23,10 @@ class ComponenteManager extends Component
 
     public $rows = [];
 
-    // Estado de asignación PNF/Trayecto
-    public $asignandoRowIndex = null;
-    public $asignacionProCodigo = '';
-    public $asignacionTraCodigo = '';
-    public $trayectosAsignacion = [];
+    // Vinculación (PNF-centrica para coordinador)
+    public $selectedProgramaId = '';
+    public $vinculacionRows = [];
+    public $trayectosVinculacion = [];
 
     protected function rules()
     {
@@ -51,93 +50,144 @@ class ComponenteManager extends Component
         $this->resetPage();
     }
 
-    /**
-     * Inicia el proceso de asignación de PNF/Trayecto para una fila.
-     */
-    public function iniciarAsignacion(int $rowIndex): void
+    // ── Vinculación (Coordinador: PNF → Componentes) ──
+
+    public function irAVinculacion(): void
     {
-        $this->asignandoRowIndex = $rowIndex;
-        $this->asignacionProCodigo = '';
-        $this->asignacionTraCodigo = '';
-        $this->trayectosAsignacion = [];
+        $this->resetValidation();
+        $this->resetFields();
+        $this->selectedProgramaId = '';
+        $this->vinculacionRows = [];
+        $this->trayectosVinculacion = [];
+        $this->viewMode = 'vinculacion';
     }
 
-    /**
-     * Cuando cambia el PNF seleccionado en la asignación, cargar trayectos.
-     */
-    public function updatedAsignacionProCodigo(string $value): void
+    public function updatedSelectedProgramaId(string $value): void
     {
         if ($value !== '') {
-            $this->trayectosAsignacion = app(CatalogoRepository::class)
+            $this->trayectosVinculacion = app(CatalogoRepository::class)
                 ->trayectosPorPrograma((int) $value)
                 ->toArray();
         } else {
-            $this->trayectosAsignacion = [];
+            $this->trayectosVinculacion = [];
         }
-        $this->asignacionTraCodigo = '';
+
+        $this->cargarVinculacionRows();
     }
 
-    /**
-     * Confirma la asignación actual y la agrega a la fila.
-     */
-    public function confirmarAsignacion(): void
+    protected function cargarVinculacionRows(): void
     {
-        if ($this->asignandoRowIndex === null || $this->asignacionProCodigo === '' || $this->asignacionTraCodigo === '') {
+        $this->vinculacionRows = [];
+
+        if ($this->selectedProgramaId === '') return;
+
+        $proCodigo = (int) $this->selectedProgramaId;
+
+        // Todos los componentes activos
+        $componentes = Componente::where('estado_logico', true)
+            ->orderBy('nombre')
+            ->get();
+
+        // Asignaciones existentes para este PNF
+        $asignaciones = ComponentePrograma::where('pro_codigo', $proCodigo)
+            ->get()
+            ->keyBy(function ($item) {
+                return $item->comp_codigo . '_' . ($item->tra_codigo ?? '__todos__');
+            });
+
+        foreach ($componentes as $comp) {
+            $key = $comp->id . '_' . '__todos__';
+            $asig = $asignaciones->get($key);
+
+            // También buscar por trayecto específico (tomamos la primera coincidencia)
+            if (!$asig) {
+                $asig = $asignaciones->first(function ($a) use ($comp) {
+                    return (int) $a->comp_codigo === (int) $comp->id;
+                });
+            }
+
+            $this->vinculacionRows[$comp->id] = [
+                'comp_codigo' => $comp->id,
+                'nombre' => $comp->nombre,
+                'asignado' => $asig !== null,
+                'tra_codigo' => $asig ? ($asig->tra_codigo ?? '') : '',
+                'cantidad' => $asig ? (int) ($asig->cantidad ?? 1) : 1,
+            ];
+        }
+    }
+
+    public function toggleAsignacionVinculacion(int $compCodigo): void
+    {
+        if (!isset($this->vinculacionRows[$compCodigo])) return;
+
+        $row = &$this->vinculacionRows[$compCodigo];
+        $row['asignado'] = !$row['asignado'];
+
+        if ($row['asignado']) {
+            $row['tra_codigo'] = '';
+            $row['cantidad'] = 1;
+        } else {
+            $row['tra_codigo'] = '';
+            $row['cantidad'] = 1;
+        }
+    }
+
+    public function cambiarTrayectoVinculacion(int $compCodigo, string $traCodigo): void
+    {
+        if (isset($this->vinculacionRows[$compCodigo])) {
+            $this->vinculacionRows[$compCodigo]['tra_codigo'] = $traCodigo;
+        }
+    }
+
+    public function cambiarCantidadVinculacion(int $compCodigo, int $cantidad): void
+    {
+        if (isset($this->vinculacionRows[$compCodigo])) {
+            $this->vinculacionRows[$compCodigo]['cantidad'] = max(1, $cantidad);
+        }
+    }
+
+    public function guardarVinculacion(): void
+    {
+        if ($this->selectedProgramaId === '') {
+            session()->flash('message', 'Debe seleccionar un PNF.');
             return;
         }
 
-        $proCodigo = (int) $this->asignacionProCodigo;
-        $traCodigo = (string) $this->asignacionTraCodigo;
+        $proCodigo = (int) $this->selectedProgramaId;
 
-        // Verificar duplicado
-        $existe = collect($this->rows[$this->asignandoRowIndex]['asignaciones'] ?? [])
-            ->contains(fn ($a) => (int) ($a['pro_codigo'] ?? 0) === $proCodigo && ($a['tra_codigo'] ?? '') === $traCodigo);
-
-        if ($existe) {
-            $this->addError('asignacion', 'Esta asignación ya existe para este componente.');
-            return;
+        // Construir array para sincronizarAsignacionesPorPrograma
+        $asignaciones = [];
+        foreach ($this->vinculacionRows as $compCodigo => $row) {
+            $asignaciones[(int) $compCodigo] = [
+                'activo' => (bool) ($row['asignado'] ?? false),
+                'tra_codigo' => !empty($row['tra_codigo']) ? $row['tra_codigo'] : null,
+                'cantidad' => max(1, (int) ($row['cantidad'] ?? 1)),
+            ];
         }
 
-        $this->rows[$this->asignandoRowIndex]['asignaciones'][] = [
-            'pro_codigo' => $proCodigo,
-            'tra_codigo' => $traCodigo,
-        ];
+        app(CatalogoRepository::class)
+            ->sincronizarAsignacionesPorPrograma($proCodigo, $asignaciones);
 
-        $this->limpiarAsignacion();
+        session()->flash('message', 'Vinculación PNF → Componentes guardada exitosamente.');
+
+        $this->viewMode = 'list';
+        $this->dispatch('refresh-icons');
     }
 
-    /**
-     * Elimina una asignación de una fila.
-     */
-    public function removerAsignacion(int $rowIndex, int $asigIndex): void
+    public function cancelarVinculacion(): void
     {
-        if (isset($this->rows[$rowIndex]['asignaciones'][$asigIndex])) {
-            unset($this->rows[$rowIndex]['asignaciones'][$asigIndex]);
-            $this->rows[$rowIndex]['asignaciones'] = array_values($this->rows[$rowIndex]['asignaciones']);
-        }
+        $this->selectedProgramaId = '';
+        $this->vinculacionRows = [];
+        $this->trayectosVinculacion = [];
+        $this->viewMode = 'list';
     }
 
-    /**
-     * Cancela el proceso de asignación.
-     */
-    public function cancelarAsignacion(): void
-    {
-        $this->limpiarAsignacion();
-    }
-
-    protected function limpiarAsignacion(): void
-    {
-        $this->asignandoRowIndex = null;
-        $this->asignacionProCodigo = '';
-        $this->asignacionTraCodigo = '';
-        $this->trayectosAsignacion = [];
-    }
+    // ── CRUD Componentes ──
 
     public function create()
     {
         $this->resetValidation();
         $this->resetFields();
-        $this->limpiarAsignacion();
 
         $this->rows = [[
             'id' => null,
@@ -145,7 +195,6 @@ class ComponenteManager extends Component
             'es_obligatorio' => true,
             'tipo_archivo' => 'pdf',
             'tamano_maximo_mb' => 4,
-            'asignaciones' => [],
         ]];
 
         $this->viewMode = 'form';
@@ -159,7 +208,6 @@ class ComponenteManager extends Component
             'es_obligatorio' => true,
             'tipo_archivo' => 'pdf',
             'tamano_maximo_mb' => 4,
-            'asignaciones' => [],
         ];
     }
 
@@ -175,22 +223,12 @@ class ComponenteManager extends Component
     {
         $this->resetValidation();
         $this->editingId = $id;
-        $this->limpiarAsignacion();
 
         $comp = Componente::find($id);
 
         if (!$comp) {
             abort(404);
         }
-
-        // Cargar asignaciones existentes
-        $asignaciones = ComponentePrograma::where('comp_codigo', $comp->id)
-            ->get(['pro_codigo', 'tra_codigo'])
-            ->map(fn ($a) => [
-                'pro_codigo' => (int) $a->pro_codigo,
-                'tra_codigo' => (string) ($a->tra_codigo ?? ''),
-            ])
-            ->toArray();
 
         $this->rows = [
             [
@@ -199,7 +237,6 @@ class ComponenteManager extends Component
                 'es_obligatorio' => (bool) $comp->es_obligatorio,
                 'tipo_archivo' => $comp->tipo_archivo ?? 'pdf',
                 'tamano_maximo_mb' => $comp->tamano_maximo_mb ?? 10,
-                'asignaciones' => $asignaciones,
             ]
         ];
 
@@ -209,7 +246,6 @@ class ComponenteManager extends Component
     public function cancel()
     {
         $this->resetFields();
-        $this->limpiarAsignacion();
         $this->viewMode = 'list';
     }
 
@@ -246,16 +282,6 @@ class ComponenteManager extends Component
             }
         }
 
-        // Validate that each component has at least one PNF/Trayecto assignment
-        foreach ($this->rows as $idx => $row) {
-            if (empty($row['asignaciones'])) {
-                $this->addError('rows', "El componente '{$row['nombre']}' debe tener al menos una asignación a PNF + Trayecto.");
-                return;
-            }
-        }
-
-        $catalogoRepo = app(CatalogoRepository::class);
-
         if ($this->editingId) {
             foreach ($this->rows as $row) {
                 if (!empty($row['id'])) {
@@ -267,31 +293,27 @@ class ComponenteManager extends Component
                             'tipo_archivo' => $row['tipo_archivo'] ?? 'pdf',
                             'tamano_maximo_mb' => $row['tamano_maximo_mb'] ?? 10,
                         ]);
-
-                        $catalogoRepo->sincronizarAsignaciones($comp->id, $row['asignaciones']);
                     }
                 } else {
-                    $comp = Componente::create([
+                    Componente::create([
                         'nombre' => $row['nombre'],
                         'es_obligatorio' => $row['es_obligatorio'],
                         'tipo_archivo' => $row['tipo_archivo'] ?? 'pdf',
                         'tamano_maximo_mb' => $row['tamano_maximo_mb'] ?? 10,
                         'estado_logico' => true,
                     ]);
-                    $catalogoRepo->sincronizarAsignaciones($comp->id, $row['asignaciones']);
                 }
             }
             session()->flash('message', 'Componente documental actualizado.');
         } else {
             foreach ($this->rows as $row) {
-                $comp = Componente::create([
+                Componente::create([
                     'nombre' => $row['nombre'],
                     'es_obligatorio' => $row['es_obligatorio'],
                     'tipo_archivo' => $row['tipo_archivo'] ?? 'pdf',
                     'tamano_maximo_mb' => $row['tamano_maximo_mb'] ?? 10,
                     'estado_logico' => true,
                 ]);
-                $catalogoRepo->sincronizarAsignaciones($comp->id, $row['asignaciones']);
             }
             session()->flash('message', count($this->rows) . ' Componente(s) creado(s) con éxito.');
         }

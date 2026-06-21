@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Helpers\DbHelper;
+use App\Helpers\DualDatabase;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -47,7 +49,7 @@ class GenerateLoginLink extends Command
     public function handle()
     {
         $this->info('--- Generador de Enlace ---');
-        
+
         $input = $this->argument('user');
 
         if (empty($input)) {
@@ -61,32 +63,60 @@ class GenerateLoginLink extends Command
         }
 
         try {
-            // Forzar conexión a la intranet (PostgreSQL) — no usar fallback a simulación
-            $connectionName = 'intranet';
+            // Buscar usuario: intentar intranet primero, si no responde usar simulación
+            $extUser = null;
 
-            $extUser = DB::connection($connectionName)
-                ->table('usuario')
-                ->leftJoin('persona', DB::raw('TRIM(usuario.usu_cedula)'), '=', DB::raw('TRIM(persona.per_cedula)'))
-                ->where(function($q) use ($input) {
-                    $inputTrim = trim($input);
-                    $q->where(DB::raw('TRIM(usuario.usu_nombre)'), $inputTrim)
-                      ->orWhere(DB::raw('TRIM(usuario.usu_cedula)'), $inputTrim);
-                })
-                ->select(['usuario.usu_cedula', 'usuario.usu_nombre', 'usuario.usu_clave', 'persona.per_nombres', 'persona.per_apellidos'])
-                ->first();
+            try {
+                $conn = DualDatabase::academicConnection();
+                $extUser = DB::connection($conn)
+                    ->table('usuario')
+                    ->leftJoin('persona', DB::raw('TRIM(usuario.usu_cedula)'), '=', DB::raw('TRIM(persona.per_cedula)'))
+                    ->where(function($q) use ($input) {
+                        $inputTrim = trim($input);
+                        $q->where(DB::raw('TRIM(usuario.usu_nombre)'), $inputTrim)
+                          ->orWhere(DB::raw('TRIM(usuario.usu_cedula)'), $inputTrim);
+                    })
+                    ->select(['usuario.usu_cedula', 'usuario.usu_nombre', 'usuario.usu_clave', 'persona.per_nombres', 'persona.per_apellidos'])
+                    ->first();
+            } catch (\Throwable $e) {
+                DbHelper::handleQueryError($e);
+                $this->warn('Intranet no disponible, intentando con simulación...');
+            }
+
+            // Si no se encontró en la conexión académica, intentar directamente en simulación
+            if (!$extUser) {
+                try {
+                    $extUser = DB::connection('simulacion')
+                        ->table('usuario')
+                        ->leftJoin('persona', DB::raw('TRIM(usuario.usu_cedula)'), '=', DB::raw('TRIM(persona.per_cedula)'))
+                        ->where(function($q) use ($input) {
+                            $inputTrim = trim($input);
+                            $q->where(DB::raw('TRIM(usuario.usu_nombre)'), $inputTrim)
+                              ->orWhere(DB::raw('TRIM(usuario.usu_cedula)'), $inputTrim);
+                        })
+                        ->select(['usuario.usu_cedula', 'usuario.usu_nombre', 'usuario.usu_clave', 'persona.per_nombres', 'persona.per_apellidos'])
+                        ->first();
+                } catch (\Throwable $e) {
+                    $this->error('Error consultando simulación: ' . $e->getMessage());
+                }
+            }
 
             if (!$extUser) {
-                $this->error('Usuario no encontrado en la intranet.');
+                $this->error('Usuario no encontrado en la base de datos.');
                 return 1;
             }
 
             $cedula = trim($extUser->usu_cedula);
-            
-            // Exportar información consultada de inmediato a la BD de simulación
+
+            // Exportar información consultada de inmediato a la BD de simulación (si se obtuvo desde intranet)
             if (!ini_get('safe_mode')) set_time_limit(300);
-            $mirror = app(\App\Services\IntranetSimulationMirrorService::class);
-            $mirror->mirrorUserContext($cedula);
-            $mirror->mirrorTable('programa');
+            try {
+                $mirror = app(\App\Services\IntranetSimulationMirrorService::class);
+                $mirror->mirrorUserContext($cedula);
+                $mirror->mirrorTable('programa');
+            } catch (\Throwable $e) {
+                $this->warn('No se pudo exportar a simulación (no crítico): ' . $e->getMessage());
+            }
 
             $nombre = trim($extUser->per_nombres ?? '') . ' ' . trim($extUser->per_apellidos ?? '');
 
@@ -111,9 +141,11 @@ class GenerateLoginLink extends Command
             $this->line('');
             $this->info('¡Enlace generado exitosamente!');
             $this->line('');
+            $this->line('Abre esta URL en el navegador:');
             $this->line('<fg=cyan>' . $url . '</>');
             $this->line('');
-            
+            $this->warn('Asegúrate de que el servidor web esté corriendo en: ' . $baseUrl);
+
             return 0;
         } catch (\Throwable $e) {
             $this->error('Error: ' . $e->getMessage());

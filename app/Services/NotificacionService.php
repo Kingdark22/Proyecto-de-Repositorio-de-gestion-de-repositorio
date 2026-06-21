@@ -127,8 +127,14 @@ class NotificacionService
             // 2. Proyectos rechazados que necesitan correcciones
             $proyectosRechazados = $this->proyectoRepo->rechazados();
 
+            // Precargar todos los grupos en UNA consulta para evitar N+1
+            $gruposCache = $this->precargarGruposProyecto(
+                $proyectosNuevos->merge($proyectosRechazados),
+                $gruposSvc
+            );
+
             foreach ($proyectosNuevos as $p) {
-                if ($this->esLiderDelProyecto($p, $cedula, $gruposSvc)) {
+                if ($this->esLiderDelProyecto($p, $cedula, $gruposSvc, $gruposCache)) {
                     $notificaciones[] = [
                         'type' => 'warning',
                         'title' => 'Subir documentos',
@@ -140,7 +146,7 @@ class NotificacionService
             }
 
             foreach ($proyectosRechazados as $p) {
-                if ($this->esLiderDelProyecto($p, $cedula, $gruposSvc)) {
+                if ($this->esLiderDelProyecto($p, $cedula, $gruposSvc, $gruposCache)) {
                     $notificaciones[] = [
                         'type' => 'warning',
                         'title' => 'Proyecto rechazado',
@@ -160,7 +166,44 @@ class NotificacionService
         return count($this->listar($user));
     }
 
-    protected function esLiderDelProyecto(Proyecto $p, string $cedula, GrupoProyectoService $gruposSvc): bool
+    /**
+     * @param  \Illuminate\Support\Collection<int, Proyecto>  $proyectos
+     * @return array<int, GrupoProyectoModulo|null>  grp_codigo => model
+     */
+    protected function precargarGruposProyecto(\Illuminate\Support\Collection $proyectos, GrupoProyectoService $gruposSvc): array
+    {
+        $gruposCache = [];
+        $codigos = [];
+
+        foreach ($proyectos as $p) {
+            $clave = $p->equipo_ref;
+            if ($clave === '') {
+                continue;
+            }
+            $partes = $gruposSvc->parsearClave($clave);
+            if ($partes && ($partes['tipo'] ?? '') === GrupoProyectoService::PREFIJO) {
+                $codigos[] = (int) ($partes['grp_codigo'] ?? 0);
+            }
+        }
+
+        $codigos = array_unique(array_filter($codigos));
+        if ($codigos === []) {
+            return [];
+        }
+
+        $grupos = GrupoProyectoModulo::whereIn('grp_codigo', $codigos)->get()->keyBy('grp_codigo');
+
+        foreach ($codigos as $cod) {
+            $gruposCache[$cod] = $grupos->get($cod);
+        }
+
+        return $gruposCache;
+    }
+
+    /**
+     * @param  array<int, GrupoProyectoModulo|null>  $gruposCache
+     */
+    protected function esLiderDelProyecto(Proyecto $p, string $cedula, GrupoProyectoService $gruposSvc, array $gruposCache = []): bool
     {
         $clave = $p->equipo_ref;
         if ($clave === '') {
@@ -172,9 +215,13 @@ class NotificacionService
             return false;
         }
 
-        $grupo = GrupoProyectoModulo::find($partes['grp_codigo'] ?? 0);
+        $codigo = (int) ($partes['grp_codigo'] ?? 0);
+        $grupo = $gruposCache[$codigo] ?? null;
         if (!$grupo) {
-            return false;
+            $grupo = GrupoProyectoModulo::find($codigo);
+            if (!$grupo) {
+                return false;
+            }
         }
 
         $miembros = $grupo->grp_miembros ?? [];

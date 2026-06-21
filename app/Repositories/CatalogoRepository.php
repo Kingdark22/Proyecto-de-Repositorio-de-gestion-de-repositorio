@@ -182,10 +182,10 @@ class CatalogoRepository
     }
 
     /**
-     * Sincroniza las asignaciones de un componente (programa, trayecto).
+     * Sincroniza las asignaciones de un componente (programa, trayecto, cantidad).
      * Reemplaza todas las asignaciones existentes por las nuevas.
      *
-     * @param  array<array{pro_codigo: int, tra_codigo: string|null}>  $asignaciones
+     * @param  array<array{pro_codigo: int, tra_codigo: string|null, cantidad?: int|null}>  $asignaciones
      */
     public function sincronizarAsignaciones(int $compCodigo, array $asignaciones): void
     {
@@ -195,12 +195,51 @@ class CatalogoRepository
             $proCodigo = (int) ($asig['pro_codigo'] ?? 0);
             if ($proCodigo <= 0) continue;
             $traCodigo = !empty($asig['tra_codigo']) ? (string) $asig['tra_codigo'] : null;
+            $cantidad = isset($asig['cantidad']) ? (int) $asig['cantidad'] : 1;
 
             ComponentePrograma::create([
                 'comp_codigo' => $compCodigo,
                 'pro_codigo' => $proCodigo,
                 'tra_codigo' => $traCodigo,
+                'cantidad' => $cantidad,
             ]);
+        }
+    }
+
+    /**
+     * Sincroniza las asignaciones de TODOS los componentes para un programa específico (PNF).
+     * Útil para la vista de vinculación del coordinador.
+     *
+     * @param  int  $proCodigo  PNF destino
+     * @param  array<int, array{activo: bool, tra_codigo: string|null, cantidad: int}>  $componentesAsignaciones  key = comp_codigo
+     */
+    public function sincronizarAsignacionesPorPrograma(int $proCodigo, array $componentesAsignaciones): void
+    {
+        foreach ($componentesAsignaciones as $compCodigo => $data) {
+            $compCodigo = (int) $compCodigo;
+            if ($compCodigo <= 0) continue;
+
+            $activo = (bool) ($data['activo'] ?? false);
+            $traCodigo = !empty($data['tra_codigo']) ? (string) $data['tra_codigo'] : null;
+            $cantidad = isset($data['cantidad']) ? max(1, (int) $data['cantidad']) : 1;
+
+            if ($activo) {
+                // Upsert: si ya existe la asignación (comp+pro+tra), actualiza cantidad; si no, crea
+                ComponentePrograma::updateOrCreate(
+                    [
+                        'comp_codigo' => $compCodigo,
+                        'pro_codigo' => $proCodigo,
+                        'tra_codigo' => $traCodigo,
+                    ],
+                    ['cantidad' => $cantidad]
+                );
+            } else {
+                // Eliminar la asignación si existe
+                ComponentePrograma::where('comp_codigo', $compCodigo)
+                    ->where('pro_codigo', $proCodigo)
+                    ->where('tra_codigo', $traCodigo)
+                    ->delete();
+            }
         }
     }
 

@@ -331,16 +331,15 @@ class UserRoleService
         $activeSessionRole = $this->getActiveRole($user);
 
         if ($activeSessionRole !== null) {
-            // Cuando se simula un rol, solo ese rol determina los permisos
             foreach ($requestedRoles as $requested) {
                 if ($this->roleMatches($requested, $activeSessionRole)) {
                     return true;
                 }
             }
-            return false;
+            // No retornar false — también verificar roles detectados
         }
 
-        // Sin rol de sesión activo: usar roles detectados (admin siempre pasa)
+        // Verificar contra TODOS los roles detectados del usuario
         $availableDetectedRoles = array_keys($this->detectAvailableRoles($user));
 
         if (in_array('administrador', $availableDetectedRoles, true)) {

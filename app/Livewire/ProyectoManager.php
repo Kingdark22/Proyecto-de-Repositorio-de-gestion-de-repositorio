@@ -823,7 +823,9 @@ class ProyectoManager extends Component
         }
 
         if ($this->modoActualizacion) {
-            $this->validate($docRules);
+            if (!empty($docRules)) {
+                $this->validate($docRules);
+            }
         } else {
             $rules = $gestion->reglasValidacion($estado, $user, $this->editingId !== null);
             // Si hay archivos subidos, validarlos también
@@ -1022,7 +1024,11 @@ class ProyectoManager extends Component
         $equipoSeccion = app(IntranetEquipoSeccionService::class);
         $lapsoFiltro = $this->filterGruposLapso !== '' ? (int) $this->filterGruposLapso : null;
         $programaFiltro = $this->filterGruposPrograma !== '' ? (int) $this->filterGruposPrograma : null;
-        $lapsosFiltro = \App\Models\LapsoAcademico::activos()->orderByDesc('lap_codigo')->get();
+        $lapsosFiltro = \Illuminate\Support\Facades\Cache::remember(
+            'proyecto_manager_lapsos',
+            now()->addMinutes(10),
+            fn () => \App\Models\LapsoAcademico::activos()->orderByDesc('lap_codigo')->get()
+        );
         $programasFiltro = $lapsoFiltro ? $equipoSeccion->programasEnLapso($lapsoFiltro) : collect();
         $trayectosFiltro = $lapsoFiltro ? $equipoSeccion->trayectosEnLapso($lapsoFiltro, $programaFiltro) : collect();
 

@@ -98,22 +98,32 @@ class MagicLoginController extends Controller
         $cedula = trim($payload['cedula']);
 
         try {
-            // 4. Buscar usuario en BD externa con fallback automático a simulación.
-            $connection = DbHelper::connection();
+            // 4. Buscar usuario: usar DbHelper para elegir conexión (respeta DB_INTRANET_ENABLED)
             $user = null;
+            $conn = DbHelper::connection();
 
+            // Primero intentar con la conexión que DbHelper determinó
             try {
-                $user = User::on($connection)->whereRaw('TRIM(usu_cedula) = ?', [$cedula])->first();
+                $user = User::on($conn)->whereRaw('TRIM(usu_cedula) = ?', [$cedula])->first();
             } catch (\Exception $e) {
                 DbHelper::handleQueryError($e);
-                if ($connection === 'intranet') {
-                    Log::warning('MagicLogin: intranet query falló, reintentando en simulación: ' . $e->getMessage());
-                    $user = User::on('simulacion')->whereRaw('TRIM(usu_cedula) = ?', [$cedula])->first();
-                }
+                Log::warning('MagicLogin: conexión ' . $conn . ' falló: ' . $e->getMessage());
             }
 
-            if (! $user && $connection === 'intranet') {
-                $user = User::on('simulacion')->whereRaw('TRIM(usu_cedula) = ?', [$cedula])->first();
+            // Si no se encontró, intentar la otra conexión
+            if (!$user) {
+                $fallback = ($conn === 'intranet') ? 'simulacion' : null;
+                // Solo intentar intranet como fallback si está habilitada
+                if ($conn !== 'intranet' && config('database.connections.intranet.enabled', true)) {
+                    $fallback = 'intranet';
+                }
+                if ($fallback) {
+                    try {
+                        $user = User::on($fallback)->whereRaw('TRIM(usu_cedula) = ?', [$cedula])->first();
+                    } catch (\Exception $e) {
+                        Log::warning('MagicLogin: fallback ' . $fallback . ' falló: ' . $e->getMessage());
+                    }
+                }
             }
 
             if (!$user) {
@@ -137,10 +147,6 @@ class MagicLoginController extends Controller
                 $roleService->setActiveRole($user, $payload['pre_role']);
             } else {
                 $roleService->bootstrapSessionRole($user);
-            }
-
-            if ($roleService->getActiveRole($user) === null) {
-                return redirect()->route('acceso-rol.index');
             }
 
             return redirect()->route('dashboard');

@@ -15,6 +15,15 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\CheckRole::class,
             'active.role' => \App\Http\Middleware\EnsureActiveRole::class,
         ]);
+
+        $middleware->encryptCookies(except: [
+            'laravel-session',
+        ]);
+
+        $middleware->validateCsrfTokens(except: [
+            'livewire/*',
+            'livewire/message/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->reportable(function (\Illuminate\Database\QueryException $e) {

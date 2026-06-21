@@ -16,13 +16,6 @@ $notificacionesCount = count($notificacionesList);
                 </a>
             </li>
 
-            <li>
-                <a href="{{ route('acceso-rol.index') }}"
-                    class="legacy-menu-item {{ request()->routeIs('acceso-rol.index') ? 'active' : '' }}">
-                    Acceder al Rol
-                </a>
-            </li>
-
             @if ($nav['canViewAcademic'])
             <li>
                 <div class="legacy-menu-item has-submenu">
