@@ -11,6 +11,7 @@ class ComponentePrograma extends RepositorioModel
         'comp_codigo',
         'pro_codigo',
         'tra_codigo',
+        'cantidad',
     ];
 
     public function componente()

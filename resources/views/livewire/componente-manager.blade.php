@@ -69,6 +69,9 @@
             <input wire:model.live.debounce.300ms="search" type="text" style="width: 350px; padding: 4px 6px; border-radius: 4px; border: 1px solid #999;"
                 placeholder="Componente...">
             <span style="margin-left: auto;"></span>
+            <button wire:click="irAVinculacion" class="cm-btn cm-btn-primary" style="font-size: 13px; padding: 6px 14px;">
+                Vinculaci&oacute;n PNF &rarr; Componentes
+            </button>
             <button wire:click="create" class="cm-btn cm-btn-success" style="font-size: 13px; padding: 6px 14px;">
                 Adicionar Componente Nuevo
             </button>
@@ -168,7 +171,94 @@
             </table>
             <div style="margin-top: 10px;">{{ $listaRegistros->links() }}</div>
         </fieldset>
-    @else
+    @elseif ($viewMode === 'vinculacion')
+        <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
+            <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">
+                Vinculaci&oacute;n PNF &rarr; Componentes
+            </legend>
+
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: bold; margin-right: 10px;">Seleccione el PNF:</label>
+                <select wire:model.live="selectedProgramaId" style="width: 400px; padding: 6px; font-size: 13px;">
+                    <option value="">- Seleccione un PNF -</option>
+                    @foreach($programasDisponibles ?? [] as $prog)
+                        <option value="{{ $prog->pro_codigo }}">{{ $prog->pro_siglas ?? $prog->pro_nombre }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            @if($selectedProgramaId !== '' && !empty($vinculacionRows))
+                <div style="font-size:12px;color:#666;margin-bottom:10px;">
+                    Marque los componentes que aplican al PNF seleccionado. Cada componente puede asignarse a un trayecto espec&iacute;fico (o dejarlo vac&iacute;o para todos los trayectos) con una cantidad.
+                </div>
+
+                <table width="100%" border="1" cellpadding="6" cellspacing="0"
+                    style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px;">
+                    <thead>
+                        <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
+                            <th width="5%">N&deg;</th>
+                            <th width="25%">Componente</th>
+                            <th width="10%">Asignado</th>
+                            <th width="25%">Trayecto</th>
+                            <th width="10%">Cantidad</th>
+                        </tr>
+                    </thead>
+                    <tbody class="Texto">
+                        @foreach($vinculacionRows as $compCodigo => $row)
+                            <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }};"
+                                valign="middle">
+                                <td align="center">{{ $loop->iteration }}</td>
+                                <td style="font-weight: bold; padding: 8px;">{{ $row['nombre'] }}</td>
+                                <td align="center">
+                                    <button type="button" wire:click="toggleAsignacionVinculacion({{ $compCodigo }})"
+                                        style="background:none;border:1px solid #ccc;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:11px;{{ $row['asignado'] ? 'background:#198754;color:#fff;border-color:#166f43;' : '' }}">
+                                        {{ $row['asignado'] ? 'S&Iacute;' : 'NO' }}
+                                    </button>
+                                </td>
+                                <td align="center">
+                                    @if($row['asignado'])
+                                        <select wire:change="cambiarTrayectoVinculacion({{ $compCodigo }}, $event.target.value)" style="width:90%;padding:4px;font-size:11px;">
+                                            <option value="">- Todos los trayectos -</option>
+                                            @foreach($trayectosVinculacion ?? [] as $tra)
+                                                <option value="{{ $tra->tra_codigo }}" {{ $row['tra_codigo'] == $tra->tra_codigo ? 'selected' : '' }}>
+                                                    {{ $tra->tra_nombre }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    @else
+                                        <span style="color:#999;font-style:italic;">-</span>
+                                    @endif
+                                </td>
+                                <td align="center">
+                                    @if($row['asignado'])
+                                        <input type="number" min="1" max="200"
+                                            wire:change="cambiarCantidadVinculacion({{ $compCodigo }}, $event.target.value)"
+                                            value="{{ $row['cantidad'] }}"
+                                            style="width:60px;padding:4px;text-align:center;font-size:11px;">
+                                    @else
+                                        <span style="color:#999;font-style:italic;">-</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+
+                <div style="text-align: center; margin-top: 20px;">
+                    <button type="button" wire:click="guardarVinculacion" class="cm-btn cm-btn-success" style="margin-right: 10px;">
+                        Guardar Vinculaci&oacute;n
+                    </button>
+                    <button type="button" wire:click="cancelarVinculacion" class="cm-btn cm-btn-danger">
+                        Cancelar
+                    </button>
+                </div>
+            @elseif($selectedProgramaId !== '' && empty($vinculacionRows))
+                <div style="text-align:center;padding:20px;font-weight:bold;color:#999;">
+                    No hay componentes activos disponibles.
+                </div>
+            @endif
+        </fieldset>
+    @elseif ($viewMode === 'form')
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">
                 {{ $editingId ? 'Editar Componente' : 'Nuevo Componente' }}
@@ -181,8 +271,7 @@
             <form wire:submit="save" style="margin: 0;">
                 <div style="margin-top: 10px;">
                     <div style="font-size:12px;color:#666;margin-bottom:10px;">
-                        Cada componente debe estar <b>vinculado al menos a un PNF + Trayecto</b>.<br>
-                        Los componentes se mostrar&aacute;n solo en proyectos del PNF y Trayecto asignados.
+                        Las asignaciones a PNF + Trayecto se gestionan desde <b>Vinculaci&oacute;n PNF &rarr; Componentes</b>.
                     </div>
 
                     @foreach ($rows as $index => $row)
@@ -234,90 +323,6 @@
                                 </td>
                             </tr>
                         </table>
-
-                        {{-- Sección de Asignaciones PNF + Trayecto --}}
-                        <div style="margin-top: 12px; padding: 10px; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px;">
-                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-                                <span style="font-weight:bold;font-size:12px;color:#333;">📌 Asignaciones a PNF + Trayecto</span>
-                                <span class="obligatorio">*</span>
-                            </div>
-
-                            @if(!empty($row['asignaciones']))
-                                <div style="margin-bottom:8px; display:flex; flex-wrap:wrap; gap:4px;">
-                                    @foreach($row['asignaciones'] as $asigIdx => $asig)
-                                        @php
-                                            $progNombre = collect($programasDisponibles ?? [])
-                                                ->firstWhere('pro_codigo', $asig['pro_codigo']);
-                                            $progLabel = $progNombre ? ($progNombre->pro_siglas ?? $progNombre->pro_nombre) : 'PNF #'.$asig['pro_codigo'];
-                                            $traLabel = !empty($asig['tra_codigo']) ? 'Trayecto '.$asig['tra_codigo'] : 'Todos';
-                                        @endphp
-                                        <span style="display:inline-flex;align-items:center;gap:4px;background:#e8f0fe;border:1px solid #b3d4fc;border-radius:4px;padding:2px 8px;font-size:11px;">
-                                            <b>{{ $progLabel }}</b> &rarr; {{ $traLabel }}
-                                            <button type="button" wire:click="removerAsignacion({{ $index }}, {{ $asigIdx }})"
-                                                style="background:none;border:none;color:#c82333;cursor:pointer;font-size:14px;padding:0 2px;line-height:1;"
-                                                title="Quitar asignaci&oacute;n">&times;</button>
-                                        </span>
-                                    @endforeach
-                                </div>
-                            @else
-                                <div style="margin-bottom:8px;font-size:11px;color:#999;font-style:italic;">
-                                    Sin asignaciones. Debe agregar al menos una.
-                                </div>
-                            @endif
-
-                            @if($asignandoRowIndex === $index)
-                                {{-- Mostrar formulario de asignación --}}
-                                <div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:4px;padding:10px;margin-top:6px;">
-                                    @error('asignacion')
-                                        <div style="color:#dc3545;font-size:10px;margin-bottom:6px;">{{ $message }}</div>
-                                    @enderror
-                                    <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size:11px;">
-                                        <tr>
-                                            <td width="40%"><b>PNF / Programa:</b></td>
-                                            <td width="40%"><b>Trayecto:</b></td>
-                                            <td width="20%"></td>
-                                        </tr>
-                                        <tr>
-                                            <td>
-                                                <select wire:model.live="asignacionProCodigo" style="width:100%;padding:4px;">
-                                                    <option value="">- Seleccione -</option>
-                                                    @foreach($programasDisponibles ?? [] as $prog)
-                                                        <option value="{{ $prog->pro_codigo }}">{{ $prog->pro_siglas ?? $prog->pro_nombre }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </td>
-                                            <td>
-                                                <select wire:model="asignacionTraCodigo" style="width:100%;padding:4px;" {{ $asignacionProCodigo === '' ? 'disabled' : '' }}>
-                                                    <option value="">- Seleccione -</option>
-                                                    @foreach($trayectosAsignacion ?? [] as $tra)
-                                                        <option value="{{ $tra->tra_codigo }}">{{ $tra->tra_nombre }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </td>
-                                            <td align="center">
-                                                <button type="button" wire:click="confirmarAsignacion"
-                                                    class="cm-btn cm-btn-success cm-btn-sm"
-                                                    style="padding:4px 10px;font-size:11px;min-width:auto;"
-                                                    {{ $asignacionProCodigo === '' || $asignacionTraCodigo === '' ? 'disabled' : '' }}>
-                                                    Agregar
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </table>
-                                    <div style="margin-top:6px;text-align:right;">
-                                        <button type="button" wire:click="cancelarAsignacion"
-                                            class="cm-btn cm-btn-danger cm-btn-sm"
-                                            style="padding:2px 8px;font-size:10px;min-width:auto;">Cancelar</button>
-                                    </div>
-                                </div>
-                            @else
-                                <button type="button" wire:click="iniciarAsignacion({{ $index }})"
-                                    class="cm-btn cm-btn-primary cm-btn-sm"
-                                    style="padding:3px 10px;font-size:11px;min-width:auto;">
-                                    + Agregar asignaci&oacute;n
-                                </button>
-                            @endif
-                        </div>
 
                         @if (empty($row['id']) && (!$editingId || count($rows) > 1))
                             <div style="margin-top: 8px; text-align: right;">

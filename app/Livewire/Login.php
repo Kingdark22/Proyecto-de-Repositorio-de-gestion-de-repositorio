@@ -127,10 +127,6 @@ class Login extends Component
             $roleService = app(UserRoleService::class);
             $roleService->bootstrapSessionRole($user);
 
-            if ($roleService->getActiveRole($user) === null) {
-                return $this->redirect(route('acceso-rol.index'), navigate: false);
-            }
-
             return $this->redirect(route('dashboard'), navigate: false);
 
         } catch (\Throwable $e) {

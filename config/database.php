@@ -73,6 +73,7 @@ return [
         ],
 
         'intranet' => [
+            'enabled' => env('DB_INTRANET_ENABLED', true),
             'driver' => env('DB_INTRANET_CONNECTION', 'pgsql'),
             'host' => env('DB_INTRANET_HOST', '201.249.139.74'),
             'port' => env('DB_INTRANET_PORT', '5432'),

@@ -72,17 +72,15 @@ class IntranetProfessorService
             return false;
         }
 
-        // 1) Debe tener asignación activa en UC de proyecto
-        if (!$this->esProfesorProyectoEnLapso($cedula, $lapCodigo)) {
+        // Query única: debe tener asignación activa en UC de proyecto Y al menos un PNF
+        try {
+            return $this->baseProfesorProyectoQuery($lapCodigo)
+                ->where('sud.sud_ced_docente', $cedula)
+                ->whereNotNull('pro.pro_codigo')
+                ->exists();
+        } catch (\Throwable) {
             return false;
         }
-
-        // 2) Debe tener al menos un programa (PNF) asociado a esa asignación
-        //    Esto evita que un docente con asignaciones huérfanas (sin malla/programa)
-        //    sea detectado como profesor de proyecto.
-        $programas = $this->programasDelDocente($cedula, $lapCodigo);
-
-        return !empty($programas);
     }
 
     /**
@@ -384,8 +382,8 @@ class IntranetProfessorService
             return true;
         }
 
-        // Verificar que el profesor existe en intranet
-        if (!$this->esProfesorProyectoEnLapso($cedula, $lapCodigo)) {
+        // Verificar que el profesor existe en intranet (una sola consulta combinada)
+        if (!$this->esProfesorProyectoVigente($cedula, $lapCodigo)) {
             return false;
         }
 
