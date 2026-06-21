@@ -1,38 +1,22 @@
 <?php
-require __DIR__ . '/vendor/autoload.php';
-$app = require __DIR__ . '/bootstrap/app.php';
-$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+require 'vendor/autoload.php';
+$app = require 'bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
 
-echo "=== REPOSITORIO DB ===\n";
-$all = DB::connection('pgsql')->select("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname='public' ORDER BY tablename");
-echo "=== ALL TABLES ===\n";
-foreach ($all as $t) {
-    echo "  " . $t->tablename . "\n";
-}
+$conn = 'intranet';
+$tables = ['seccion_unidad_docente', 'rol', 'estado', 'municipio', 'parroquia'];
 
-echo "\n=== COLUMNS PER TABLE ===\n";
-foreach ($all as $t) {
-    $tname = $t->tablename;
-    $cols = DB::connection('pgsql')->getSchemaBuilder()->getColumnListing($tname);
-    echo "\n--- $tname ---\n";
-    foreach ($cols as $c) {
-        $type = DB::connection('pgsql')->select("SELECT data_type FROM information_schema.columns WHERE table_name=? AND column_name=?", [$tname, $c]);
-        $tinfo = $type[0]->data_type ?? '?';
-        echo "  $c ($tinfo)\n";
+foreach ($tables as $t) {
+    try {
+        $has = Illuminate\Support\Facades\Schema::connection($conn)->hasTable($t);
+        if (!$has) { echo "=== $t === NO EXISTE\n\n"; continue; }
+        $cols = Illuminate\Support\Facades\Schema::connection($conn)->getColumnListing($t);
+        echo "=== $t ===\n";
+        echo implode(', ', $cols) . "\n";
+        $count = Illuminate\Support\Facades\DB::connection($conn)->table($t)->count();
+        echo "Rows: $count\n\n";
+    } catch (Throwable $e) {
+        echo "=== $t === ERROR: " . $e->getMessage() . "\n\n";
     }
 }
-
-echo "\n\n=== INTRANET DB ===\n";
-try {
-    $conn2 = config('dual_database.intranet_connection', 'pgsql');
-    echo "Connection name: $conn2\n";
-    $tablesIntra = DB::connection($conn2)->select("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname='public' ORDER BY tablename");
-    echo "Tables:\n";
-    foreach ($tablesIntra as $t) {
-        echo "  " . $t->tablename . "\n";
-    }
-} catch (\Throwable $e) {
-    echo "ERROR: " . $e->getMessage() . "\n";
-}
-
-echo "\n=== DONE ===\n";

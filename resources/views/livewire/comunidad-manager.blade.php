@@ -55,20 +55,6 @@
         @endif
     </p>
 
-    @if (session()->has('message'))
-        <div
-            style="background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size:12px;">
-            {{ session('message') }}
-        </div>
-    @endif
-
-    @if (session()->has('message_error'))
-        <div
-            style="background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size:12px;">
-            {{ session('message_error') }}
-        </div>
-    @endif
-
     @if ($viewMode === 'list')
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin-bottom: 20px;">
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Buscador y listado
@@ -157,7 +143,7 @@
                                     <span class="obligatorio" style="color: red; font-weight: bold;">*</span>
                                 </div>
                                 @error('nombre')
-                                    <span style="color:red;font-size:10px; display: block; margin-top: 2px;">{{ $message }}</span>
+                                    <span class="validation-error">{{ $message }}</span>
                                 @enderror
                             </div>
                         </div>
@@ -169,7 +155,7 @@
                                 <input wire:model="rif" type="text" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
                                 <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
                                 @error('rif')
-                                    <span style="color:red;font-size:10px; display: block; margin-top: 2px;">{{ $message }}</span>
+                                    <span class="validation-error">{{ $message }}</span>
                                 @enderror
                             </div>
                         </div>
@@ -183,7 +169,7 @@
                                 <input wire:model="correo" type="email" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
                                 <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
                                 @error('correo')
-                                    <span style="color:red;font-size:10px; display: block; margin-top: 2px;">{{ $message }}</span>
+                                    <span class="validation-error">{{ $message }}</span>
                                 @enderror
                             </div>
                         </div>
@@ -205,10 +191,10 @@
                                 </div>
                                 <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
                                 @error('prefijo_telefono')
-                                    <span style="color:red;font-size:10px; display: block; margin-top: 2px;">{{ $message }}</span>
+                                    <span class="validation-error">{{ $message }}</span>
                                 @enderror
                                 @error('numero_telefono')
-                                    <span style="color:red;font-size:10px; display: block; margin-top: 2px;">{{ $message }}</span>
+                                    <span class="validation-error">{{ $message }}</span>
                                 @enderror
                             </div>
                         </div>
@@ -229,7 +215,7 @@
                                     <span class="obligatorio" style="color: red; font-weight: bold;">*</span>
                                 </div>
                                 @error('estado_id')
-                                    <span style="color:red;font-size:10px; display: block; margin-top: 2px;">{{ $message }}</span>
+                                    <span class="validation-error">{{ $message }}</span>
                                 @enderror
                             </div>
                         </div>
@@ -248,7 +234,7 @@
                                     <span class="obligatorio" style="color: red; font-weight: bold;">*</span>
                                 </div>
                                 @error('municipio_id')
-                                    <span style="color:red;font-size:10px; display: block; margin-top: 2px;">{{ $message }}</span>
+                                    <span class="validation-error">{{ $message }}</span>
                                 @enderror
                             </div>
                         </div>
@@ -265,7 +251,7 @@
                                     <span class="obligatorio" style="color: red; font-weight: bold; margin-top: 5px;">*</span>
                                 </div>
                                 @error('dir_nombre')
-                                    <span style="color:red;font-size:10px; display: block; margin-top: 2px;">{{ $message }}</span>
+                                    <span class="validation-error">{{ $message }}</span>
                                 @enderror
                             </div>
                         </div>

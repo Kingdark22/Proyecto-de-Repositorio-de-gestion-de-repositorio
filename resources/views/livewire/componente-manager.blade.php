@@ -63,13 +63,6 @@
 
     <h2 class="titulo" style="margin-bottom: 20px; font-weight: bolder; margin-top: 10px;">Gesti&oacute;n de Componentes</h2>
 
-    @if (session()->has('message'))
-        <div
-            style="background-color: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border: 1px solid #c3e6cb; border-radius: 4px; font-weight: bold; text-align: center;">
-            {{ session('message') }}
-        </div>
-    @endif
-
     @if ($viewMode === 'list')
         <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 12px;">
             <b>Buscar:</b>
@@ -271,7 +264,7 @@
                 {{ $editingId ? 'Editar Componente' : 'Nuevo Componente' }}
             </legend>
             @error('rows')
-                <div style="background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px; font-weight: bold; text-align: center;">
+                <div class="validation-error" style="padding:10px;margin-bottom:15px;font-weight:bold;text-align:center;">
                     {{ $message }}
                 </div>
             @enderror

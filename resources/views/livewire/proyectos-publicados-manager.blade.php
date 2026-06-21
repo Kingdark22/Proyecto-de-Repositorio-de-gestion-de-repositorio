@@ -94,7 +94,7 @@
                     <textarea wire:model="nuevoComentario" rows="3"
                         style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 4px;"
                         placeholder="Escribe un comentario..."></textarea>
-                    @error('nuevoComentario')<div style="color:red;font-size:10px;margin-top:3px;">{{ $message }}</div>@enderror
+                    @error('nuevoComentario')<div class="validation-error">{{ $message }}</div>@enderror
                     <div style="text-align: right; margin-top: 6px;">
                         <button type="button" wire:click="comentar" class="cm-btn cm-btn-primary cm-btn-sm">Comentar</button>
                     </div>

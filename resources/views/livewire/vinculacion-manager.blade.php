@@ -29,84 +29,132 @@
                 @endif
             </div>
 
-            <table width="100%" cellpadding="5" cellspacing="0" style="font-size: 13px;">
-                <tr>
-                    <td width="120" style="font-weight:bold; vertical-align:top;">T&iacute;tulo:</td>
-                    <td>{{ $selectedProyecto->titulo ?? '(sin t&iacute;tulo)' }}</td>
-                </tr>
-                <tr>
-                    <td style="font-weight:bold; vertical-align:top;">Resumen:</td>
-                    <td>{{ $selectedProyecto->resumen ?? '(sin resumen)' }}</td>
-                </tr>
-                <tr>
-                    <td style="font-weight:bold;">Comunidad:</td>
-                    <td>{{ $selectedProyecto->comunidad?->nombre ?? '-' }}</td>
-                </tr>
-                <tr>
-                    <td style="font-weight:bold;">Fecha aprobaci&oacute;n:</td>
-                    <td>{{ $selectedProyecto->fecha_aprobacion ? $selectedProyecto->fecha_aprobacion->format('d/m/Y') : '-' }}</td>
-                </tr>
-                @if($selectedProyecto->archivo_path)
-                <tr>
-                    <td style="font-weight:bold;">Documento:</td>
-                    <td><a href="{{ route('documentos.serve', ['path' => $selectedProyecto->archivo_path]) }}" target="_blank" style="color:#0000EE;">Ver PDF</a></td>
-                </tr>
+            {{-- Datos del proyecto --}}
+            <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 12px;">
+                <legend style="font-weight: bold; font-size: 12px; color:#333;">Datos del proyecto vinculado</legend>
+                <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 13px;">
+                    <tr>
+                        <td width="120" style="font-weight:bold; vertical-align:top;">T&iacute;tulo:</td>
+                        <td>{{ $selectedProyecto->titulo ?? '(sin t&iacute;tulo)' }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold; vertical-align:top;">Resumen:</td>
+                        <td style="text-align:justify;">{{ $selectedProyecto->resumen ?? '(sin resumen)' }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold;">Comunidad:</td>
+                        <td>{{ $selectedProyecto->comunidad?->nombre ?? '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold;">Equipo:</td>
+                        <td>{{ $selectedProyecto->equipo_resumen }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold;">Clasificaci&oacute;n:</td>
+                        <td style="font-size:11px;">
+                            @if($selectedProyecto->linea_investigacion)<span style="background:#e8f0fe;padding:1px 5px;border-radius:3px;">L: {{ $selectedProyecto->linea_investigacion->nombre_investigacion }}</span>@endif
+                            @if($selectedProyecto->metodologia) <span style="background:#e8f0fe;padding:1px 5px;border-radius:3px;">M: {{ $selectedProyecto->metodologia->nombre }}</span>@endif
+                            @if($selectedProyecto->tipo_publicacion) <span style="background:#e8f0fe;padding:1px 5px;border-radius:3px;">TP: {{ $selectedProyecto->tipo_publicacion->nombre }}</span>@endif
+                            @if($selectedProyecto->tipo_investigacion) <span style="background:#e8f0fe;padding:1px 5px;border-radius:3px;">TI: {{ $selectedProyecto->tipo_investigacion->nombre }}</span>@endif
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold; vertical-align:top;">Fecha aprobaci&oacute;n:</td>
+                        <td>{{ $selectedProyecto->fecha_aprobacion ? $selectedProyecto->fecha_aprobacion->format('d/m/Y') : '-' }}</td>
+                    </tr>
+                </table>
+
+                {{-- Documentos del proyecto --}}
+                @php $docs = $selectedProyecto->documentos ?? collect(); @endphp
+                @if($docs->isNotEmpty())
+                    <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #ddd;">
+                        <b style="font-size:12px;">Documentos del proyecto:</b>
+                        <div style="margin-top:4px;">
+                            @foreach($docs as $doc)
+                                <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank"
+                                    style="display:inline-block; background:#f0f7ff; border:1px solid #b3d4fc; border-radius:4px; padding:3px 10px; margin:2px; font-size:11px; color:#004080; text-decoration:none;">
+                                    📄 {{ $doc->componente?->nombre ?? 'Documento' }}
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @else
+                    <div style="margin-top:8px; font-size:11px; color:#999; font-style:italic;">
+                        Este proyecto no tiene documentos asociados.
+                    </div>
                 @endif
-            </table>
+            </fieldset>
 
             <hr style="border:none; border-top:1px solid #ccc; margin:15px 0;">
 
-            <table width="100%" cellpadding="5" cellspacing="0" style="font-size: 13px;">
-                <tr>
-                    <td width="140" style="font-weight:bold; vertical-align:top;">Tipo de Vinculaci&oacute;n:</td>
-                    <td>
-                        <input type="text" wire:model="vinculacionTipo" style="width: 80%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Ej: Ciencia y Tecnolog&iacute;a...">
-                        @error('vinculacionTipo') <div style="color:red;font-size:10px;">{{ $message }}</div> @enderror
-                    </td>
-                </tr>
-                <tr>
-                    <td style="font-weight:bold; vertical-align:top;">Asociar Comunidad:</td>
-                    <td>
-                        @if($comunidadSeleccionada)
-                            <div style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:4px;padding:8px;margin-bottom:6px;">
-                                <div style="font-weight:bold;font-size:13px;">{{ $comunidadSeleccionada->nombre }}</div>
-                                @if($comunidadSeleccionada->rif)
-                                    <div style="font-size:11px;color:#555;">RIF: {{ $comunidadSeleccionada->rif }}</div>
-                                @endif
-                                @php $dir = $comunidadSeleccionada->direccion; @endphp
-                                @if($dir && $dir->municipio)
-                                    <div style="font-size:11px;color:#555;">
-                                        Direcci&oacute;n: {{ $dir->dir_calle ?? '' }},
-                                        {{ $dir->municipio->mun_nombre ?? '' }},
-                                        {{ $dir->municipio?->estado?->est_nombre ?? '' }}
+            {{-- Formulario de vinculación --}}
+            <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 12px;">
+                <legend style="font-weight: bold; font-size: 12px; color:#333;">Datos de la vinculaci&oacute;n</legend>
+                <table width="100%" cellpadding="5" cellspacing="0" style="font-size: 13px;">
+                    <tr>
+                        <td width="140" style="font-weight:bold; vertical-align:top;">T&iacute;tulo de Vinculaci&oacute;n:
+                            <span style="color:red;">*</span></td>
+                        <td>
+                            <input type="text" wire:model="vinculacionTitulo" style="width: 90%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Ej: Proyecto de desarrollo comunitario...">
+                            @error('vinculacionTitulo') <div class="validation-error">{{ $message }}</div> @enderror
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold; vertical-align:top;">Descripci&oacute;n:</td>
+                        <td>
+                            <textarea wire:model="vinculacionDescripcion" rows="3" style="width: 90%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Describa el alcance de la vinculación..."></textarea>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold; vertical-align:top;">Tipo (opcional):</td>
+                        <td>
+                            <input type="text" wire:model="vinculacionTipo" style="width: 90%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Ej: Ciencia y Tecnolog&iacute;a, Social, Ambiental...">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold; vertical-align:top;">Asociar Comunidad:</td>
+                        <td>
+                            @if($comunidadSeleccionada)
+                                <div style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:4px;padding:8px;margin-bottom:6px;">
+                                    <div style="font-weight:bold;font-size:13px;">{{ $comunidadSeleccionada->nombre }}</div>
+                                    @if($comunidadSeleccionada->rif)
+                                        <div style="font-size:11px;color:#555;">RIF: {{ $comunidadSeleccionada->rif }}</div>
+                                    @endif
+                                    @php $dir = $comunidadSeleccionada->direccion; @endphp
+                                    @if($dir && $dir->municipio)
+                                        <div style="font-size:11px;color:#555;">
+                                            Direcci&oacute;n: {{ $dir->dir_calle ?? '' }},
+                                            {{ $dir->municipio->mun_nombre ?? '' }},
+                                            {{ $dir->municipio?->estado?->est_nombre ?? '' }}
+                                        </div>
+                                    @endif
+                                    <button type="button" wire:click="quitarComunidad" style="font-size:10px;color:#c62828;border:none;background:none;cursor:pointer;margin-top:4px;">&times; Quitar comunidad</button>
+                                </div>
+                            @else
+                                <div style="margin-bottom:4px;">
+                                    <input type="text" wire:model.live.debounce.300ms="searchComunidad" style="width:90%;padding:5px;border:1px solid #ccc;border-radius:4px;" placeholder="Buscar comunidad por nombre o RIF...">
+                                </div>
+                                @if($searchComunidad !== '')
+                                    <div style="max-height:150px;overflow-y:auto;border:1px solid #ddd;border-radius:4px;padding:4px;margin-bottom:4px;">
+                                        @forelse($comunidadesFiltradas as $com)
+                                            <div wire:click="seleccionarComunidad({{ $com->com_codigo }})" style="cursor:pointer;padding:4px 6px;border-bottom:1px solid #eee;font-size:12px;">
+                                                <b>{{ $com->nombre }}</b>
+                                                @if($com->rif) <span style="color:#888;">({{ $com->rif }})</span> @endif
+                                            </div>
+                                        @empty
+                                            <div style="padding:4px;color:#999;font-size:11px;font-style:italic;">Sin resultados</div>
+                                        @endforelse
                                     </div>
                                 @endif
-                                <button type="button" wire:click="quitarComunidad" style="font-size:10px;color:#c62828;border:none;background:none;cursor:pointer;margin-top:4px;">&times; Quitar comunidad</button>
-                            </div>
-                        @else
-                            <div style="margin-bottom:4px;">
-                                <input type="text" wire:model.live.debounce.300ms="searchComunidad" style="width:80%;padding:4px;border:1px solid #ccc;border-radius:4px;" placeholder="Buscar comunidad por nombre o RIF...">
-                            </div>
-                            @if($searchComunidad !== '')
-                                <div style="max-height:150px;overflow-y:auto;border:1px solid #ddd;border-radius:4px;padding:4px;margin-bottom:4px;">
-                                    @forelse($comunidadesFiltradas as $com)
-                                        <div wire:click="seleccionarComunidad({{ $com->com_codigo }})" style="cursor:pointer;padding:4px 6px;border-bottom:1px solid #eee;font-size:12px;">
-                                            <b>{{ $com->nombre }}</b>
-                                            @if($com->rif) <span style="color:#888;">({{ $com->rif }})</span> @endif
-                                        </div>
-                                    @empty
-                                        <div style="padding:4px;color:#999;font-size:11px;font-style:italic;">Sin resultados</div>
-                                    @endforelse
-                                </div>
                             @endif
-                        @endif
-                    </td>
-                </tr>
-                <tr>
-                    <td style="font-weight:bold; vertical-align:top;">Observaciones:</td>
-                    <td><textarea wire:model="vinculacionObservaciones" rows="3" style="width: 80%; padding: 4px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Observaciones opcionales..."></textarea></td>
-                </tr>
-            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:bold; vertical-align:top;">Observaciones:</td>
+                        <td><textarea wire:model="vinculacionObservaciones" rows="2" style="width: 90%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Observaciones opcionales..."></textarea></td>
+                    </tr>
+                </table>
+            </fieldset>
 
             <div style="text-align: right; margin-top: 12px;">
                 <button type="button" wire:click="cerrar" class="cm-btn cm-btn-secondary cm-btn-sm">Cancelar</button>

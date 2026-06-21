@@ -33,6 +33,7 @@ Route::get('/login', function (\Illuminate\Http\Request $request) {
 
 Route::middleware(['auth', 'active.role'])->group(function () {
     Route::view('/dashboard', 'dashboard')->name('dashboard');
+    Route::view('/configuracion', 'configuracion.index')->name('configuracion');
 
     Route::middleware('role:administrador,coordinador,gestionador')->group(function () {
         Route::view('/lineas-investigacion', 'lineas.index')->name('lineas-investigacion');
@@ -40,22 +41,20 @@ Route::middleware(['auth', 'active.role'])->group(function () {
         Route::view('/objetivos-investigacion', 'objetivo_investigacion.index')->name('objetivos-investigacion');
         Route::view('/metodologia-investigacion', 'metodologia_investigacion.index')->name('metodologia-investigacion');
         Route::view('/tipos-publicacion', 'tipo_publicacion.index')->name('tipos-publicacion');
+        Route::view('/objetivos', 'objetivos.index')->name('objetivos.index');
     });
 
     Route::redirect('/lapsos-academicos', '/dashboard')->name('lapsos-academicos');
 
     Route::view('/proyectos/buscar', 'proyectos.buscar')->name('proyectos.buscar');
 
-    Route::middleware('role:administrador,coordinador,profesor proyecto,gestionador,estudiante')->group(function () {
+    Route::middleware('role:administrador,coordinador,profesor proyecto,gestionador,estudiante,docente')->group(function () {
         Route::view('/proyectos', 'proyectos.index')->name('proyectos.index');
         Route::view('/comunidades', 'comunidades.index')->name('comunidades.index');
-    });
-
-    Route::middleware('role:administrador,coordinador,profesor proyecto,gestionador')->group(function () {
         Route::view('/grupos-proyecto', 'grupos_proyecto.index')->name('grupos-proyecto.index');
     });
 
-    Route::middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador')->group(function () {
+    Route::middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador,docente')->group(function () {
         Route::view('/proyectos/gestion', 'proyectos.index')->name('proyectos.gestion');
     });
     Route::view('/publicaciones', 'publicaciones.index')->name('publicaciones.index')->middleware('role:gestionador');

@@ -168,6 +168,29 @@
 
         .columna_color_oscuro{ background-color:#C3E0E4; }
         .columna_color_claro{ background-color:#8FC4CB; }
+
+        /* Estilos globales para errores de validación visuales */
+        .validation-error {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 4px;
+            padding: 6px 10px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-left: 3px solid #dc2626;
+            border-radius: 4px;
+            color: #991b1b;
+            font-size: 11px;
+            font-weight: 600;
+            line-height: 1.4;
+            box-shadow: 0 1px 3px rgba(220,38,38,0.06);
+        }
+        .validation-error::before {
+            content: "⚠";
+            font-size: 12px;
+            flex-shrink: 0;
+        }
     </style>
     @stack('styles')
     @livewireStyles
@@ -334,6 +357,35 @@
             
             @yield('content')
         </main>
+
+        {{-- Auto-detectar session flashes y mostrarlos como modal visual --}}
+        @php
+            $_flashMsg = session('message');
+            $_flashErr = session('message_error');
+            $_flashErr2 = session('error');
+        @endphp
+        @if($_flashMsg || $_flashErr || $_flashErr2)
+        <script>
+        (function() {
+            var type = 'info', msg = '';
+            @if($_flashMsg)
+                type = 'success';
+                msg = '{{ addslashes($_flashMsg) }}';
+            @elseif($_flashErr)
+                type = 'error';
+                msg = '{{ addslashes($_flashErr) }}';
+            @elseif($_flashErr2)
+                type = 'error';
+                msg = '{{ addslashes($_flashErr2) }}';
+            @endif
+            if (msg) {
+                if (typeof showNotifyModal === 'function') {
+                    setTimeout(function() { showNotifyModal(type, msg); }, 100);
+                }
+            }
+        })();
+        </script>
+        @endif
 
         <!-- Capa de Abajo -->
         <div id="abajo">

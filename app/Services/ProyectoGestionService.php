@@ -147,11 +147,7 @@ class ProyectoGestionService
             ? (int) $estado['programa_id']
             : $this->resolverProgramaDesdeClave($estado['equipo_seccion_clave'] ?? '');
 
-        $trayecto = !empty($estado['trayecto'])
-            ? (string) $estado['trayecto']
-            : null;
-
-        $datos = array_merge($this->catalogoRepo->catalogos($programaId, $trayecto), $equipoCtx, [
+        $datos = array_merge($this->catalogoRepo->catalogos($programaId), $equipoCtx, [
             'canRegister' => $user ? $this->usuarioPuedeRegistrar($user) : false,
             'esAdmin' => $esAdmin,
             'programasEquipo' => $lapCodigoFiltro
