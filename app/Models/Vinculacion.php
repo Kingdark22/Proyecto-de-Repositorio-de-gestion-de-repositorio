@@ -8,16 +8,10 @@ class Vinculacion extends RepositorioModel
 
     protected $fillable = [
         'proyecto_id',
-        'tipo',
         'vin_titulo',
         'vin_descripcion',
-        'observaciones',
         'comunidad_id',
-    ];
-
-    protected $casts = [
-        'vin_titulo' => 'string',
-        'vin_descripcion' => 'string',
+        'tipo',
     ];
 
     public function getTituloAttribute(): string

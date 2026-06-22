@@ -301,19 +301,19 @@ class ProyectoManager extends Component
     protected function messages(): array
     {
         return [
-            'titulo.required' => 'El titulo del proyecto es obligatorio.',
-            'titulo.min' => 'El titulo debe tener al menos 5 caracteres.',
+            'titulo.required' => 'El título del proyecto es obligatorio.',
+            'titulo.min' => 'El título debe tener al menos 5 caracteres.',
             'resumen.required' => 'El resumen es obligatorio.',
             'resumen.min' => 'El resumen debe tener al menos 10 caracteres.',
             'fecha_subida.required' => 'La fecha de subida es obligatoria.',
-            'calificacion.required' => 'La calificacion es obligatoria.',
-            'calificacion.integer' => 'La calificacion debe ser un numero entero.',
-            'calificacion.min' => 'La calificacion minima es 1.',
-            'calificacion.max' => 'La calificacion maxima es 20.',
-            'fecha_aprobacion.required' => 'La fecha de aprobacion es obligatoria.',
+            'calificacion.required' => 'La calificación es obligatoria.',
+            'calificacion.integer' => 'La calificación debe ser un número entero.',
+            'calificacion.min' => 'La calificación mínima es 1.',
+            'calificacion.max' => 'La calificación máxima es 20.',
+            'fecha_aprobacion.required' => 'La fecha de aprobación es obligatoria.',
 
-            'lapso_academico_id.required' => 'Debe seleccionar un lapso academico.',
-            'equipo_seccion_clave.required' => 'Debe validar el equipo (seccion intranet).',
+            'lapso_academico_id.required' => 'Debe seleccionar un lapso académico.',
+            'equipo_seccion_clave.required' => 'Debe validar el equipo (sección intranet).',
             'comunidad_id.required' => 'La comunidad es obligatoria. El grupo seleccionado debe tener una comunidad asignada.',
             'trayecto.required' => 'El trayecto es obligatorio.',
             'motivo_rechazo.required' => 'Debe indicar el motivo de rechazo.',
@@ -1039,7 +1039,6 @@ class ProyectoManager extends Component
         return view('livewire.proyecto-manager', array_merge($datos, [
             'viewMode' => $this->viewMode,
             'editingId' => $this->editingId,
-            'filterLapsoEquipo' => $this->filterLapsoEquipo,
             'archivos_actuales' => $this->archivos_actuales,
             'selectedProject' => $this->selectedProject,
             'esAdmin' => $gestion->usuarioEsAdminEnSistema($user),

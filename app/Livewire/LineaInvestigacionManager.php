@@ -90,7 +90,7 @@ class LineaInvestigacionManager extends Component
         );
 
         $this->viewMode = 'list';
-        session()->flash('message', $this->editingId ? 'Línea de Investigación actualizada con éxito.' : 'Línea de Investigación registrada con éxito.');
+        $this->dispatch('notify', type: 'success', message: $this->editingId ? 'Línea de Investigación actualizada con éxito.' : 'Línea de Investigación registrada con éxito.');
         $this->dispatch('refresh-icons');
     }
 
@@ -99,14 +99,14 @@ class LineaInvestigacionManager extends Component
         $item = LineaInvestigacion::findOrFail($id);
         $item->alternarEstado();
 
-        session()->flash('message', $item->activo ? 'Línea habilitada correctamente.' : 'Línea deshabilitada correctamente.');
+        $this->dispatch('notify', type: 'success', message: $item->activo ? 'Línea habilitada correctamente.' : 'Línea deshabilitada correctamente.');
         $this->dispatch('refresh-icons');
     }
 
     public function delete($id)
     {
         LineaInvestigacion::find($id)->delete();
-        session()->flash('message', 'Línea de Investigación eliminada correctamente.');
+        $this->dispatch('notify', type: 'success', message: 'Línea de Investigación eliminada correctamente.');
         $this->dispatch('refresh-icons');
     }
 

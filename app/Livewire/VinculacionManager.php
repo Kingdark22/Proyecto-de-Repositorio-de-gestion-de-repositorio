@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Comunidad;
 use App\Models\Proyecto;
 use App\Models\Vinculacion;
+use Illuminate\Support\Collection;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -12,8 +13,7 @@ class VinculacionManager extends Component
 {
     use WithPagination;
 
-    public string $mensaje = '';
-    public string $tipoMensaje = 'success';
+
     public string $search = '';
 
     public $selectedProyecto = null;
@@ -22,17 +22,66 @@ class VinculacionManager extends Component
     public $vinculacionExistente = null;
 
     public string $vinculacionComunidadId = '';
-    public string $searchComunidad = '';
 
-    public function updatedSearchComunidad(): void
+    public bool $mostrarModalComunidad = false;
+    public string $modalComunidadNombre = '';
+    public string $modalComunidadRif = '';
+    public string $buscarComunidad = '';
+    public Collection $comunidadesEncontradas;
+
+    public function mount(): void
     {
-        $this->vinculacionComunidadId = '';
+        $this->comunidadesEncontradas = collect();
     }
 
-    public function seleccionarComunidad($id): void
+    public function updatedBuscarComunidad(): void
     {
-        $this->vinculacionComunidadId = (string) $id;
-        $this->searchComunidad = '';
+        $q = trim($this->buscarComunidad);
+        if ($q === '') {
+            $this->comunidadesEncontradas = collect();
+            return;
+        }
+        $this->comunidadesEncontradas = Comunidad::whereRaw('com_nombre ILIKE ?', ["%{$q}%"])
+            ->orWhereRaw('com_rif ILIKE ?', ["%{$q}%"])
+            ->orderByRaw('com_nombre')
+            ->get();
+    }
+
+    public function abrirModalComunidad(): void
+    {
+        $this->mostrarModalComunidad = true;
+        $this->modalComunidadNombre = '';
+        $this->modalComunidadRif = '';
+        $this->buscarComunidad = '';
+        $this->comunidadesEncontradas = collect();
+    }
+
+    public function cerrarModalComunidad(): void
+    {
+        $this->mostrarModalComunidad = false;
+    }
+
+    public function seleccionarComunidadModal(string $id): void
+    {
+        $this->vinculacionComunidadId = $id;
+        $this->cerrarModalComunidad();
+    }
+
+    public function guardarComunidadModal(): void
+    {
+        $this->validate([
+            'modalComunidadNombre' => 'required|string|max:255',
+        ], [
+            'modalComunidadNombre.required' => 'El nombre de la comunidad es obligatorio.',
+        ]);
+
+        $comunidad = Comunidad::create([
+            'nombre' => $this->modalComunidadNombre,
+            'rif' => $this->modalComunidadRif ?: null,
+        ]);
+
+        $this->vinculacionComunidadId = (string) $comunidad->id;
+        $this->cerrarModalComunidad();
     }
 
     public function quitarComunidad(): void
@@ -45,19 +94,13 @@ class VinculacionManager extends Component
         $this->resetPage();
     }
 
-    public function limpiarMensaje(): void
-    {
-        $this->mensaje = '';
-    }
-
     public function vincular($proyectoId): void
     {
         $proyecto = Proyecto::with(['comunidad', 'documentos.componente',
             'linea_investigacion', 'metodologia', 'tipo_publicacion', 'tipo_investigacion'])
             ->find($proyectoId);
         if (!$proyecto) {
-            $this->tipoMensaje = 'error';
-            $this->mensaje = 'Proyecto no encontrado.';
+            $this->dispatch('notify', type: 'error', message: 'Proyecto no encontrado.');
             return;
         }
 
@@ -74,7 +117,6 @@ class VinculacionManager extends Component
             $this->vinculacionTitulo = '';
             $this->vinculacionComunidadId = '';
         }
-        $this->searchComunidad = '';
     }
 
     public function cerrar(): void
@@ -84,7 +126,6 @@ class VinculacionManager extends Component
         $this->vinculacionExistente = null;
         $this->vinculacionTitulo = '';
         $this->vinculacionComunidadId = '';
-        $this->searchComunidad = '';
     }
 
     public function guardarVinculacion(): void
@@ -95,8 +136,7 @@ class VinculacionManager extends Component
 
         $titulo = trim($this->vinculacionTitulo);
         if ($titulo === '') {
-            $this->tipoMensaje = 'error';
-            $this->mensaje = 'Debe escribir un título para la vinculación.';
+            $this->dispatch('notify', type: 'error', message: 'Debe escribir un título para la vinculación.');
             return;
         }
 
@@ -104,16 +144,15 @@ class VinculacionManager extends Component
             'proyecto_id' => $this->selectedProyecto->id,
             'vin_titulo' => $titulo,
             'comunidad_id' => $this->vinculacionComunidadId !== '' ? (int) $this->vinculacionComunidadId : null,
+            'tipo' => 'Vinculación',
         ];
 
         if ($this->vinculacionExistente) {
             $this->vinculacionExistente->update($data);
-            $this->tipoMensaje = 'success';
-            $this->mensaje = "Vinculación «{$titulo}» actualizada.";
+            $this->dispatch('notify', type: 'success', message: "Vinculación «{$titulo}» actualizada.");
         } else {
             $this->vinculacionExistente = Vinculacion::create($data);
-            $this->tipoMensaje = 'success';
-            $this->mensaje = "Vinculación «{$titulo}» creada.";
+            $this->dispatch('notify', type: 'success', message: "Vinculación «{$titulo}» creada.");
         }
     }
 
@@ -125,13 +164,19 @@ class VinculacionManager extends Component
 
         if ($this->search !== '') {
             $search = trim($this->search);
-            $query->where(function ($q) use ($search) {
-                try {
-                    $q->whereRaw('to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)', [$search]);
-                } catch (\Throwable) {
-                    $term = '%' . $search . '%';
-                    $q->whereRaw('pry_resumen ILIKE ?', [$term]);
-                }
+            $term = '%' . $search . '%';
+            $query->where(function ($q) use ($search, $term) {
+                $q->whereRaw('pry_resumen ILIKE ?', [$term])
+                  ->orWhereRaw('pry_direccion_logica ILIKE ?', [$term])
+                  ->orWhereRaw('pry_motivo_rechazo ILIKE ?', [$term])
+                  ->orWhereRaw('pry_creador_cedula ILIKE ?', [$term])
+                  ->orWhereRaw('cast(pry_calificacion as text) ILIKE ?', [$term])
+                  ->orWhereHas('comunidad', fn($cq) => $cq->whereRaw('com_nombre ILIKE ?', [$term]))
+                  ->orWhereHas('linea_investigacion', fn($cq) => $cq->whereRaw('lin_nombre_investigacion ILIKE ?', [$term]))
+                  ->orWhereHas('metodologia', fn($cq) => $cq->whereRaw('mei_nombre ILIKE ?', [$term]))
+                  ->orWhereHas('tipo_publicacion', fn($cq) => $cq->whereRaw('tpu_nombre ILIKE ?', [$term]))
+                  ->orWhereHas('tipo_investigacion', fn($cq) => $cq->whereRaw('tin_nombre ILIKE ?', [$term]))
+                  ->orWhereHas('objetivo_investigacion', fn($cq) => $cq->whereRaw('obi_nombre ILIKE ?', [$term]));
             });
         }
 
@@ -153,20 +198,13 @@ class VinculacionManager extends Component
                 ->find((int) $this->vinculacionComunidadId);
         }
 
-        $comunidadesFiltradas = collect();
-        if ($this->searchComunidad !== '') {
-            $term = '%' . $this->searchComunidad . '%';
-            $comunidadesFiltradas = Comunidad::where('nombre', 'ILIKE', $term)
-                ->orWhere('rif', 'ILIKE', $term)
-                ->orderBy('com_nombre')
-                ->get(['com_codigo', 'com_nombre', 'com_rif']);
-        }
+        $comunidades = Comunidad::orderBy('com_nombre')->get();
 
         return view('livewire.vinculacion-manager', [
             'proyectos' => $proyectos,
             'vinculaciones' => $vinculaciones,
             'comunidadSeleccionada' => $comunidadSeleccionada,
-            'comunidadesFiltradas' => $comunidadesFiltradas,
+            'comunidades' => $comunidades,
         ]);
     }
 }

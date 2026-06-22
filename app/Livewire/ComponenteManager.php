@@ -83,92 +83,77 @@ class ComponenteManager extends Component
 
         $proCodigo = (int) $this->selectedProgramaId;
 
-        // Todos los componentes activos
         $componentes = Componente::where('estado_logico', true)
             ->orderBy('nombre')
             ->get();
 
-        // Asignaciones existentes para este PNF
         $asignaciones = ComponentePrograma::where('pro_codigo', $proCodigo)
             ->get()
-            ->keyBy(function ($item) {
-                return $item->comp_codigo . '_' . ($item->tra_codigo ?? '__todos__');
-            });
+            ->groupBy('comp_codigo');
 
         foreach ($componentes as $comp) {
-            $key = $comp->id . '_' . '__todos__';
-            $asig = $asignaciones->get($key);
+            $asigs = $asignaciones->get($comp->id, collect());
 
-            // También buscar por trayecto específico (tomamos la primera coincidencia)
-            if (!$asig) {
-                $asig = $asignaciones->first(function ($a) use ($comp) {
-                    return (int) $a->comp_codigo === (int) $comp->id;
-                });
+            $trayectos = [];
+            foreach ($this->trayectosVinculacion as $tra) {
+                $codigo = is_object($tra) ? $tra->tra_codigo : $tra['tra_codigo'];
+                $asig = $asigs->firstWhere('tra_codigo', $codigo);
+                $trayectos[$codigo] = [
+                    'selected' => $asig !== null,
+                    'cantidad' => $asig ? (int) ($asig->cantidad ?? 1) : 1,
+                ];
             }
 
             $this->vinculacionRows[$comp->id] = [
                 'comp_codigo' => $comp->id,
                 'nombre' => $comp->nombre,
-                'asignado' => $asig !== null,
-                'tra_codigo' => $asig ? ($asig->tra_codigo ?? '') : '',
-                'cantidad' => $asig ? (int) ($asig->cantidad ?? 1) : 1,
+                'activo' => $asigs->isNotEmpty(),
+                'trayectos' => $trayectos,
             ];
         }
     }
 
-    public function toggleAsignacionVinculacion(int $compCodigo): void
+    public function toggleTrayecto(int $compCodigo, string $traCodigo): void
     {
-        if (!isset($this->vinculacionRows[$compCodigo])) return;
-
-        $row = &$this->vinculacionRows[$compCodigo];
-        $row['asignado'] = !$row['asignado'];
-
-        if ($row['asignado']) {
-            $row['tra_codigo'] = '';
-            $row['cantidad'] = 1;
-        } else {
-            $row['tra_codigo'] = '';
-            $row['cantidad'] = 1;
-        }
+        if (!isset($this->vinculacionRows[$compCodigo]['trayectos'][$traCodigo])) return;
+        $this->vinculacionRows[$compCodigo]['trayectos'][$traCodigo]['selected'] =
+            !$this->vinculacionRows[$compCodigo]['trayectos'][$traCodigo]['selected'];
+        $this->vinculacionRows[$compCodigo]['activo'] = collect($this->vinculacionRows[$compCodigo]['trayectos'])
+            ->contains('selected', true);
     }
 
-    public function cambiarTrayectoVinculacion(int $compCodigo, string $traCodigo): void
+    public function cambiarCantidadTrayecto(int $compCodigo, string $traCodigo, int $cantidad): void
     {
-        if (isset($this->vinculacionRows[$compCodigo])) {
-            $this->vinculacionRows[$compCodigo]['tra_codigo'] = $traCodigo;
-        }
-    }
-
-    public function cambiarCantidadVinculacion(int $compCodigo, int $cantidad): void
-    {
-        if (isset($this->vinculacionRows[$compCodigo])) {
-            $this->vinculacionRows[$compCodigo]['cantidad'] = max(1, $cantidad);
+        if (isset($this->vinculacionRows[$compCodigo]['trayectos'][$traCodigo])) {
+            $this->vinculacionRows[$compCodigo]['trayectos'][$traCodigo]['cantidad'] = max(1, $cantidad);
         }
     }
 
     public function guardarVinculacion(): void
     {
         if ($this->selectedProgramaId === '') {
-            session()->flash('message', 'Debe seleccionar un PNF.');
+            $this->dispatch('notify', type: 'error', message: 'Debe seleccionar un PNF.');
             return;
         }
 
         $proCodigo = (int) $this->selectedProgramaId;
 
-        // Construir array para sincronizarAsignacionesPorPrograma
-        $asignaciones = [];
+        ComponentePrograma::where('pro_codigo', $proCodigo)->delete();
+
         foreach ($this->vinculacionRows as $compCodigo => $row) {
-            $asignaciones[(int) $compCodigo] = [
-                'activo' => (bool) ($row['asignado'] ?? false),
-                'tra_codigo' => !empty($row['tra_codigo']) ? $row['tra_codigo'] : null,
-                'cantidad' => max(1, (int) ($row['cantidad'] ?? 1)),
-            ];
+            if (!$row['activo']) continue;
+            foreach ($row['trayectos'] ?? [] as $traCodigo => $traData) {
+                if (!($traData['selected'] ?? false)) continue;
+                ComponentePrograma::create([
+                    'comp_codigo' => (int) $compCodigo,
+                    'pro_codigo' => $proCodigo,
+                    'tra_codigo' => $traCodigo,
+                    'cantidad' => max(1, (int) ($traData['cantidad'] ?? 1)),
+                ]);
+            }
         }
 
-        app(CatalogoRepository::class)
-            ->sincronizarAsignacionesPorPrograma($proCodigo, $asignaciones);
-
-        session()->flash('message', 'Vinculación PNF → Componentes guardada exitosamente.');
+        $this->dispatch('notify', type: 'success', message: 'Vinculación PNF → Componentes guardada exitosamente.');
 
         $this->viewMode = 'list';
         $this->dispatch('refresh-icons');
@@ -304,7 +289,7 @@ class ComponenteManager extends Component
                     ]);
                 }
             }
-            session()->flash('message', 'Componente documental actualizado.');
+            $this->dispatch('notify', type: 'success', message: 'Componente documental actualizado.');
         } else {
             foreach ($this->rows as $row) {
                 Componente::create([
@@ -315,7 +300,8 @@ class ComponenteManager extends Component
                     'estado_logico' => true,
                 ]);
             }
-            session()->flash('message', count($this->rows) . ' Componente(s) creado(s) con éxito.');
+            $n = count($this->rows);
+            $this->dispatch('notify', type: 'success', message: $n . ' componente' . ($n !== 1 ? 's' : '') . ' creado' . ($n !== 1 ? 's' : '') . ' con éxito.');
         }
 
         $this->viewMode = 'list';
@@ -327,7 +313,7 @@ class ComponenteManager extends Component
         $comp = Componente::find($id);
         if ($comp) {
             $comp->update(['estado_logico' => !$comp->estado_logico]);
-            session()->flash('message', 'Estado lógico del componente actualizado.');
+            $this->dispatch('notify', type: 'success', message: 'Estado del componente actualizado.');
         }
         $this->dispatch('refresh-icons');
     }
@@ -335,7 +321,7 @@ class ComponenteManager extends Component
     public function delete($id)
     {
         Componente::find($id)?->delete();
-        session()->flash('message', 'Regla de componente eliminada de la base de datos.');
+        $this->dispatch('notify', type: 'success', message: 'Componente eliminado correctamente.');
         $this->dispatch('refresh-icons');
     }
 

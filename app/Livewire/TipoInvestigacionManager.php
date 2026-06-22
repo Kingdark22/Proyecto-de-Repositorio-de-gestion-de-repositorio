@@ -75,7 +75,7 @@ class TipoInvestigacionManager extends Component
         );
 
         $this->viewMode = 'list';
-        session()->flash('message', $this->editingId ? 'Tipo de Investigación actualizado con éxito.' : 'Tipo de Investigación registrado con éxito.');
+        $this->dispatch('notify', type: 'success', message: $this->editingId ? 'Tipo de Investigación actualizado con éxito.' : 'Tipo de Investigación registrado con éxito.');
         $this->dispatch('refresh-icons');
     }
 
@@ -84,7 +84,7 @@ class TipoInvestigacionManager extends Component
         $item = TipoInvestigacion::findOrFail($id);
         $item->alternarEstado();
 
-        session()->flash('message', $item->estado_logico ? 'Tipo habilitado correctamente.' : 'Tipo deshabilitado correctamente.');
+        $this->dispatch('notify', type: 'success', message: $item->estado_logico ? 'Tipo habilitado correctamente.' : 'Tipo deshabilitado correctamente.');
         $this->dispatch('refresh-icons');
     }
 
@@ -92,7 +92,7 @@ class TipoInvestigacionManager extends Component
     {
         $item = TipoInvestigacion::findOrFail($id);
         $item->borrar();
-        session()->flash('message', 'Tipo de Investigación eliminado correctamente.');
+        $this->dispatch('notify', type: 'success', message: 'Tipo de Investigación eliminado correctamente.');
         $this->dispatch('refresh-icons');
     }
 
