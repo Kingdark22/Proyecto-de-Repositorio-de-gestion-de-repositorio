@@ -657,9 +657,6 @@ class ProyectoGestionService
                 return static::$roleCache[$key] = true;
             }
             if ($userRoleService->roleMatches('estudiante', $activeRole)) {
-                if ($userRoleService->allowsFreeSessionRoles()) {
-                    return static::$roleCache[$key] = true;
-                }
                 return static::$roleCache[$key] = $this->equipoSeccion->estudiantePuedeRegistrar(trim((string) $user->usu_cedula));
             }
             return static::$roleCache[$key] = false;

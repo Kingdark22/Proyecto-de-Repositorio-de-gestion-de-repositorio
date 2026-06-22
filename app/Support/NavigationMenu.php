@@ -51,8 +51,7 @@ class NavigationMenu
             'isTeacher'            => $this->roles->userHasRole($user, 'profesor proyecto'),
             'isStudent'            => $this->roles->userHasRole($user, 'estudiante'),
             'isGestionador'        => $this->roles->userHasRole($user, 'gestionador'),
-            'canViewAcademic'      => $this->roles->userHasRole($user, 'administrador', 'coordinador', 'profesor proyecto', 'gestionador')
-                || ($this->roles->userHasRole($user, 'estudiante') && $user->perteneceAEquipo()),
+            'canViewAcademic'      => $this->roles->userHasRole($user, 'administrador', 'coordinador', 'profesor proyecto', 'gestionador'),
             'canViewComunes'       => $this->roles->userHasRole($user, 'administrador', 'coordinador', 'profesor proyecto', 'estudiante', 'gestionador'),
             'canViewGruposProyecto'=> $this->roles->userHasRole($user, 'administrador', 'coordinador', 'profesor proyecto', 'gestionador'),
             'canManageCatalogs'    => $this->roles->userHasRole($user, 'administrador', 'coordinador', 'gestionador'),

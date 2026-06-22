@@ -25,7 +25,7 @@
             <div style="margin-bottom: 12px;">
                 <button type="button" wire:click="cerrar" class="cm-btn cm-btn-secondary cm-btn-sm">&larr; Volver al listado</button>
                 @if($vinculacionExistente)
-                    <span class="cm-tag" style="margin-left: 8px;">Vinculado como: {{ $vinculacionExistente->tipo }}</span>
+                    <span class="cm-tag" style="margin-left: 8px; background: #198754;">Ya vinculado</span>
                 @endif
             </div>
 
@@ -46,8 +46,24 @@
                         <td>{{ $selectedProyecto->comunidad?->nombre ?? '-' }}</td>
                     </tr>
                     <tr>
-                        <td style="font-weight:bold;">Equipo:</td>
-                        <td>{{ $selectedProyecto->equipo_resumen }}</td>
+                        <td style="font-weight:bold; vertical-align:top;">Equipo:</td>
+                        <td>
+                            @php $integrantes = $integrantesProyecto ?? collect(); @endphp
+                            @if($integrantes->isNotEmpty())
+                                <div style="font-size:11px;">
+                                    @foreach($integrantes as $i)
+                                        <div style="margin:2px 0;">
+                                            <span style="font-weight:600;">{{ $i->nombre }} {{ $i->apellido }}</span>
+                                            @if($i->rol)
+                                                <span style="background:#007bff;color:#fff;border-radius:3px;padding:0 6px;font-size:10px;">{{ $i->rol }}</span>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <span style="color:#999;font-style:italic;">{{ $selectedProyecto->equipo_resumen }}</span>
+                            @endif
+                        </td>
                     </tr>
                     <tr>
                         <td style="font-weight:bold;">Clasificaci&oacute;n:</td>
@@ -100,18 +116,6 @@
                         </td>
                     </tr>
                     <tr>
-                        <td style="font-weight:bold; vertical-align:top;">Descripci&oacute;n:</td>
-                        <td>
-                            <textarea wire:model="vinculacionDescripcion" rows="3" style="width: 90%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Describa el alcance de la vinculación..."></textarea>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight:bold; vertical-align:top;">Tipo (opcional):</td>
-                        <td>
-                            <input type="text" wire:model="vinculacionTipo" style="width: 90%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Ej: Ciencia y Tecnolog&iacute;a, Social, Ambiental...">
-                        </td>
-                    </tr>
-                    <tr>
                         <td style="font-weight:bold; vertical-align:top;">Asociar Comunidad:</td>
                         <td>
                             @if($comunidadSeleccionada)
@@ -148,10 +152,6 @@
                                 @endif
                             @endif
                         </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight:bold; vertical-align:top;">Observaciones:</td>
-                        <td><textarea wire:model="vinculacionObservaciones" rows="2" style="width: 90%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Observaciones opcionales..."></textarea></td>
                     </tr>
                 </table>
             </fieldset>
@@ -202,7 +202,7 @@
                                 <td align="center">{{ $proy->fecha_aprobacion ? $proy->fecha_aprobacion->format('d/m/Y') : '-' }}</td>
                                 <td align="center">
                                     @if($vin)
-                                        <span class="cm-tag">{{ $vin->tipo }}</span>
+                                        <span class="cm-tag" style="background: #198754;">Vinculado</span>
                                         @if($vin->comunidad)
                                             <div style="font-size:10px;color:#555;margin-top:2px;">{{ $vin->comunidad->nombre }}</div>
                                         @endif

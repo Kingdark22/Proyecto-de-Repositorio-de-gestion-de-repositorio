@@ -18,11 +18,11 @@ class DbHelper
 
     protected static ?int $intranetPort = null;
 
-    protected const CACHE_TTL = 10;
+    protected const CACHE_TTL = 60;
 
     protected const CACHE_KEY = 'dbhelper_intranet_available';
 
-    protected const INTENTA_CACHE_TTL = 30; // segundos sin reintentar intranet tras un fallo
+    protected const INTENTA_CACHE_TTL = 120; // segundos sin reintentar intranet tras un fallo
 
     /**
      * Retorna el nombre de la conexión activa. Si la intranet está caída, retorna 'simulacion' como fallback.
@@ -130,7 +130,7 @@ class DbHelper
 
         $errno = null;
         $errstr = '';
-        $fp = @fsockopen(self::$intranetHost, self::$intranetPort, $errno, $errstr, 0.15);
+        $fp = @fsockopen(self::$intranetHost, self::$intranetPort, $errno, $errstr, 0.05);
 
         if ($fp) {
             fclose($fp);
@@ -145,6 +145,31 @@ class DbHelper
         self::connection();
 
         return self::$usingIntranet;
+    }
+
+    /**
+     * Verifica si la intranet está realmente disponible (conexión directa).
+     * Útil para comandos de espejado y login que necesitan saber si pueden consultar intranet
+     * independientemente de la caché de DbHelper.
+     */
+    public static function intranetAvailable(): bool
+    {
+        try {
+            if (!config('database.connections.intranet.enabled', true)) {
+                return false;
+            }
+
+            if (!self::intranetAlcanzable()) {
+                return false;
+            }
+
+            $pdo = DB::connection('intranet')->getPdo();
+            $pdo->query('SELECT 1')->fetch();
+
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     public static function reset(): void

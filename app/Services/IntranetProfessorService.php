@@ -56,9 +56,31 @@ class IntranetProfessorService
 
     public function lapsoVigenteCodigo(): ?int
     {
-        $lap = LapsoAcademico::vigente();
+        // Tomar el primer lapso activo que no sea "No Regist." ni vacío
+        $lapsos = $this->lapsosActivos();
+        $primero = $lapsos->first();
 
-        return $lap ? (int) $lap->lap_codigo : null;
+        return $primero ? (int) $primero->lap_codigo : null;
+    }
+
+    /**
+     * Docente con asignación activa en el lapso vigente, asociado a un PNF y sección.
+     */
+    public function esDocenteVigente(string $cedula, ?int $lapCodigo = null): bool
+    {
+        $lapCodigo = $lapCodigo ?? $this->lapsoVigenteCodigo();
+        if ($lapCodigo === null) {
+            return false;
+        }
+
+        try {
+            return $this->baseDocenteQuery($lapCodigo)
+                ->where('sud.sud_ced_docente', $cedula)
+                ->whereNotNull('pro.pro_codigo')
+                ->exists();
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**
