@@ -211,7 +211,7 @@
                 <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 11px; margin-bottom: 8px;">
                     <tr>
                         <td width="33%"><b>Título:</b><br>
-                            <input wire:model.live.debounce.300ms="search" type="text" style="width: 95%;" placeholder="Buscar...">
+                            <input wire:model.live.debounce.300ms="search" type="text" style="width: 95%;" placeholder="Buscar por título...">
                         </td>
                         <td width="33%"><b>Estado:</b><br>
                             <select wire:model.live="filterEstadoList" style="width: 95%;">
@@ -402,157 +402,106 @@
             </legend>
             <form wire:submit="save">
 
-                {{-- == SECCIÓN DATOS DEL PROYECTO (PRIMERO) == --}}
-                <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
-                    <legend style="font-weight: bold; font-size: 12px;">Datos del proyecto</legend>
-                    <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 12px;">
-                        <tr>
-                            <td width="20%"><b>Comunidad:</b></td>
-                            <td colspan="3">
-                                @if($comunidadNombreGrupo)
-                                    <span style="background:#f9f2f2; border:1px solid #8b0000; padding:4px 10px; border-radius:4px; font-weight:bold; color:#8b0000;">{{ $comunidadNombreGrupo }}</span>
-                                @else
-                                    <span style="color:#999;">(asignada autom&aacute;ticamente del grupo)</span>
-                                @endif
-                            </td>
-                        </tr>
-                        <tr>
-                            <td width="20%"><b>T&iacute;tulo:</b></td>
-                            <td colspan="3">
-                                <div style="padding: 4px 0; font-weight: bold; font-size: 14px;">
-                                    {{ $titulo ?: '(seleccione un equipo para auto-llenar el t&iacute;tulo)' }}
-                                </div>
-                                @error('titulo')
-                                    <span class="validation-error">{{ $message }}</span>
-                                @enderror
-                            </td>
-                        </tr>
-                        <tr>
-                            <td valign="top"><b>Resumen:</b></td>
-                            <td colspan="3">
-                                <textarea wire:model="resumen" rows="3" style="width: 95%;"></textarea><span class="obligatorio">*</span>
-                                @error('resumen')
-                                    <br><span class="validation-error">{{ $message }}</span>
-                                @enderror
-                            </td>
-                        </tr>
-                    </table>
-                </fieldset>
+                {{-- == SECCIÓN DATOS DEL PROYECTO == --}}
+                <fieldset style="border: 1px solid #CCC; padding: 16px; margin-bottom: 15px; background:#fafafa;">
+                    <legend style="font-weight: bold; font-size: 14px; padding: 0 8px;">Datos del proyecto</legend>
 
-                {{-- == SECCIÓN EQUIPO / GRUPO == --}}
-                @if (!$modoActualizacion)
-                    @if(!$esProfesor && !$esGestionador)
-                    <div style="margin-bottom: 15px; border: 1px solid #CCC; border-radius: 4px;">
-                        <button type="button" wire:click="toggleTeamFilters"
-                            style="width:100%; background:#f5f5f5; border:none; padding:8px 12px; text-align:left; font-weight:bold; font-size:12px; cursor:pointer;">
-                            {{ $showTeamFilters ? '▼ Ocultar selección de equipo' : '▶ Seleccionar equipo / grupo de proyecto' }}
-                        </button>
-                        @if ($showTeamFilters)
-                            <div style="padding:10px;">
-                                <div style="padding:4px 0; margin-bottom:8px;">
-                                    <select wire:model.live="filterLapsoEquipo" style="width: 32%;">
-                                        <option value="">- Lapso -</option>
-                                        @foreach ($lapsos as $lap)
-                                            <option value="{{ $lap->id }}">{{ $lap->nombre }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select wire:model.live="filterProgramaEquipo" style="width: 32%;">
-                                        <option value="">- Programa -</option>
-                                        @foreach ($programasEquipo as $pro)
-                                            <option value="{{ $pro->pro_codigo }}">{{ trim($pro->pro_siglas) }}</option>
-                                        @endforeach
-                                    </select>
-                                    <select wire:model.live="filterSeccionEquipo" style="width: 32%;">
-                                        <option value="">- Sección -</option>
-                                        @foreach ($seccionesEquipo as $sec)
-                                            <option value="{{ $sec->sec_codigo }}">{{ trim($sec->sec_nombre) }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
+                    {{-- Título (auto-asignado desde el equipo) --}}
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-weight:bold; font-size:13px; color:#555; display:block; margin-bottom:4px;">
+                            T&iacute;tulo del proyecto:
+                        </label>
+                        <div style="padding:8px 10px; border:1px solid #ddd; border-radius:5px; font-size:14px; background:#f5f5f5; color:#333; font-weight:bold;">
+                            {{ $titulo ?: 'El t&iacute;tulo se asigna autom&aacute;ticamente del equipo de proyecto' }}
+                        </div>
+                        @error('titulo')
+                            <div style="font-size:12px;color:#c62828;margin-top:3px;">{{ $message }}</div>
+                        @enderror
+                    </div>
 
-                                <div style="margin-bottom: 8px;">
-                                    <b>Seleccione el grupo de proyecto:</b><span class="obligatorio">*</span>
-                                    <select wire:model.live="equipo_seccion_clave" style="width: 100%;">
-                                        <option value="">Seleccione grupo de proyecto…</option>
-                                        @foreach ($equipos_disp ?? [] as $eq)
-                                            <option value="{{ $eq->clave }}">
-                                                {{ $eq->nombre ?? $eq->clave }}
-                                                @if (!empty($eq->lapso_nombre))
-                                                    - {{ $eq->lapso_nombre }}
-                                                @endif
-                                                ({{ $eq->integrantes ?? '?' }} int.)
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    @error('equipo_seccion_clave')
-                                        <span class="obligatorio">{{ $message }}</span>
-                                    @enderror
-                                </div>
+                    {{-- Comunidad --}}
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-weight:bold; font-size:13px; color:#555; display:block; margin-bottom:4px;">
+                            Comunidad:
+                        </label>
+                        <div style="padding:8px 10px; border:1px solid #ddd; border-radius:5px; font-size:14px; background:#f5f5f5;">
+                            @if($comunidadNombreGrupo)
+                                <span style="font-weight:bold; color:#8b0000;">{{ $comunidadNombreGrupo }}</span>
+                            @else
+                                <span style="color:#999;">(asignada autom&aacute;ticamente del grupo)</span>
+                            @endif
+                        </div>
+                    </div>
 
-                                @if (!empty($equipoValidado))
-                                    <div style="margin: 6px 0; padding: 6px; background: #d4edda; font-size: 10px;">
-                                        <b>Validado:</b> {{ $equipoValidado->nombre }}
-                                        | Lapso: {{ $equipoValidado->lap_nombre ?? '?' }}
-                                        | Sección: {{ $equipoValidado->sec_nombre ?? '?' }}
-                                        @if (!empty($equipoValidado->pro_siglas))
-                                            | PNF: {{ $equipoValidado->pro_siglas }}
-                                        @endif
-                                        @if (!empty($trayecto_derived))
-                                            | Trayecto: {{ $trayecto_derived }}
-                                        @endif
-                                        ({{ ($integrantesEquipo ?? collect())->count() }} integrantes)
-                                    </div>
+                    {{-- Resumen --}}
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-weight:bold; font-size:13px; color:#555; display:block; margin-bottom:4px;">
+                            Resumen: <span class="obligatorio">*</span>
+                        </label>
+                        <textarea wire:model="resumen" rows="4" style="width:100%; padding:8px 10px; border:1px solid #bbb; border-radius:5px; font-size:14px; box-sizing:border-box; resize:vertical;" placeholder="Resumen del proyecto..."></textarea>
+                        @error('resumen')
+                            <div style="font-size:12px;color:#c62828;margin-top:3px;">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    {{-- Equipo / Integrantes --}}
+                    @if(!empty($miembrosGrupo) || !empty($equipoValidado))
+                    <div style="border:1px solid #ddd; border-radius:6px; padding:12px; background:#fff;">
+                        <div style="font-weight:bold; font-size:13px; color:#333; margin-bottom:10px;">
+                            Equipo de proyecto
+                        </div>
+
+                        @if (!empty($equipoValidado))
+                            <div style="margin-bottom:10px; padding:6px 10px; background:#d4edda; border:1px solid #c3e6cb; border-radius:4px; font-size:12px; color:#155724;">
+                                <b>Validado:</b> {{ $equipoValidado->nombre }}
+                                | Lapso: {{ $equipoValidado->lap_nombre ?? '?' }}
+                                | Secci&oacute;n: {{ $equipoValidado->sec_nombre ?? '?' }}
+                                @if (!empty($equipoValidado->pro_siglas)) | PNF: {{ $equipoValidado->pro_siglas }} @endif
+                                @if (!empty($trayecto_derived)) | Trayecto: {{ $trayecto_derived }} @endif
+                                ({{ ($integrantesEquipo ?? collect())->count() }} integrantes)
+                            </div>
+                        @endif
+
+                        @if(!empty($miembrosGrupo))
+                            <div style="border:1px solid #e0e0e0; border-radius:6px; overflow:hidden; font-size:12px;">
+                                <div style="background:#8b0000; color:#fff; padding:6px 12px; font-weight:bold; font-size:13px;">
+                                    Integrantes del equipo ({{ count($miembrosGrupo) }})
+                                </div>
+                                <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;">
+                                    @foreach($miembrosGrupo as $idx => $miembro)
+                                    @php $esLider = in_array($miembro['cedula'], $selectedLeaders); @endphp
+                                    <tr style="background-color: {{ $idx % 2 == 0 ? '#fafafa' : '#FFFFFF' }}; border-bottom:1px solid #f0e0e0;">
+                                        <td width="36" style="padding:5px 4px 5px 10px; text-align:center;">
+                                            <div style="width:26px; height:26px; border-radius:50%; background:{{ $esLider ? '#8b0000' : '#d4c5c5' }}; color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:bold;">
+                                                {{ $idx + 1 }}
+                                            </div>
+                                        </td>
+                                        <td width="50" style="padding:5px 2px;">
+                                            @if($esLider)
+                                                <span style="display:inline-block; background:#8b0000; color:#fff; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:bold;">L&Iacute;DER</span>
+                                            @else
+                                                <span style="display:inline-block; background:#e8e0e0; color:#666; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:bold;">AUTOR</span>
+                                            @endif
+                                        </td>
+                                        <td style="padding:5px 4px; font-weight:{{ $esLider ? 'bold' : 'normal' }}; color:{{ $esLider ? '#8b0000' : '#333' }};">
+                                            {{ $miembro['nombre'] }} {{ $miembro['apellido'] }}
+                                            <span style="color:#999; font-size:10px;"> ({{ $miembro['cedula'] }})</span>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </table>
+                                @if(count($selectedLeaders) > 0)
+                                <div style="padding:5px 12px; background:#f9f2f2; border-top:1px solid #e0d0d0; font-size:11px; color:#8b0000;">
+                                    @php $lideresNombres = array_filter($miembrosGrupo, fn($m) => in_array($m['cedula'], $selectedLeaders)); @endphp
+                                    <b>L&iacute;der{{ count($lideresNombres) > 1 ? 'es' : '' }}:</b>
+                                    {{ implode(', ', array_map(fn($m) => $m['nombre'] . ' ' . $m['apellido'], $lideresNombres)) }}
+                                </div>
                                 @endif
                             </div>
                         @endif
                     </div>
                     @endif
-                @endif
-
-                @if($esProfesor || $esGestionador)
-                <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
-                    <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Equipo</legend>
-                    @if(!empty($miembrosGrupo))
-                    <div style="margin-top: 8px; padding: 0; background: #fff; border: 1px solid #e9aaad; border-radius: 6px; font-size: 12px; overflow: hidden;">
-                        <div style="background: linear-gradient(135deg, #8b0000, #a52a2a); color: #fff; padding: 6px 12px; font-weight: bold; font-size: 13px; letter-spacing: 0.3px;">
-                            👥 Integrantes del equipo ({{ count($miembrosGrupo) }})
-                        </div>
-                        <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 12px;">
-                            @foreach($miembrosGrupo as $idx => $miembro)
-                            @php
-                                $esLider = in_array($miembro['cedula'], $selectedLeaders);
-                            @endphp
-                            <tr style="background-color: {{ $idx % 2 == 0 ? '#fafafa' : '#FFFFFF' }}; border-bottom: 1px solid #f0e6e6;">
-                                <td width="36" style="padding: 6px 4px 6px 12px; text-align:center;">
-                                    <div style="width:28px; height:28px; border-radius:50%; background:{{ $esLider ? '#8b0000' : '#d4c5c5' }}; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;">
-                                        {{ $idx + 1 }}
-                                    </div>
-                                </td>
-                                <td width="40" style="padding: 6px 2px;">
-                                    @if($esLider)
-                                        <span style="display:inline-block; background:#8b0000; color:#fff; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:bold; letter-spacing:0.5px;">LÍDER</span>
-                                    @else
-                                        <span style="display:inline-block; background:#e8e0e0; color:#666; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:bold;">AUTOR</span>
-                                    @endif
-                                </td>
-                                <td style="padding: 6px 4px; font-weight:{{ $esLider ? 'bold' : 'normal' }}; color:{{ $esLider ? '#8b0000' : '#333' }};">
-                                    {{ $miembro['nombre'] }} {{ $miembro['apellido'] }}
-                                    <span style="color:#999; font-size:10px; font-weight:normal;"> ({{ $miembro['cedula'] }})</span>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </table>
-                        @if(count($selectedLeaders) > 0)
-                        <div style="padding: 6px 12px; background: #f9f2f2; border-top: 1px solid #e9aaad; font-size: 10px; color: #8b0000;">
-                            @php $lideresNombres = array_filter($miembrosGrupo, fn($m) => in_array($m['cedula'], $selectedLeaders)); @endphp
-                            <b>Líder{{ count($lideresNombres) > 1 ? 'es' : '' }}:</b>
-                            {{ implode(', ', array_map(fn($m) => $m['nombre'] . ' ' . $m['apellido'], $lideresNombres)) }}
-                        </div>
-                        @endif
-                    </div>
-                    @endif
                 </fieldset>
-                @endif
 
                 {{-- == FECHA SUBIDA == --}}
                 <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
@@ -667,7 +616,7 @@
                         </tr>
                         <tr>
                             <td width="20%"><b>Tipo de Publicaci&oacute;n:</b></td>
-                            <td width="30%">
+                            <td colspan="3">
                                 <div style="display: flex; gap: 4px; align-items: center;">
                                     <select wire:model="tipo_publicacion_id" style="flex:1;">
                                         <option value="">Seleccione...</option>
@@ -678,18 +627,6 @@
                                     <button type="button" wire:click="abrirModalTipoPublicacion" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap; padding: 4px 8px; font-size: 11px;" title="Buscar o crear nuevo tipo de publicación">+</button>
                                 </div>
                                 @error('tipo_publicacion_id')
-                                    <br><span class="obligatorio">{{ $message }}</span>
-                                @enderror
-                            </td>
-                            <td width="20%"><b>Objetivo:</b></td>
-                            <td width="30%">
-                                <select wire:model="objetivo_id" style="width: 100%;">
-                                    <option value="">Seleccione...</option>
-                                    @foreach ($objetivos ?? [] as $obj)
-                                        <option value="{{ $obj->id }}">{{ $obj->nombre }}</option>
-                                    @endforeach
-                                </select>
-                                @error('objetivo_id')
                                     <br><span class="obligatorio">{{ $message }}</span>
                                 @enderror
                             </td>
@@ -944,7 +881,7 @@
                                 </tr>
                                 @error('modalTipoPubNombre') <tr><td></td><td class="validation-error">⚠ {{ $message }}</td></tr> @enderror
                                 <tr>
-                                    <td><b>Men. honorífica:</b></td>
+                                    <td><b>Mención honorífica:</b></td>
                                     <td>
                                         <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
                                             <input wire:model="modalTipoPubMencionHonorifica" type="checkbox" style="width:16px;height:16px;cursor:pointer;">

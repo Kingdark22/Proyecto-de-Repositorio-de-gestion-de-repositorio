@@ -73,7 +73,7 @@
                 Vinculaci&oacute;n PNF &rarr; Componentes
             </button>
             <button wire:click="create" class="cm-btn cm-btn-success" style="font-size: 13px; padding: 6px 14px;">
-                Adicionar Componente Nuevo
+                Nuevo Componente
             </button>
         </div>
 
@@ -89,7 +89,7 @@
                         <th width="25%">Asignaciones (PNF &rarr; Trayecto)</th>
                         <th width="12%">Tipo Archivo</th>
                         <th width="8%">Tama&ntilde;o</th>
-                        <th width="8%">Oblig.</th>
+                        <th width="8%">Obligatorio</th>
                         <th width="8%">Estatus</th>
                         <th width="12%">Configurar</th>
                     </tr>
@@ -146,14 +146,14 @@
                                         Editar
                                     </button>
                                     <button type="button" wire:click.prevent="toggleStatus({{ $item->id }})"
-                                        title="{{ $item->estado_logico ? 'Suspender' : 'Publicar' }}"
+                                        title="{{ $item->estado_logico ? 'Suspender' : 'Activar' }}"
                                         class="cm-btn cm-btn-warning cm-btn-sm">
-                                        {{ $item->estado_logico ? 'Suspender' : 'Publicar' }}
+                                        {{ $item->estado_logico ? 'Suspender' : 'Activar' }}
                                     </button>
                                     <button type="button" wire:click.prevent="delete({{ $item->id }})"
                                         wire:confirm="&iquest;Seguro desea eliminar este componente?"
                                         title="Eliminar" class="cm-btn cm-btn-danger cm-btn-sm">
-                                        Borrar
+                                        Eliminar
                                     </button>
                                 </div>
                             </td>
@@ -189,7 +189,7 @@
 
             @if($selectedProgramaId !== '' && !empty($vinculacionRows))
                 <div style="font-size:12px;color:#666;margin-bottom:10px;">
-                    Marque los componentes que aplican al PNF seleccionado. Cada componente puede asignarse a un trayecto espec&iacute;fico (o dejarlo vac&iacute;o para todos los trayectos) con una cantidad.
+                    Marque los trayectos que aplican para cada componente y ajuste la cantidad si es necesario.
                 </div>
 
                 <table width="100%" border="1" cellpadding="6" cellspacing="0"
@@ -197,48 +197,48 @@
                     <thead>
                         <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
                             <th width="5%">N&deg;</th>
-                            <th width="25%">Componente</th>
-                            <th width="10%">Asignado</th>
-                            <th width="25%">Trayecto</th>
-                            <th width="10%">Cantidad</th>
+                            <th width="20%">Componente</th>
+                            <th width="5%">Activo</th>
+                            <th width="55%">Trayectos asignados</th>
+                            <th width="15%"></th>
                         </tr>
                     </thead>
                     <tbody class="Texto">
                         @foreach($vinculacionRows as $compCodigo => $row)
                             <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }};"
-                                valign="middle">
+                                valign="top">
                                 <td align="center">{{ $loop->iteration }}</td>
                                 <td style="font-weight: bold; padding: 8px;">{{ $row['nombre'] }}</td>
                                 <td align="center">
-                                    <button type="button" wire:click="toggleAsignacionVinculacion({{ $compCodigo }})"
-                                        style="background:none;border:1px solid #ccc;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:11px;{{ $row['asignado'] ? 'background:#198754;color:#fff;border-color:#166f43;' : '' }}">
-                                        {{ $row['asignado'] ? 'S&Iacute;' : 'NO' }}
-                                    </button>
+                                    <input type="checkbox" wire:model="vinculacionRows.{{ $compCodigo }}.activo" style="width:18px;height:18px;cursor:pointer;">
                                 </td>
-                                <td align="center">
-                                    @if($row['asignado'])
-                                        <select wire:change="cambiarTrayectoVinculacion({{ $compCodigo }}, $event.target.value)" style="width:90%;padding:4px;font-size:11px;">
-                                            <option value="">- Todos los trayectos -</option>
-                                            @foreach($trayectosVinculacion ?? [] as $tra)
-                                                <option value="{{ $tra->tra_codigo }}" {{ $row['tra_codigo'] == $tra->tra_codigo ? 'selected' : '' }}>
-                                                    {{ $tra->tra_nombre }}
-                                                </option>
+                                <td style="padding: 6px;">
+                                    @if($row['activo'])
+                                        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                                            @foreach($row['trayectos'] ?? [] as $traCodigo => $traData)
+                                                <label style="display:flex;align-items:center;gap:4px;background:#f8f8f8;border:1px solid #ddd;border-radius:5px;padding:4px 8px;cursor:pointer;font-size:11px;{{ $traData['selected'] ? 'background:#e8f5e9;border-color:#198754;' : '' }}">
+                                                    <input type="checkbox"
+                                                        wire:click="toggleTrayecto({{ $compCodigo }}, '{{ $traCodigo }}')"
+                                                        {{ $traData['selected'] ? 'checked' : '' }}
+                                                        style="cursor:pointer;">
+                                                    <span style="font-weight:{{ $traData['selected'] ? 'bold' : 'normal' }};">
+                                                        {{ collect($trayectosVinculacion ?? [])->firstWhere('tra_codigo', $traCodigo)?->tra_nombre ?? $traCodigo }}
+                                                    </span>
+                                                    @if($traData['selected'])
+                                                        <span style="font-size:10px;color:#555;">Cantidad:</span>
+                                                        <input type="number" min="1" max="200"
+                                                            wire:change="cambiarCantidadTrayecto({{ $compCodigo }}, '{{ $traCodigo }}', $event.target.value)"
+                                                            value="{{ $traData['cantidad'] }}"
+                                                            style="width:45px;padding:2px;text-align:center;font-size:11px;border:1px solid #ccc;border-radius:3px;">
+                                                    @endif
+                                                </label>
                                             @endforeach
-                                        </select>
+                                        </div>
                                     @else
-                                        <span style="color:#999;font-style:italic;">-</span>
+                                        <span style="color:#999;font-style:italic;">Componente no asignado a este PNF</span>
                                     @endif
                                 </td>
-                                <td align="center">
-                                    @if($row['asignado'])
-                                        <input type="number" min="1" max="200"
-                                            wire:change="cambiarCantidadVinculacion({{ $compCodigo }}, $event.target.value)"
-                                            value="{{ $row['cantidad'] }}"
-                                            style="width:60px;padding:4px;text-align:center;font-size:11px;">
-                                    @else
-                                        <span style="color:#999;font-style:italic;">-</span>
-                                    @endif
-                                </td>
+                                <td align="center"></td>
                             </tr>
                         @endforeach
                     </tbody>

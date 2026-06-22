@@ -75,7 +75,7 @@ class ObjetivoInvestigacionManager extends Component
         );
 
         $this->viewMode = 'list';
-        session()->flash('message', $this->editingId ? 'Objetivo de Investigación actualizado con éxito.' : 'Objetivo de Investigación registrado con éxito.');
+        $this->dispatch('notify', type: 'success', message: $this->editingId ? 'Objetivo de Investigación actualizado con éxito.' : 'Objetivo de Investigación registrado con éxito.');
         $this->dispatch('refresh-icons');
     }
 
@@ -84,7 +84,7 @@ class ObjetivoInvestigacionManager extends Component
         $item = ObjetivoInvestigacion::findOrFail($id);
         $item->alternarEstado();
 
-        session()->flash('message', $item->estado_logico ? 'Objetivo habilitado correctamente.' : 'Objetivo deshabilitado correctamente.');
+        $this->dispatch('notify', type: 'success', message: $item->estado_logico ? 'Objetivo habilitado correctamente.' : 'Objetivo deshabilitado correctamente.');
         $this->dispatch('refresh-icons');
     }
 
@@ -92,7 +92,7 @@ class ObjetivoInvestigacionManager extends Component
     {
         $item = ObjetivoInvestigacion::findOrFail($id);
         $item->borrar();
-        session()->flash('message', 'Objetivo de Investigación eliminado correctamente.');
+        $this->dispatch('notify', type: 'success', message: 'Objetivo de Investigación eliminado correctamente.');
         $this->dispatch('refresh-icons');
     }
 

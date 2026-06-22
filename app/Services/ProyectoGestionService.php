@@ -139,26 +139,16 @@ class ProyectoGestionService
         $esAdmin = $this->usuarioEsAdminEnSistema($user);
 
         $equipoCtx = $this->contextoEquipo($estado, $cedula, $esAdmin);
-        $lapCodigoFiltro = ($estado['filterLapsoEquipo'] ?? '') !== ''
-            ? (int) $estado['filterLapsoEquipo']
-            : null;
 
         $programaId = !empty($estado['programa_id'])
             ? (int) $estado['programa_id']
             : $this->resolverProgramaDesdeClave($estado['equipo_seccion_clave'] ?? '');
 
-        $datos = array_merge($this->catalogoRepo->catalogos($programaId), $equipoCtx, [
+        $trayectoCodigo = $this->resolverTrayectoDesdeEstado($estado);
+
+        $datos = array_merge($this->catalogoRepo->catalogos($programaId, $trayectoCodigo), $equipoCtx, [
             'canRegister' => $user ? $this->usuarioPuedeRegistrar($user) : false,
             'esAdmin' => $esAdmin,
-            'programasEquipo' => $lapCodigoFiltro
-                ? $this->equipoSeccion->programasEnLapso($lapCodigoFiltro)
-                : collect(),
-            'seccionesEquipo' => $lapCodigoFiltro
-                ? $this->equipoSeccion->seccionesEnLapso(
-                    $lapCodigoFiltro,
-                    ($estado['filterProgramaEquipo'] ?? '') !== '' ? (int) $estado['filterProgramaEquipo'] : null
-                )
-                : collect(),
             'comunidades' => $this->comunidadRepo->allOrdered(),
         ]);
 
@@ -605,6 +595,35 @@ class ProyectoGestionService
                 ->first();
 
             return $row ? (int) $row->pro_codigo : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    protected function resolverTrayectoDesdeEstado(array $estado): ?string
+    {
+        $trayectoNombre = $estado['trayecto'] ?? '';
+        if ($trayectoNombre === '' || $trayectoNombre === null) {
+            return null;
+        }
+
+        $clave = $estado['equipo_seccion_clave'] ?? '';
+        $partes = $clave !== '' ? $this->equipoSeccion->parsearClave($clave) : null;
+        if (!$partes || empty($partes['sec_codigo'])) {
+            return null;
+        }
+
+        try {
+            $row = DB::connection($this->equipoSeccion->academicConnection())
+                ->table('seccion as sec')
+                ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
+                ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'mal.mal_cod_trayecto')
+                ->where('sec.sec_codigo', $partes['sec_codigo'])
+                ->where('tra.tra_nombre', $trayectoNombre)
+                ->select('tra.tra_codigo')
+                ->first();
+
+            return $row ? (string) $row->tra_codigo : null;
         } catch (\Throwable) {
             return null;
         }

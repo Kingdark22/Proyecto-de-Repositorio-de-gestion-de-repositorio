@@ -128,22 +128,20 @@ class CatalogoRepository
     }
 
     /**
-     * Retorna los trayectos de un programa desde intranet, a través de malla.
+     * Retorna los trayectos disponibles para vinculación (I, II, III, IV, V) excluyendo
+     * INICIAL y TRANSICIÓN, ordenados secuencialmente.
      */
     public function trayectosPorPrograma(int $proCodigo): Collection
     {
         $conn = DualDatabase::academicConnection();
-        $cacheKey = 'cat_trayectos_prog_' . $proCodigo;
-        return Cache::remember($cacheKey, now()->addHours(24), function () use ($conn, $proCodigo) {
+        $cacheKey = 'cat_trayectos_todos';
+        return Cache::remember($cacheKey, now()->addHours(24), function () use ($conn) {
             try {
                 return DB::connection($conn)
-                    ->table('trayecto as tra')
-                    ->join('malla as mal', 'mal.mal_cod_trayecto', '=', 'tra.tra_codigo')
-                    ->where('mal.mal_cod_programa', $proCodigo)
-                    ->select(['tra.tra_codigo', 'tra.tra_nombre'])
-                    ->distinct()
-                    ->orderBy('tra.tra_nombre')
-                    ->get();
+                    ->table('trayecto')
+                    ->whereNotIn('tra_nombre', ['INICIAL', 'TRANSICIÓN'])
+                    ->orderBy('tra_codigo')
+                    ->get(['tra_codigo', 'tra_nombre']);
             } catch (\Throwable) {
                 return collect();
             }

@@ -9,53 +9,51 @@
         .cm-tag { display: inline-block; background: #0d6efd; color: #fff; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
     </style>
 
-    @if($mensaje)
-        <div style="background-color: {{ $tipoMensaje === 'error' ? '#f8d7da' : '#d4edda' }}; color: {{ $tipoMensaje === 'error' ? '#721c24' : '#155724' }}; border: 1px solid {{ $tipoMensaje === 'error' ? '#f5c6cb' : '#c3e6cb' }}; padding: 10px; margin-bottom: 15px; border-radius: 4px; font-size:12px; display: flex; justify-content: space-between; align-items: center;">
-            <span>{{ $mensaje }}</span>
-            <a href="#" wire:click.prevent="limpiarMensaje" style="font-size:16px; font-weight:bold; text-decoration:none; color:inherit;">&times;</a>
-        </div>
-    @endif
+
 
     @if($selectedProyecto)
-        <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px;">
-            <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">
+        <fieldset style="border: 2px solid #8b0000; border-radius: 8px; padding: 16px;">
+            <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 10px; font-size:15px;">
                 Vincular: {{ $selectedProyecto->titulo ?? 'Proyecto' }}
             </legend>
 
-            <div style="margin-bottom: 12px;">
-                <button type="button" wire:click="cerrar" class="cm-btn cm-btn-secondary cm-btn-sm">&larr; Volver al listado</button>
+            <div style="margin-bottom: 16px; display:flex; align-items:center; gap:10px;">
+                <button type="button" wire:click="cerrar" class="cm-btn cm-btn-secondary" style="font-size:13px;">&larr; Volver al listado</button>
                 @if($vinculacionExistente)
-                    <span class="cm-tag" style="margin-left: 8px; background: #198754;">Ya vinculado</span>
+                    <span class="cm-tag" style="background: #198754; font-size:12px; padding:3px 12px;">Ya vinculado</span>
                 @endif
             </div>
 
             {{-- Datos del proyecto --}}
-            <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 12px;">
-                <legend style="font-weight: bold; font-size: 12px; color:#333;">Datos del proyecto vinculado</legend>
-                <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 13px;">
+            <fieldset style="border: 1px solid #CCC; padding: 16px; margin-bottom: 16px; background:#fafafa;">
+                <legend style="font-weight: bold; font-size: 14px; color:#333; padding: 0 8px;">Datos del proyecto vinculado</legend>
+                <table width="100%" cellpadding="6" cellspacing="0" style="font-size: 14px; border-collapse: separate; border-spacing: 0 6px;">
                     <tr>
-                        <td width="120" style="font-weight:bold; vertical-align:top;">T&iacute;tulo:</td>
-                        <td>{{ $selectedProyecto->titulo ?? '(sin t&iacute;tulo)' }}</td>
+                        <td width="130" style="font-weight:bold; vertical-align:top; color:#555; white-space:nowrap;">T&iacute;tulo:</td>
+                        <td style="color:#222;">{{ $selectedProyecto->titulo ?? '(sin t&iacute;tulo)' }}</td>
                     </tr>
                     <tr>
-                        <td style="font-weight:bold; vertical-align:top;">Resumen:</td>
-                        <td style="text-align:justify;">{{ $selectedProyecto->resumen ?? '(sin resumen)' }}</td>
+                        <td style="font-weight:bold; vertical-align:top; color:#555; white-space:nowrap;">Resumen:</td>
+                        <td style="text-align:justify; color:#444; line-height:1.5;">{{ $selectedProyecto->resumen ?? '(sin resumen)' }}</td>
                     </tr>
                     <tr>
-                        <td style="font-weight:bold;">Comunidad:</td>
+                        <td style="font-weight:bold; vertical-align:top; color:#555; white-space:nowrap;">Comunidad:</td>
                         <td>{{ $selectedProyecto->comunidad?->nombre ?? '-' }}</td>
                     </tr>
                     <tr>
-                        <td style="font-weight:bold; vertical-align:top;">Equipo:</td>
+                        <td style="font-weight:bold; vertical-align:top; color:#555; white-space:nowrap;">Equipo:</td>
                         <td>
                             @php $integrantes = $integrantesProyecto ?? collect(); @endphp
                             @if($integrantes->isNotEmpty())
-                                <div style="font-size:11px;">
+                                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
                                     @foreach($integrantes as $i)
-                                        <div style="margin:2px 0;">
-                                            <span style="font-weight:600;">{{ $i->nombre }} {{ $i->apellido }}</span>
+                                        <div style="display:inline-flex;align-items:center;background:#e8e8e8;border-radius:14px;padding:2px 10px 2px 4px;gap:5px;font-size:11px;">
+                                            <span style="width:20px;height:20px;border-radius:50%;background:#8b0000;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:bold;flex-shrink:0;">
+                                                {{ strtoupper(substr($i->nombre, 0, 1)) }}{{ strtoupper(substr($i->apellido, 0, 1)) }}
+                                            </span>
+                                            <span style="font-weight:500;color:#333;">{{ $i->nombre }} {{ $i->apellido }}</span>
                                             @if($i->rol)
-                                                <span style="background:#007bff;color:#fff;border-radius:3px;padding:0 6px;font-size:10px;">{{ $i->rol }}</span>
+                                                <span style="background:#8b0000;color:#fff;border-radius:10px;padding:1px 7px;font-size:9px;font-weight:600;">{{ $i->rol }}</span>
                                             @endif
                                         </div>
                                     @endforeach
@@ -66,37 +64,39 @@
                         </td>
                     </tr>
                     <tr>
-                        <td style="font-weight:bold;">Clasificaci&oacute;n:</td>
-                        <td style="font-size:11px;">
-                            @if($selectedProyecto->linea_investigacion)<span style="background:#e8f0fe;padding:1px 5px;border-radius:3px;">L: {{ $selectedProyecto->linea_investigacion->nombre_investigacion }}</span>@endif
-                            @if($selectedProyecto->metodologia) <span style="background:#e8f0fe;padding:1px 5px;border-radius:3px;">M: {{ $selectedProyecto->metodologia->nombre }}</span>@endif
-                            @if($selectedProyecto->tipo_publicacion) <span style="background:#e8f0fe;padding:1px 5px;border-radius:3px;">TP: {{ $selectedProyecto->tipo_publicacion->nombre }}</span>@endif
-                            @if($selectedProyecto->tipo_investigacion) <span style="background:#e8f0fe;padding:1px 5px;border-radius:3px;">TI: {{ $selectedProyecto->tipo_investigacion->nombre }}</span>@endif
+                        <td style="font-weight:bold; vertical-align:top; color:#555; white-space:nowrap;">Clasificaci&oacute;n:</td>
+                        <td>
+                            <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                                @if($selectedProyecto->linea_investigacion)<span style="background:#e8f0fe;padding:3px 8px;border-radius:4px;font-size:12px;border:1px solid #c4d7f5;">L&iacute;nea: {{ $selectedProyecto->linea_investigacion->nombre_investigacion }}</span>@endif
+                                @if($selectedProyecto->metodologia) <span style="background:#e8f0fe;padding:3px 8px;border-radius:4px;font-size:12px;border:1px solid #c4d7f5;">Metodolog&iacute;a: {{ $selectedProyecto->metodologia->nombre }}</span>@endif
+                                @if($selectedProyecto->tipo_publicacion) <span style="background:#e8f0fe;padding:3px 8px;border-radius:4px;font-size:12px;border:1px solid #c4d7f5;">T. Publicaci&oacute;n: {{ $selectedProyecto->tipo_publicacion->nombre }}</span>@endif
+                                @if($selectedProyecto->tipo_investigacion) <span style="background:#e8f0fe;padding:3px 8px;border-radius:4px;font-size:12px;border:1px solid #c4d7f5;">T. Investigaci&oacute;n: {{ $selectedProyecto->tipo_investigacion->nombre }}</span>@endif
+                            </div>
                         </td>
                     </tr>
                     <tr>
-                        <td style="font-weight:bold; vertical-align:top;">Fecha aprobaci&oacute;n:</td>
-                        <td>{{ $selectedProyecto->fecha_aprobacion ? $selectedProyecto->fecha_aprobacion->format('d/m/Y') : '-' }}</td>
+                        <td style="font-weight:bold; vertical-align:top; color:#555; white-space:nowrap;">Fecha aprobaci&oacute;n:</td>
+                        <td style="color:#222;">{{ $selectedProyecto->fecha_aprobacion ? $selectedProyecto->fecha_aprobacion->format('d/m/Y') : '-' }}</td>
                     </tr>
                 </table>
 
                 {{-- Documentos del proyecto --}}
                 @php $docs = $selectedProyecto->documentos ?? collect(); @endphp
                 @if($docs->isNotEmpty())
-                    <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #ddd;">
-                        <b style="font-size:12px;">Documentos del proyecto:</b>
-                        <div style="margin-top:4px;">
+                    <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #ddd;">
+                        <b style="font-size:13px; color:#333;">Documentos del proyecto:</b>
+                        <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">
                             @foreach($docs as $doc)
                                 <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank"
-                                    style="display:inline-block; background:#f0f7ff; border:1px solid #b3d4fc; border-radius:4px; padding:3px 10px; margin:2px; font-size:11px; color:#004080; text-decoration:none;">
-                                    📄 {{ $doc->componente?->nombre ?? 'Documento' }}
+                                    style="display:inline-flex;align-items:center;gap:4px; background:#f0f7ff; border:1px solid #b3d4fc; border-radius:5px; padding:5px 12px; font-size:12px; color:#004080; text-decoration:none;">
+                                    <span style="font-size:14px;">&#128196;</span> {{ $doc->componente?->nombre ?? 'Documento' }}
                                 </a>
                             @endforeach
                         </div>
                     </div>
                 @else
-                    <div style="margin-top:8px; font-size:11px; color:#999; font-style:italic;">
-                        Este proyecto no tiene documentos asociados.
+                    <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #ddd; font-size:13px; color:#999;">
+                        <i>Este proyecto no tiene documentos asociados.</i>
                     </div>
                 @endif
             </fieldset>
@@ -104,72 +104,71 @@
             <hr style="border:none; border-top:1px solid #ccc; margin:15px 0;">
 
             {{-- Formulario de vinculación --}}
-            <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 12px;">
-                <legend style="font-weight: bold; font-size: 12px; color:#333;">Datos de la vinculaci&oacute;n</legend>
-                <table width="100%" cellpadding="5" cellspacing="0" style="font-size: 13px;">
+            <fieldset style="border: 1px solid #CCC; padding: 16px; margin-bottom: 12px; background:#fafafa;">
+                <legend style="font-weight: bold; font-size: 14px; color:#333; padding: 0 8px;">Datos de la vinculaci&oacute;n</legend>
+                <table width="100%" cellpadding="6" cellspacing="0" style="font-size: 14px; border-collapse: separate; border-spacing: 0 8px;">
                     <tr>
-                        <td width="140" style="font-weight:bold; vertical-align:top;">T&iacute;tulo de Vinculaci&oacute;n:
+                        <td width="160" style="font-weight:bold; vertical-align:middle; color:#555; white-space:nowrap;">T&iacute;tulo de Vinculaci&oacute;n:
                             <span style="color:red;">*</span></td>
                         <td>
-                            <input type="text" wire:model="vinculacionTitulo" style="width: 90%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;" placeholder="Ej: Proyecto de desarrollo comunitario...">
-                            @error('vinculacionTitulo') <div class="validation-error">{{ $message }}</div> @enderror
+                            <input type="text" wire:model="vinculacionTitulo" style="width: 100%; padding: 8px 10px; border: 1px solid #bbb; border-radius: 5px; font-size: 14px; box-sizing:border-box;" placeholder="Ej: Proyecto de desarrollo comunitario...">
+                            @error('vinculacionTitulo') <div style="font-size:12px;color:#c62828;margin-top:3px;">{{ $message }}</div> @enderror
                         </td>
                     </tr>
                     <tr>
-                        <td style="font-weight:bold; vertical-align:top;">Asociar Comunidad:</td>
+                        <td style="font-weight:bold; vertical-align:middle; color:#555; white-space:nowrap;">Asociar Comunidad:</td>
                         <td>
                             @if($comunidadSeleccionada)
-                                <div style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:4px;padding:8px;margin-bottom:6px;">
-                                    <div style="font-weight:bold;font-size:13px;">{{ $comunidadSeleccionada->nombre }}</div>
-                                    @if($comunidadSeleccionada->rif)
-                                        <div style="font-size:11px;color:#555;">RIF: {{ $comunidadSeleccionada->rif }}</div>
-                                    @endif
-                                    @php $dir = $comunidadSeleccionada->direccion; @endphp
-                                    @if($dir && $dir->municipio)
-                                        <div style="font-size:11px;color:#555;">
-                                            Direcci&oacute;n: {{ $dir->dir_calle ?? '' }},
-                                            {{ $dir->municipio->mun_nombre ?? '' }},
-                                            {{ $dir->municipio?->estado?->est_nombre ?? '' }}
+                                <div style="background:#e8f5e9;border:1px solid #c8e6c9;border-radius:6px;padding:12px;">
+                                    <div style="display:flex;align-items:center;gap:12px;">
+                                        <div style="width:36px;height:36px;border-radius:50%;background:#198754;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">&#10003;</div>
+                                        <div style="flex:1;">
+                                            <div style="font-weight:bold;font-size:14px;">{{ $comunidadSeleccionada->nombre }}</div>
+                                            @if($comunidadSeleccionada->rif)
+                                                <div style="font-size:12px;color:#555;">RIF: {{ $comunidadSeleccionada->rif }}</div>
+                                            @endif
+                                            @php $dir = $comunidadSeleccionada->direccion; @endphp
+                                            @if($dir && $dir->municipio)
+                                                <div style="font-size:12px;color:#555;">
+                                                    Direcci&oacute;n: {{ $dir->dir_calle ?? '' }},
+                                                    {{ $dir->municipio->mun_nombre ?? '' }},
+                                                    {{ $dir->municipio?->estado?->est_nombre ?? '' }}
+                                                </div>
+                                            @endif
                                         </div>
-                                    @endif
-                                    <button type="button" wire:click="quitarComunidad" style="font-size:10px;color:#c62828;border:none;background:none;cursor:pointer;margin-top:4px;">&times; Quitar comunidad</button>
+                                        <button type="button" wire:click="quitarComunidad" class="cm-btn cm-btn-secondary" style="font-size:12px;padding:6px 14px;">Cambiar</button>
+                                    </div>
                                 </div>
                             @else
-                                <div style="margin-bottom:4px;">
-                                    <input type="text" wire:model.live.debounce.300ms="searchComunidad" style="width:90%;padding:5px;border:1px solid #ccc;border-radius:4px;" placeholder="Buscar comunidad por nombre o RIF...">
+                                <div style="display:flex;gap:8px;align-items:center;">
+                                    <select wire:model="vinculacionComunidadId" style="flex:1;padding:8px 10px;border:1px solid #bbb;border-radius:5px;font-size:14px;background:#fff;">
+                                        <option value="">Seleccione comunidad...</option>
+                                        @foreach($comunidades as $com)
+                                            <option value="{{ $com->id }}">{{ $com->nombre }} @if($com->rif)({{ $com->rif }})@endif</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" wire:click="abrirModalComunidad" class="cm-btn cm-btn-primary" style="white-space:nowrap;padding:8px 14px;font-size:13px;" title="Crear nueva comunidad">+ Nueva</button>
                                 </div>
-                                @if($searchComunidad !== '')
-                                    <div style="max-height:150px;overflow-y:auto;border:1px solid #ddd;border-radius:4px;padding:4px;margin-bottom:4px;">
-                                        @forelse($comunidadesFiltradas as $com)
-                                            <div wire:click="seleccionarComunidad({{ $com->com_codigo }})" style="cursor:pointer;padding:4px 6px;border-bottom:1px solid #eee;font-size:12px;">
-                                                <b>{{ $com->nombre }}</b>
-                                                @if($com->rif) <span style="color:#888;">({{ $com->rif }})</span> @endif
-                                            </div>
-                                        @empty
-                                            <div style="padding:4px;color:#999;font-size:11px;font-style:italic;">Sin resultados</div>
-                                        @endforelse
-                                    </div>
-                                @endif
                             @endif
                         </td>
                     </tr>
                 </table>
             </fieldset>
 
-            <div style="text-align: right; margin-top: 12px;">
-                <button type="button" wire:click="cerrar" class="cm-btn cm-btn-secondary cm-btn-sm">Cancelar</button>
-                <button type="button" wire:click="guardarVinculacion" class="cm-btn cm-btn-success cm-btn-sm" style="margin-left: 8px;">
+            <div style="text-align: right; margin-top: 16px; display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" wire:click="cerrar" class="cm-btn cm-btn-secondary" style="font-size:14px; padding:8px 20px;">Cancelar</button>
+                <button type="button" wire:click="guardarVinculacion" class="cm-btn cm-btn-success" style="font-size:14px; padding:8px 24px;">
                     {{ $vinculacionExistente ? 'Actualizar' : 'Guardar' }} Vinculaci&oacute;n
                 </button>
             </div>
         </fieldset>
     @else
-        <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px;">
-            <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Vinculaci&oacute;n de Proyectos</legend>
+        <fieldset style="border: 2px solid #8b0000; border-radius: 8px; padding: 16px;">
+            <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 10px; font-size:15px;">Vinculaci&oacute;n de Proyectos</legend>
 
-            <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Buscar por t&iacute;tulo..." style="padding:4px 8px; border:1px solid #ccc; border-radius:4px; font-size:12px; min-width:200px; flex:1;">
-                <span style="font-size: 12px; color: #555;">
+            <div style="margin-bottom: 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Buscar por t&iacute;tulo..." style="padding:6px 10px; border:1px solid #ccc; border-radius:5px; font-size:13px; min-width:250px; flex:1;">
+                <span style="font-size: 13px; color: #555;">
                     <b>{{ $proyectos->total() }}</b> proyecto(s)
                 </span>
             </div>
@@ -177,16 +176,16 @@
             @if($proyectos->isEmpty())
                 <p style="color:#666; font-style:italic; padding: 10px;">No hay proyectos aprobados.</p>
             @else
-                <table width="100%" border="1" cellpadding="5" cellspacing="0"
-                    style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px;">
+                <table width="100%" border="1" cellpadding="6" cellspacing="0"
+                    style="border-collapse: collapse; border-color: #ccc; font-size: 12px;">
                     <thead>
                         <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
-                            <th width="5%">N&deg;</th>
-                            <th width="30%">T&iacute;tulo</th>
-                            <th width="15%">Comunidad</th>
-                            <th width="10%">Fecha</th>
-                            <th width="20%">Vinculaci&oacute;n</th>
-                            <th width="20%">Acci&oacute;n</th>
+                            <th width="5%" style="padding:8px 4px;">N&deg;</th>
+                            <th width="30%" style="padding:8px 4px;">T&iacute;tulo</th>
+                            <th width="15%" style="padding:8px 4px;">Comunidad</th>
+                            <th width="10%" style="padding:8px 4px;">Fecha Aprob.</th>
+                            <th width="20%" style="padding:8px 4px;">Vinculaci&oacute;n</th>
+                            <th width="20%" style="padding:8px 4px;">Acci&oacute;n</th>
                         </tr>
                     </thead>
                     <tbody class="Texto">
@@ -196,22 +195,22 @@
                                 $rowNum = ($proyectos->currentPage() - 1) * $proyectos->perPage() + $loop->iteration;
                             @endphp
                             <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }};" valign="top">
-                                <td align="center">{{ $rowNum }}</td>
-                                <td style="font-weight:bold;">{{ $proy->titulo ?? 'N/A' }}</td>
-                                <td>{{ $proy->comunidad->nombre ?? '-' }}</td>
-                                <td align="center">{{ $proy->fecha_aprobacion ? $proy->fecha_aprobacion->format('d/m/Y') : '-' }}</td>
-                                <td align="center">
+                                <td align="center" style="padding:6px 4px;">{{ $rowNum }}</td>
+                                <td style="font-weight:bold; padding:6px 4px;">{{ $proy->titulo ?? 'N/A' }}</td>
+                                <td style="padding:6px 4px;">{{ $proy->comunidad->nombre ?? '-' }}</td>
+                                <td align="center" style="padding:6px 4px;">{{ $proy->fecha_aprobacion ? $proy->fecha_aprobacion->format('d/m/Y') : '-' }}</td>
+                                <td align="center" style="padding:6px 4px;">
                                     @if($vin)
-                                        <span class="cm-tag" style="background: #198754;">Vinculado</span>
+                                        <span class="cm-tag" style="background: #198754; font-size:11px;">Vinculado</span>
                                         @if($vin->comunidad)
-                                            <div style="font-size:10px;color:#555;margin-top:2px;">{{ $vin->comunidad->nombre }}</div>
+                                            <div style="font-size:11px;color:#555;margin-top:3px;">{{ $vin->comunidad->nombre }}</div>
                                         @endif
                                     @else
                                         <span style="color:#999;">-</span>
                                     @endif
                                 </td>
-                                <td align="center">
-                                    <button type="button" wire:click="vincular({{ $proy->id }})" class="cm-btn cm-btn-primary cm-btn-sm">
+                                <td align="center" style="padding:6px 4px;">
+                                    <button type="button" wire:click="vincular({{ $proy->id }})" class="cm-btn cm-btn-primary cm-btn-sm" style="font-size:12px;">
                                         {{ $vin ? 'Editar' : 'Vincular' }}
                                     </button>
                                 </td>
@@ -219,10 +218,63 @@
                         @endforeach
                     </tbody>
                 </table>
-                <div style="margin-top: 10px;">
+                <div style="margin-top: 12px;">
                     {{ $proyectos->links() }}
                 </div>
             @endif
         </fieldset>
+    @endif
+
+    @if ($mostrarModalComunidad)
+        <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;">
+            <div style="background:#fff;border-radius:10px;padding:24px;max-width:480px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #8b0000;">
+                    <div style="width:36px;height:36px;border-radius:50%;background:#8b0000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:bold;">C</div>
+                    <h3 style="margin:0;font-size:16px;font-weight:bold;color:#333;">Comunidad</h3>
+                </div>
+
+                <div style="margin-bottom: 14px;">
+                    <b style="font-size:12px;color:#555;">Buscar comunidad existente:</b>
+                    <input wire:model.live="buscarComunidad" type="text" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;margin-top:4px;font-size:13px;" placeholder="Escriba nombre o RIF...">
+                    @if($comunidadesEncontradas->isNotEmpty())
+                        <div style="margin-top:6px;border:1px solid #e0e0e0;border-radius:6px;max-height:180px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                            @foreach($comunidadesEncontradas as $com)
+                                <div wire:click="seleccionarComunidadModal({{ $com->id }})" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:12px;transition:background 0.15s;"
+                                     onmouseover="this.style.background='#f5f0f0';this.style.borderLeft='3px solid #8b0000'" onmouseout="this.style.background='';this.style.borderLeft=''">
+                                    <b style="color:#8b0000;">{{ $com->nombre }}</b>
+                                    @if($com->rif)<br><small style="color:#888;">RIF: {{ $com->rif }}</small>@endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                    @if($buscarComunidad && $comunidadesEncontradas->isEmpty())
+                        <div style="margin-top:4px;font-size:11px;color:#999;padding:4px 0;">No se encontraron comunidades. Cree una nueva abajo.</div>
+                    @endif
+                </div>
+
+                <hr style="border:none;border-top:1px solid #e8e8e8;margin:14px 0;">
+
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                    <div style="width:24px;height:24px;border-radius:50%;background:#198754;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;">+</div>
+                    <b style="font-size:13px;color:#333;">O crear nueva comunidad</b>
+                </div>
+                <table width="100%" style="font-size:12px;margin-top:4px;border-collapse:separate;border-spacing:0 6px;">
+                    <tr>
+                        <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
+                        <td><input wire:model="modalComunidadNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;" placeholder="Nombre de la comunidad"></td>
+                    </tr>
+                    @error('modalComunidadNombre') <tr><td></td><td class="validation-error" style="font-size:11px;color:#c62828;">{{ $message }}</td></tr> @enderror
+                    <tr>
+                        <td><b>RIF:</b></td>
+                        <td><input wire:model="modalComunidadRif" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;" placeholder="Opcional"></td>
+                    </tr>
+                </table>
+
+                <div style="margin-top:20px;text-align:center;display:flex;gap:10px;justify-content:center;">
+                    <button type="button" class="cm-btn cm-btn-success" wire:click="guardarComunidadModal" style="padding:8px 20px;font-size:13px;">Guardar comunidad</button>
+                    <button type="button" class="cm-btn cm-btn-secondary" wire:click="cerrarModalComunidad" style="padding:8px 20px;font-size:13px;">Cancelar</button>
+                </div>
+            </div>
+        </div>
     @endif
 </div>

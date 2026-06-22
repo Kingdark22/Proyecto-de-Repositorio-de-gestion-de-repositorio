@@ -75,7 +75,7 @@ class MetodologiaManager extends Component
         );
 
         $this->viewMode = 'list';
-        session()->flash('message', $this->editingId ? 'Metodología actualizada con éxito.' : 'Metodología registrada con éxito.');
+        $this->dispatch('notify', type: 'success', message: $this->editingId ? 'Metodología actualizada con éxito.' : 'Metodología registrada con éxito.');
         $this->dispatch('refresh-icons');
     }
 
@@ -84,7 +84,7 @@ class MetodologiaManager extends Component
         $item = MetodologiaInvestigacion::findOrFail($id);
         $item->alternarEstado();
 
-        session()->flash('message', $item->estado_logico ? 'Metodología habilitada correctamente.' : 'Metodología deshabilitada correctamente.');
+        $this->dispatch('notify', type: 'success', message: $item->estado_logico ? 'Metodología habilitada correctamente.' : 'Metodología deshabilitada correctamente.');
         $this->dispatch('refresh-icons');
     }
 
@@ -92,7 +92,7 @@ class MetodologiaManager extends Component
     {
         $item = MetodologiaInvestigacion::findOrFail($id);
         $item->borrar();
-        session()->flash('message', 'Metodología eliminada correctamente.');
+        $this->dispatch('notify', type: 'success', message: 'Metodología eliminada correctamente.');
         $this->dispatch('refresh-icons');
     }
 

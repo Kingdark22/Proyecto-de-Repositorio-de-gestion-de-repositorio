@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="<?php echo e(str_replace('_', '-', app()->getLocale())); ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Repositorio UPTP - @yield('title', 'Dashboard')</title>
-    <link rel="icon" type="image/png" href="{{ asset('imagenes/uptp-logo.png') }}">
+    <title>Repositorio UPTP - <?php echo $__env->yieldContent('title', 'Dashboard'); ?></title>
+    <link rel="icon" type="image/png" href="<?php echo e(asset('imagenes/uptp-logo.png')); ?>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -274,19 +274,41 @@
             color: #2563eb;
         }
     </style>
-    @stack('styles')
-    @livewireStyles
+    <?php echo $__env->yieldPushContent('styles'); ?>
+    <?php echo \Livewire\Mechanisms\FrontendAssets\FrontendAssets::styles(); ?>
+
 </head>
 <body>
     <div id="contenedor">
         <!-- Capa de Arriba -->
         <div id="arriba">
-            <img src="{{ asset('imagenes/barras.jpeg') }}" alt="Encabezado Institucional" style="width: 100%; height: 100%; object-fit: fill; display: block;">
+            <img src="<?php echo e(asset('imagenes/barras.jpeg')); ?>" alt="Encabezado Institucional" style="width: 100%; height: 100%; object-fit: fill; display: block;">
         </div>
 
         <!-- Menu Lateral (Sidebar) -->
         <div id="menu_lateral">
-            <x-sidebar />
+            <?php if (isset($component)) { $__componentOriginal2880b66d47486b4bfeaf519598a469d6 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal2880b66d47486b4bfeaf519598a469d6 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.sidebar','data' => []] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('sidebar'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes([]); ?>
+<?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
+
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal2880b66d47486b4bfeaf519598a469d6)): ?>
+<?php $attributes = $__attributesOriginal2880b66d47486b4bfeaf519598a469d6; ?>
+<?php unset($__attributesOriginal2880b66d47486b4bfeaf519598a469d6); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal2880b66d47486b4bfeaf519598a469d6)): ?>
+<?php $component = $__componentOriginal2880b66d47486b4bfeaf519598a469d6; ?>
+<?php unset($__componentOriginal2880b66d47486b4bfeaf519598a469d6); ?>
+<?php endif; ?>
         </div>
 
         <!-- Toast de notificaciones -->
@@ -440,43 +462,43 @@
 
         <!-- Main Content (Centro) -->
         <main id="centro">
-            @hasSection('header')
+            <?php if (! empty(trim($__env->yieldContent('header')))): ?>
             <div style="margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0;">
-                <h2 style="font-size: 20px; font-weight: bold; color: #333; margin: 0; text-align: left;">@yield('header')</h2>
+                <h2 style="font-size: 20px; font-weight: bold; color: #333; margin: 0; text-align: left;"><?php echo $__env->yieldContent('header'); ?></h2>
             </div>
-            @endif
+            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
             
-            @yield('content')
+            <?php echo $__env->yieldContent('content'); ?>
         </main>
 
-        {{-- Auto-detectar session flashes y mostrarlos como modal visual --}}
-        @php
+        
+        <?php
             $_flashMsg = session('message');
             $_flashErr = session('message_error');
             $_flashErr2 = session('error');
-        @endphp
-        @if($_flashMsg || $_flashErr || $_flashErr2)
+        ?>
+        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($_flashMsg || $_flashErr || $_flashErr2): ?>
         <script>
         (function() {
             var type = 'info', msg = '';
-            @if($_flashMsg)
+            <?php if($_flashMsg): ?>
                 type = 'success';
-                msg = '{{ addslashes($_flashMsg) }}';
-            @elseif($_flashErr)
+                msg = '<?php echo e(addslashes($_flashMsg)); ?>';
+            <?php elseif($_flashErr): ?>
                 type = 'error';
-                msg = '{{ addslashes($_flashErr) }}';
-            @elseif($_flashErr2)
+                msg = '<?php echo e(addslashes($_flashErr)); ?>';
+            <?php elseif($_flashErr2): ?>
                 type = 'error';
-                msg = '{{ addslashes($_flashErr2) }}';
-            @endif
+                msg = '<?php echo e(addslashes($_flashErr2)); ?>';
+            <?php endif; ?>
             if (msg) {
-                if (typeof showNotifyToast === 'function') {
-                    setTimeout(function() { showNotifyToast(type, msg); }, 100);
+                if (typeof showNotifyModal === 'function') {
+                    setTimeout(function() { showNotifyModal(type, msg); }, 100);
                 }
             }
         })();
         </script>
-        @endif
+        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
         <!-- Capa de Abajo -->
         <div id="abajo">
@@ -484,11 +506,12 @@
         </div>
     </div>
 
-    @livewireScripts
+    <?php echo \Livewire\Mechanisms\FrontendAssets\FrontendAssets::scripts(); ?>
+
     <script>
         // Heartbeat para mantener la sesión activa (cada 60 segundos)
         (function() {
-            var keepaliveUrl = '{{ route('session.keepalive') }}';
+            var keepaliveUrl = '<?php echo e(route('session.keepalive')); ?>';
             function sessionKeepalive() {
                 fetch(keepaliveUrl, {
                     method: 'GET',
@@ -519,3 +542,4 @@
 </body>
 </html>
 
+<?php /**PATH C:\Users\tu hermana\Downloads\proyecto\Proyecto-de-Repositorio-de-gestion-de-repositorio\resources\views/layouts/app.blade.php ENDPATH**/ ?>
