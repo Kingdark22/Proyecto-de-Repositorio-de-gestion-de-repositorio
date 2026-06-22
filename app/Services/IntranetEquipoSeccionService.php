@@ -150,11 +150,11 @@ class IntranetEquipoSeccionService
 
                 return $q->exists();
             } catch (\Throwable) {
-                // fallback sección
+                return false;
             }
         }
 
-        return $this->equiposDelEstudiante($cedula, $lapCodigo)->isNotEmpty();
+        return false;
     }
 
     /**

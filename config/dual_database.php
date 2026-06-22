@@ -24,17 +24,10 @@ return [
         'inscripcion',
         'lapso_academico',
         'malla',
-        'programa',
         'trayecto',
         'semestre',
         'unidad_curricular',
         'rol',
-        'grupo_proyecto_estudiante',
-        'grupo_proyecto',
-        'rol',
-        'estado',
-        'municipio',
-        'parroquia',
     ],
 
     /*

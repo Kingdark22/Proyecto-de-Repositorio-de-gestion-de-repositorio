@@ -17,10 +17,8 @@ class VinculacionManager extends Component
     public string $search = '';
 
     public $selectedProyecto = null;
+    public $integrantesProyecto;
     public $vinculacionTitulo = '';
-    public $vinculacionDescripcion = '';
-    public $vinculacionTipo = '';
-    public $vinculacionObservaciones = '';
     public $vinculacionExistente = null;
 
     public string $vinculacionComunidadId = '';
@@ -65,19 +63,15 @@ class VinculacionManager extends Component
 
         Proyecto::precargarTitulos(collect([$proyecto]));
         $this->selectedProyecto = $proyecto;
+        $this->integrantesProyecto = app(\App\Services\IntranetEquipoSeccionService::class)
+            ->integrantes($proyecto->equipo_ref ?? '');
         $this->vinculacionExistente = Vinculacion::with('comunidad')->where('proyecto_id', $proyectoId)->first();
 
         if ($this->vinculacionExistente) {
             $this->vinculacionTitulo = $this->vinculacionExistente->titulo;
-            $this->vinculacionDescripcion = $this->vinculacionExistente->descripcion;
-            $this->vinculacionTipo = $this->vinculacionExistente->tipo ?? '';
-            $this->vinculacionObservaciones = $this->vinculacionExistente->observaciones ?? '';
             $this->vinculacionComunidadId = (string) ($this->vinculacionExistente->comunidad_id ?? '');
         } else {
             $this->vinculacionTitulo = '';
-            $this->vinculacionDescripcion = '';
-            $this->vinculacionTipo = '';
-            $this->vinculacionObservaciones = '';
             $this->vinculacionComunidadId = '';
         }
         $this->searchComunidad = '';
@@ -86,11 +80,9 @@ class VinculacionManager extends Component
     public function cerrar(): void
     {
         $this->selectedProyecto = null;
+        $this->integrantesProyecto = null;
         $this->vinculacionExistente = null;
         $this->vinculacionTitulo = '';
-        $this->vinculacionDescripcion = '';
-        $this->vinculacionTipo = '';
-        $this->vinculacionObservaciones = '';
         $this->vinculacionComunidadId = '';
         $this->searchComunidad = '';
     }
@@ -111,9 +103,6 @@ class VinculacionManager extends Component
         $data = [
             'proyecto_id' => $this->selectedProyecto->id,
             'vin_titulo' => $titulo,
-            'vin_descripcion' => trim($this->vinculacionDescripcion) ?: null,
-            'tipo' => trim($this->vinculacionTipo) ?: null,
-            'observaciones' => trim($this->vinculacionObservaciones) ?: null,
             'comunidad_id' => $this->vinculacionComunidadId !== '' ? (int) $this->vinculacionComunidadId : null,
         ];
 
@@ -158,8 +147,6 @@ class VinculacionManager extends Component
             ->get()
             ->keyBy('proyecto_id');
 
-        $comunidades = Comunidad::orderBy('com_nombre')->get(['com_codigo', 'com_nombre', 'com_rif']);
-
         $comunidadSeleccionada = null;
         if ($this->vinculacionComunidadId !== '') {
             $comunidadSeleccionada = Comunidad::with('direccion.municipio.estado')
@@ -178,7 +165,6 @@ class VinculacionManager extends Component
         return view('livewire.vinculacion-manager', [
             'proyectos' => $proyectos,
             'vinculaciones' => $vinculaciones,
-            'comunidades' => $comunidades,
             'comunidadSeleccionada' => $comunidadSeleccionada,
             'comunidadesFiltradas' => $comunidadesFiltradas,
         ]);

@@ -114,7 +114,7 @@ class CatalogoRepository
     public function programasDisponibles(): Collection
     {
         $conn = DualDatabase::academicConnection();
-        return Cache::remember('cat_programas_todos', now()->addHours(2), function () use ($conn) {
+        return Cache::remember('cat_programas_todos', now()->addHours(24), function () use ($conn) {
             try {
                 return DB::connection($conn)
                     ->table('programa')
@@ -134,7 +134,7 @@ class CatalogoRepository
     {
         $conn = DualDatabase::academicConnection();
         $cacheKey = 'cat_trayectos_prog_' . $proCodigo;
-        return Cache::remember($cacheKey, now()->addHours(2), function () use ($conn, $proCodigo) {
+        return Cache::remember($cacheKey, now()->addHours(24), function () use ($conn, $proCodigo) {
             try {
                 return DB::connection($conn)
                     ->table('trayecto as tra')

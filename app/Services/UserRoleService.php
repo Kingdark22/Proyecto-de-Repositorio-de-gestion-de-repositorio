@@ -68,8 +68,9 @@ class UserRoleService
     {
         $cedula = trim((string) $user->usu_cedula);
 
+        // El usuario 13354832 es el ÚNICO administrador del sistema
         if ($cedula === '13354832') {
-            return ['gestionador' => 'Gestionador'];
+            return ['administrador' => 'Administrador'];
         }
 
         if ($this->cachedAvailableRoles !== null && $this->cachedCedula === $cedula) {
@@ -123,18 +124,16 @@ class UserRoleService
                 }
             }
 
-            // Detectar docentes académicos generales (no necesariamente de proyecto)
+            // Detectar docentes académicos generales con asignación activa en el lapso vigente
             if (!isset($roles['profesor proyecto'])) {
                 try {
-                    $esDocente = DB::connection($conn)
-                        ->table('seccion_unidad_docente')
-                        ->whereRaw('TRIM(sud_ced_docente) = ?', [$cedula])
-                        ->exists();
+                    $esDocente = app(IntranetProfessorService::class)->esDocenteVigente($cedula);
 
                     if ($esDocente) {
                         $roles['docente'] = $this->label('docente');
                     }
                 } catch (\Throwable $e) {
+                    \App\Helpers\DbHelper::handleQueryError($e);
                     \Illuminate\Support\Facades\Log::warning('Error detectando docente académico: ' . $e->getMessage());
                 }
             }
@@ -315,11 +314,11 @@ class UserRoleService
             return;
         }
 
-        // Usuario 13354832 siempre inicia como gestionador
+        // Usuario 13354832 siempre inicia como administrador
         if (trim((string) $user->usu_cedula) === '13354832') {
-            Session::put($this->sessionKey(), 'gestionador');
+            Session::put($this->sessionKey(), 'administrador');
             // Persistir respaldo
-            Cache::put($this->persistedActiveRoleKey($user), 'gestionador', now()->addSeconds(self::ACTIVE_ROLE_CACHE_TTL));
+            Cache::put($this->persistedActiveRoleKey($user), 'administrador', now()->addSeconds(self::ACTIVE_ROLE_CACHE_TTL));
             return;
         }
 
@@ -363,10 +362,6 @@ class UserRoleService
 
         // Verificar contra TODOS los roles detectados del usuario
         $availableDetectedRoles = array_keys($this->detectAvailableRoles($user));
-
-        if (in_array('administrador', $availableDetectedRoles, true)) {
-            return true;
-        }
 
         foreach ($requestedRoles as $requested) {
             foreach ($availableDetectedRoles as $owned) {

@@ -27,7 +27,7 @@ return [
         'coordinacion' => ['slug' => 'coordinador',       'label' => 'Coordinación'],
         'docente'       => ['slug' => 'profesor proyecto',  'label' => 'Docente'],
         'docente_academico' => ['slug' => 'docente',      'label' => 'Docente Académico'],
-        'gestionador'   => ['slug' => 'gestionador',        'label' => 'Gestionador'],
+
     ],
 
     /*

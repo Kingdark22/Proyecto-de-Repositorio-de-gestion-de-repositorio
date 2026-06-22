@@ -1,5 +1,10 @@
 <div class="pgm-wrap">
     <style>
+        .pgm-wrap { max-width: 100%; overflow-x: auto; box-sizing: border-box; word-break: break-word; }
+        .pgm-wrap table { box-sizing: border-box; }
+        .pgm-wrap select, .pgm-wrap input, .pgm-wrap textarea { box-sizing: border-box; max-width: 100%; }
+        .pgm-wrap fieldset { box-sizing: border-box; max-width: 100%; }
+        .pgm-wrap table, .pgm-wrap td, .pgm-wrap th { word-break: break-word; }
         .cm-btn {
             display: inline-flex;
             align-items: center;
@@ -431,15 +436,6 @@
                                 @enderror
                             </td>
                         </tr>
-                        <tr>
-                            <td><b>Fecha subida:</b></td>
-                            <td colspan="3"><input wire:model="fecha_subida" type="date"><span
-                                    class="obligatorio">*</span> @error('fecha_subida')
-                                    <span class="obligatorio">{{ $message }}</span>
-                                @enderror
-                            </td>
-                        </tr>
-
                     </table>
                 </fieldset>
 
@@ -558,6 +554,23 @@
                 </fieldset>
                 @endif
 
+                {{-- == FECHA SUBIDA == --}}
+                <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
+                    <legend style="font-weight: bold; font-size: 12px;">Fecha de subida</legend>
+                    <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px;">
+                        <tr>
+                            <td width="20%"><b>Fecha subida:</b></td>
+                            <td colspan="3">
+                                <input wire:model="fecha_subida" type="date">
+                                <span class="obligatorio">*</span>
+                                @error('fecha_subida')
+                                    <span class="obligatorio">{{ $message }}</span>
+                                @enderror
+                            </td>
+                        </tr>
+                    </table>
+                </fieldset>
+
                 {{-- == SECCIÓN DOCUMENTOS POR COMPONENTE == --}}
                 @php
                     $tieneComponentes = isset($componentes_disp) && $componentes_disp->isNotEmpty();
@@ -653,8 +666,8 @@
                             </td>
                         </tr>
                         <tr>
-                            <td><b>Tipo de Publicaci&oacute;n:</b></td>
-                            <td>
+                            <td width="20%"><b>Tipo de Publicaci&oacute;n:</b></td>
+                            <td width="30%">
                                 <div style="display: flex; gap: 4px; align-items: center;">
                                     <select wire:model="tipo_publicacion_id" style="flex:1;">
                                         <option value="">Seleccione...</option>
@@ -668,8 +681,8 @@
                                     <br><span class="obligatorio">{{ $message }}</span>
                                 @enderror
                             </td>
-                            <td><b>Objetivo:</b></td>
-                            <td>
+                            <td width="20%"><b>Objetivo:</b></td>
+                            <td width="30%">
                                 <select wire:model="objetivo_id" style="width: 100%;">
                                     <option value="">Seleccione...</option>
                                     @foreach ($objetivos ?? [] as $obj)
@@ -680,8 +693,10 @@
                                     <br><span class="obligatorio">{{ $message }}</span>
                                 @enderror
                             </td>
-                            <td><b>Tipo de Investigaci&oacute;n:</b></td>
-                            <td>
+                        </tr>
+                        <tr>
+                            <td width="20%"><b>Tipo de Investigaci&oacute;n:</b></td>
+                            <td width="30%">
                                 <div style="display: flex; gap: 4px; align-items: center;">
                                     <select wire:model="tipo_investigacion_id" style="flex:1;">
                                         <option value="">Seleccione...</option>
@@ -695,10 +710,8 @@
                                     <br><span class="obligatorio">{{ $message }}</span>
                                 @enderror
                             </td>
-                        </tr>
-                        <tr>
-                            <td><b>Objetivo de Investigaci&oacute;n:</b></td>
-                            <td colspan="3">
+                            <td width="20%"><b>Objetivo de Investigaci&oacute;n:</b></td>
+                            <td width="30%">
                                 <div style="display: flex; gap: 4px; align-items: center;">
                                     <select wire:model="objetivo_investigacion_id" style="flex:1;">
                                         <option value="">Seleccione...</option>
