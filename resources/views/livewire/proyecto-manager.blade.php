@@ -705,7 +705,13 @@
                             <table width="100%" style="font-size:12px;margin-top:4px;border-collapse:separate;border-spacing:0 6px;">
                                 <tr>
                                     <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
-                                    <td><input wire:model="modalLineaNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
+                                    <td><input wire:model.live.debounce.500ms="modalLineaNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;">
+                                    @if($modalLineaNombreStatus === 'disponible')
+                                        <br><span style="color: #28a745; font-size: 11px;">✓ Nombre disponible</span>
+                                    @elseif($modalLineaNombreStatus === 'no_disponible')
+                                        <br><span style="color: #dc3545; font-size: 11px;">✗ Este nombre ya está en uso</span>
+                                    @endif
+                                    </td>
                                 </tr>
                                 @error('modalLineaNombre') <tr><td></td><td class="validation-error">⚠ {{ $message }}</td></tr> @enderror
                                 <tr>
@@ -765,7 +771,13 @@
                             <table width="100%" style="font-size:12px;margin-top:4px;border-collapse:separate;border-spacing:0 6px;">
                                 <tr>
                                     <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
-                                    <td><input wire:model="modalMetodologiaNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
+                                    <td><input wire:model.live.debounce.500ms="modalMetodologiaNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;">
+                                    @if($modalMetodologiaNombreStatus === 'disponible')
+                                        <br><span style="color: #28a745; font-size: 11px;">✓ Nombre disponible</span>
+                                    @elseif($modalMetodologiaNombreStatus === 'no_disponible')
+                                        <br><span style="color: #dc3545; font-size: 11px;">✗ Este nombre ya está en uso</span>
+                                    @endif
+                                    </td>
                                 </tr>
                                 @error('modalMetodologiaNombre') <tr><td></td><td class="validation-error">⚠ {{ $message }}</td></tr> @enderror
                                 <tr>
@@ -821,7 +833,13 @@
                             <table width="100%" style="font-size:12px;margin-top:4px;border-collapse:separate;border-spacing:0 6px;">
                                 <tr>
                                     <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
-                                    <td><input wire:model="modalTipoInvNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
+                                    <td><input wire:model.live.debounce.500ms="modalTipoInvNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;">
+                                    @if($modalTipoInvNombreStatus === 'disponible')
+                                        <br><span style="color: #28a745; font-size: 11px;">✓ Nombre disponible</span>
+                                    @elseif($modalTipoInvNombreStatus === 'no_disponible')
+                                        <br><span style="color: #dc3545; font-size: 11px;">✗ Este nombre ya está en uso</span>
+                                    @endif
+                                    </td>
                                 </tr>
                                 @error('modalTipoInvNombre') <tr><td></td><td class="validation-error">⚠ {{ $message }}</td></tr> @enderror
                                 <tr>
@@ -877,7 +895,13 @@
                             <table width="100%" style="font-size:12px;margin-top:4px;border-collapse:separate;border-spacing:0 6px;">
                                 <tr>
                                     <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
-                                    <td><input wire:model="modalTipoPubNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
+                                    <td><input wire:model.live.debounce.500ms="modalTipoPubNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;">
+                                    @if($modalTipoPubNombreStatus === 'disponible')
+                                        <br><span style="color: #28a745; font-size: 11px;">✓ Nombre disponible</span>
+                                    @elseif($modalTipoPubNombreStatus === 'no_disponible')
+                                        <br><span style="color: #dc3545; font-size: 11px;">✗ Este nombre ya está en uso</span>
+                                    @endif
+                                    </td>
                                 </tr>
                                 @error('modalTipoPubNombre') <tr><td></td><td class="validation-error">⚠ {{ $message }}</td></tr> @enderror
                                 <tr>
@@ -938,7 +962,13 @@
                             <table width="100%" style="font-size:12px;margin-top:4px;border-collapse:separate;border-spacing:0 6px;">
                                 <tr>
                                     <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
-                                    <td><input wire:model="modalObjetivoNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
+                                    <td><input wire:model.live.debounce.500ms="modalObjetivoNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;">
+                                    @if($modalObjetivoNombreStatus === 'disponible')
+                                        <br><span style="color: #28a745; font-size: 11px;">✓ Nombre disponible</span>
+                                    @elseif($modalObjetivoNombreStatus === 'no_disponible')
+                                        <br><span style="color: #dc3545; font-size: 11px;">✗ Este nombre ya está en uso</span>
+                                    @endif
+                                    </td>
                                 </tr>
                                 @error('modalObjetivoNombre') <tr><td></td><td style="color:#dc3545;font-size:11px;">⚠ {{ $message }}</td></tr> @enderror
                                 <tr>

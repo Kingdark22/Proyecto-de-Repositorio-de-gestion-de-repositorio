@@ -19,7 +19,7 @@ class ComunidadGestionService
     {
         return [
             'nombre' => 'required|string|max:255',
-            'rif' => 'nullable|string|max:50',
+            'rif' => 'nullable|regex:/^[VEGJP]-\d{1,9}-\d$/',
             'estado_id' => 'required|integer|exists:estados,est_codigo',
             'municipio_id' => 'required|integer|exists:municipios,mun_codigo',
             'dir_nombre' => 'required|string|max:500',
@@ -66,8 +66,8 @@ class ComunidadGestionService
 
         $payload = [
             'nombre' => $datos['nombre'],
-            'rif' => $datos['rif'],
-            'correo' => $datos['correo'],
+            'rif' => $datos['rif'] ?? null,
+            'correo' => $datos['correo'] ?? null,
             'direccion_id' => $direccionId,
         ];
 

@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\LineaInvestigacion;
+use App\Services\UnicidadNombreService;
 use App\Helpers\DbHelper;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -19,6 +20,26 @@ class LineaInvestigacionManager extends Component
     public $search = '';
     public $editingId = null;
     public $viewMode = 'list';
+
+    public ?string $nombreStatus = null;
+
+    public function updatedNombreInvestigacion(): void
+    {
+        if (strlen(trim($this->nombre_investigacion)) < 3) {
+            $this->nombreStatus = null;
+            $this->resetValidation('nombre_investigacion');
+            return;
+        }
+        $this->nombreStatus = app(UnicidadNombreService::class)->check(
+            LineaInvestigacion::class,
+            'nombre_investigacion',
+            $this->nombre_investigacion,
+            $this->editingId,
+        ) ? 'disponible' : 'no_disponible';
+        if ($this->nombreStatus === 'disponible') {
+            $this->resetValidation('nombre_investigacion');
+        }
+    }
 
     protected $rules = [
         'nombre_investigacion' => 'required|min:3|max:255',
@@ -56,6 +77,7 @@ class LineaInvestigacionManager extends Component
         $this->descripcion = $item->descripcion;
         $this->area_de_investigacion = $item->area_de_investigacion;
         $this->programa_id = $item->programa_id;
+        $this->nombreStatus = 'disponible';
         $this->viewMode = 'form';
     }
 
@@ -72,11 +94,17 @@ class LineaInvestigacionManager extends Component
         $this->area_de_investigacion = '';
         $this->programa_id = '';
         $this->editingId = null;
+        $this->nombreStatus = null;
     }
 
     public function save()
     {
         $this->validate();
+
+        if ($this->nombreStatus === 'no_disponible') {
+            $this->addError('nombre_investigacion', 'Este nombre ya está en uso.');
+            return;
+        }
 
         LineaInvestigacion::guardar(
             [

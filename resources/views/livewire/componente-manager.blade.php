@@ -285,9 +285,14 @@
                             <tr>
                                 <td width="35%"><b>Nombre:</b></td>
                                 <td width="65%">
-                                    <input type="text" wire:model="rows.{{ $index }}.nombre"
+                                    <input type="text" wire:model.live.debounce.500ms="rows.{{ $index }}.nombre"
                                         style="width: 95%; padding: 4px;"
                                         placeholder="Ej: Informe Final...">
+                                    @if(($rowsNombreStatus[$index] ?? null) === 'disponible')
+                                        <br><span style="color: #28a745; font-size: 10px;">✓ Nombre disponible</span>
+                                    @elseif(($rowsNombreStatus[$index] ?? null) === 'no_disponible')
+                                        <br><span style="color: #dc3545; font-size: 10px;">✗ Este nombre ya está en uso</span>
+                                    @endif
                                     @error("rows.$index.nombre")
                                         <br><span style="color:red; font-size:10px;">{{ $message }}</span>
                                     @enderror

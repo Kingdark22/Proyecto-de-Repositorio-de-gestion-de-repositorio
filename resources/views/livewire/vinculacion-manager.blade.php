@@ -261,12 +261,37 @@
                 <table width="100%" style="font-size:12px;margin-top:4px;border-collapse:separate;border-spacing:0 6px;">
                     <tr>
                         <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
-                        <td><input wire:model="modalComunidadNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;" placeholder="Nombre de la comunidad"></td>
+                        <td><input wire:model.live.debounce.500ms="modalComunidadNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;" placeholder="Nombre de la comunidad">
+                        @if($modalComunidadNombreStatus === 'disponible')
+                            <br><span style="color: #28a745; font-size: 11px;">✓ Nombre disponible</span>
+                        @elseif($modalComunidadNombreStatus === 'no_disponible')
+                            <br><span style="color: #dc3545; font-size: 11px;">✗ Este nombre ya está en uso</span>
+                        @endif
+                        </td>
                     </tr>
                     @error('modalComunidadNombre') <tr><td></td><td class="validation-error" style="font-size:11px;color:#c62828;">{{ $message }}</td></tr> @enderror
                     <tr>
-                        <td><b>RIF:</b></td>
-                        <td><input wire:model="modalComunidadRif" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;" placeholder="Opcional"></td>
+                        <td style="vertical-align:top;"><b>RIF:</b></td>
+                        <td>
+                            <div style="display:flex;gap:4px;align-items:center;">
+                                <select wire:model.live="modalComunidadRifLetra" style="padding:4px 6px;border:1px solid #ccc;border-radius:4px;background:#fff;font-size:11px;width:48px;">
+                                    <option value="V">V</option>
+                                    <option value="E">E</option>
+                                    <option value="J">J</option>
+                                    <option value="G">G</option>
+                                    <option value="P">P</option>
+                                </select>
+                                <input wire:model.live.debounce.500ms="modalComunidadRifNumero" type="text" maxlength="9" style="flex:1;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;" placeholder="Número (máx. 9 dígitos)">
+                            </div>
+                            @if($modalComunidadRifStatus === 'valido')
+                                <span style="color: #28a745; font-size: 11px;">✓ RIF válido</span>
+                            @elseif($modalComunidadRifStatus === 'invalido')
+                                <span style="color: #dc3545; font-size: 11px;">✗ RIF inválido</span>
+                            @endif
+                            @error('modalComunidadRifNumero')
+                                <span class="validation-error" style="font-size:11px;color:#c62828;">{{ $message }}</span>
+                            @enderror
+                        </td>
                     </tr>
                 </table>
 

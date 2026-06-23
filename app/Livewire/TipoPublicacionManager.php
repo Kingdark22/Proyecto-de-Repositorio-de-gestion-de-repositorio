@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\TipoPublicacion;
+use App\Services\UnicidadNombreService;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -15,6 +16,26 @@ class TipoPublicacionManager extends Component
     public $search = '';
     public $editingId = null;
     public $viewMode = 'list';
+
+    public ?string $nombreStatus = null;
+
+    public function updatedNombre(): void
+    {
+        if (strlen(trim($this->nombre)) < 3) {
+            $this->nombreStatus = null;
+            $this->resetValidation('nombre');
+            return;
+        }
+        $this->nombreStatus = app(UnicidadNombreService::class)->check(
+            TipoPublicacion::class,
+            'nombre',
+            $this->nombre,
+            $this->editingId,
+        ) ? 'disponible' : 'no_disponible';
+        if ($this->nombreStatus === 'disponible') {
+            $this->resetValidation('nombre');
+        }
+    }
 
     protected $rules = [
         'nombre' => 'required|min:3|max:255',
@@ -45,6 +66,7 @@ class TipoPublicacionManager extends Component
         $item = TipoPublicacion::find($id);
         $this->nombre = $item->nombre;
         $this->mencion_honorifica = $item->mencion_honorifica;
+        $this->nombreStatus = 'disponible';
         $this->viewMode = 'form';
     }
 
@@ -59,11 +81,17 @@ class TipoPublicacionManager extends Component
         $this->nombre = '';
         $this->mencion_honorifica = false;
         $this->editingId = null;
+        $this->nombreStatus = null;
     }
 
     public function save()
     {
         $this->validate();
+
+        if ($this->nombreStatus === 'no_disponible') {
+            $this->addError('nombre', 'Este nombre ya está en uso.');
+            return;
+        }
 
         TipoPublicacion::guardar(
             [

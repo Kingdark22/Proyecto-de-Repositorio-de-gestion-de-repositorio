@@ -5,6 +5,8 @@ namespace App\Livewire;
 use App\Models\Comunidad;
 use App\Models\Proyecto;
 use App\Models\Vinculacion;
+use App\Services\UnicidadNombreService;
+use App\Services\ValidacionRifService;
 use Illuminate\Support\Collection;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -25,7 +27,60 @@ class VinculacionManager extends Component
 
     public bool $mostrarModalComunidad = false;
     public string $modalComunidadNombre = '';
-    public string $modalComunidadRif = '';
+
+    public ?string $modalComunidadNombreStatus = null;
+
+    public function updatedModalComunidadNombre(): void
+    {
+        if (strlen(trim($this->modalComunidadNombre)) < 3) {
+            $this->modalComunidadNombreStatus = null;
+            $this->resetValidation('modalComunidadNombre');
+            return;
+        }
+        $this->modalComunidadNombreStatus = app(UnicidadNombreService::class)->check(
+            Comunidad::class,
+            'nombre',
+            $this->modalComunidadNombre,
+        ) ? 'disponible' : 'no_disponible';
+        if ($this->modalComunidadNombreStatus === 'disponible') {
+            $this->resetValidation('modalComunidadNombre');
+        }
+    }
+
+    public string $modalComunidadRifLetra = 'J';
+
+    public string $modalComunidadRifNumero = '';
+
+    public ?string $modalComunidadRifDigito = null;
+
+    public ?string $modalComunidadRifStatus = null;
+
+    public function updatedModalComunidadRifNumero(ValidacionRifService $rifService): void
+    {
+        $original = $this->modalComunidadRifNumero;
+        $num = preg_replace('/\D/', '', $original);
+        $this->modalComunidadRifNumero = $num;
+        $tieneLetras = $original !== $num;
+        if ($num === '' || strlen($num) < 5) {
+            $this->modalComunidadRifDigito = null;
+            $this->modalComunidadRifStatus = null;
+            $this->resetValidation('modalComunidadRifNumero');
+            return;
+        }
+        $this->modalComunidadRifDigito = $rifService->calcularDigito($this->modalComunidadRifLetra, $num);
+        $this->modalComunidadRifStatus = ($this->modalComunidadRifDigito !== null && !$tieneLetras) ? 'valido' : 'invalido';
+        if ($this->modalComunidadRifStatus === 'valido') {
+            $this->resetValidation('modalComunidadRifNumero');
+        }
+    }
+
+    public function updatedModalComunidadRifLetra(ValidacionRifService $rifService): void
+    {
+        if (strlen($this->modalComunidadRifNumero) >= 5) {
+            $this->updatedModalComunidadRifNumero($rifService);
+        }
+    }
+
     public string $buscarComunidad = '';
     public Collection $comunidadesEncontradas;
 
@@ -51,7 +106,11 @@ class VinculacionManager extends Component
     {
         $this->mostrarModalComunidad = true;
         $this->modalComunidadNombre = '';
-        $this->modalComunidadRif = '';
+        $this->modalComunidadNombreStatus = null;
+        $this->modalComunidadRifLetra = 'J';
+        $this->modalComunidadRifNumero = '';
+        $this->modalComunidadRifDigito = null;
+        $this->modalComunidadRifStatus = null;
         $this->buscarComunidad = '';
         $this->comunidadesEncontradas = collect();
     }
@@ -75,9 +134,24 @@ class VinculacionManager extends Component
             'modalComunidadNombre.required' => 'El nombre de la comunidad es obligatorio.',
         ]);
 
+        if ($this->modalComunidadNombreStatus === 'no_disponible') {
+            $this->addError('modalComunidadNombre', 'Este nombre ya está en uso.');
+            return;
+        }
+
+        if ($this->modalComunidadRifNumero !== '' && $this->modalComunidadRifStatus !== 'valido') {
+            $this->addError('modalComunidadRifNumero', 'El RIF ingresado no es válido.');
+            return;
+        }
+
+        $rif = null;
+        if ($this->modalComunidadRifNumero !== '') {
+            $rif = "{$this->modalComunidadRifLetra}-{$this->modalComunidadRifNumero}-{$this->modalComunidadRifDigito}";
+        }
+
         $comunidad = Comunidad::create([
             'nombre' => $this->modalComunidadNombre,
-            'rif' => $this->modalComunidadRif ?: null,
+            'rif' => $rif,
         ]);
 
         $this->vinculacionComunidadId = (string) $comunidad->id;

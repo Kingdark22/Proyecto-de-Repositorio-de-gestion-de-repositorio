@@ -139,9 +139,14 @@
                             <b style="white-space: nowrap; padding-top: 8px; min-width: 60px;">Nombre:</b>
                             <div style="flex: 1;">
                                 <div style="display: flex; align-items: center; gap: 4px;">
-                                    <input wire:model="nombre" type="text" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                                    <input wire:model.live.debounce.500ms="nombre" type="text" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
                                     <span class="obligatorio" style="color: red; font-weight: bold;">*</span>
                                 </div>
+                                @if($nombreStatus === 'disponible')
+                                    <span style="color: #28a745; font-size: 11px;">✓ Nombre disponible</span>
+                                @elseif($nombreStatus === 'no_disponible')
+                                    <span style="color: #dc3545; font-size: 11px;">✗ Este nombre ya está en uso</span>
+                                @endif
                                 @error('nombre')
                                     <span class="validation-error">{{ $message }}</span>
                                 @enderror
@@ -152,9 +157,23 @@
                         <div style="display: flex; align-items: flex-start; gap: 6px;">
                             <b style="white-space: nowrap; padding-top: 8px; min-width: 40px;">RIF:</b>
                             <div style="flex: 1;">
-                                <input wire:model="rif" type="text" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                                <div style="display: flex; gap: 5px; align-items: center;">
+                                    <select wire:model.live="rifLetra" style="padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-size: 11px; width: 48px;">
+                                        <option value="V">V</option>
+                                        <option value="E">E</option>
+                                        <option value="J">J</option>
+                                        <option value="G">G</option>
+                                        <option value="P">P</option>
+                                    </select>
+                                    <input wire:model.live.debounce.500ms="rifNumero" type="text" maxlength="9" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" placeholder="Número (máx. 9 dígitos)">
+                                </div>
                                 <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
-                                @error('rif')
+                                @if($rifStatus === 'valido')
+                                    <span style="color: #28a745; font-size: 11px;">✓ RIF válido</span>
+                                @elseif($rifStatus === 'invalido')
+                                    <span style="color: #dc3545; font-size: 11px;">✗ RIF inválido</span>
+                                @endif
+                                @error('rifNumero')
                                     <span class="validation-error">{{ $message }}</span>
                                 @enderror
                             </div>
