@@ -166,20 +166,20 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
                             <b style="white-space: nowrap; padding-top: 8px; min-width: 40px;">RIF:</b>
                             <div style="flex: 1;">
                                 <div style="display: flex; gap: 5px; align-items: center;">
-                                    <select wire:model.live="rifLetra" style="padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-size: 11px; width: 48px;">
+                                    <select wire:model.live="rifLetra" style="padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-size: 11px; width: 48px;" <?php if($editingId): ?> disabled <?php endif; ?>>
                                         <option value="V">V</option>
                                         <option value="E">E</option>
                                         <option value="J">J</option>
                                         <option value="G">G</option>
                                         <option value="P">P</option>
                                     </select>
-                                    <input wire:model.live.debounce.500ms="rifNumero" type="text" maxlength="9" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" placeholder="Número (máx. 9 dígitos)">
+                                    <input wire:model.live.debounce.500ms="rifNumero" type="text" inputmode="numeric" maxlength="9" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="Número (máx. 9 dígitos)">
                                 </div>
                                 <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
                                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($rifStatus === 'valido'): ?>
                                     <span style="color: #28a745; font-size: 11px;">✓ RIF válido</span>
                                 <?php elseif($rifStatus === 'invalido'): ?>
-                                    <span style="color: #dc3545; font-size: 11px;">✗ RIF inválido</span>
+                                    <span style="color: #dc3545; font-size: 11px;">✗ <?php echo e($rifError ?? 'RIF inválido'); ?></span>
                                 <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['rifNumero'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
@@ -200,8 +200,13 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
                         <div style="display: flex; align-items: flex-start; gap: 6px;">
                             <b style="white-space: nowrap; padding-top: 8px; min-width: 60px;">Correo:</b>
                             <div style="flex: 1;">
-                                <input wire:model="correo" type="email" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                                <input wire:model.live.debounce.500ms="correo" type="email" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" placeholder="ejemplo@gmail.com">
                                 <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($correoStatus === 'valido'): ?>
+                                    <span style="color: #28a745; font-size: 11px;">✓ Correo válido</span>
+                                <?php elseif($correoStatus === 'invalido'): ?>
+                                    <span style="color: #dc3545; font-size: 11px;">✗ <?php echo e($correoError ?? 'Correo inválido'); ?></span>
+                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['correo'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :

@@ -19,7 +19,7 @@ class ComunidadGestionService
     {
         return [
             'nombre' => 'required|string|max:255',
-            'rif' => 'nullable|regex:/^[VEGJP]-\d{1,9}-\d$/',
+            'rif' => 'nullable|regex:/^[VEGJP]-\d{9}-\d$/',
             'estado_id' => 'required|integer|exists:estados,est_codigo',
             'municipio_id' => 'required|integer|exists:municipios,mun_codigo',
             'dir_nombre' => 'required|string|max:500',
