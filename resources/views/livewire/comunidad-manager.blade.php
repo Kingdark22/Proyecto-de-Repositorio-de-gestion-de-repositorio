@@ -158,20 +158,20 @@
                             <b style="white-space: nowrap; padding-top: 8px; min-width: 40px;">RIF:</b>
                             <div style="flex: 1;">
                                 <div style="display: flex; gap: 5px; align-items: center;">
-                                    <select wire:model.live="rifLetra" style="padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-size: 11px; width: 48px;">
+                                    <select wire:model.live="rifLetra" style="padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-size: 11px; width: 48px;" @if($editingId) disabled @endif>
                                         <option value="V">V</option>
                                         <option value="E">E</option>
                                         <option value="J">J</option>
                                         <option value="G">G</option>
                                         <option value="P">P</option>
                                     </select>
-                                    <input wire:model.live.debounce.500ms="rifNumero" type="text" maxlength="9" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" placeholder="Número (máx. 9 dígitos)">
+                                    <input wire:model.live.debounce.500ms="rifNumero" type="text" inputmode="numeric" maxlength="9" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="Número (máx. 9 dígitos)">
                                 </div>
                                 <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
                                 @if($rifStatus === 'valido')
                                     <span style="color: #28a745; font-size: 11px;">✓ RIF válido</span>
                                 @elseif($rifStatus === 'invalido')
-                                    <span style="color: #dc3545; font-size: 11px;">✗ RIF inválido</span>
+                                    <span style="color: #dc3545; font-size: 11px;">✗ {{ $rifError ?? 'RIF inválido' }}</span>
                                 @endif
                                 @error('rifNumero')
                                     <span class="validation-error">{{ $message }}</span>
@@ -185,8 +185,13 @@
                         <div style="display: flex; align-items: flex-start; gap: 6px;">
                             <b style="white-space: nowrap; padding-top: 8px; min-width: 60px;">Correo:</b>
                             <div style="flex: 1;">
-                                <input wire:model="correo" type="email" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                                <input wire:model.live.debounce.500ms="correo" type="email" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" placeholder="ejemplo@gmail.com">
                                 <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
+                                @if($correoStatus === 'valido')
+                                    <span style="color: #28a745; font-size: 11px;">✓ Correo válido</span>
+                                @elseif($correoStatus === 'invalido')
+                                    <span style="color: #dc3545; font-size: 11px;">✗ {{ $correoError ?? 'Correo inválido' }}</span>
+                                @endif
                                 @error('correo')
                                     <span class="validation-error">{{ $message }}</span>
                                 @enderror

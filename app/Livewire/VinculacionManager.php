@@ -57,20 +57,29 @@ class VinculacionManager extends Component
 
     public ?string $modalComunidadRifStatus = null;
 
+    public ?string $modalComunidadRifError = null;
+
     public function updatedModalComunidadRifNumero(ValidacionRifService $rifService): void
     {
-        $original = $this->modalComunidadRifNumero;
-        $num = preg_replace('/\D/', '', $original);
+        $num = preg_replace('/\D/', '', $this->modalComunidadRifNumero);
         $this->modalComunidadRifNumero = $num;
-        $tieneLetras = $original !== $num;
-        if ($num === '' || strlen($num) < 5) {
+        if ($num === '') {
             $this->modalComunidadRifDigito = null;
             $this->modalComunidadRifStatus = null;
+            $this->modalComunidadRifError = null;
+            $this->resetValidation('modalComunidadRifNumero');
+            return;
+        }
+        if (strlen($num) < 9) {
+            $this->modalComunidadRifDigito = null;
+            $this->modalComunidadRifStatus = 'invalido';
+            $this->modalComunidadRifError = 'Debe tener 9 dígitos';
             $this->resetValidation('modalComunidadRifNumero');
             return;
         }
         $this->modalComunidadRifDigito = $rifService->calcularDigito($this->modalComunidadRifLetra, $num);
-        $this->modalComunidadRifStatus = ($this->modalComunidadRifDigito !== null && !$tieneLetras) ? 'valido' : 'invalido';
+        $this->modalComunidadRifStatus = $this->modalComunidadRifDigito !== null ? 'valido' : 'invalido';
+        $this->modalComunidadRifError = $this->modalComunidadRifStatus === 'valido' ? null : 'RIF inválido';
         if ($this->modalComunidadRifStatus === 'valido') {
             $this->resetValidation('modalComunidadRifNumero');
         }
@@ -78,7 +87,7 @@ class VinculacionManager extends Component
 
     public function updatedModalComunidadRifLetra(ValidacionRifService $rifService): void
     {
-        if (strlen($this->modalComunidadRifNumero) >= 5) {
+        if (strlen($this->modalComunidadRifNumero) >= 9) {
             $this->updatedModalComunidadRifNumero($rifService);
         }
     }
@@ -113,6 +122,7 @@ class VinculacionManager extends Component
         $this->modalComunidadRifNumero = '';
         $this->modalComunidadRifDigito = null;
         $this->modalComunidadRifStatus = null;
+        $this->modalComunidadRifError = null;
         $this->buscarComunidad = '';
         $this->comunidadesEncontradas = collect();
     }
@@ -138,6 +148,11 @@ class VinculacionManager extends Component
 
         if ($this->modalComunidadNombreStatus === 'no_disponible') {
             $this->addError('modalComunidadNombre', 'Este nombre ya está en uso.');
+            return;
+        }
+
+        if ($this->modalComunidadRifNumero !== '' && strlen($this->modalComunidadRifNumero) < 9) {
+            $this->addError('modalComunidadRifNumero', 'El RIF debe tener exactamente 9 dígitos.');
             return;
         }
 
