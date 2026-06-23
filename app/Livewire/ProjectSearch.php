@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\WithSafeNotify;
 use App\Services\ProyectoBusquedaService;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -9,6 +10,7 @@ use Livewire\WithPagination;
 class ProjectSearch extends Component
 {
     use WithPagination;
+    use WithSafeNotify;
 
     public string $search = '';
 
@@ -138,7 +140,7 @@ class ProjectSearch extends Component
     {
         $this->selectedProject = $busqueda->proyectoDetalle($id);
         $this->isDetailsModalOpen = $this->selectedProject !== null;
-        $this->dispatch('refresh-icons');
+        $this->safeRefreshIcons();
     }
 
     public function closeDetails(): void

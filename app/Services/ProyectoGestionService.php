@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Involucrado;
 use App\Models\Proyecto;
+use App\Models\RolInvolucrado;
 use App\Models\User;
 use App\Repositories\AuditoriaRepository;
 use App\Repositories\CatalogoRepository;
@@ -94,12 +96,18 @@ class ProyectoGestionService
      */
     public function proyectosLider(User $user): \Illuminate\Support\Collection
     {
-        $ids = $this->proyectosDondeEsLider($user);
-        if (empty($ids)) {
-            return collect();
+        $key = 'lider_proyectos_' . $user->getKey();
+        if (array_key_exists($key, static::$roleCache)) {
+            return static::$roleCache[$key] ?? collect();
         }
 
-        return $this->proyectoRepo->findWhereIn('pry_codigo', $ids);
+        $ids = $this->proyectosDondeEsLider($user);
+        if (empty($ids)) {
+            return static::$roleCache[$key] = collect();
+        }
+
+        $result = $this->proyectoRepo->findWhereIn('pry_codigo', $ids);
+        return static::$roleCache[$key] = $result;
     }
 
     public function aprobar(int $id, ?User $user = null): void
@@ -737,9 +745,14 @@ class ProyectoGestionService
      */
     public function proyectosDondeEsLider(User $user): array
     {
+        $key = 'lider_ids_' . $user->getKey();
+        if (array_key_exists($key, static::$roleCache)) {
+            return static::$roleCache[$key] ?? [];
+        }
+
         $cedula = trim((string) $user->usu_cedula);
         if ($cedula === '') {
-            return [];
+            return static::$roleCache[$key] = [];
         }
 
         try {
@@ -747,14 +760,16 @@ class ProyectoGestionService
 
             $claves = $grupos->map(fn ($g) => 'EQGRP:' . $g->grp_codigo)->toArray();
             if (empty($claves)) {
-                return [];
+                return static::$roleCache[$key] = [];
             }
 
-            return $this->proyectoRepo->findLiderIds($claves)
+            $ids = $this->proyectoRepo->findLiderIds($claves)
                 ->map(fn ($v) => (int) $v)
                 ->toArray();
+
+            return static::$roleCache[$key] = $ids;
         } catch (\Throwable) {
-            return [];
+            return static::$roleCache[$key] = [];
         }
     }
 
@@ -862,5 +877,202 @@ class ProyectoGestionService
     protected function puedeRegistrar(User $user, array $estado): bool
     {
         return $this->usuarioPuedeRegistrar($user);
+    }
+
+    // ─── Involucrados ─────────────────────────────────────────────
+
+    /**
+     * Busca involucrados por cédula o nombre (autocomplete).
+     * @return Collection<int, Involucrado>
+     */
+    public function buscarInvolucrados(string $query): Collection
+    {
+        $q = trim($query);
+        if ($q === '') {
+            return collect();
+        }
+
+        return Involucrado::where('cedula', 'ILIKE', "%{$q}%")
+            ->orWhere('nombre', 'ILIKE', "%{$q}%")
+            ->orWhere('apellido', 'ILIKE', "%{$q}%")
+            ->orderBy('apellido')
+            ->orderBy('nombre')
+            ->limit(15)
+            ->get();
+    }
+
+    /**
+     * Crea un nuevo involucrado.
+     */
+    public function crearInvolucrado(string $nombre, string $apellido, string $cedula): Involucrado
+    {
+        $cedula = trim($cedula);
+        $existing = Involucrado::where('cedula', $cedula)->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        return Involucrado::create([
+            'nombre' => trim($nombre),
+            'apellido' => trim($apellido),
+            'cedula' => $cedula,
+        ]);
+    }
+
+    /**
+     * Involucrados del proyecto con sus roles.
+     * @return Collection<int, array{id: int, nombre: string, apellido: string, cedula: string, roles: array}>
+     */
+    public function involucradosDelProyecto(int $proyectoId): Collection
+    {
+        $connection = (string) config('dual_database.repositorio_connection', 'pgsql');
+
+        $rows = DB::connection($connection)
+            ->table('proyecto_involucrado as pi')
+            ->join('involucrados as i', 'i.id', '=', 'pi.involucrado_id')
+            ->leftJoin('involucrado_rol as ir', 'ir.proyecto_involucrado_id', '=', 'pi.id')
+            ->leftJoin('roles_involucrados as ri', 'ri.id', '=', 'ir.rol_id')
+            ->where('pi.proyecto_id', $proyectoId)
+            ->select([
+                'i.id',
+                'i.nombre',
+                'i.apellido',
+                'i.cedula',
+                'pi.id as pivot_id',
+                'ri.id as rol_id',
+                'ri.nombre as rol_nombre',
+            ])
+            ->orderBy('i.apellido')
+            ->orderBy('i.nombre')
+            ->get();
+
+        return $rows->groupBy('id')->map(function ($items) {
+            $first = $items->first();
+
+            return [
+                'id' => (int) $first->id,
+                'nombre' => trim($first->nombre),
+                'apellido' => trim($first->apellido),
+                'cedula' => trim($first->cedula),
+                'pivot_id' => (int) $first->pivot_id,
+                'roles' => $items->filter(fn ($i) => $i->rol_id !== null)
+                    ->map(fn ($i) => ['id' => (int) $i->rol_id, 'nombre' => trim($i->rol_nombre)])
+                    ->unique('id')
+                    ->values()
+                    ->toArray(),
+            ];
+        })->values();
+    }
+
+    /**
+     * Agrega un involucrado a un proyecto con sus roles.
+     */
+    public function agregarInvolucradoAProyecto(int $proyectoId, int $involucradoId, array $roleIds): void
+    {
+        $connection = (string) config('dual_database.repositorio_connection', 'pgsql');
+
+        // Verificar si ya existe la relación
+        $existing = DB::connection($connection)
+            ->table('proyecto_involucrado')
+            ->where('proyecto_id', $proyectoId)
+            ->where('involucrado_id', $involucradoId)
+            ->first();
+
+        if ($existing) {
+            $pivotId = $existing->id;
+        } else {
+            $pivotId = DB::connection($connection)->table('proyecto_involucrado')->insertGetId([
+                'proyecto_id' => $proyectoId,
+                'involucrado_id' => $involucradoId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        // Agregar roles que no existan
+        foreach ($roleIds as $rolId) {
+            $exists = DB::connection($connection)
+                ->table('involucrado_rol')
+                ->where('proyecto_involucrado_id', $pivotId)
+                ->where('rol_id', $rolId)
+                ->exists();
+
+            if (! $exists) {
+                DB::connection($connection)->table('involucrado_rol')->insert([
+                    'proyecto_involucrado_id' => $pivotId,
+                    'rol_id' => $rolId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Quita un rol específico de un involucrado en el proyecto.
+     */
+    public function quitarRolDeInvolucrado(int $pivotId, int $rolId): void
+    {
+        $connection = (string) config('dual_database.repositorio_connection', 'pgsql');
+
+        DB::connection($connection)
+            ->table('involucrado_rol')
+            ->where('proyecto_involucrado_id', $pivotId)
+            ->where('rol_id', $rolId)
+            ->delete();
+    }
+
+    /**
+     * Elimina un involucrado de un proyecto (y sus roles asociados).
+     */
+    public function quitarInvolucradoDeProyecto(int $proyectoId, int $involucradoId): void
+    {
+        $connection = (string) config('dual_database.repositorio_connection', 'pgsql');
+
+        $pivot = DB::connection($connection)
+            ->table('proyecto_involucrado')
+            ->where('proyecto_id', $proyectoId)
+            ->where('involucrado_id', $involucradoId)
+            ->first();
+
+        if ($pivot) {
+            DB::connection($connection)
+                ->table('involucrado_rol')
+                ->where('proyecto_involucrado_id', $pivot->id)
+                ->delete();
+
+            DB::connection($connection)
+                ->table('proyecto_involucrado')
+                ->where('id', $pivot->id)
+                ->delete();
+        }
+    }
+
+    /**
+     * Busca roles disponibles para involucrados (autocomplete).
+     * @return Collection<int, RolInvolucrado>
+     */
+    public function buscarRoles(string $query): Collection
+    {
+        $q = trim($query);
+        if ($q === '') {
+            return collect();
+        }
+
+        return RolInvolucrado::where('nombre', 'ILIKE', "%{$q}%")
+            ->orderBy('nombre')
+            ->limit(10)
+            ->get();
+    }
+
+    /**
+     * Crea un nuevo rol para involucrados.
+     */
+    public function crearRol(string $nombre): RolInvolucrado
+    {
+        return RolInvolucrado::firstOrCreate(
+            ['nombre' => trim($nombre)],
+            ['nombre' => trim($nombre)]
+        );
     }
 }

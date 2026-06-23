@@ -116,7 +116,7 @@
                                         <?php elseif($g->proyecto_estado_validacion === 'rechazado'): ?>
                                             <span style="color: #FF0000; font-weight: bold;">Rechazado</span>
                                         <?php else: ?>
-                                            <span style="color: #d4a017; font-weight: bold;">Pendiente</span>
+                                            <span style="color: #d4a017; font-weight: bold;">En proceso</span>
                                         <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                                     <?php else: ?>
                                         <span style="color: #999;">Sin proyecto</span>
@@ -178,8 +178,8 @@
                                     <span style="font-size: 10px;"><?php echo e($p->comunidad->nombre ?? 'N/A'); ?></span>
                                 </td>
                                 <td align="center" style="padding: 5px;">
-                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($p->estado_validacion === 'pendiente'): ?>
-                                        <span style="color: #d4a017; font-weight: bold;">Pendiente</span>
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($p->estado_validacion === 'En proceso'): ?>
+                                        <span style="color: #d4a017; font-weight: bold;">En proceso</span>
                                     <?php elseif($p->estado_validacion === 'completado'): ?>
                                         <span style="color: #2e7d32; font-weight: bold;">Completado</span>
                                     <?php elseif($p->estado_validacion === 'aprobado'): ?>
@@ -212,12 +212,12 @@
                 <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 11px; margin-bottom: 8px;">
                     <tr>
                         <td width="33%"><b>Título:</b><br>
-                            <input wire:model.live.debounce.300ms="search" type="text" style="width: 95%;" placeholder="Buscar por título...">
+                            <input wire:model.live.debounce.300ms="search" type="text" style="width: 95%;" placeholder="Buscar...">
                         </td>
                         <td width="33%"><b>Estado:</b><br>
                             <select wire:model.live="filterEstadoList" style="width: 95%;">
                                 <option value="">- Todos -</option>
-                                <option value="pendiente">Pendiente</option>
+                                <option value="En proceso">En proceso</option>
                                 <option value="completado">Completado</option>
                                 <option value="aprobado">Aprobado</option>
                                 <option value="rechazado">Rechazado</option>
@@ -274,8 +274,8 @@
                                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                                 </td>
                                 <td align="center" style="padding: 5px;">
-                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($p->estado_validacion === 'pendiente'): ?>
-                                        <span style="color: #d4a017; font-weight: bold;">Pendiente</span>
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($p->estado_validacion === 'En proceso'): ?>
+                                        <span style="color: #d4a017; font-weight: bold;">En proceso</span>
                                     <?php elseif($p->estado_validacion === 'completado'): ?>
                                         <span style="color: #2e7d32; font-weight: bold;">Completado</span>
                                     <?php elseif($p->estado_validacion === 'rechazado'): ?>
@@ -294,7 +294,7 @@
                                 </td>
                                 <td align="center" style="padding: 5px;">
                                     <div class="pgm-actions">
-                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($canValidate) && in_array($p->estado_validacion, ['pendiente', 'completado'])): ?>
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($canValidate) && in_array($p->estado_validacion, ['En proceso', 'completado'])): ?>
                                             <button type="button" wire:click="approve(<?php echo e($p->id); ?>)"
                                                 onclick="return confirm('¿Aprueba este proyecto?')"
                                                 class="pgm-btn-action pgm-btn-action--approve">
@@ -379,7 +379,7 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
                 </div>
             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
             <div style="text-align: center; margin-top: 20px; border-top: 1px solid #CCC; padding-top: 15px;">
-                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($selectedProject->estado_validacion === 'pendiente'): ?>
+                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($selectedProject->estado_validacion === 'En proceso'): ?>
                     <button type="button" wire:click="approveFromDetails(<?php echo e($selectedProject->id); ?>)"
                         onclick="return confirm('¿Aprueba este proyecto?')"
                         class="pgm-btn-action pgm-btn-action--approve">
@@ -413,126 +413,211 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
             <form wire:submit="save">
 
                 
-                <fieldset style="border: 1px solid #CCC; padding: 16px; margin-bottom: 15px; background:#fafafa;">
-                    <legend style="font-weight: bold; font-size: 14px; padding: 0 8px;">Datos del proyecto</legend>
+                <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
+                    <legend style="font-weight: bold; font-size: 12px;">Datos del proyecto</legend>
+                    <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 12px;">
+                        <tr>
+                            <td width="20%"><b>Comunidad:</b></td>
+                            <td colspan="3">
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($comunidadNombreGrupo): ?>
+                                    <span style="background:#f9f2f2; border:1px solid #8b0000; padding:4px 10px; border-radius:4px; font-weight:bold; color:#8b0000;"><?php echo e($comunidadNombreGrupo); ?></span>
+                                <?php else: ?>
+                                    <span style="color:#999;">(asignada autom&aacute;ticamente del grupo)</span>
+                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td width="20%"><b>T&iacute;tulo:</b></td>
+                            <td colspan="3">
+                                <div style="padding: 4px 0; font-weight: bold; font-size: 14px;">
+                                    <?php echo e($titulo ?: '(seleccione un equipo para auto-llenar el t&iacute;tulo)'); ?>
 
-                    
-                    <div style="margin-bottom: 12px;">
-                        <label style="font-weight:bold; font-size:13px; color:#555; display:block; margin-bottom:4px;">
-                            T&iacute;tulo del proyecto:
-                        </label>
-                        <div style="padding:8px 10px; border:1px solid #ddd; border-radius:5px; font-size:14px; background:#f5f5f5; color:#333; font-weight:bold;">
-                            <?php echo e($titulo ?: 'El t&iacute;tulo se asigna autom&aacute;ticamente del equipo de proyecto'); ?>
-
-                        </div>
-                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['titulo'];
+                                </div>
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['titulo'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
 if (isset($message)) { $__messageOriginal = $message; }
 $message = $__bag->first($__errorArgs[0]); ?>
-                            <div style="font-size:12px;color:#c62828;margin-top:3px;"><?php echo e($message); ?></div>
-                        <?php unset($message);
+                                    <span class="validation-error"><?php echo e($message); ?></span>
+                                <?php unset($message);
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-                    </div>
-
-                    
-                    <div style="margin-bottom: 12px;">
-                        <label style="font-weight:bold; font-size:13px; color:#555; display:block; margin-bottom:4px;">
-                            Comunidad:
-                        </label>
-                        <div style="padding:8px 10px; border:1px solid #ddd; border-radius:5px; font-size:14px; background:#f5f5f5;">
-                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($comunidadNombreGrupo): ?>
-                                <span style="font-weight:bold; color:#8b0000;"><?php echo e($comunidadNombreGrupo); ?></span>
-                            <?php else: ?>
-                                <span style="color:#999;">(asignada autom&aacute;ticamente del grupo)</span>
-                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-                        </div>
-                    </div>
-
-                    
-                    <div style="margin-bottom: 12px;">
-                        <label style="font-weight:bold; font-size:13px; color:#555; display:block; margin-bottom:4px;">
-                            Resumen: <span class="obligatorio">*</span>
-                        </label>
-                        <textarea wire:model="resumen" rows="4" style="width:100%; padding:8px 10px; border:1px solid #bbb; border-radius:5px; font-size:14px; box-sizing:border-box; resize:vertical;" placeholder="Resumen del proyecto..."></textarea>
-                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['resumen'];
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top"><b>Resumen:</b></td>
+                            <td colspan="3">
+                                <textarea wire:model="resumen" rows="3" style="width: 95%;"></textarea><span class="obligatorio">*</span>
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['resumen'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
 if (isset($message)) { $__messageOriginal = $message; }
 $message = $__bag->first($__errorArgs[0]); ?>
-                            <div style="font-size:12px;color:#c62828;margin-top:3px;"><?php echo e($message); ?></div>
-                        <?php unset($message);
+                                    <br><span class="validation-error"><?php echo e($message); ?></span>
+                                <?php unset($message);
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-                    </div>
+                            </td>
+                        </tr>
+                    </table>
+                </fieldset>
 
-                    
-                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($miembrosGrupo) || !empty($equipoValidado)): ?>
-                    <div style="border:1px solid #ddd; border-radius:6px; padding:12px; background:#fff;">
-                        <div style="font-weight:bold; font-size:13px; color:#333; margin-bottom:10px;">
-                            Equipo de proyecto
-                        </div>
+                
+                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!$modoActualizacion): ?>
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!$esProfesor && !$esGestionador): ?>
+                    <div style="margin-bottom: 15px; border: 1px solid #CCC; border-radius: 4px;">
+                        <button type="button" wire:click="toggleTeamFilters"
+                            style="width:100%; background:#f5f5f5; border:none; padding:8px 12px; text-align:left; font-weight:bold; font-size:12px; cursor:pointer;">
+                            <?php echo e($showTeamFilters ? '▼ Ocultar selección de equipo' : '▶ Seleccionar equipo / grupo de proyecto'); ?>
 
-                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($equipoValidado)): ?>
-                            <div style="margin-bottom:10px; padding:6px 10px; background:#d4edda; border:1px solid #c3e6cb; border-radius:4px; font-size:12px; color:#155724;">
-                                <b>Validado:</b> <?php echo e($equipoValidado->nombre); ?>
-
-                                | Lapso: <?php echo e($equipoValidado->lap_nombre ?? '?'); ?>
-
-                                | Secci&oacute;n: <?php echo e($equipoValidado->sec_nombre ?? '?'); ?>
-
-                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($equipoValidado->pro_siglas)): ?> | PNF: <?php echo e($equipoValidado->pro_siglas); ?> <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($trayecto_derived)): ?> | Trayecto: <?php echo e($trayecto_derived); ?> <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-                                (<?php echo e(($integrantesEquipo ?? collect())->count()); ?> integrantes)
-                            </div>
-                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-
-                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($miembrosGrupo)): ?>
-                            <div style="border:1px solid #e0e0e0; border-radius:6px; overflow:hidden; font-size:12px;">
-                                <div style="background:#8b0000; color:#fff; padding:6px 12px; font-weight:bold; font-size:13px;">
-                                    Integrantes del equipo (<?php echo e(count($miembrosGrupo)); ?>)
+                        </button>
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($showTeamFilters): ?>
+                            <div style="padding:10px;">
+                                <div style="padding:4px 0; margin-bottom:8px;">
+                                    <select wire:model.live="filterLapsoEquipo" style="width: 32%;">
+                                        <option value="">- Lapso -</option>
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $lapsos; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $lap): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                            <option value="<?php echo e($lap->id); ?>"><?php echo e($lap->nombre); ?></option>
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                                    </select>
+                                    <select wire:model.live="filterProgramaEquipo" style="width: 32%;">
+                                        <option value="">- Programa -</option>
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $programasEquipo; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $pro): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                            <option value="<?php echo e($pro->pro_codigo); ?>"><?php echo e(trim($pro->pro_siglas)); ?></option>
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                                    </select>
+                                    <select wire:model.live="filterSeccionEquipo" style="width: 32%;">
+                                        <option value="">- Sección -</option>
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $seccionesEquipo; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sec): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                            <option value="<?php echo e($sec->sec_codigo); ?>"><?php echo e(trim($sec->sec_nombre)); ?></option>
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                                    </select>
                                 </div>
-                                <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;">
-                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $miembrosGrupo; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $idx => $miembro): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
-                                    <?php $esLider = in_array($miembro['cedula'], $selectedLeaders); ?>
-                                    <tr style="background-color: <?php echo e($idx % 2 == 0 ? '#fafafa' : '#FFFFFF'); ?>; border-bottom:1px solid #f0e0e0;">
-                                        <td width="36" style="padding:5px 4px 5px 10px; text-align:center;">
-                                            <div style="width:26px; height:26px; border-radius:50%; background:<?php echo e($esLider ? '#8b0000' : '#d4c5c5'); ?>; color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:bold;">
-                                                <?php echo e($idx + 1); ?>
 
-                                            </div>
-                                        </td>
-                                        <td width="50" style="padding:5px 2px;">
-                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($esLider): ?>
-                                                <span style="display:inline-block; background:#8b0000; color:#fff; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:bold;">L&Iacute;DER</span>
-                                            <?php else: ?>
-                                                <span style="display:inline-block; background:#e8e0e0; color:#666; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:bold;">AUTOR</span>
-                                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-                                        </td>
-                                        <td style="padding:5px 4px; font-weight:<?php echo e($esLider ? 'bold' : 'normal'); ?>; color:<?php echo e($esLider ? '#8b0000' : '#333'); ?>;">
-                                            <?php echo e($miembro['nombre']); ?> <?php echo e($miembro['apellido']); ?>
+                                <div style="margin-bottom: 8px;">
+                                    <b>Seleccione el grupo de proyecto:</b><span class="obligatorio">*</span>
+                                    <select wire:model.live="equipo_seccion_clave" style="width: 100%;">
+                                        <option value="">Seleccione grupo de proyecto…</option>
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $equipos_disp ?? []; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $eq): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                            <option value="<?php echo e($eq->clave); ?>">
+                                                <?php echo e($eq->nombre ?? $eq->clave); ?>
 
-                                            <span style="color:#999; font-size:10px;"> (<?php echo e($miembro['cedula']); ?>)</span>
-                                        </td>
-                                    </tr>
-                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
-                                </table>
-                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(count($selectedLeaders) > 0): ?>
-                                <div style="padding:5px 12px; background:#f9f2f2; border-top:1px solid #e0d0d0; font-size:11px; color:#8b0000;">
-                                    <?php $lideresNombres = array_filter($miembrosGrupo, fn($m) => in_array($m['cedula'], $selectedLeaders)); ?>
-                                    <b>L&iacute;der<?php echo e(count($lideresNombres) > 1 ? 'es' : ''); ?>:</b>
-                                    <?php echo e(implode(', ', array_map(fn($m) => $m['nombre'] . ' ' . $m['apellido'], $lideresNombres))); ?>
+                                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($eq->lapso_nombre)): ?>
+                                                    - <?php echo e($eq->lapso_nombre); ?>
 
+                                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                                (<?php echo e($eq->integrantes ?? '?'); ?> int.)
+                                            </option>
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                                    </select>
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['equipo_seccion_clave'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                        <span class="obligatorio"><?php echo e($message); ?></span>
+                                    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                                 </div>
+
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($equipoValidado)): ?>
+                                    <div style="margin: 6px 0; padding: 6px; background: #d4edda; font-size: 10px;">
+                                        <b>Validado:</b> <?php echo e($equipoValidado->nombre); ?>
+
+                                        | Lapso: <?php echo e($equipoValidado->lap_nombre ?? '?'); ?>
+
+                                        | Sección: <?php echo e($equipoValidado->sec_nombre ?? '?'); ?>
+
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($equipoValidado->pro_siglas)): ?>
+                                            | PNF: <?php echo e($equipoValidado->pro_siglas); ?>
+
+                                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($trayecto_derived)): ?>
+                                            | Trayecto: <?php echo e($trayecto_derived); ?>
+
+                                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                        (<?php echo e(($integrantesEquipo ?? collect())->count()); ?> integrantes)
+                                    </div>
                                 <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                             </div>
                         <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                     </div>
                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($esProfesor || $esGestionador): ?>
+                <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
+                    <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Equipo</legend>
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($miembrosGrupo)): ?>
+                    <?php
+                        $busquedaEst = trim($buscarEstudiante);
+                        $miembrosFiltrados = $busquedaEst === ''
+                            ? $miembrosGrupo
+                            : array_filter($miembrosGrupo, function($m) use ($busquedaEst) {
+                                $q = mb_strtolower($busquedaEst);
+                                $nombre = mb_strtolower(($m['nombre'] ?? '') . ' ' . ($m['apellido'] ?? ''));
+                                $cedula = mb_strtolower($m['cedula'] ?? '');
+                                return str_contains($nombre, $q) || str_contains($cedula, $q);
+                            });
+                    ?>
+                    <div style="margin-top: 8px; padding: 0; background: #fff; border: 1px solid #e9aaad; border-radius: 6px; font-size: 12px; overflow: hidden;">
+                        <div style="background: linear-gradient(135deg, #8b0000, #a52a2a); color: #fff; padding: 6px 12px; font-weight: bold; font-size: 13px; letter-spacing: 0.3px; display:flex; align-items:center; justify-content:space-between;">
+                            <span>👥 Integrantes del equipo (<?php echo e(count($miembrosFiltrados)); ?>/<?php echo e(count($miembrosGrupo)); ?>)</span>
+                        </div>
+                        <div style="padding: 6px 12px; background: #fafafa; border-bottom: 1px solid #e9aaad;">
+                            <input wire:model.live.debounce.200ms="buscarEstudiante" type="text"
+                                style="width:100%; padding:6px 8px; border:1px solid #d4c5c5; border-radius:4px; font-size:11px; box-sizing:border-box; outline:none;"
+                                placeholder="🔍 Buscar estudiante por nombre o cédula...">
+                        </div>
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($miembrosFiltrados)): ?>
+                        <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 12px;">
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $miembrosFiltrados; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $idx => $miembro): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                            <?php
+                                $esLider = in_array($miembro['cedula'], $selectedLeaders);
+                            ?>
+                            <tr style="background-color: <?php echo e($idx % 2 == 0 ? '#fafafa' : '#FFFFFF'); ?>; border-bottom: 1px solid #f0e6e6;">
+                                <td width="36" style="padding: 6px 4px 6px 12px; text-align:center;">
+                                    <div style="width:28px; height:28px; border-radius:50%; background:<?php echo e($esLider ? '#8b0000' : '#d4c5c5'); ?>; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;">
+                                        <?php echo e($idx + 1); ?>
+
+                                    </div>
+                                </td>
+                                <td width="40" style="padding: 6px 2px;">
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($esLider): ?>
+                                        <span style="display:inline-block; background:#8b0000; color:#fff; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:bold; letter-spacing:0.5px;">LÍDER</span>
+                                    <?php else: ?>
+                                        <span style="display:inline-block; background:#e8e0e0; color:#666; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:bold;">AUTOR</span>
+                                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                </td>
+                                <td style="padding: 6px 4px; font-weight:<?php echo e($esLider ? 'bold' : 'normal'); ?>; color:<?php echo e($esLider ? '#8b0000' : '#333'); ?>;">
+                                    <?php echo e($miembro['nombre']); ?> <?php echo e($miembro['apellido']); ?>
+
+                                    <span style="color:#999; font-size:10px; font-weight:normal;"> (<?php echo e($miembro['cedula']); ?>)</span>
+                                </td>
+                            </tr>
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                        </table>
+                        <?php else: ?>
+                            <div style="padding: 12px; text-align:center; color:#999; font-size:11px;">
+                                😕 No se encontraron estudiantes que coincidan con "<?php echo e($busquedaEst); ?>"
+                            </div>
+                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(count($selectedLeaders) > 0 && $busquedaEst === ''): ?>
+                        <div style="padding: 6px 12px; background: #f9f2f2; border-top: 1px solid #e9aaad; font-size: 10px; color: #8b0000;">
+                            <?php $lideresNombres = array_filter($miembrosGrupo, fn($m) => in_array($m['cedula'], $selectedLeaders)); ?>
+                            <b>Líder<?php echo e(count($lideresNombres) > 1 ? 'es' : ''); ?>:</b>
+                            <?php echo e(implode(', ', array_map(fn($m) => $m['nombre'] . ' ' . $m['apellido'], $lideresNombres))); ?>
+
+                        </div>
+                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                    </div>
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                 </fieldset>
+                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
                 
                 <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
@@ -623,6 +708,358 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
                         </div>
                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                 </fieldset>
+
+                
+                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($esProfesor && $editingId): ?>
+                <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px; background: #fafafa;">
+                    <legend style="font-weight: bold; font-size: 12px; color: #8b0000;">Involucrados del proyecto</legend>
+
+                    
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($involucradosProyecto)): ?>
+                        <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 11px; margin-bottom: 10px;">
+                            <thead>
+                                <tr style="background: #e8e0e0; font-weight: bold;">
+                                    <th width="25%" style="padding: 4px 8px;">Nombre</th>
+                                    <th width="15%" style="padding: 4px 8px;">Cédula</th>
+                                    <th width="35%" style="padding: 4px 8px;">Roles</th>
+                                    <th width="25%" style="padding: 4px 8px;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $involucradosProyecto; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $inv): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                <?php
+                                    $pivotId = $inv['pivot_id'] ?? 0;
+                                    $editandoEste = ($involucradoEditandoRoles === $pivotId);
+                                ?>
+                                <tr style="border-bottom: 1px solid #e0e0e0; <?php echo e($editandoEste ? 'background:#fff5f5;' : ''); ?>">
+                                    <td style="padding: 4px 8px;"><?php echo e($inv['nombre']); ?> <?php echo e($inv['apellido']); ?></td>
+                                    <td style="padding: 4px 8px;"><?php echo e($inv['cedula']); ?></td>
+                                    <td style="padding: 4px 8px;">
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($inv['roles'])): ?>
+                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $inv['roles']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $rol): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                                <span style="display:inline-flex; align-items:center; background:#8b0000; color:#fff; padding:1px 4px 1px 8px; border-radius:10px; font-size:9px; margin:1px;">
+                                                    <?php echo e($rol['nombre']); ?>
+
+                                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!$editandoEste): ?>
+                                                    <button type="button" wire:click="quitarRolDeInvolucrado(<?php echo e($pivotId); ?>, <?php echo e($rol['id']); ?>)" onclick="return confirm('¿Quitar este rol del involucrado?')"
+                                                        style="background:none; border:none; color:#ffcccc; cursor:pointer; font-size:11px; padding:0 2px; margin-left:3px; line-height:1;"
+                                                        title="Quitar rol">&times;</button>
+                                                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                                </span>
+                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                                        <?php else: ?>
+                                            <span style="color:#999;">Sin roles</span>
+                                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                    </td>
+                                    <td style="padding: 4px 8px;">
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($editandoEste): ?>
+                                            <span style="color:#8b0000; font-size:9px; font-weight:bold;">✎ Editando roles...</span>
+                                        <?php else: ?>
+                                        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                                            <button type="button" wire:click="agregarRolesAInvolucrado(<?php echo e($pivotId); ?>, <?php echo e($inv['id']); ?>)"
+                                                style="background:#8b0000; color:#fff; border:none; border-radius:3px; padding:2px 8px; font-size:9px; cursor:pointer;">
+                                                + Roles
+                                            </button>
+                                            <button type="button" wire:click="quitarInvolucrado(<?php echo e($inv['id']); ?>)" onclick="return confirm('¿Eliminar este involucrado del proyecto?')"
+                                                style="background:#dc3545; color:#fff; border:none; border-radius:3px; padding:2px 8px; font-size:9px; cursor:pointer;">
+                                                Quitar
+                                            </button>
+                                        </div>
+                                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                    </td>
+                                </tr>
+                                
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($editandoEste): ?>
+                                <tr style="background:#fff5f5;">
+                                    <td colspan="4" style="padding: 8px 12px;">
+                                        <div style="border: 1px solid #8b0000; border-radius: 6px; padding: 12px; background: #fff;">
+                                            <div style="font-weight: bold; font-size: 12px; color: #8b0000; margin-bottom: 8px;">
+                                                Agregar más roles a: <span style="color:#333;"><?php echo e($inv['nombre']); ?> <?php echo e($inv['apellido']); ?></span>
+                                            </div>
+
+                                            
+                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($rolesSeleccionados)): ?>
+                                                <div style="margin-bottom: 8px;">
+                                                    <b style="font-size: 11px;">Roles a agregar:</b>
+                                                    <div style="margin-top: 4px;">
+                                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $rolesSeleccionados; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $rId => $rNombre): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                                            <span style="display:inline-block; background:#8b0000; color:#fff; padding:2px 10px; border-radius:10px; font-size:10px; margin:2px;">
+                                                                <?php echo e($rNombre); ?>
+
+                                                                <button type="button" wire:click="quitarRolSeleccionado(<?php echo e($rId); ?>)" style="background:none; border:none; color:#fff; cursor:pointer; margin-left:4px; font-size:12px;">&times;</button>
+                                                            </span>
+                                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                                                    </div>
+                                                </div>
+                                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+                                            
+                                            <div style="margin-bottom: 6px;">
+                                                <input wire:model.live.debounce.300ms="buscarRol" type="text"
+                                                    style="width:100%; padding:6px 8px; border:1px solid #ccc; border-radius:4px; font-size:11px; box-sizing:border-box;"
+                                                    placeholder="Buscar rol existente...">
+
+                                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($resultadosRoles->isNotEmpty()): ?>
+                                                    <div style="margin-top: 2px; border: 1px solid #e0e0e0; border-radius: 4px; max-height: 120px; overflow-y: auto; background: #fff;">
+                                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $resultadosRoles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $rol): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                                            <div wire:click="seleccionarRol(<?php echo e($rol->id); ?>)"
+                                                                style="padding:4px 8px; cursor:pointer; border-bottom:1px solid #f0f0f0; font-size:11px;"
+                                                                onmouseover="this.style.background='#f5f0f0'" onmouseout="this.style.background=''">
+                                                                <?php echo e($rol->nombre); ?>
+
+                                                            </div>
+                                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                                                    </div>
+                                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+                                                
+                                                <div style="margin-top: 4px;">
+                                                    <button type="button" wire:click="toggleFormNuevoRol" style="background:none; border:none; color:#198754; font-size:11px; cursor:pointer; padding:2px 0;">
+                                                        + Crear nuevo rol
+                                                    </button>
+                                                </div>
+
+                                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($mostrarFormNuevoRol): ?>
+                                                    <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px;">
+                                                        <input wire:model="nuevoRolNombre" type="text"
+                                                            style="flex:1; padding:4px 6px; border:1px solid #ccc; border-radius:3px; font-size:11px;"
+                                                            placeholder="Nombre del nuevo rol">
+                                                        <button type="button" wire:click="crearNuevoRol" style="background:#198754; color:#fff; border:none; border-radius:3px; padding:4px 10px; font-size:10px; cursor:pointer;">Crear</button>
+                                                    </div>
+                                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                            </div>
+
+                                            <div style="margin-top: 10px; display: flex; gap: 8px;">
+                                                <button type="button" wire:click="confirmarRolesAdicionales"
+                                                    style="background:#8b0000; color:#fff; border:none; border-radius:4px; padding:6px 14px; font-size:11px; cursor:pointer;">
+                                                    Agregar roles
+                                                </button>
+                                                <button type="button" wire:click="cancelarEdicionRoles"
+                                                    style="background:#6c757d; color:#fff; border:none; border-radius:4px; padding:6px 14px; font-size:11px; cursor:pointer;">
+                                                    Cancelar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                            </tbody>
+                        </table>
+                    <?php else: ?>
+                        <div style="font-size: 11px; color: #999; margin-bottom: 10px;">No hay involucrados registrados en este proyecto.</div>
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+                    <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 10px 0;">
+
+                    
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($involucradoPendienteId === null && !$mostrarFormNuevoInvolucrado): ?>
+                        <div style="margin-bottom: 8px;">
+                            <label style="font-weight: bold; font-size: 12px; display: block; margin-bottom: 4px;">Buscar involucrado por nombre o cédula:</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input wire:model.live.debounce.300ms="buscarInvolucrado" type="text"
+                                    style="flex:1; padding:6px 8px; border:1px solid #ccc; border-radius:4px; font-size:12px;"
+                                    placeholder="Escriba nombre, apellido o cédula...">
+                                <button type="button" wire:click="toggleFormNuevoInvolucrado"
+                                    style="background:#198754; color:#fff; border:none; border-radius:4px; padding:6px 12px; font-size:11px; cursor:pointer; white-space:nowrap;">
+                                    + Nuevo
+                                </button>
+                            </div>
+
+                            
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($resultadosInvolucrados->isNotEmpty()): ?>
+                                <div style="margin-top: 4px; border: 1px solid #e0e0e0; border-radius: 4px; max-height: 180px; overflow-y: auto; background: #fff;">
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $resultadosInvolucrados; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $inv): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                        <div wire:click="seleccionarInvolucrado(<?php echo e($inv->id); ?>)"
+                                            style="padding:6px 8px; cursor:pointer; border-bottom:1px solid #f0f0f0; font-size:11px; transition:background 0.15s;"
+                                            onmouseover="this.style.background='#f5f0f0'" onmouseout="this.style.background=''">
+                                            <b><?php echo e($inv->nombre); ?> <?php echo e($inv->apellido); ?></b>
+                                            <span style="color:#666;"> (<?php echo e($inv->cedula); ?>)</span>
+                                        </div>
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                                </div>
+                            <?php elseif($buscarInvolucrado !== ''): ?>
+                                <div style="margin-top: 4px; font-size: 10px; color: #999;">
+                                    No se encontraron resultados. Use "+ Nuevo" para registrar un involucrado.
+                                </div>
+                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                        </div>
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+                    
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($mostrarFormNuevoInvolucrado): ?>
+                        <div style="border: 1px solid #198754; border-radius: 6px; padding: 12px; background: #f0fff0; margin-bottom: 8px;">
+                            <div style="font-weight: bold; font-size: 12px; color: #198754; margin-bottom: 8px;">+ Registrar nuevo involucrado</div>
+                            <table width="100%" style="font-size: 11px; border-collapse: separate; border-spacing: 0 4px;">
+                                <tr>
+                                    <td width="20%"><b>Nombre:</b> <span style="color:red;">*</span></td>
+                                    <td width="30%"><input wire:model="nuevoInvolucradoNombre" type="text" style="width:95%; padding:4px 6px; border:1px solid #ccc; border-radius:3px; font-size:11px;"></td>
+                                    <td width="20%"><b>Apellido:</b> <span style="color:red;">*</span></td>
+                                    <td width="30%"><input wire:model="nuevoInvolucradoApellido" type="text" style="width:95%; padding:4px 6px; border:1px solid #ccc; border-radius:3px; font-size:11px;"></td>
+                                </tr>
+                                <tr>
+                                    <td><b>Cédula:</b> <span style="color:red;">*</span></td>
+                                    <td colspan="3"><input wire:model.live="nuevoInvolucradoCedula" type="text" style="width:97%; padding:4px 6px; border:1px solid #ccc; border-radius:3px; font-size:11px;" placeholder="V-12345678"></td>
+                                </tr>
+                            </table>
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['nuevoInvolucradoNombre'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> <div style="color:#dc3545;font-size:10px;">⚠ <?php echo e($message); ?></div> <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['nuevoInvolucradoApellido'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> <div style="color:#dc3545;font-size:10px;">⚠ <?php echo e($message); ?></div> <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['nuevoInvolucradoCedula'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> <div style="color:#dc3545;font-size:10px;">⚠ <?php echo e($message); ?></div> <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+                            
+                            <hr style="border:none;border-top:1px solid #c8e6c9;margin:10px 0;">
+                            <div style="font-weight: bold; font-size: 11px; color: #198754; margin-bottom: 6px;">Asignar roles al nuevo involucrado:</div>
+
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($rolesSeleccionados)): ?>
+                                <div style="margin-bottom: 8px;">
+                                    <b style="font-size: 11px;">Roles seleccionados:</b>
+                                    <div style="margin-top: 4px;">
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $rolesSeleccionados; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $rId => $rNombre): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                            <span style="display:inline-block; background:#198754; color:#fff; padding:2px 10px; border-radius:10px; font-size:10px; margin:2px;">
+                                                <?php echo e($rNombre); ?>
+
+                                                <button type="button" wire:click="quitarRolSeleccionado(<?php echo e($rId); ?>)" style="background:none; border:none; color:#fff; cursor:pointer; margin-left:4px; font-size:12px;">&times;</button>
+                                            </span>
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+                            <div style="margin-bottom: 6px;">
+                                <input wire:model.live.debounce.300ms="buscarRol" type="text"
+                                    style="width:100%; padding:6px 8px; border:1px solid #ccc; border-radius:4px; font-size:11px; box-sizing:border-box;"
+                                    placeholder="Buscar rol existente...">
+
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($resultadosRoles->isNotEmpty()): ?>
+                                    <div style="margin-top: 2px; border: 1px solid #e0e0e0; border-radius: 4px; max-height: 120px; overflow-y: auto; background: #fff;">
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $resultadosRoles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $rol): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                            <div wire:click="seleccionarRol(<?php echo e($rol->id); ?>)"
+                                                style="padding:4px 8px; cursor:pointer; border-bottom:1px solid #f0f0f0; font-size:11px;"
+                                                onmouseover="this.style.background='#f5f0f0'" onmouseout="this.style.background=''">
+                                                <?php echo e($rol->nombre); ?>
+
+                                            </div>
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                                    </div>
+                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+                                <div style="margin-top: 4px;">
+                                    <button type="button" wire:click="toggleFormNuevoRol" style="background:none; border:none; color:#198754; font-size:11px; cursor:pointer; padding:2px 0;">
+                                        + Crear nuevo rol
+                                    </button>
+                                </div>
+
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($mostrarFormNuevoRol): ?>
+                                    <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px;">
+                                        <input wire:model="nuevoRolNombre" type="text"
+                                            style="flex:1; padding:4px 6px; border:1px solid #ccc; border-radius:3px; font-size:11px;"
+                                            placeholder="Nombre del nuevo rol">
+                                        <button type="button" wire:click="crearNuevoRol" style="background:#198754; color:#fff; border:none; border-radius:3px; padding:4px 10px; font-size:10px; cursor:pointer;">Crear</button>
+                                    </div>
+                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                            </div>
+
+                            <div style="margin-top: 8px; display: flex; gap: 8px;">
+                                <button type="button" wire:click="agregarNuevoInvolucrado" style="background:#198754; color:#fff; border:none; border-radius:4px; padding:6px 14px; font-size:11px; cursor:pointer;">Guardar y agregar</button>
+                                <button type="button" wire:click="toggleFormNuevoInvolucrado" style="background:#6c757d; color:#fff; border:none; border-radius:4px; padding:6px 14px; font-size:11px; cursor:pointer;">Cancelar</button>
+                            </div>
+                        </div>
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+                    
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($involucradoPendienteId !== null): ?>
+                        <div style="border: 1px solid #8b0000; border-radius: 6px; padding: 12px; background: #fff5f5; margin-top: 8px;">
+                            <div style="font-weight: bold; font-size: 12px; color: #8b0000; margin-bottom: 8px;">
+                                Asignar roles a: <span style="color:#333;"><?php echo e($involucradoPendienteNombre); ?></span>
+                            </div>
+
+                            
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($rolesSeleccionados)): ?>
+                                <div style="margin-bottom: 8px;">
+                                    <b style="font-size: 11px;">Roles seleccionados:</b>
+                                    <div style="margin-top: 4px;">
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $rolesSeleccionados; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $rId => $rNombre): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                            <span style="display:inline-block; background:#8b0000; color:#fff; padding:2px 10px; border-radius:10px; font-size:10px; margin:2px;">
+                                                <?php echo e($rNombre); ?>
+
+                                                <button type="button" wire:click="quitarRolSeleccionado(<?php echo e($rId); ?>)" style="background:none; border:none; color:#fff; cursor:pointer; margin-left:4px; font-size:12px;">&times;</button>
+                                            </span>
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+                            
+                            <div style="margin-bottom: 6px;">
+                                <input wire:model.live.debounce.300ms="buscarRol" type="text"
+                                    style="width:100%; padding:6px 8px; border:1px solid #ccc; border-radius:4px; font-size:11px; box-sizing:border-box;"
+                                    placeholder="Buscar rol existente...">
+
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($resultadosRoles->isNotEmpty()): ?>
+                                    <div style="margin-top: 2px; border: 1px solid #e0e0e0; border-radius: 4px; max-height: 120px; overflow-y: auto; background: #fff;">
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $resultadosRoles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $rol): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                            <div wire:click="seleccionarRol(<?php echo e($rol->id); ?>)"
+                                                style="padding:4px 8px; cursor:pointer; border-bottom:1px solid #f0f0f0; font-size:11px; transition:background 0.15s;"
+                                                onmouseover="this.style.background='#f5f0f0'" onmouseout="this.style.background=''">
+                                                <?php echo e($rol->nombre); ?>
+
+                                            </div>
+                                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                                    </div>
+                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+                                
+                                <div style="margin-top: 4px;">
+                                    <button type="button" wire:click="toggleFormNuevoRol" style="background:none; border:none; color:#198754; font-size:11px; cursor:pointer; padding:2px 0;">
+                                        + Crear nuevo rol
+                                    </button>
+                                </div>
+
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($mostrarFormNuevoRol): ?>
+                                    <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px;">
+                                        <input wire:model="nuevoRolNombre" type="text"
+                                            style="flex:1; padding:4px 6px; border:1px solid #ccc; border-radius:3px; font-size:11px;"
+                                            placeholder="Nombre del nuevo rol">
+                                        <button type="button" wire:click="crearNuevoRol" style="background:#198754; color:#fff; border:none; border-radius:3px; padding:4px 10px; font-size:10px; cursor:pointer;">Crear</button>
+                                    </div>
+                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                            </div>
+
+                            <div style="margin-top: 10px; display: flex; gap: 8px;">
+                                <button type="button" wire:click="confirmarRolInvolucrado"
+                                    style="background:#8b0000; color:#fff; border:none; border-radius:4px; padding:6px 14px; font-size:11px; cursor:pointer;">
+                                    Confirmar y agregar
+                                </button>
+                                <button type="button" wire:click="cancelarSeleccionInvolucrado"
+                                    style="background:#6c757d; color:#fff; border:none; border-radius:4px; padding:6px 14px; font-size:11px; cursor:pointer;">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                </fieldset>
+                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
                 
                 <div style="margin-bottom: 15px; border: 1px solid #CCC; border-radius: 4px; padding: 10px;">
@@ -989,7 +1426,7 @@ if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                                 <tr>
-                                    <td><b>Mención honorífica:</b></td>
+                                    <td><b>Men. honorífica:</b></td>
                                     <td>
                                         <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
                                             <input wire:model="modalTipoPubMencionHonorifica" type="checkbox" style="width:16px;height:16px;cursor:pointer;">

@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\WithSafeNotify;
 use App\Models\Comunidad;
 use App\Models\Proyecto;
 use App\Models\Vinculacion;
@@ -14,6 +15,7 @@ use Livewire\WithPagination;
 class VinculacionManager extends Component
 {
     use WithPagination;
+    use WithSafeNotify;
 
 
     public string $search = '';
@@ -174,7 +176,7 @@ class VinculacionManager extends Component
             'linea_investigacion', 'metodologia', 'tipo_publicacion', 'tipo_investigacion'])
             ->find($proyectoId);
         if (!$proyecto) {
-            $this->dispatch('notify', type: 'error', message: 'Proyecto no encontrado.');
+            $this->safeDispatch('error', 'Proyecto no encontrado.');
             return;
         }
 
@@ -210,7 +212,7 @@ class VinculacionManager extends Component
 
         $titulo = trim($this->vinculacionTitulo);
         if ($titulo === '') {
-            $this->dispatch('notify', type: 'error', message: 'Debe escribir un título para la vinculación.');
+            $this->safeDispatch('error', 'Debe escribir un título para la vinculación.');
             return;
         }
 
@@ -223,10 +225,10 @@ class VinculacionManager extends Component
 
         if ($this->vinculacionExistente) {
             $this->vinculacionExistente->update($data);
-            $this->dispatch('notify', type: 'success', message: "Vinculación «{$titulo}» actualizada.");
+            $this->safeDispatch('success', "Vinculación «{$titulo}» actualizada.");
         } else {
             $this->vinculacionExistente = Vinculacion::create($data);
-            $this->dispatch('notify', type: 'success', message: "Vinculación «{$titulo}» creada.");
+            $this->safeDispatch('success', "Vinculación «{$titulo}» creada.");
         }
     }
 

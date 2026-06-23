@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\WithSafeNotify;
 use App\Models\Componente;
 use App\Models\ComponentePrograma;
 use App\Repositories\CatalogoRepository;
@@ -12,6 +13,7 @@ use Livewire\WithPagination;
 class ComponenteManager extends Component
 {
     use WithPagination;
+    use WithSafeNotify;
 
     public $search = '';
     public $viewMode = 'list';
@@ -156,7 +158,7 @@ class ComponenteManager extends Component
     public function guardarVinculacion(): void
     {
         if ($this->selectedProgramaId === '') {
-            $this->dispatch('notify', type: 'error', message: 'Debe seleccionar un PNF.');
+            $this->safeDispatch('error', 'Debe seleccionar un PNF.');
             return;
         }
 
@@ -177,10 +179,10 @@ class ComponenteManager extends Component
             }
         }
 
-        $this->dispatch('notify', type: 'success', message: 'Vinculación PNF → Componentes guardada exitosamente.');
+        $this->safeDispatch('success', 'Vinculación PNF → Componentes guardada exitosamente.');
 
         $this->viewMode = 'list';
-        $this->dispatch('refresh-icons');
+        $this->safeRefreshIcons();
     }
 
     public function cancelarVinculacion(): void
@@ -323,7 +325,7 @@ class ComponenteManager extends Component
                     ]);
                 }
             }
-            $this->dispatch('notify', type: 'success', message: 'Componente documental actualizado.');
+            $this->safeDispatch('success', 'Componente documental actualizado.');
         } else {
             foreach ($this->rows as $row) {
                 Componente::create([
@@ -335,11 +337,11 @@ class ComponenteManager extends Component
                 ]);
             }
             $n = count($this->rows);
-            $this->dispatch('notify', type: 'success', message: $n . ' componente' . ($n !== 1 ? 's' : '') . ' creado' . ($n !== 1 ? 's' : '') . ' con éxito.');
+            $this->safeDispatch('success', $n . ' componente' . ($n !== 1 ? 's' : '') . ' creado' . ($n !== 1 ? 's' : '') . ' con éxito.');
         }
 
         $this->viewMode = 'list';
-        $this->dispatch('refresh-icons');
+        $this->safeRefreshIcons();
     }
 
     public function toggleStatus($id)
@@ -347,16 +349,16 @@ class ComponenteManager extends Component
         $comp = Componente::find($id);
         if ($comp) {
             $comp->update(['estado_logico' => !$comp->estado_logico]);
-            $this->dispatch('notify', type: 'success', message: 'Estado del componente actualizado.');
+            $this->safeDispatch('success', 'Estado del componente actualizado.');
         }
-        $this->dispatch('refresh-icons');
+        $this->safeRefreshIcons();
     }
 
     public function delete($id)
     {
         Componente::find($id)?->delete();
-        $this->dispatch('notify', type: 'success', message: 'Componente eliminado correctamente.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', 'Componente eliminado correctamente.');
+        $this->safeRefreshIcons();
     }
 
     public function with()

@@ -4,6 +4,8 @@ namespace App\Livewire;
 
 use App\Models\Proyecto;
 use App\Models\LineaInvestigacion;
+use App\Models\Involucrado;
+use App\Models\RolInvolucrado;
 use App\Services\GrupoProyectoService;
 use App\Services\UnicidadNombreService;
 use App\Services\IntranetEquipoSeccionService;
@@ -11,6 +13,7 @@ use App\Services\ProyectoGestionService;
 use App\Services\UserRoleService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
+use App\Livewire\Concerns\WithSafeNotify;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
@@ -21,6 +24,7 @@ class ProyectoManager extends Component
 {
     use WithFileUploads;
     use WithPagination;
+    use WithSafeNotify;
 
     public ?string $titulo = '';
 
@@ -104,6 +108,55 @@ class ProyectoManager extends Component
 
     /** True si el rol activo es gestionador */
     public bool $esGestionador = false;
+
+    /** Búsqueda de estudiantes en la tabla de integrantes del equipo */
+    public string $buscarEstudiante = '';
+
+    // ─── Involucrados ────────────────────────────────────────
+
+    /** Búsqueda de involucrados */
+    public string $buscarInvolucrado = '';
+
+    /** Resultados de búsqueda de involucrados */
+    public Collection $resultadosInvolucrados;
+
+    /** Involucrados actuales del proyecto que se está editando */
+    public array $involucradosProyecto = [];
+
+    /** Formulario nuevo involucrado */
+    public bool $mostrarFormNuevoInvolucrado = false;
+
+    /** Involucrado seleccionado de búsqueda pendiente de rol */
+    public ?int $involucradoPendienteId = null;
+
+    public string $involucradoPendienteNombre = '';
+
+    public string $nuevoInvolucradoNombre = '';
+
+    public string $nuevoInvolucradoApellido = '';
+
+    public string $nuevoInvolucradoCedula = '';
+
+    /** Búsqueda de roles del catálogo */
+    public string $buscarRol = '';
+
+    /** Resultados de búsqueda de roles */
+    public Collection $resultadosRoles;
+
+    /** Roles seleccionados para el involucrado pendiente (array de id => nombre) */
+    public array $rolesSeleccionados = [];
+
+    /** Mostrar formulario de nuevo rol */
+    public bool $mostrarFormNuevoRol = false;
+
+    /** Nombre del nuevo rol a crear */
+    public string $nuevoRolNombre = '';
+
+    /** Involucrado al que se le están editando roles adicionales (pivot_id) */
+    public ?int $involucradoEditandoRoles = null;
+
+    /** Involucrado al que se le están editando roles (id del involucrado) */
+    public ?int $editandoRolesInvolucradoId = null;
 
     /** Modal crear línea de investigación */
     public bool $mostrarModalLinea = false;
@@ -327,6 +380,8 @@ class ProyectoManager extends Component
         $this->tiposInvestigacionEncontradas = collect();
         $this->tiposPublicacionEncontradas = collect();
         $this->objetivosEncontrados = collect();
+        $this->resultadosInvolucrados = collect();
+        $this->resultadosRoles = collect();
     }
 
     protected function cargarGruposDocente(ProyectoGestionService $gestion): void
@@ -367,11 +422,11 @@ class ProyectoManager extends Component
 
         $proyecto = $gestion->registrarProyectoDesdeGrupo($grpCodigo, $user);
         if (!$proyecto) {
-            $this->dispatch('notify', type: 'error', message: 'No se pudo registrar el proyecto. Grupo no encontrado.');
+            $this->safeDispatch('error', 'No se pudo registrar el proyecto. Grupo no encontrado.');
             return;
         }
 
-        $this->dispatch('notify', type: 'success', message: 'Proyecto registrado exitosamente. Complete los datos del proyecto.');
+        $this->safeDispatch('success', 'Proyecto registrado exitosamente. Complete los datos del proyecto.');
         $this->edit($proyecto->id, $gestion, app(GrupoProyectoService::class));
     }
 
@@ -883,6 +938,9 @@ class ProyectoManager extends Component
         $this->esLider = $proyecto ? $gestion->usuarioEsLiderDelProyecto($user, $proyecto) : false;
         $this->modoActualizacion = $this->esLider && !$gestion->usuarioEsAdminEnSistema($user);
 
+        // Cargar involucrados existentes del proyecto
+        $this->cargarInvolucradosProyecto($gestion);
+
         // Reconstruir estado de grupo si el equipo seleccionado es un grupo de proyecto
         $clave = $this->equipo_seccion_clave ?? '';
         if (str_starts_with($clave, GrupoProyectoService::PREFIJO . ':')) {
@@ -900,6 +958,265 @@ class ProyectoManager extends Component
                 $this->cargarMiembrosGrupo($grupos, $clave);
             }
         }
+    }
+
+    // ─── Involucrados ─────────────────────────────────────────────
+
+    public function updatedBuscarInvolucrado(): void
+    {
+        $q = trim($this->buscarInvolucrado);
+        if ($q === '') {
+            $this->resultadosInvolucrados = collect();
+            return;
+        }
+        $this->resultadosInvolucrados = app(ProyectoGestionService::class)->buscarInvolucrados($q);
+    }
+
+    public function updatedNuevoInvolucradoCedula(): void
+    {
+        $cedula = trim($this->nuevoInvolucradoCedula);
+        if ($cedula === '') return;
+
+        $existente = Involucrado::where('cedula', $cedula)->first();
+        if ($existente) {
+            $this->nuevoInvolucradoNombre = $existente->nombre;
+            $this->nuevoInvolucradoApellido = $existente->apellido;
+        }
+    }
+
+    public function updatedBuscarRol(): void
+    {
+        $q = trim($this->buscarRol);
+        if ($q === '') {
+            $this->resultadosRoles = collect();
+            return;
+        }
+        $this->resultadosRoles = app(ProyectoGestionService::class)->buscarRoles($q);
+    }
+
+    public function seleccionarRol(int $rolId): void
+    {
+        $rol = RolInvolucrado::find($rolId);
+        if ($rol && !isset($this->rolesSeleccionados[$rolId])) {
+            $this->rolesSeleccionados[$rolId] = $rol->nombre;
+        }
+        $this->buscarRol = '';
+        $this->resultadosRoles = collect();
+    }
+
+    public function quitarRolSeleccionado(int $rolId): void
+    {
+        unset($this->rolesSeleccionados[$rolId]);
+    }
+
+    public function toggleFormNuevoRol(): void
+    {
+        $this->mostrarFormNuevoRol = !$this->mostrarFormNuevoRol;
+        if (!$this->mostrarFormNuevoRol) {
+            $this->nuevoRolNombre = '';
+        }
+    }
+
+    public function crearNuevoRol(): void
+    {
+        $nombre = trim($this->nuevoRolNombre);
+        if ($nombre === '') return;
+
+        $rol = app(ProyectoGestionService::class)->crearRol($nombre);
+        $this->rolesSeleccionados[$rol->id] = $rol->nombre;
+        $this->mostrarFormNuevoRol = false;
+        $this->nuevoRolNombre = '';
+        $this->safeDispatch('success', 'Rol creado y seleccionado.');
+    }
+
+    public function seleccionarInvolucrado(int $involucradoId): void
+    {
+        if (!$this->editingId) return;
+
+        $inv = Involucrado::find($involucradoId);
+        $this->involucradoPendienteNombre = $inv ? trim($inv->nombre . ' ' . $inv->apellido) : '';
+        $this->involucradoPendienteId = $involucradoId;
+        $this->rolesSeleccionados = [];
+        $this->buscarRol = '';
+        $this->resultadosRoles = collect();
+    }
+
+    public function confirmarRolInvolucrado(): void
+    {
+        if (!$this->editingId || !$this->involucradoPendienteId) return;
+
+        if (empty($this->rolesSeleccionados)) {
+            $this->safeDispatch('warning', 'Debe seleccionar al menos un rol para el involucrado.');
+            return;
+        }
+
+        app(ProyectoGestionService::class)->agregarInvolucradoAProyecto(
+            $this->editingId,
+            $this->involucradoPendienteId,
+            array_keys($this->rolesSeleccionados)
+        );
+
+        $this->involucradoPendienteId = null;
+        $this->rolesSeleccionados = [];
+        $this->buscarInvolucrado = '';
+        $this->resultadosInvolucrados = collect();
+        $this->cargarInvolucradosProyecto();
+        $this->safeDispatch('success', 'Involucrado agregado al proyecto.');
+    }
+
+    public function cancelarSeleccionInvolucrado(): void
+    {
+        $this->involucradoPendienteId = null;
+        $this->involucradoPendienteNombre = '';
+        $this->rolesSeleccionados = [];
+        $this->buscarRol = '';
+        $this->resultadosRoles = collect();
+    }
+
+    /**
+     * Abre el panel para agregar más roles a un involucrado ya existente en el proyecto.
+     */
+    public function agregarRolesAInvolucrado(int $pivotId, int $involucradoId): void
+    {
+        $this->involucradoEditandoRoles = $pivotId;
+        $this->editandoRolesInvolucradoId = $involucradoId;
+        $this->rolesSeleccionados = [];
+        $this->buscarRol = '';
+        $this->resultadosRoles = collect();
+        $this->mostrarFormNuevoRol = false;
+        $this->nuevoRolNombre = '';
+    }
+
+    /**
+     * Cierra el panel de edición de roles.
+     */
+    public function cancelarEdicionRoles(): void
+    {
+        $this->involucradoEditandoRoles = null;
+        $this->editandoRolesInvolucradoId = null;
+        $this->rolesSeleccionados = [];
+        $this->buscarRol = '';
+        $this->resultadosRoles = collect();
+    }
+
+    /**
+     * Confirma los roles adicionales para un involucrado ya existente en el proyecto.
+     */
+    public function confirmarRolesAdicionales(): void
+    {
+        if (!$this->editingId || !$this->involucradoEditandoRoles || !$this->editandoRolesInvolucradoId) return;
+
+        if (empty($this->rolesSeleccionados)) {
+            $this->safeDispatch('warning', 'Debe seleccionar al menos un rol para agregar.');
+            return;
+        }
+
+        app(ProyectoGestionService::class)->agregarInvolucradoAProyecto(
+            $this->editingId,
+            $this->editandoRolesInvolucradoId,
+            array_keys($this->rolesSeleccionados)
+        );
+
+        $this->cancelarEdicionRoles();
+        $this->cargarInvolucradosProyecto();
+        $this->safeDispatch('success', 'Roles agregados al involucrado.');
+    }
+
+    /**
+     * Quita un rol específico de un involucrado en el proyecto.
+     */
+    public function quitarRolDeInvolucrado(int $pivotId, int $rolId): void
+    {
+        if (!$this->editingId) return;
+
+        app(ProyectoGestionService::class)->quitarRolDeInvolucrado($pivotId, $rolId);
+        $this->cargarInvolucradosProyecto();
+        $this->safeDispatch('success', 'Rol eliminado del involucrado.');
+    }
+
+    public function toggleFormNuevoInvolucrado(): void
+    {
+        $this->mostrarFormNuevoInvolucrado = !$this->mostrarFormNuevoInvolucrado;
+        if ($this->mostrarFormNuevoInvolucrado) {
+            // Al abrir, limpiar roles previos para evitar contaminación
+            $this->rolesSeleccionados = [];
+            $this->buscarRol = '';
+            $this->resultadosRoles = collect();
+            $this->mostrarFormNuevoRol = false;
+            $this->nuevoRolNombre = '';
+        } else {
+            $this->nuevoInvolucradoNombre = '';
+            $this->nuevoInvolucradoApellido = '';
+            $this->nuevoInvolucradoCedula = '';
+            $this->rolesSeleccionados = [];
+            $this->buscarRol = '';
+            $this->resultadosRoles = collect();
+        }
+    }
+
+    public function agregarNuevoInvolucrado(): void
+    {
+        $this->validate([
+            'nuevoInvolucradoNombre' => 'required|string|max:255',
+            'nuevoInvolucradoApellido' => 'required|string|max:255',
+            'nuevoInvolucradoCedula' => 'required|string|max:50',
+        ], [
+            'nuevoInvolucradoNombre.required' => 'El nombre del involucrado es obligatorio.',
+            'nuevoInvolucradoApellido.required' => 'El apellido del involucrado es obligatorio.',
+            'nuevoInvolucradoCedula.required' => 'La cédula del involucrado es obligatoria.',
+        ]);
+
+        if (empty($this->rolesSeleccionados)) {
+            $this->safeDispatch('warning', 'Debe seleccionar al menos un rol para el involucrado.');
+            return;
+        }
+
+        if (!$this->editingId) return;
+
+        $gestion = app(ProyectoGestionService::class);
+        $involucrado = $gestion->crearInvolucrado(
+            $this->nuevoInvolucradoNombre,
+            $this->nuevoInvolucradoApellido,
+            $this->nuevoInvolucradoCedula
+        );
+
+        $roleIds = array_keys($this->rolesSeleccionados);
+        $gestion->agregarInvolucradoAProyecto(
+            $this->editingId,
+            $involucrado->id,
+            $roleIds
+        );
+
+        $this->toggleFormNuevoInvolucrado();
+        $this->rolesSeleccionados = [];
+        $this->cargarInvolucradosProyecto();
+        $this->safeDispatch('success', 'Involucrado registrado y agregado al proyecto.');
+    }
+
+    public function quitarInvolucrado(int $involucradoId): void
+    {
+        if (!$this->editingId) return;
+
+        app(ProyectoGestionService::class)->quitarInvolucradoDeProyecto(
+            $this->editingId,
+            $involucradoId
+        );
+
+        $this->cargarInvolucradosProyecto();
+        $this->safeDispatch('success', 'Involucrado eliminado del proyecto.');
+    }
+
+    protected function cargarInvolucradosProyecto(?ProyectoGestionService $gestion = null): void
+    {
+        if (!$this->editingId) {
+            $this->involucradosProyecto = [];
+            return;
+        }
+
+        $gestion = $gestion ?? app(ProyectoGestionService::class);
+        $this->involucradosProyecto = $gestion
+            ->involucradosDelProyecto($this->editingId)
+            ->toArray();
     }
 
     public function cancel(): void
@@ -943,7 +1260,7 @@ class ProyectoManager extends Component
             if (!$esAdminOCoordinador) {
                 $proyecto = \App\Models\Proyecto::find($this->editingId);
                 if ($proyecto && !$gestion->estudianteLiderVigente($user, $proyecto)) {
-                    $this->dispatch('notify', type: 'error', message: 'No puedes subir documentos porque ya no estás inscrito vigentemente en la sección/lapso de este proyecto. Contacta al coordinador o profesor.');
+                    $this->safeDispatch('error', 'No puedes subir documentos porque ya no estás inscrito vigentemente en la sección/lapso de este proyecto. Contacta al coordinador o profesor.');
                     return;
                 }
             }
@@ -981,10 +1298,10 @@ class ProyectoManager extends Component
         }
 
         $this->viewMode = 'list';
-        $this->dispatch('notify', type: 'success', message: $this->modoActualizacion ? 'Documentos subidos con éxito. El profesor será notificado.' : ($this->editingId ? 'Proyecto actualizado con éxito.' : 'Proyecto registrado con éxito.'));
+        $this->safeDispatch('success', $this->modoActualizacion ? 'Documentos subidos con éxito. El profesor será notificado.' : ($this->editingId ? 'Proyecto actualizado con éxito.' : 'Proyecto registrado con éxito.'));
         $this->resetFormulario();
         $this->cargarGruposDocente(app(ProyectoGestionService::class));
-        $this->dispatch('refresh-icons');
+        $this->safeRefreshIcons();
     }
 
      /**
@@ -1020,33 +1337,33 @@ class ProyectoManager extends Component
              $this->esGrupoRegistrado ? $this->selectedLeaders : [],
          );
  
-         $this->dispatch('notify', type: 'success', message: 'Formulario guardado con éxito. Se han guardado los datos y documentos del proyecto.');
+         $this->safeDispatch('success', 'Formulario guardado con éxito. Se han guardado los datos y documentos del proyecto.');
          $this->irAListado();
      }
 
     public function toggleStatus(int $id, ProyectoGestionService $gestion): void
     {
         $gestion->alternarEstado($id);
-        $this->dispatch('notify', type: 'success', message: 'Estado del proyecto actualizado.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', 'Estado del proyecto actualizado.');
+        $this->safeRefreshIcons();
     }
 
     public function delete(int $id, ProyectoGestionService $gestion): void
     {
         $gestion->eliminar($id);
-        $this->dispatch('notify', type: 'success', message: 'Proyecto eliminado correctamente.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', 'Proyecto eliminado correctamente.');
+        $this->safeRefreshIcons();
     }
 
     public function approve(int $id, ProyectoGestionService $gestion): void
     {
         try {
             $gestion->aprobar($id);
-            $this->dispatch('notify', type: 'success', message: 'Proyecto aprobado con éxito.');
+            $this->safeDispatch('success', 'Proyecto aprobado con éxito.');
         } catch (AuthorizationException $e) {
-            $this->dispatch('notify', type: 'error', message: $e->getMessage());
+            $this->safeDispatch('error', $e->getMessage());
         }
-        $this->dispatch('refresh-icons');
+        $this->safeRefreshIcons();
     }
 
     public function openReject(int $id): void
@@ -1060,7 +1377,7 @@ class ProyectoManager extends Component
     {
         $this->selectedProject = $gestion->proyectoParaFicha($id);
         $this->viewMode = 'details';
-        $this->dispatch('refresh-icons');
+        $this->safeRefreshIcons();
     }
 
     public function confirmReject(ProyectoGestionService $gestion): void
@@ -1072,11 +1389,11 @@ class ProyectoManager extends Component
         try {
             $gestion->rechazar((int) $this->selectedProjectId, $this->motivo_rechazo);
             $this->irAListado();
-            $this->dispatch('notify', type: 'success', message: 'Proyecto rechazado.');
+            $this->safeDispatch('success', 'Proyecto rechazado.');
         } catch (AuthorizationException $e) {
-            $this->dispatch('notify', type: 'error', message: $e->getMessage());
+            $this->safeDispatch('error', $e->getMessage());
         }
-        $this->dispatch('refresh-icons');
+        $this->safeRefreshIcons();
     }
 
     public function approveFromDetails(int $id, ProyectoGestionService $gestion): void
@@ -1084,11 +1401,11 @@ class ProyectoManager extends Component
         try {
             $gestion->aprobar($id);
             $this->irAListado();
-            $this->dispatch('notify', type: 'success', message: 'Proyecto aprobado con éxito.');
+            $this->safeDispatch('success', 'Proyecto aprobado con éxito.');
         } catch (AuthorizationException $e) {
-            $this->dispatch('notify', type: 'error', message: $e->getMessage());
+            $this->safeDispatch('error', $e->getMessage());
         }
-        $this->dispatch('refresh-icons');
+        $this->safeRefreshIcons();
     }
 
     public function rejectFromDetails(int $id): void
@@ -1119,11 +1436,11 @@ class ProyectoManager extends Component
 
         $esLiderGlobal = $this->usuarioEsLider($gestion);
 
-        // Detectar si es estudiante líder (no admin, no coord, no prof)
+        // Only compute expensive leader data when in list view for non-profesores
         $esEstudianteLider = false;
         $proyectosLiderIds = [];
         $proyectosLider = collect();
-        if ($user && !$this->esProfesor) {
+        if ($user && !$this->esProfesor && $this->viewMode === 'list') {
             $userRoleService = app(UserRoleService::class);
             $activeRole = $userRoleService->getActiveRole($user);
             if (!$userRoleService->roleMatches('administrador', $activeRole)
@@ -1147,17 +1464,24 @@ class ProyectoManager extends Component
             default => ['comunidades' => $gestion->comunidadesOrdenadas()],
         };
 
-        // Catalogs for group filters
+        // Catalogs for group filters - only when form is visible or gruposDocente are loaded
         $equipoSeccion = app(IntranetEquipoSeccionService::class);
         $lapsoFiltro = $this->filterGruposLapso !== '' ? (int) $this->filterGruposLapso : null;
         $programaFiltro = $this->filterGruposPrograma !== '' ? (int) $this->filterGruposPrograma : null;
+
         $lapsosFiltro = \Illuminate\Support\Facades\Cache::remember(
             'proyecto_manager_lapsos',
             now()->addMinutes(10),
             fn () => \App\Models\LapsoAcademico::activos()->orderByDesc('lap_codigo')->get()
         );
-        $programasFiltro = $lapsoFiltro ? $equipoSeccion->programasEnLapso($lapsoFiltro) : collect();
-        $trayectosFiltro = $lapsoFiltro ? $equipoSeccion->trayectosEnLapso($lapsoFiltro, $programaFiltro) : collect();
+
+        // Only query programas/trayectos from intranet when we have a lapso filter
+        $programasFiltro = collect();
+        $trayectosFiltro = collect();
+        if ($lapsoFiltro && ($this->viewMode !== 'list' || $this->gruposDocente)) {
+            $programasFiltro = $equipoSeccion->programasEnLapso($lapsoFiltro);
+            $trayectosFiltro = $lapsoFiltro ? $equipoSeccion->trayectosEnLapso($lapsoFiltro, $programaFiltro) : collect();
+        }
 
         $userRoleService = app(UserRoleService::class);
         $activeRole = $userRoleService->getActiveRole($user);
@@ -1212,6 +1536,21 @@ class ProyectoManager extends Component
         $this->filterGruposLapso = '';
         $this->filterGruposPrograma = '';
         $this->filterGruposTrayecto = '';
+        $this->buscarInvolucrado = '';
+        $this->resultadosInvolucrados = collect();
+        $this->involucradosProyecto = [];
+        $this->mostrarFormNuevoInvolucrado = false;
+        $this->involucradoPendienteId = null;
+        $this->nuevoInvolucradoNombre = '';
+        $this->nuevoInvolucradoApellido = '';
+        $this->nuevoInvolucradoCedula = '';
+        $this->buscarRol = '';
+        $this->resultadosRoles = collect();
+        $this->rolesSeleccionados = [];
+        $this->mostrarFormNuevoRol = false;
+        $this->nuevoRolNombre = '';
+        $this->involucradoEditandoRoles = null;
+        $this->editandoRolesInvolucradoId = null;
     }
 
     protected function estadoFormulario(): array

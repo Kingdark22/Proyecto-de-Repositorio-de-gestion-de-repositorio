@@ -1,1 +1,0 @@
-paginator-{{ $paginator->getPageName() }}-page{{ $page }}

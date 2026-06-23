@@ -461,9 +461,9 @@ class IntranetEquipoSeccionService
 
     public function trayectosEnLapso(?int $lapCodigo = null, ?int $programaCodigo = null): Collection
     {
-        $cacheKey = 'equipos_todos_trayectos_'.($programaCodigo ?? '0').'_'.DbHelper::connection();
+        $cacheKey = 'equipos_trayectos_v3_'.($lapCodigo ?? '0').'_'.($programaCodigo ?? '0').'_'.DbHelper::connection();
 
-        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($programaCodigo) {
+        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($lapCodigo, $programaCodigo) {
             try {
                 $query = DB::connection($this->academicConnection())
                     ->table('trayecto as tra')
@@ -472,6 +472,14 @@ class IntranetEquipoSeccionService
                 if ($programaCodigo) {
                     $query->join('malla as mal', 'mal.mal_cod_trayecto', '=', 'tra.tra_codigo')
                         ->where('mal.mal_cod_programa', $programaCodigo);
+                }
+
+                // If lapso is provided, filter secciones in that lapso
+                if ($lapCodigo) {
+                    $query->join('seccion as sec', function ($join) use ($lapCodigo) {
+                        $join->on('sec.sec_cod_malla', 'mal.mal_codigo')
+                            ->where('sec.sec_cod_lapso_academico', $lapCodigo);
+                    });
                 }
 
                 return $query->distinct()

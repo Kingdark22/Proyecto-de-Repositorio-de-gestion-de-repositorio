@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\WithSafeNotify;
 use App\Services\IntranetProfessorService;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -9,6 +10,7 @@ use Livewire\WithPagination;
 class ProjectProfessorManager extends Component
 {
     use WithPagination;
+    use WithSafeNotify;
 
     public string $search = '';
 
@@ -98,7 +100,7 @@ class ProjectProfessorManager extends Component
             unset($this->selectedYear[$cedula], $this->selectedSection[$cedula], $this->selectedPrograma[$cedula]);
         }
 
-        $this->dispatch('refresh-icons');
+        $this->safeRefreshIcons();
     }
 
     public function render(IntranetProfessorService $professorService)

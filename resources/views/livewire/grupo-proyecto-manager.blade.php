@@ -325,14 +325,56 @@
                 <div style="margin-top: 12px; padding: 8px; background: #f5f5f5; border: 1px solid #ccc;">
                     <b>Agregar integrante (del PNF):</b><br>
                     <div style="display: flex; gap: 16px; align-items: center; margin-top: 4px;">
-                        <select wire:model="selectedCedula" class="grp-filter-select" style="flex: 1;">
-                            <option value="">Estudiante inscrito&hellip;</option>
-                            @foreach ($candidatos as $c)
-                                <option value="{{ $c->cedula }}">{{ $c->apellido }}, {{ $c->nombre }}
-                                    ({{ $c->cedula }})
-                                </option>
-                            @endforeach
-                        </select>
+                        <div style="position: relative; flex: 1;">
+                            <!-- Select + Búsqueda unificados en un solo componente dinámico -->
+                            <div style="position: relative;">
+                                <!-- Input de búsqueda (actúa como select-search) -->
+                                <input wire:model.live.debounce.150ms="buscarEstudiante"
+                                       type="text"
+                                       class="grp-filter-input"
+                                       style="width: 100%; padding: 8px 10px; font-size: 12px; height: 34px;"
+                                       placeholder="🔍 Escriba nombre, apellido o cédula para buscar..."
+                                       autocomplete="off"
+                                       wire:focus="abrirDropdownEstudiantes"
+                                       wire:blur="cerrarDropdownEstudiantes">
+
+                                <!-- Dropdown de resultados (se muestra al buscar O al hacer focus con el campo vacío) -->
+                                @if($mostrarDropdownEstudiantes)
+                                    <div style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; background: #fff; border: 1px solid #ccc; max-height: 280px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.12); border-radius: 0 0 6px 6px;">
+                                        @php $items = $this->estudiantesFiltrados; @endphp
+                                        @forelse($items as $c)
+                                            <div wire:mousedown="seleccionarEstudiante('{{ $c->cedula }}')"
+                                                 style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0; font-size: 12px; transition: background 0.12s;"
+                                                 onmouseover="this.style.background='#f0f7f0'"
+                                                 onmouseout="this.style.background=''">
+                                                <span style="font-weight: 600;">{{ $c->apellido }}, {{ $c->nombre }}</span>
+                                                <span style="color: #888; font-size: 10px; margin-left: auto;">{{ $c->cedula }}</span>
+                                            </div>
+                                        @empty
+                                            <div style="padding: 12px; color: #999; font-size: 11px; text-align: center;">
+                                                @if(trim($buscarEstudiante) !== '')
+                                                    😕 No se encontraron estudiantes con "{{ $buscarEstudiante }}"
+                                                @else
+                                                    👆 Escriba para buscar estudiantes...
+                                                @endif
+                                            </div>
+                                        @endforelse
+                                        @if($items->count() >= 30 && trim($buscarEstudiante) !== '')
+                                            <div style="padding: 6px; color: #888; font-size: 10px; text-align: center; border-top: 1px solid #eee;">
+                                                Mostrando 30 resultados. Sea más específico.
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
+                            </div>
+
+                            @if($selectedCedula !== '' && $estudianteSeleccionadoLabel !== '')
+                                <div style="margin-top: 4px; padding: 4px 8px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; font-size: 11px; color: #166534; display: flex; align-items: center; gap: 6px;">
+                                    <span>✓</span>
+                                    <span>{{ $estudianteSeleccionadoLabel }}</span>
+                                </div>
+                            @endif
+                        </div>
                         <select wire:model="selectedRolId" class="grp-filter-select" style="width: 130px;">
                             <option value="1">Autor-L&iacute;der</option>
                             <option value="2">Autor</option>
