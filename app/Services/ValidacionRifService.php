@@ -65,7 +65,7 @@ class ValidacionRifService
             return true;
         }
 
-        if (!preg_match('/^([VEGJP])-(\d{1,9})-(\d)$/', strtoupper($rif), $m)) {
+        if (!preg_match('/^([VEGJP])-(\d{9})-(\d)$/', strtoupper($rif), $m)) {
             return false;
         }
 
@@ -77,7 +77,7 @@ class ValidacionRifService
     public function parsear(?string $rif): array
     {
         if ($rif === null || $rif === '') {
-            return ['letra' => 'V', 'numero' => '', 'digito' => null];
+            return ['letra' => 'J', 'numero' => '', 'digito' => null];
         }
 
         if (preg_match('/^([VEGJP])-?(\d{1,9})-?(\d)$/', strtoupper($rif), $m)) {
@@ -88,6 +88,6 @@ class ValidacionRifService
             ];
         }
 
-        return ['letra' => 'V', 'numero' => '', 'digito' => null];
+        return ['letra' => 'J', 'numero' => '', 'digito' => null];
     }
 }

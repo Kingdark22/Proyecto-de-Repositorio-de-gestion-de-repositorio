@@ -422,7 +422,7 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
                                               <option value="G">G</option>
                                               <option value="P">P</option>
                                           </select>
-                                          <input wire:model.live.debounce.500ms="modalRifNumero" type="text" maxlength="9" style="flex:1;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;" placeholder="Número (máx. 9 dígitos)">
+                                          <input wire:model.live.debounce.500ms="modalRifNumero" type="text" inputmode="numeric" maxlength="9" style="flex:1;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="Número (máx. 9 dígitos)">
                                       </div>
                                       <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($modalRifStatus === 'valido'): ?>
                                           <span style="color: #28a745; font-size: 11px;">✓ RIF válido</span>
@@ -443,7 +443,24 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
                              </tr>
                             <tr>
                                 <td><b>Correo:</b></td>
-                                <td><input wire:model="modalCorreo" type="email" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;"></td>
+                                 <td>
+                                     <input wire:model.live.debounce.500ms="modalCorreo" type="email" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;" placeholder="ejemplo@gmail.com">
+                                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($modalCorreoStatus === 'valido'): ?>
+                                         <span style="color: #28a745; font-size: 11px;">✓ Correo válido</span>
+                                     <?php elseif($modalCorreoStatus === 'invalido'): ?>
+                                         <span style="color: #dc3545; font-size: 11px;">✗ <?php echo e($modalCorreoError ?? 'Correo inválido'); ?></span>
+                                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['modalCorreo'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                         <span class="validation-error" style="font-size:11px;color:#c62828;"><?php echo e($message); ?></span>
+                                     <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                 </td>
                             </tr>
                             <tr>
                                 <td><b>Tel&eacute;fono:</b></td>

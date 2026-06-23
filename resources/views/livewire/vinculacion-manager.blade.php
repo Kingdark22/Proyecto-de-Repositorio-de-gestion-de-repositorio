@@ -281,12 +281,12 @@
                                     <option value="G">G</option>
                                     <option value="P">P</option>
                                 </select>
-                                <input wire:model.live.debounce.500ms="modalComunidadRifNumero" type="text" maxlength="9" style="flex:1;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;" placeholder="Número (máx. 9 dígitos)">
+                                <input wire:model.live.debounce.500ms="modalComunidadRifNumero" type="text" inputmode="numeric" maxlength="9" style="flex:1;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;" oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="Número (máx. 9 dígitos)">
                             </div>
                             @if($modalComunidadRifStatus === 'valido')
                                 <span style="color: #28a745; font-size: 11px;">✓ RIF válido</span>
                             @elseif($modalComunidadRifStatus === 'invalido')
-                                <span style="color: #dc3545; font-size: 11px;">✗ RIF inválido</span>
+                                <span style="color: #dc3545; font-size: 11px;">✗ {{ $modalComunidadRifError ?? 'RIF inválido' }}</span>
                             @endif
                             @error('modalComunidadRifNumero')
                                 <span class="validation-error" style="font-size:11px;color:#c62828;">{{ $message }}</span>

@@ -7,6 +7,7 @@ use App\Models\Estado;
 use App\Services\ComunidadGestionService;
 use App\Services\GrupoProyectoService;
 use App\Services\UnicidadNombreService;
+use App\Services\ValidacionCorreoService;
 use App\Services\ValidacionRifService;
 use App\Services\IntranetEquipoSeccionService;
 use App\Services\IntranetProfessorService;
@@ -77,20 +78,29 @@ class GrupoProyectoManager extends Component
 
     public ?string $modalRifStatus = null;
 
+    public ?string $modalRifError = null;
+
     public function updatedModalRifNumero(ValidacionRifService $rifService): void
     {
-        $original = $this->modalRifNumero;
-        $num = preg_replace('/\D/', '', $original);
+        $num = preg_replace('/\D/', '', $this->modalRifNumero);
         $this->modalRifNumero = $num;
-        $tieneLetras = $original !== $num;
-        if ($num === '' || strlen($num) < 5) {
+        if ($num === '') {
             $this->modalRifDigito = null;
             $this->modalRifStatus = null;
+            $this->modalRifError = null;
+            $this->resetValidation('modalRifNumero');
+            return;
+        }
+        if (strlen($num) < 9) {
+            $this->modalRifDigito = null;
+            $this->modalRifStatus = 'invalido';
+            $this->modalRifError = 'Debe tener 9 dígitos';
             $this->resetValidation('modalRifNumero');
             return;
         }
         $this->modalRifDigito = $rifService->calcularDigito($this->modalRifLetra, $num);
-        $this->modalRifStatus = ($this->modalRifDigito !== null && !$tieneLetras) ? 'valido' : 'invalido';
+        $this->modalRifStatus = $this->modalRifDigito !== null ? 'valido' : 'invalido';
+        $this->modalRifError = $this->modalRifStatus === 'valido' ? null : 'RIF inválido';
         if ($this->modalRifStatus === 'valido') {
             $this->resetValidation('modalRifNumero');
         }
@@ -98,12 +108,33 @@ class GrupoProyectoManager extends Component
 
     public function updatedModalRifLetra(ValidacionRifService $rifService): void
     {
-        if (strlen($this->modalRifNumero) >= 5) {
+        if (strlen($this->modalRifNumero) >= 9) {
             $this->updatedModalRifNumero($rifService);
         }
     }
 
     public string $modalCorreo = '';
+
+    public ?string $modalCorreoStatus = null;
+
+    public ?string $modalCorreoError = null;
+
+    public function updatedModalCorreo(ValidacionCorreoService $correoService): void
+    {
+        $correo = trim($this->modalCorreo);
+        if ($correo === '' || strlen($correo) < 5) {
+            $this->modalCorreoStatus = null;
+            $this->modalCorreoError = null;
+            $this->resetValidation('modalCorreo');
+            return;
+        }
+        $resultado = $correoService->validarCompleto($correo);
+        $this->modalCorreoStatus = $resultado['valido'] ? 'valido' : 'invalido';
+        $this->modalCorreoError = $resultado['error'];
+        if ($this->modalCorreoStatus === 'valido') {
+            $this->resetValidation('modalCorreo');
+        }
+    }
 
     public string $modalPrefijoTelefono = '0424';
 
@@ -482,7 +513,10 @@ class GrupoProyectoManager extends Component
         $this->modalRifNumero = '';
         $this->modalRifDigito = null;
         $this->modalRifStatus = null;
+        $this->modalRifError = null;
         $this->modalCorreo = '';
+        $this->modalCorreoStatus = null;
+        $this->modalCorreoError = null;
         $this->modalPrefijoTelefono = '0424';
         $this->modalNumeroTelefono = '';
         $this->modalEstadoId = '';
@@ -527,9 +561,27 @@ class GrupoProyectoManager extends Component
             return;
         }
 
+        if ($this->modalRifNumero !== '' && strlen($this->modalRifNumero) < 9) {
+            $this->addError('modalRifNumero', 'El RIF debe tener exactamente 9 dígitos.');
+            return;
+        }
+
         if ($this->modalRifNumero !== '' && $this->modalRifStatus !== 'valido') {
             $this->addError('modalRifNumero', 'El RIF ingresado no es válido.');
             return;
+        }
+
+        if ($this->modalCorreo !== '' && $this->modalCorreoStatus !== 'valido') {
+            $this->addError('modalCorreo', $this->modalCorreoError ?? 'El correo ingresado no es válido.');
+            return;
+        }
+
+        if ($this->modalCorreo !== '') {
+            $resultado = app(ValidacionCorreoService::class)->validarCompleto($this->modalCorreo, true);
+            if (!$resultado['valido']) {
+                $this->addError('modalCorreo', $resultado['error'] ?? 'El dominio del correo no existe.');
+                return;
+            }
         }
 
         $payload = [

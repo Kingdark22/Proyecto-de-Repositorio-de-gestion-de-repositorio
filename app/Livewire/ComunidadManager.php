@@ -6,6 +6,7 @@ use App\Models\Comunidad;
 use App\Services\ComunidadGestionService;
 use App\Services\IntranetProfessorService;
 use App\Services\UnicidadNombreService;
+use App\Services\ValidacionCorreoService;
 use App\Services\ValidacionRifService;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -55,20 +56,29 @@ class ComunidadManager extends Component
 
     public ?string $rifStatus = null;
 
+    public ?string $rifError = null;
+
     public function updatedRifNumero(ValidacionRifService $rifService): void
     {
-        $original = $this->rifNumero;
-        $num = preg_replace('/\D/', '', $original);
+        $num = preg_replace('/\D/', '', $this->rifNumero);
         $this->rifNumero = $num;
-        $tieneLetras = $original !== $num;
-        if ($num === '' || strlen($num) < 5) {
+        if ($num === '') {
             $this->rifDigito = null;
             $this->rifStatus = null;
+            $this->rifError = null;
+            $this->resetValidation('rifNumero');
+            return;
+        }
+        if (strlen($num) < 9) {
+            $this->rifDigito = null;
+            $this->rifStatus = 'invalido';
+            $this->rifError = 'Debe tener 9 dígitos';
             $this->resetValidation('rifNumero');
             return;
         }
         $this->rifDigito = $rifService->calcularDigito($this->rifLetra, $num);
-        $this->rifStatus = ($this->rifDigito !== null && !$tieneLetras) ? 'valido' : 'invalido';
+        $this->rifStatus = $this->rifDigito !== null ? 'valido' : 'invalido';
+        $this->rifError = $this->rifStatus === 'valido' ? null : 'RIF inválido';
         if ($this->rifStatus === 'valido') {
             $this->resetValidation('rifNumero');
         }
@@ -76,12 +86,33 @@ class ComunidadManager extends Component
 
     public function updatedRifLetra(ValidacionRifService $rifService): void
     {
-        if (strlen($this->rifNumero) >= 5) {
+        if (strlen($this->rifNumero) >= 9) {
             $this->updatedRifNumero($rifService);
         }
     }
 
     public string $correo = '';
+
+    public ?string $correoStatus = null;
+
+    public ?string $correoError = null;
+
+    public function updatedCorreo(ValidacionCorreoService $correoService): void
+    {
+        $correo = trim($this->correo);
+        if ($correo === '' || strlen($correo) < 5) {
+            $this->correoStatus = null;
+            $this->correoError = null;
+            $this->resetValidation('correo');
+            return;
+        }
+        $resultado = $correoService->validarCompleto($correo);
+        $this->correoStatus = $resultado['valido'] ? 'valido' : 'invalido';
+        $this->correoError = $resultado['error'];
+        if ($this->correoStatus === 'valido') {
+            $this->resetValidation('correo');
+        }
+    }
 
     public string $numero_telefono = '';
 
@@ -156,7 +187,7 @@ class ComunidadManager extends Component
             return;
         }
 
-        $this->reset(['editingId', 'nombre', 'rif', 'rifLetra', 'rifNumero', 'rifDigito', 'rifStatus', 'correo', 'numero_telefono', 'prefijo_telefono', 'estado_id', 'municipio_id', 'dir_nombre', 'nombreStatus']);
+        $this->reset(['editingId', 'nombre', 'rif', 'rifLetra', 'rifNumero', 'rifDigito', 'rifStatus', 'rifError', 'correo', 'correoStatus', 'correoError', 'numero_telefono', 'prefijo_telefono', 'estado_id', 'municipio_id', 'dir_nombre', 'nombreStatus']);
         $this->prefijo_telefono = '0424';
         $this->rifLetra = 'J';
         $this->resetValidation();
@@ -183,6 +214,7 @@ class ComunidadManager extends Component
         $this->rifStatus = $parsed['digito'] !== null ? 'valido' : null;
         $this->fill(collect($datos)->except('rif')->toArray());
         $this->nombreStatus = 'disponible';
+        $this->updatedCorreo(app(ValidacionCorreoService::class));
 
         $telefonoCompleto = $datos['numero_telefono'];
         $prefijos = ['0424', '0414', '0412', '0422', '0416', '0426'];
@@ -215,9 +247,27 @@ class ComunidadManager extends Component
             return;
         }
 
+        if ($this->rifNumero !== '' && strlen($this->rifNumero) < 9) {
+            $this->addError('rifNumero', 'El RIF debe tener exactamente 9 dígitos.');
+            return;
+        }
+
         if ($this->rifNumero !== '' && $this->rifStatus !== 'valido') {
             $this->addError('rifNumero', 'El RIF ingresado no es válido.');
             return;
+        }
+
+        if ($this->correo !== '' && $this->correoStatus !== 'valido') {
+            $this->addError('correo', $this->correoError ?? 'El correo ingresado no es válido.');
+            return;
+        }
+
+        if ($this->correo !== '') {
+            $resultado = app(ValidacionCorreoService::class)->validarCompleto($this->correo, true);
+            if (!$resultado['valido']) {
+                $this->addError('correo', $resultado['error'] ?? 'El dominio del correo no existe.');
+                return;
+            }
         }
 
         $payload = [
