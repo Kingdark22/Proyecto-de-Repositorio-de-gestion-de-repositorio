@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Repositorio UPTP - @yield('title', 'Dashboard')</title>
     <link rel="icon" type="image/png" href="{{ asset('imagenes/uptp-logo.png') }}">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -427,15 +428,16 @@
         }
         function closeNotifyModal() {} // stub legacy
         document.addEventListener('livewire:initialized', function() {
-            Livewire.on('notify', function(data) {
-                showNotifyToast(data.type || 'info', data.message || '');
-            });
+            try {
+                Livewire.on('notify', function(data) {
+                    showNotifyToast(data.type || 'info', data.message || '');
+                });
+            } catch(e) {
+                console.warn('Error registrando listener notify:', e);
+            }
         });
-        document.addEventListener('livewire:navigated', function() {
-            Livewire.on('notify', function(data) {
-                showNotifyToast(data.type || 'info', data.message || '');
-            });
-        });
+
+
         </script>
 
         <!-- Main Content (Centro) -->
@@ -486,22 +488,61 @@
 
     @livewireScripts
     <script>
-        // Heartbeat para mantener la sesión activa (cada 60 segundos)
+        // Heartbeat para mantener la sesión activa (cada 30 segundos)
         (function() {
             var keepaliveUrl = '{{ route('session.keepalive') }}';
+            var keepaliveInterval = 30000; // 30 segundos
+            var keepaliveRetryDelay = 5000; // 5 segundos si falla
+
             function sessionKeepalive() {
                 fetch(keepaliveUrl, {
                     method: 'GET',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                    cache: 'no-store'
-                }).catch(function() {
-                    // Si falla el keepalive, reintentar en el próximo ciclo
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    },
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                }).then(function(response) {
+                    if (!response.ok) {
+                        console.warn('Keepalive responded with', response.status);
+                    }
+                }).catch(function(err) {
+                    console.warn('Keepalive falló, reintentando en 5s:', err);
+                    // Reintentar más rápido si falló
+                    setTimeout(sessionKeepalive, keepaliveRetryDelay);
                 });
             }
-            window._keepaliveInterval = setInterval(sessionKeepalive, 60000);
+
+            // Iniciar heartbeat
+            window._keepaliveInterval = setInterval(sessionKeepalive, keepaliveInterval);
+
+            // Reiniciar timer en cada interacción del usuario
             document.addEventListener('click', function() {
-                clearInterval(window._keepaliveInterval);
-                window._keepaliveInterval = setInterval(sessionKeepalive, 60000);
+                if (window._keepaliveInterval) {
+                    clearInterval(window._keepaliveInterval);
+                }
+                window._keepaliveInterval = setInterval(sessionKeepalive, keepaliveInterval);
+            });
+
+            // También reiniciar en teclas y scroll
+            document.addEventListener('keydown', function() {
+                if (window._keepaliveInterval) {
+                    clearInterval(window._keepaliveInterval);
+                }
+                window._keepaliveInterval = setInterval(sessionKeepalive, keepaliveInterval);
+            });
+
+            // Detectar cuando la página recupera el foco (vuelta de inactividad larga)
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    // La página está visible otra vez - hacer keepalive inmediato
+                    sessionKeepalive();
+                    if (window._keepaliveInterval) {
+                        clearInterval(window._keepaliveInterval);
+                    }
+                    window._keepaliveInterval = setInterval(sessionKeepalive, keepaliveInterval);
+                }
             });
         })();
 

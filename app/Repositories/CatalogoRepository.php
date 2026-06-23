@@ -35,6 +35,22 @@ class CatalogoRepository
         ];
     }
 
+    public function invalidarCatalogos(): void
+    {
+        $keys = [
+            'gestion_cat_lineas',
+            'gestion_cat_metodologias',
+            'gestion_cat_tipos_publicacion',
+            'gestion_cat_tipos_investigacion',
+            'gestion_cat_objetivos_investigacion',
+            'gestion_cat_lapsos',
+            'gestion_comunidades_ordenadas',
+        ];
+        foreach ($keys as $key) {
+            Cache::forget($key);
+        }
+    }
+
     public function lineasActivas(): Collection
     {
         return LineaInvestigacion::where('activo', true)
@@ -77,25 +93,29 @@ class CatalogoRepository
      */
     public function componentesPorProgramaYTrayecto(?int $programaId, ?string $trayectoCodigo = null): Collection
     {
-        $query = Componente::where('estado_logico', true);
+        $cacheKey = 'gestion_componentes_v2_' . ($programaId ?? '0') . '_' . ($trayectoCodigo ?? '0');
 
-        if ($programaId !== null) {
-            // Componentes que: NO tienen asignaciones (globales) O tienen asignación que coincide
-            $query->where(function ($q) use ($programaId, $trayectoCodigo) {
-                $q->whereDoesntHave('programas')
-                  ->orWhereHas('programas', function ($q) use ($programaId, $trayectoCodigo) {
-                      $q->where('pro_codigo', $programaId);
-                      if ($trayectoCodigo !== null && $trayectoCodigo !== '') {
-                          $q->where(function ($q) use ($trayectoCodigo) {
-                              $q->where('tra_codigo', $trayectoCodigo)
-                                ->orWhereNull('tra_codigo');
-                          });
-                      }
-                  });
-            });
-        }
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($programaId, $trayectoCodigo) {
+            $query = Componente::where('estado_logico', true);
 
-        return $query->orderBy('nombre')->get();
+            if ($programaId !== null) {
+                // Componentes que: NO tienen asignaciones (globales) O tienen asignación que coincide
+                $query->where(function ($q) use ($programaId, $trayectoCodigo) {
+                    $q->whereDoesntHave('programas')
+                      ->orWhereHas('programas', function ($q) use ($programaId, $trayectoCodigo) {
+                          $q->where('pro_codigo', $programaId);
+                          if ($trayectoCodigo !== null && $trayectoCodigo !== '') {
+                              $q->where(function ($q) use ($trayectoCodigo) {
+                                  $q->where('tra_codigo', $trayectoCodigo)
+                                    ->orWhereNull('tra_codigo');
+                              });
+                          }
+                      });
+                });
+            }
+
+            return $query->orderBy('nombre')->get();
+        });
     }
 
     /**

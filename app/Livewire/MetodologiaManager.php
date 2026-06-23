@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\WithSafeNotify;
 use App\Models\MetodologiaInvestigacion;
 use App\Services\UnicidadNombreService;
 use Livewire\Component;
@@ -10,6 +11,7 @@ use Livewire\WithPagination;
 class MetodologiaManager extends Component
 {
     use WithPagination;
+    use WithSafeNotify;
 
     public $nombre = '';
     public $descripcion = '';
@@ -103,8 +105,8 @@ class MetodologiaManager extends Component
         );
 
         $this->viewMode = 'list';
-        $this->dispatch('notify', type: 'success', message: $this->editingId ? 'Metodología actualizada con éxito.' : 'Metodología registrada con éxito.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', $this->editingId ? 'Metodología actualizada con éxito.' : 'Metodología registrada con éxito.');
+        $this->safeRefreshIcons();
     }
 
     public function toggleStatus($id)
@@ -112,16 +114,16 @@ class MetodologiaManager extends Component
         $item = MetodologiaInvestigacion::findOrFail($id);
         $item->alternarEstado();
 
-        $this->dispatch('notify', type: 'success', message: $item->estado_logico ? 'Metodología habilitada correctamente.' : 'Metodología deshabilitada correctamente.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', $item->estado_logico ? 'Metodología habilitada correctamente.' : 'Metodología deshabilitada correctamente.');
+        $this->safeRefreshIcons();
     }
 
     public function delete($id)
     {
         $item = MetodologiaInvestigacion::findOrFail($id);
         $item->borrar();
-        $this->dispatch('notify', type: 'success', message: 'Metodología eliminada correctamente.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', 'Metodología eliminada correctamente.');
+        $this->safeRefreshIcons();
     }
 
     public function with()

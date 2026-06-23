@@ -86,7 +86,14 @@ Route::get('/documentos/{path}', function (string $path) {
 Route::get('/publicaciones/publico', \App\Livewire\ProyectosPublicosManager::class)->name('publicaciones.publico')->middleware('auth', 'role:gestionador');
 
 Route::get('/session/keepalive', function () {
-    return response()->json(['ok' => true]);
+    // Forzar escritura de la sesión en BD para refrescar last_activity
+    request()->session()->save();
+    
+    return response()->json([
+        'ok' => true,
+        'csrf_token' => csrf_token(),
+        'time' => now()->timestamp,
+    ]);
 })->middleware('auth')->name('session.keepalive');
 
 Route::post('/logout', function () {

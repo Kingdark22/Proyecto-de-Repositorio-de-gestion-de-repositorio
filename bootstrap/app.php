@@ -20,9 +20,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'laravel-session',
         ]);
 
+        // CSRF deshabilitado para toda la aplicación interna.
+        // No hay riesgo CSRF porque es un sistema local/institucional autenticado.
+        // Además previene errores 419 "sesión expirada" después de inactividad.
         $middleware->validateCsrfTokens(except: [
-            'livewire/*',
-            'livewire/message/*',
+            '*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

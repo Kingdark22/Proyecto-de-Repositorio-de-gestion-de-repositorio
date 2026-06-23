@@ -329,6 +329,30 @@ class GrupoProyectoService
     }
 
     /**
+     * Verifica si un nombre de grupo está disponible dentro de un lapso específico.
+     */
+    public function nombreDisponibleEnLapso(string $nombre, int $lapCodigo, ?int $excludeGrpCodigo = null): bool
+    {
+        if (! $this->tablaDisponible()) {
+            return true;
+        }
+
+        return $this->repo->nombreDisponibleEnLapso($nombre, $lapCodigo, $excludeGrpCodigo);
+    }
+
+    /**
+     * Verifica si un estudiante ya pertenece a algún grupo en el lapso indicado.
+     */
+    public function estudianteEnGrupoEnLapso(string $cedula, int $lapCodigo, ?int $excludeGrpCodigo = null): bool
+    {
+        if (! $this->tablaDisponible()) {
+            return false;
+        }
+
+        return $this->repo->estudianteEnGrupoEnLapso($cedula, $lapCodigo, $excludeGrpCodigo);
+    }
+
+    /**
      * @return array{
      *     lap_codigo: int,
      *     sec_codigo: int,

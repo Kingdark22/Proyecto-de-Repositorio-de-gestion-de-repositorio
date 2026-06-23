@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\WithSafeNotify;
 use App\Models\Comunidad;
 use App\Services\ComunidadGestionService;
 use App\Services\IntranetProfessorService;
@@ -17,6 +18,7 @@ use Livewire\Attributes\Lazy;
 class ComunidadManager extends Component
 {
     use WithPagination;
+    use WithSafeNotify;
 
     public string $search = '';
 
@@ -193,7 +195,7 @@ class ComunidadManager extends Component
         $this->resetValidation();
 
         $this->viewMode = 'form';
-        $this->dispatch('refresh-icons');
+        $this->safeRefreshIcons();
     }
 
     public function edit(int $id, ComunidadGestionService $gestion): void
@@ -230,7 +232,7 @@ class ComunidadManager extends Component
         }
 
         $this->viewMode = 'form';
-        $this->dispatch('refresh-icons');
+        $this->safeRefreshIcons();
     }
 
     public function save(ComunidadGestionService $gestion): void
@@ -288,13 +290,13 @@ class ComunidadManager extends Component
  
         session()->flash('message', 'Comunidad guardada correctamente.');
         $this->viewMode = 'list';
-        $this->dispatch('refresh-icons');
+        $this->safeRefreshIcons();
     }
 
     public function cancel(): void
     {
         $this->viewMode = 'list';
-        $this->dispatch('refresh-icons');
+        $this->safeRefreshIcons();
     }
 
     public function delete(int $id, ComunidadGestionService $gestion): void

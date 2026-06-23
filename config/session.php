@@ -18,7 +18,7 @@ return [
     |
     */
 
-    'driver' => env('SESSION_DRIVER', 'database'),
+    'driver' => 'database',
 
     /*
     |--------------------------------------------------------------------------
@@ -32,10 +32,10 @@ return [
     |
     */
 
-    // Minutos de inactividad antes de expirar (525600 ≈ 1 año; sesión prácticamente ilimitada)
-    'lifetime' => (int) env('SESSION_LIFETIME', 525600),
+    // Minutos de inactividad antes de expirar (5 años ≈ sesión prácticamente eterna)
+    'lifetime' => 2628000,
 
-    'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
+    'expire_on_close' => false,
 
     /*
     |--------------------------------------------------------------------------
@@ -115,7 +115,7 @@ return [
     |
     */
 
-    'lottery' => [2, 100],
+    'lottery' => [1, 1000],
 
     /*
     |--------------------------------------------------------------------------
@@ -144,7 +144,7 @@ return [
     |
     */
 
-    'path' => env('SESSION_PATH', '/'),
+    'path' => '/',
 
     /*
     |--------------------------------------------------------------------------
@@ -157,7 +157,7 @@ return [
     |
     */
 
-    'domain' => env('SESSION_DOMAIN'),
+    'domain' => null,
 
     /*
     |--------------------------------------------------------------------------
@@ -170,7 +170,7 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    'secure' => false,
 
     /*
     |--------------------------------------------------------------------------

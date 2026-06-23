@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\WithSafeNotify;
 use App\Models\ObjetivoInvestigacion;
 use App\Services\UnicidadNombreService;
 use Livewire\Component;
@@ -10,6 +11,7 @@ use Livewire\WithPagination;
 class ObjetivoInvestigacionManager extends Component
 {
     use WithPagination;
+    use WithSafeNotify;
 
     public $nombre = '';
     public $descripcion = '';
@@ -103,8 +105,8 @@ class ObjetivoInvestigacionManager extends Component
         );
 
         $this->viewMode = 'list';
-        $this->dispatch('notify', type: 'success', message: $this->editingId ? 'Objetivo de Investigación actualizado con éxito.' : 'Objetivo de Investigación registrado con éxito.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', $this->editingId ? 'Objetivo de Investigación actualizado con éxito.' : 'Objetivo de Investigación registrado con éxito.');
+        $this->safeRefreshIcons();
     }
 
     public function toggleStatus($id)
@@ -112,16 +114,16 @@ class ObjetivoInvestigacionManager extends Component
         $item = ObjetivoInvestigacion::findOrFail($id);
         $item->alternarEstado();
 
-        $this->dispatch('notify', type: 'success', message: $item->estado_logico ? 'Objetivo habilitado correctamente.' : 'Objetivo deshabilitado correctamente.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', $item->estado_logico ? 'Objetivo habilitado correctamente.' : 'Objetivo deshabilitado correctamente.');
+        $this->safeRefreshIcons();
     }
 
     public function delete($id)
     {
         $item = ObjetivoInvestigacion::findOrFail($id);
         $item->borrar();
-        $this->dispatch('notify', type: 'success', message: 'Objetivo de Investigación eliminado correctamente.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', 'Objetivo de Investigación eliminado correctamente.');
+        $this->safeRefreshIcons();
     }
 
     public function with()

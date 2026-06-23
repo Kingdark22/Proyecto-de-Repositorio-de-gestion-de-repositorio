@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\WithSafeNotify;
 use App\Models\TipoInvestigacion;
 use App\Services\UnicidadNombreService;
 use Livewire\Component;
@@ -10,6 +11,7 @@ use Livewire\WithPagination;
 class TipoInvestigacionManager extends Component
 {
     use WithPagination;
+    use WithSafeNotify;
 
     public $nombre = '';
     public $descripcion = '';
@@ -103,8 +105,8 @@ class TipoInvestigacionManager extends Component
         );
 
         $this->viewMode = 'list';
-        $this->dispatch('notify', type: 'success', message: $this->editingId ? 'Tipo de Investigación actualizado con éxito.' : 'Tipo de Investigación registrado con éxito.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', $this->editingId ? 'Tipo de Investigación actualizado con éxito.' : 'Tipo de Investigación registrado con éxito.');
+        $this->safeRefreshIcons();
     }
 
     public function toggleStatus($id)
@@ -112,16 +114,16 @@ class TipoInvestigacionManager extends Component
         $item = TipoInvestigacion::findOrFail($id);
         $item->alternarEstado();
 
-        $this->dispatch('notify', type: 'success', message: $item->estado_logico ? 'Tipo habilitado correctamente.' : 'Tipo deshabilitado correctamente.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', $item->estado_logico ? 'Tipo habilitado correctamente.' : 'Tipo deshabilitado correctamente.');
+        $this->safeRefreshIcons();
     }
 
     public function delete($id)
     {
         $item = TipoInvestigacion::findOrFail($id);
         $item->borrar();
-        $this->dispatch('notify', type: 'success', message: 'Tipo de Investigación eliminado correctamente.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', 'Tipo de Investigación eliminado correctamente.');
+        $this->safeRefreshIcons();
     }
 
     public function with()

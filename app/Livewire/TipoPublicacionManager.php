@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\WithSafeNotify;
 use App\Models\TipoPublicacion;
 use App\Services\UnicidadNombreService;
 use Livewire\Component;
@@ -10,6 +11,7 @@ use Livewire\WithPagination;
 class TipoPublicacionManager extends Component
 {
     use WithPagination;
+    use WithSafeNotify;
 
     public $nombre = '';
     public $mencion_honorifica = false;
@@ -103,8 +105,8 @@ class TipoPublicacionManager extends Component
         );
 
         $this->viewMode = 'list';
-        $this->dispatch('notify', type: 'success', message: $this->editingId ? 'Tipo de Publicación actualizado con éxito.' : 'Tipo de Publicación registrado con éxito.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', $this->editingId ? 'Tipo de Publicación actualizado con éxito.' : 'Tipo de Publicación registrado con éxito.');
+        $this->safeRefreshIcons();
     }
 
     public function toggleStatus($id)
@@ -112,16 +114,16 @@ class TipoPublicacionManager extends Component
         $item = TipoPublicacion::findOrFail($id);
         $item->alternarEstado();
 
-        $this->dispatch('notify', type: 'success', message: $item->estado_logico ? 'Tipo habilitado correctamente.' : 'Tipo deshabilitado correctamente.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', $item->estado_logico ? 'Tipo habilitado correctamente.' : 'Tipo deshabilitado correctamente.');
+        $this->safeRefreshIcons();
     }
 
     public function delete($id)
     {
         $item = TipoPublicacion::findOrFail($id);
         $item->borrar();
-        $this->dispatch('notify', type: 'success', message: 'Tipo de Publicación eliminado correctamente.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', 'Tipo de Publicación eliminado correctamente.');
+        $this->safeRefreshIcons();
     }
 
     public function with()

@@ -178,4 +178,40 @@ class GrupoProyectoRepository
             [(string) $lapCodigo, (string) $secCodigo]
         )->get();
     }
+
+    /**
+     * Verifica si un nombre de grupo está disponible (no existe otro con el mismo nombre en el mismo lapso).
+     * Usa LOWER() con índice funcional para búsqueda case-insensitive eficiente.
+     */
+    public function nombreDisponibleEnLapso(string $nombre, int $lapCodigo, ?int $excludeGrpCodigo = null): bool
+    {
+        $query = GrupoProyectoModulo::whereRaw(
+            'LOWER(grp_nombre) = ? AND CAST(grp_contexto AS jsonb)->>\'lap_codigo\' = ?',
+            [mb_strtolower(trim($nombre)), (string) $lapCodigo]
+        );
+
+        if ($excludeGrpCodigo !== null) {
+            $query->where('grp_codigo', '!=', $excludeGrpCodigo);
+        }
+
+        return ! $query->exists();
+    }
+
+    /**
+     * Verifica si una cédula pertenece a algún grupo en el lapso indicado.
+     * Usa el índice GIN sobre grp_miembros para la búsqueda.
+     */
+    public function estudianteEnGrupoEnLapso(string $cedula, int $lapCodigo, ?int $excludeGrpCodigo = null): bool
+    {
+        $query = GrupoProyectoModulo::whereRaw(
+            'CAST(grp_miembros AS jsonb) @> ? AND CAST(grp_contexto AS jsonb)->>\'lap_codigo\' = ?',
+            [json_encode([['cedula' => trim($cedula)]]), (string) $lapCodigo]
+        );
+
+        if ($excludeGrpCodigo !== null) {
+            $query->where('grp_codigo', '!=', $excludeGrpCodigo);
+        }
+
+        return $query->exists();
+    }
 }

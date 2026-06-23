@@ -183,12 +183,19 @@ class GrupoProyectoManager extends Component
             $this->resetValidation('nombreGrupo');
             return;
         }
-        $this->nombreGrupoStatus = app(UnicidadNombreService::class)->check(
-            \App\Models\GrupoProyectoModulo::class,
-            'grp_nombre',
+
+        $lapCodigo = (int) $this->filterLapso;
+        if ($lapCodigo <= 0) {
+            $this->nombreGrupoStatus = null;
+            return;
+        }
+
+        $this->nombreGrupoStatus = app(GrupoProyectoService::class)->nombreDisponibleEnLapso(
             $this->nombreGrupo,
+            $lapCodigo,
             $this->editingGrpCodigo,
         ) ? 'disponible' : 'no_disponible';
+
         if ($this->nombreGrupoStatus === 'disponible') {
             $this->resetValidation('nombreGrupo');
         }
@@ -200,8 +207,41 @@ class GrupoProyectoManager extends Component
 
     public string $selectedRolId = '2';
 
+    /** Búsqueda dinámica de estudiantes */
+    public string $buscarEstudiante = '';
+
+    /** Mostrar dropdown de resultados de estudiantes */
+    public bool $mostrarDropdownEstudiantes = false;
+
+    /** Estudiante seleccionado temporalmente para mostrar en el input */
+    public string $estudianteSeleccionadoLabel = '';
+
     /** @var list<array{cedula: string, nombre: string, apellido: string, rol_id: int, rol_name: string}> */
     public array $miembrosSeleccionados = [];
+
+    /**
+     * Estudiantes filtrados en tiempo real según la búsqueda.
+     * Computed: se cachea automáticamente entre renders.
+     * Se invalida al cambiar $buscarEstudiante, $filterSeccion o $filterLapso.
+     */
+    #[\Livewire\Attributes\Computed]
+    public function estudiantesFiltrados(): \Illuminate\Support\Collection
+    {
+        $candidatos = $this->candidatosActuales();
+        $q = trim($this->buscarEstudiante);
+
+        if ($q === '') {
+            return $candidatos->take(50);
+        }
+
+        $q = mb_strtolower($q);
+
+        return $candidatos->filter(function ($c) use ($q) {
+            return str_contains(mb_strtolower($c->nombre ?? ''), $q)
+                || str_contains(mb_strtolower($c->apellido ?? ''), $q)
+                || str_contains($c->cedula ?? '', $q);
+        })->take(30);
+    }
 
     public function mount(): void
     {
@@ -325,6 +365,35 @@ class GrupoProyectoManager extends Component
         $this->viewMode = 'form';
     }
 
+    public function updatedBuscarEstudiante(): void
+    {
+        $this->selectedCedula = '';
+        $this->estudianteSeleccionadoLabel = '';
+        $this->mostrarDropdownEstudiantes = trim($this->buscarEstudiante) !== '';
+    }
+
+    public function abrirDropdownEstudiantes(): void
+    {
+        $this->mostrarDropdownEstudiantes = true;
+    }
+
+    public function cerrarDropdownEstudiantes(): void
+    {
+        $this->mostrarDropdownEstudiantes = false;
+    }
+
+    public function seleccionarEstudiante(string $cedula): void
+    {
+        $candidatos = $this->candidatosActuales();
+        $est = $candidatos->firstWhere('cedula', $cedula);
+        if ($est) {
+            $this->selectedCedula = $cedula;
+            $this->estudianteSeleccionadoLabel = trim($est->apellido . ', ' . $est->nombre) . ' (' . $est->cedula . ')';
+            $this->buscarEstudiante = $this->estudianteSeleccionadoLabel;
+        }
+        $this->mostrarDropdownEstudiantes = false;
+    }
+
     public function agregarIntegrante(): void
     {
         if ($this->selectedCedula === '') {
@@ -375,26 +444,17 @@ class GrupoProyectoManager extends Component
 
     protected function estudianteEnOtroGrupo(string $cedula): bool
     {
-        $lapso = $this->filterLapso;
-        if (!$lapso) {
+        $lapso = (int) $this->filterLapso;
+        if ($lapso <= 0) {
             return false;
         }
 
         try {
-            $query = \App\Models\GrupoProyectoModulo::whereRaw(
-                "CAST(grp_contexto AS jsonb)->>'lap_codigo' = ?",
-                [(string) $lapso]
-            )->whereRaw(
-                "CAST(grp_miembros AS jsonb) @> ?",
-                ['[{"cedula":"' . $cedula . '"}]']
+            return app(GrupoProyectoService::class)->estudianteEnGrupoEnLapso(
+                $cedula,
+                $lapso,
+                $this->editingGrpCodigo,
             );
-
-            // Excluir el grupo actual si estamos editando
-            if ($this->editingGrpCodigo) {
-                $query->where('grp_codigo', '!=', $this->editingGrpCodigo);
-            }
-
-            return $query->exists();
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Error verificando grupo existente: ' . $e->getMessage());
             return false;
@@ -427,6 +487,17 @@ class GrupoProyectoManager extends Component
 
         if ($this->nombreGrupoStatus === 'no_disponible') {
             session()->flash('message_error', 'Este nombre de grupo ya está en uso.');
+            return;
+        }
+
+        // Validación server-side: verificar que el nombre sea único en el lapso
+        $lapCodigo = (int) $this->filterLapso;
+        if ($lapCodigo > 0 && ! app(GrupoProyectoService::class)->nombreDisponibleEnLapso(
+            $this->nombreGrupo,
+            $lapCodigo,
+            $this->editingGrpCodigo,
+        )) {
+            session()->flash('message_error', 'Este nombre de grupo ya está en uso en el lapso académico seleccionado.');
             return;
         }
 
@@ -497,6 +568,9 @@ class GrupoProyectoManager extends Component
         $this->mostrarDropdownComunidad = false;
         $this->miembrosSeleccionados = [];
         $this->selectedCedula = '';
+        $this->buscarEstudiante = '';
+        $this->mostrarDropdownEstudiantes = false;
+        $this->estudianteSeleccionadoLabel = '';
         $this->filterLapso = '';
         $this->filterPrograma = '';
         $this->filterSeccion = '';
@@ -625,12 +699,19 @@ class GrupoProyectoManager extends Component
         $this->filterPrograma = '';
         $this->filterSeccion = '';
         $this->loadProgramas();
+        unset($this->estudiantesFiltrados);
     }
 
     public function updatedFilterPrograma(): void
     {
         $this->filterSeccion = '';
         $this->loadSecciones();
+        unset($this->estudiantesFiltrados);
+    }
+
+    public function updatedFilterSeccion(): void
+    {
+        unset($this->estudiantesFiltrados);
     }
 
     protected function loadProgramas(): void

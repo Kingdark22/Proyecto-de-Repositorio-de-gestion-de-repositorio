@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\WithSafeNotify;
 use App\Models\LineaInvestigacion;
 use App\Services\UnicidadNombreService;
 use App\Helpers\DbHelper;
@@ -12,6 +13,7 @@ use Livewire\WithPagination;
 class LineaInvestigacionManager extends Component
 {
     use WithPagination;
+    use WithSafeNotify;
 
     public $nombre_investigacion = '';
     public $descripcion = '';
@@ -118,8 +120,8 @@ class LineaInvestigacionManager extends Component
         );
 
         $this->viewMode = 'list';
-        $this->dispatch('notify', type: 'success', message: $this->editingId ? 'Línea de Investigación actualizada con éxito.' : 'Línea de Investigación registrada con éxito.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', $this->editingId ? 'Línea de Investigación actualizada con éxito.' : 'Línea de Investigación registrada con éxito.');
+        $this->safeRefreshIcons();
     }
 
     public function toggleStatus($id)
@@ -127,15 +129,15 @@ class LineaInvestigacionManager extends Component
         $item = LineaInvestigacion::findOrFail($id);
         $item->alternarEstado();
 
-        $this->dispatch('notify', type: 'success', message: $item->activo ? 'Línea habilitada correctamente.' : 'Línea deshabilitada correctamente.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', $item->activo ? 'Línea habilitada correctamente.' : 'Línea deshabilitada correctamente.');
+        $this->safeRefreshIcons();
     }
 
     public function delete($id)
     {
         LineaInvestigacion::find($id)->delete();
-        $this->dispatch('notify', type: 'success', message: 'Línea de Investigación eliminada correctamente.');
-        $this->dispatch('refresh-icons');
+        $this->safeDispatch('success', 'Línea de Investigación eliminada correctamente.');
+        $this->safeRefreshIcons();
     }
 
     public function with()
