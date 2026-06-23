@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Componente;
 use App\Models\ComponentePrograma;
 use App\Repositories\CatalogoRepository;
+use App\Services\UnicidadNombreService;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -22,6 +23,29 @@ class ComponenteManager extends Component
     public $tamano_maximo_mb = 10;
 
     public $rows = [];
+
+    public array $rowsNombreStatus = [];
+
+    public function updated($propertyName, $value): void
+    {
+        if (preg_match('/^rows\.(\d+)\.nombre$/', $propertyName, $m)) {
+            $index = (int) $m[1];
+            if (strlen(trim((string) $value)) < 3) {
+                $this->rowsNombreStatus[$index] = 'vacio';
+                $this->resetValidation("rows.$index.nombre");
+                return;
+            }
+            $this->rowsNombreStatus[$index] = app(UnicidadNombreService::class)->check(
+                Componente::class,
+                'nombre',
+                $value,
+                !empty($this->rows[$index]['id']) ? (int) $this->rows[$index]['id'] : null,
+            ) ? 'disponible' : 'no_disponible';
+            if ($this->rowsNombreStatus[$index] === 'disponible') {
+                $this->resetValidation("rows.$index.nombre");
+            }
+        }
+    }
 
     // Vinculación (PNF-centrica para coordinador)
     public $selectedProgramaId = '';
@@ -181,6 +205,7 @@ class ComponenteManager extends Component
             'tipo_archivo' => 'pdf',
             'tamano_maximo_mb' => 4,
         ]];
+        $this->rowsNombreStatus = [0 => null];
 
         $this->viewMode = 'form';
     }
@@ -224,6 +249,7 @@ class ComponenteManager extends Component
                 'tamano_maximo_mb' => $comp->tamano_maximo_mb ?? 10,
             ]
         ];
+        $this->rowsNombreStatus = [0 => 'disponible'];
 
         $this->viewMode = 'form';
     }
@@ -242,11 +268,19 @@ class ComponenteManager extends Component
         $this->tipo_archivo = 'pdf';
         $this->tamano_maximo_mb = 10;
         $this->rows = [];
+        $this->rowsNombreStatus = [];
     }
 
     public function save()
     {
         $this->validate();
+
+        foreach ($this->rowsNombreStatus as $status) {
+            if ($status === 'no_disponible') {
+                $this->addError('rows', 'Uno o más nombres de componente ya están en uso.');
+                return;
+            }
+        }
 
         // Validate unique names within the submission (case-insensitive)
         $nombres = array_map(fn($r) => mb_strtolower(trim($r['nombre'])), $this->rows);

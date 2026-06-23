@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Proyecto;
 use App\Models\LineaInvestigacion;
 use App\Services\GrupoProyectoService;
+use App\Services\UnicidadNombreService;
 use App\Services\IntranetEquipoSeccionService;
 use App\Services\ProyectoGestionService;
 use App\Services\UserRoleService;
@@ -109,6 +110,25 @@ class ProyectoManager extends Component
 
     public string $modalLineaNombre = '';
 
+    public ?string $modalLineaNombreStatus = null;
+
+    public function updatedModalLineaNombre(): void
+    {
+        if (strlen(trim($this->modalLineaNombre)) < 3) {
+            $this->modalLineaNombreStatus = null;
+            $this->resetValidation('modalLineaNombre');
+            return;
+        }
+        $this->modalLineaNombreStatus = app(UnicidadNombreService::class)->check(
+            LineaInvestigacion::class,
+            'nombre_investigacion',
+            $this->modalLineaNombre,
+        ) ? 'disponible' : 'no_disponible';
+        if ($this->modalLineaNombreStatus === 'disponible') {
+            $this->resetValidation('modalLineaNombre');
+        }
+    }
+
     public string $modalLineaDescripcion = '';
 
     public string $modalLineaArea = '';
@@ -124,6 +144,25 @@ class ProyectoManager extends Component
 
     public string $modalMetodologiaNombre = '';
 
+    public ?string $modalMetodologiaNombreStatus = null;
+
+    public function updatedModalMetodologiaNombre(): void
+    {
+        if (strlen(trim($this->modalMetodologiaNombre)) < 3) {
+            $this->modalMetodologiaNombreStatus = null;
+            $this->resetValidation('modalMetodologiaNombre');
+            return;
+        }
+        $this->modalMetodologiaNombreStatus = app(UnicidadNombreService::class)->check(
+            \App\Models\MetodologiaInvestigacion::class,
+            'nombre',
+            $this->modalMetodologiaNombre,
+        ) ? 'disponible' : 'no_disponible';
+        if ($this->modalMetodologiaNombreStatus === 'disponible') {
+            $this->resetValidation('modalMetodologiaNombre');
+        }
+    }
+
     public string $modalMetodologiaDescripcion = '';
 
     /** Búsqueda de metodologías */
@@ -136,6 +175,25 @@ class ProyectoManager extends Component
     public bool $mostrarModalTipoInvestigacion = false;
 
     public string $modalTipoInvNombre = '';
+
+    public ?string $modalTipoInvNombreStatus = null;
+
+    public function updatedModalTipoInvNombre(): void
+    {
+        if (strlen(trim($this->modalTipoInvNombre)) < 3) {
+            $this->modalTipoInvNombreStatus = null;
+            $this->resetValidation('modalTipoInvNombre');
+            return;
+        }
+        $this->modalTipoInvNombreStatus = app(UnicidadNombreService::class)->check(
+            \App\Models\TipoInvestigacion::class,
+            'nombre',
+            $this->modalTipoInvNombre,
+        ) ? 'disponible' : 'no_disponible';
+        if ($this->modalTipoInvNombreStatus === 'disponible') {
+            $this->resetValidation('modalTipoInvNombre');
+        }
+    }
 
     public string $modalTipoInvDescripcion = '';
 
@@ -150,6 +208,25 @@ class ProyectoManager extends Component
 
     public string $modalTipoPubNombre = '';
 
+    public ?string $modalTipoPubNombreStatus = null;
+
+    public function updatedModalTipoPubNombre(): void
+    {
+        if (strlen(trim($this->modalTipoPubNombre)) < 3) {
+            $this->modalTipoPubNombreStatus = null;
+            $this->resetValidation('modalTipoPubNombre');
+            return;
+        }
+        $this->modalTipoPubNombreStatus = app(UnicidadNombreService::class)->check(
+            \App\Models\TipoPublicacion::class,
+            'nombre',
+            $this->modalTipoPubNombre,
+        ) ? 'disponible' : 'no_disponible';
+        if ($this->modalTipoPubNombreStatus === 'disponible') {
+            $this->resetValidation('modalTipoPubNombre');
+        }
+    }
+
     public bool $modalTipoPubMencionHonorifica = false;
 
     /** Búsqueda de tipos de publicación */
@@ -161,6 +238,26 @@ class ProyectoManager extends Component
     /** Modal crear objetivo de investigación */
     public bool $mostrarModalObjetivo = false;
     public string $modalObjetivoNombre = '';
+
+    public ?string $modalObjetivoNombreStatus = null;
+
+    public function updatedModalObjetivoNombre(): void
+    {
+        if (strlen(trim($this->modalObjetivoNombre)) < 3) {
+            $this->modalObjetivoNombreStatus = null;
+            $this->resetValidation('modalObjetivoNombre');
+            return;
+        }
+        $this->modalObjetivoNombreStatus = app(UnicidadNombreService::class)->check(
+            \App\Models\ObjetivoInvestigacion::class,
+            'nombre',
+            $this->modalObjetivoNombre,
+        ) ? 'disponible' : 'no_disponible';
+        if ($this->modalObjetivoNombreStatus === 'disponible') {
+            $this->resetValidation('modalObjetivoNombre');
+        }
+    }
+
     public string $modalObjetivoDescripcion = '';
     public string $buscarObjetivo = '';
     public Collection $objetivosEncontrados;
@@ -473,6 +570,7 @@ class ProyectoManager extends Component
     {
         $this->mostrarModalLinea = true;
         $this->modalLineaNombre = '';
+        $this->modalLineaNombreStatus = null;
         $this->modalLineaDescripcion = '';
         $this->modalLineaArea = '';
         $this->buscarLinea = '';
@@ -488,6 +586,7 @@ class ProyectoManager extends Component
     {
         $this->mostrarModalMetodologia = true;
         $this->modalMetodologiaNombre = '';
+        $this->modalMetodologiaNombreStatus = null;
         $this->modalMetodologiaDescripcion = '';
         $this->buscarMetodologia = '';
         $this->metodologiasEncontradas = collect();
@@ -525,6 +624,11 @@ class ProyectoManager extends Component
             'modalMetodologiaNombre.required' => 'El nombre de la metodología es obligatorio.',
         ]);
 
+        if ($this->modalMetodologiaNombreStatus === 'no_disponible') {
+            $this->addError('modalMetodologiaNombre', 'Este nombre ya está en uso.');
+            return;
+        }
+
         $metodologia = \App\Models\MetodologiaInvestigacion::create([
             'nombre' => $this->modalMetodologiaNombre,
             'descripcion' => $this->modalMetodologiaDescripcion ?: null,
@@ -540,6 +644,7 @@ class ProyectoManager extends Component
     {
         $this->mostrarModalTipoInvestigacion = true;
         $this->modalTipoInvNombre = '';
+        $this->modalTipoInvNombreStatus = null;
         $this->modalTipoInvDescripcion = '';
         $this->buscarTipoInvestigacion = '';
         $this->tiposInvestigacionEncontradas = collect();
@@ -578,6 +683,11 @@ class ProyectoManager extends Component
             'modalTipoInvNombre.required' => 'El nombre del tipo de investigación es obligatorio.',
         ]);
 
+        if ($this->modalTipoInvNombreStatus === 'no_disponible') {
+            $this->addError('modalTipoInvNombre', 'Este nombre ya está en uso.');
+            return;
+        }
+
         $tipo = \App\Models\TipoInvestigacion::create([
             'nombre' => $this->modalTipoInvNombre,
             'descripcion' => $this->modalTipoInvDescripcion ?: null,
@@ -593,6 +703,7 @@ class ProyectoManager extends Component
     {
         $this->mostrarModalTipoPublicacion = true;
         $this->modalTipoPubNombre = '';
+        $this->modalTipoPubNombreStatus = null;
         $this->modalTipoPubMencionHonorifica = false;
         $this->buscarTipoPublicacion = '';
         $this->tiposPublicacionEncontradas = collect();
@@ -602,6 +713,7 @@ class ProyectoManager extends Component
     {
         $this->mostrarModalObjetivo = true;
         $this->modalObjetivoNombre = '';
+        $this->modalObjetivoNombreStatus = null;
         $this->modalObjetivoDescripcion = '';
         $this->buscarObjetivo = '';
         $this->objetivosEncontrados = collect();
@@ -639,6 +751,11 @@ class ProyectoManager extends Component
         ], [
             'modalObjetivoNombre.required' => 'El nombre del objetivo es obligatorio.',
         ]);
+
+        if ($this->modalObjetivoNombreStatus === 'no_disponible') {
+            $this->addError('modalObjetivoNombre', 'Este nombre ya está en uso.');
+            return;
+        }
 
         $objetivo = \App\Models\ObjetivoInvestigacion::create([
             'nombre' => $this->modalObjetivoNombre,
@@ -682,6 +799,11 @@ class ProyectoManager extends Component
             'modalTipoPubNombre.required' => 'El nombre del tipo de publicación es obligatorio.',
         ]);
 
+        if ($this->modalTipoPubNombreStatus === 'no_disponible') {
+            $this->addError('modalTipoPubNombre', 'Este nombre ya está en uso.');
+            return;
+        }
+
         $tipo = \App\Models\TipoPublicacion::create([
             'nombre' => $this->modalTipoPubNombre,
             'mencion_honorifica' => $this->modalTipoPubMencionHonorifica,
@@ -721,6 +843,11 @@ class ProyectoManager extends Component
         ], [
             'modalLineaNombre.required' => 'El nombre de la línea es obligatorio.',
         ]);
+
+        if ($this->modalLineaNombreStatus === 'no_disponible') {
+            $this->addError('modalLineaNombre', 'Este nombre ya está en uso.');
+            return;
+        }
 
         $linea = LineaInvestigacion::create([
             'nombre_investigacion' => $this->modalLineaNombre,

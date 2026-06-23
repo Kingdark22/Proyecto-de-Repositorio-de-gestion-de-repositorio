@@ -5,6 +5,8 @@ namespace App\Livewire;
 use App\Models\Comunidad;
 use App\Services\ComunidadGestionService;
 use App\Services\IntranetProfessorService;
+use App\Services\UnicidadNombreService;
+use App\Services\ValidacionRifService;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\Attributes\Lazy;
@@ -23,7 +25,61 @@ class ComunidadManager extends Component
 
     public string $nombre = '';
 
+    public ?string $nombreStatus = null;
+
+    public function updatedNombre(): void
+    {
+        if (strlen(trim($this->nombre)) < 3) {
+            $this->nombreStatus = null;
+            $this->resetValidation('nombre');
+            return;
+        }
+        $this->nombreStatus = app(UnicidadNombreService::class)->check(
+            Comunidad::class,
+            'nombre',
+            $this->nombre,
+            $this->editingId,
+        ) ? 'disponible' : 'no_disponible';
+        if ($this->nombreStatus === 'disponible') {
+            $this->resetValidation('nombre');
+        }
+    }
+
     public string $rif = '';
+
+    public string $rifLetra = 'J';
+
+    public string $rifNumero = '';
+
+    public ?string $rifDigito = null;
+
+    public ?string $rifStatus = null;
+
+    public function updatedRifNumero(ValidacionRifService $rifService): void
+    {
+        $original = $this->rifNumero;
+        $num = preg_replace('/\D/', '', $original);
+        $this->rifNumero = $num;
+        $tieneLetras = $original !== $num;
+        if ($num === '' || strlen($num) < 5) {
+            $this->rifDigito = null;
+            $this->rifStatus = null;
+            $this->resetValidation('rifNumero');
+            return;
+        }
+        $this->rifDigito = $rifService->calcularDigito($this->rifLetra, $num);
+        $this->rifStatus = ($this->rifDigito !== null && !$tieneLetras) ? 'valido' : 'invalido';
+        if ($this->rifStatus === 'valido') {
+            $this->resetValidation('rifNumero');
+        }
+    }
+
+    public function updatedRifLetra(ValidacionRifService $rifService): void
+    {
+        if (strlen($this->rifNumero) >= 5) {
+            $this->updatedRifNumero($rifService);
+        }
+    }
 
     public string $correo = '';
 
@@ -100,8 +156,9 @@ class ComunidadManager extends Component
             return;
         }
 
-        $this->reset(['editingId', 'nombre', 'rif', 'correo', 'numero_telefono', 'prefijo_telefono', 'estado_id', 'municipio_id', 'dir_nombre']);
+        $this->reset(['editingId', 'nombre', 'rif', 'rifLetra', 'rifNumero', 'rifDigito', 'rifStatus', 'correo', 'numero_telefono', 'prefijo_telefono', 'estado_id', 'municipio_id', 'dir_nombre', 'nombreStatus']);
         $this->prefijo_telefono = '0424';
+        $this->rifLetra = 'J';
         $this->resetValidation();
 
         $this->viewMode = 'form';
@@ -118,7 +175,14 @@ class ComunidadManager extends Component
         $this->resetValidation();
         $datos = $gestion->cargarParaEdicion($id);
         $this->editingId = $id;
-        $this->fill($datos);
+
+        $parsed = app(ValidacionRifService::class)->parsear($datos['rif'] ?? '');
+        $this->rifLetra = $parsed['letra'];
+        $this->rifNumero = $parsed['numero'];
+        $this->rifDigito = $parsed['digito'];
+        $this->rifStatus = $parsed['digito'] !== null ? 'valido' : null;
+        $this->fill(collect($datos)->except('rif')->toArray());
+        $this->nombreStatus = 'disponible';
 
         $telefonoCompleto = $datos['numero_telefono'];
         $prefijos = ['0424', '0414', '0412', '0422', '0416', '0426'];
@@ -145,17 +209,32 @@ class ComunidadManager extends Component
         }
  
         $this->validate($gestion->reglasValidacion());
- 
-        $gestion->guardar($this->editingId, [
+
+        if ($this->nombreStatus === 'no_disponible') {
+            $this->addError('nombre', 'Este nombre ya está en uso.');
+            return;
+        }
+
+        if ($this->rifNumero !== '' && $this->rifStatus !== 'valido') {
+            $this->addError('rifNumero', 'El RIF ingresado no es válido.');
+            return;
+        }
+
+        $payload = [
             'nombre' => $this->nombre,
-            'rif' => $this->rif,
             'correo' => $this->correo,
             'prefijo_telefono' => $this->prefijo_telefono,
             'numero_telefono' => $this->numero_telefono,
             'estado_id' => $this->estado_id,
             'municipio_id' => $this->municipio_id,
             'dir_nombre' => $this->dir_nombre,
-        ]);
+        ];
+
+        if ($this->rifNumero !== '') {
+            $payload['rif'] = "{$this->rifLetra}-{$this->rifNumero}-{$this->rifDigito}";
+        }
+
+        $gestion->guardar($this->editingId, $payload);
  
         session()->flash('message', 'Comunidad guardada correctamente.');
         $this->viewMode = 'list';

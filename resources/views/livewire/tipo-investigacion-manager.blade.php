@@ -140,8 +140,13 @@
                     <tr>
                         <td width="30%"><b>Nombre del Tipo:</b></td>
                         <td width="70%">
-                            <input wire:model="nombre" type="text" style="width: 90%;">
+                            <input wire:model.live.debounce.500ms="nombre" type="text" style="width: 90%;">
                             <span class="obligatorio">*</span>
+                            @if($nombreStatus === 'disponible')
+                                <br><span style="color: #28a745; font-size: 11px;">✓ Nombre disponible</span>
+                            @elseif($nombreStatus === 'no_disponible')
+                                <br><span style="color: #dc3545; font-size: 11px;">✗ Este nombre ya está en uso</span>
+                            @endif
                             @error('nombre')
                                 <br><span class="validation-error">{{ $message }}</span>
                             @enderror

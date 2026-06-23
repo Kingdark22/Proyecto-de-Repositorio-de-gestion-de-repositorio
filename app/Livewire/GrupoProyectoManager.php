@@ -6,6 +6,8 @@ use App\Models\Comunidad;
 use App\Models\Estado;
 use App\Services\ComunidadGestionService;
 use App\Services\GrupoProyectoService;
+use App\Services\UnicidadNombreService;
+use App\Services\ValidacionRifService;
 use App\Services\IntranetEquipoSeccionService;
 use App\Services\IntranetProfessorService;
 use App\Services\UserRoleService;
@@ -48,7 +50,58 @@ class GrupoProyectoManager extends Component
 
     public string $modalNombre = '';
 
-    public string $modalRif = '';
+    public ?string $modalNombreStatus = null;
+
+    public function updatedModalNombre(): void
+    {
+        if (strlen(trim($this->modalNombre)) < 3) {
+            $this->modalNombreStatus = null;
+            $this->resetValidation('modalNombre');
+            return;
+        }
+        $this->modalNombreStatus = app(UnicidadNombreService::class)->check(
+            Comunidad::class,
+            'nombre',
+            $this->modalNombre,
+        ) ? 'disponible' : 'no_disponible';
+        if ($this->modalNombreStatus === 'disponible') {
+            $this->resetValidation('modalNombre');
+        }
+    }
+
+    public string $modalRifLetra = 'J';
+
+    public string $modalRifNumero = '';
+
+    public ?string $modalRifDigito = null;
+
+    public ?string $modalRifStatus = null;
+
+    public function updatedModalRifNumero(ValidacionRifService $rifService): void
+    {
+        $original = $this->modalRifNumero;
+        $num = preg_replace('/\D/', '', $original);
+        $this->modalRifNumero = $num;
+        $tieneLetras = $original !== $num;
+        if ($num === '' || strlen($num) < 5) {
+            $this->modalRifDigito = null;
+            $this->modalRifStatus = null;
+            $this->resetValidation('modalRifNumero');
+            return;
+        }
+        $this->modalRifDigito = $rifService->calcularDigito($this->modalRifLetra, $num);
+        $this->modalRifStatus = ($this->modalRifDigito !== null && !$tieneLetras) ? 'valido' : 'invalido';
+        if ($this->modalRifStatus === 'valido') {
+            $this->resetValidation('modalRifNumero');
+        }
+    }
+
+    public function updatedModalRifLetra(ValidacionRifService $rifService): void
+    {
+        if (strlen($this->modalRifNumero) >= 5) {
+            $this->updatedModalRifNumero($rifService);
+        }
+    }
 
     public string $modalCorreo = '';
 
@@ -89,6 +142,26 @@ class GrupoProyectoManager extends Component
     public ?int $editingGrpCodigo = null;
 
     public string $nombreGrupo = '';
+
+    public ?string $nombreGrupoStatus = null;
+
+    public function updatedNombreGrupo(): void
+    {
+        if (strlen(trim($this->nombreGrupo)) < 2) {
+            $this->nombreGrupoStatus = null;
+            $this->resetValidation('nombreGrupo');
+            return;
+        }
+        $this->nombreGrupoStatus = app(UnicidadNombreService::class)->check(
+            \App\Models\GrupoProyectoModulo::class,
+            'grp_nombre',
+            $this->nombreGrupo,
+            $this->editingGrpCodigo,
+        ) ? 'disponible' : 'no_disponible';
+        if ($this->nombreGrupoStatus === 'disponible') {
+            $this->resetValidation('nombreGrupo');
+        }
+    }
 
     public string $comunidadId = '';
 
@@ -321,6 +394,11 @@ class GrupoProyectoManager extends Component
             ],
         );
 
+        if ($this->nombreGrupoStatus === 'no_disponible') {
+            session()->flash('message_error', 'Este nombre de grupo ya está en uso.');
+            return;
+        }
+
         if (!$grupos->tablaDisponible()) {
             session()->flash('message_error', 'Ejecute la migración grupo_proyecto_modulo en repositorio (solo módulo).');
             return;
@@ -382,6 +460,7 @@ class GrupoProyectoManager extends Component
     {
         $this->editingGrpCodigo = null;
         $this->nombreGrupo = '';
+        $this->nombreGrupoStatus = null;
         $this->comunidadId = '';
         $this->searchComunidad = '';
         $this->mostrarDropdownComunidad = false;
@@ -398,7 +477,11 @@ class GrupoProyectoManager extends Component
     {
         $this->mostrarModalComunidad = true;
         $this->modalNombre = '';
-        $this->modalRif = '';
+        $this->modalNombreStatus = null;
+        $this->modalRifLetra = 'J';
+        $this->modalRifNumero = '';
+        $this->modalRifDigito = null;
+        $this->modalRifStatus = null;
         $this->modalCorreo = '';
         $this->modalPrefijoTelefono = '0424';
         $this->modalNumeroTelefono = '';
@@ -428,7 +511,6 @@ class GrupoProyectoManager extends Component
     {
         $this->validate([
             'modalNombre' => 'required|string|max:255',
-            'modalRif' => 'nullable|string|max:50',
             'modalCorreo' => 'nullable|email|max:150',
             'modalEstadoId' => 'required|integer|exists:estados,est_codigo',
             'modalMunicipioId' => 'required|integer|exists:municipios,mun_codigo',
@@ -440,16 +522,31 @@ class GrupoProyectoManager extends Component
             'modalDirNombre.required' => 'La dirección exacta es obligatoria.',
         ]);
 
-        $id = $gestion->guardar(null, [
+        if ($this->modalNombreStatus === 'no_disponible') {
+            $this->addError('modalNombre', 'Este nombre de comunidad ya está en uso.');
+            return;
+        }
+
+        if ($this->modalRifNumero !== '' && $this->modalRifStatus !== 'valido') {
+            $this->addError('modalRifNumero', 'El RIF ingresado no es válido.');
+            return;
+        }
+
+        $payload = [
             'nombre' => $this->modalNombre,
-            'rif' => $this->modalRif,
             'correo' => $this->modalCorreo,
             'prefijo_telefono' => $this->modalPrefijoTelefono,
             'numero_telefono' => $this->modalNumeroTelefono,
             'estado_id' => $this->modalEstadoId,
             'municipio_id' => $this->modalMunicipioId,
             'dir_nombre' => $this->modalDirNombre,
-        ]);
+        ];
+
+        if ($this->modalRifNumero !== '') {
+            $payload['rif'] = "{$this->modalRifLetra}-{$this->modalRifNumero}-{$this->modalRifDigito}";
+        }
+
+        $id = $gestion->guardar(null, $payload);
 
         Cache::forget('grupos_comunidades');
         $this->comunidades = Comunidad::query()->orderBy('nombre')->get(['com_codigo', 'com_nombre']);

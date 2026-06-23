@@ -1,0 +1,28 @@
+<?php $__env->startSection('title', 'Tipos de Investigación'); ?>
+<?php $__env->startSection('header', 'Gestión de Tipos de Investigación'); ?>
+
+<?php $__env->startSection('content'); ?>
+    <?php
+$__split = function ($name, $params = []) {
+    return [$name, $params];
+};
+[$__name, $__params] = $__split('tipo-investigacion-manager', []);
+
+$key = null;
+$__componentSlots = [];
+
+$key ??= \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::generateKey('lw-3360506739-0', $key);
+
+$__html = app('livewire')->mount($__name, $__params, $key, $__componentSlots);
+
+echo $__html;
+
+unset($__html);
+unset($__name);
+unset($__params);
+unset($__componentSlots);
+unset($__split);
+?>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\Emanuel\Desktop\Sistemax\Proyecto-de-Repositorio-de-gestion-de-repositorio\resources\views/tipo_investigacion/index.blade.php ENDPATH**/ ?>

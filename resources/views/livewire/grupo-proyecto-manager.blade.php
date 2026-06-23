@@ -234,8 +234,14 @@
             </legend>
             <table width="100%" style="font-size: 11px;">
                 <tr>
-                    <td width="50%"><b>Nombre del proyecto:</b><br><input wire:model="nombreGrupo" type="text"
-                            class="grp-filter-input" style="width:90%;"></td>
+                    <td width="50%"><b>Nombre del proyecto:</b><br><input wire:model.live.debounce.500ms="nombreGrupo" type="text"
+                            class="grp-filter-input" style="width:90%;">
+                            @if($nombreGrupoStatus === 'disponible')
+                                <br><span style="color: #28a745; font-size: 11px;">✓ Nombre disponible</span>
+                            @elseif($nombreGrupoStatus === 'no_disponible')
+                                <br><span style="color: #dc3545; font-size: 11px;">✗ Este nombre ya está en uso</span>
+                            @endif
+                    </td>
                      <td><b>Comunidad:</b><br>
                          <div style="display: flex; gap: 4px; align-items: center;">
                               <div class="comunidad-search-container" id="comunidad-search-container">
@@ -386,12 +392,37 @@
                         <table width="100%" style="font-size:11px;">
                             <tr>
                                 <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
-                                <td><input wire:model="modalNombre" type="text" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;"></td>
-                            </tr>
-                            <tr>
-                                <td><b>RIF:</b></td>
-                                <td><input wire:model="modalRif" type="text" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;"></td>
-                            </tr>
+                                 <td><input wire:model.live.debounce.500ms="modalNombre" type="text" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;">
+                                 @if($modalNombreStatus === 'disponible')
+                                     <br><span style="color: #28a745; font-size: 11px;">✓ Nombre disponible</span>
+                                 @elseif($modalNombreStatus === 'no_disponible')
+                                     <br><span style="color: #dc3545; font-size: 11px;">✗ Este nombre ya está en uso</span>
+                                 @endif
+                                 </td>
+                             </tr>
+                              <tr>
+                                  <td style="vertical-align:top;"><b>RIF:</b></td>
+                                  <td>
+                                      <div style="display:flex;gap:4px;align-items:center;">
+                                          <select wire:model.live="modalRifLetra" style="padding:4px 6px;border:1px solid #ccc;border-radius:4px;background:#fff;font-size:11px;width:48px;">
+                                              <option value="V">V</option>
+                                              <option value="E">E</option>
+                                              <option value="J">J</option>
+                                              <option value="G">G</option>
+                                              <option value="P">P</option>
+                                          </select>
+                                          <input wire:model.live.debounce.500ms="modalRifNumero" type="text" maxlength="9" style="flex:1;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;" placeholder="Número (máx. 9 dígitos)">
+                                      </div>
+                                      @if($modalRifStatus === 'valido')
+                                          <span style="color: #28a745; font-size: 11px;">✓ RIF válido</span>
+                                      @elseif($modalRifStatus === 'invalido')
+                                          <span style="color: #dc3545; font-size: 11px;">✗ RIF inválido</span>
+                                      @endif
+                                      @error('modalRifNumero')
+                                          <span class="validation-error" style="font-size:11px;color:#c62828;">{{ $message }}</span>
+                                      @enderror
+                                  </td>
+                             </tr>
                             <tr>
                                 <td><b>Correo:</b></td>
                                 <td><input wire:model="modalCorreo" type="email" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;"></td>
