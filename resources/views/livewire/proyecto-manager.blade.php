@@ -161,8 +161,7 @@
                                 valign="top">
                                 <td style="padding: 5px; font-weight: bold;">
                                     {{ $p->titulo }}
-                                    <br><span style="font-size: 9px; font-weight: normal;">Subido:
-                                        {{ $p->fecha_subida?->format('d/m/Y') ?? '-' }}</span>
+
                                     @if ($p->documentos->isNotEmpty())
                                         <div style="margin-top: 3px;">
                                             @foreach ($p->documentos as $doc)
@@ -249,8 +248,7 @@
                                 valign="top">
                                 <td style="padding: 5px; font-weight: bold;">
                                     {{ $p->titulo }}
-                                    <br><span style="font-size: 9px; font-weight: normal;">Subido:
-                                        {{ $p->fecha_subida?->format('d/m/Y') ?? '-' }}</span>
+
                                     @php $gestionDocs = $p->documentos; @endphp
                                     @if ($gestionDocs->isNotEmpty())
                                         <div style="margin-top: 5px;">
@@ -407,6 +405,18 @@
                     <legend style="font-weight: bold; font-size: 12px;">Datos del proyecto</legend>
                     <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 12px;">
                         <tr>
+                            <td width="20%"><b>T&iacute;tulo:</b></td>
+                            <td colspan="3">
+                                <div style="padding: 4px 0; font-weight: bold; font-size: 14px;">
+                                    {{ $titulo ?: '(seleccione un equipo para auto-llenar el t&iacute;tulo)' }}
+                                </div>
+                                <input type="hidden" wire:model="titulo">
+                                @error('titulo')
+                                    <span class="validation-error">{{ $message }}</span>
+                                @enderror
+                            </td>
+                        </tr>
+                        <tr>
                             <td width="20%"><b>Comunidad:</b></td>
                             <td colspan="3">
                                 @if($comunidadNombreGrupo)
@@ -414,17 +424,6 @@
                                 @else
                                     <span style="color:#999;">(asignada autom&aacute;ticamente del grupo)</span>
                                 @endif
-                            </td>
-                        </tr>
-                        <tr>
-                            <td width="20%"><b>T&iacute;tulo:</b></td>
-                            <td colspan="3">
-                                <div style="padding: 4px 0; font-weight: bold; font-size: 14px;">
-                                    {{ $titulo ?: '(seleccione un equipo para auto-llenar el t&iacute;tulo)' }}
-                                </div>
-                                @error('titulo')
-                                    <span class="validation-error">{{ $message }}</span>
-                                @enderror
                             </td>
                         </tr>
                         <tr>
@@ -509,89 +508,126 @@
                     @endif
                 @endif
 
-                @if($esProfesor || $esGestionador)
-                <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
-                    <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Equipo</legend>
-                    @if(!empty($miembrosGrupo))
-                    @php
-                        $busquedaEst = trim($buscarEstudiante);
-                        $miembrosFiltrados = $busquedaEst === ''
-                            ? $miembrosGrupo
-                            : array_filter($miembrosGrupo, function($m) use ($busquedaEst) {
-                                $q = mb_strtolower($busquedaEst);
-                                $nombre = mb_strtolower(($m['nombre'] ?? '') . ' ' . ($m['apellido'] ?? ''));
-                                $cedula = mb_strtolower($m['cedula'] ?? '');
-                                return str_contains($nombre, $q) || str_contains($cedula, $q);
-                            });
-                    @endphp
-                    <div style="margin-top: 8px; padding: 0; background: #fff; border: 1px solid #e9aaad; border-radius: 6px; font-size: 12px; overflow: hidden;">
-                        <div style="background: linear-gradient(135deg, #8b0000, #a52a2a); color: #fff; padding: 6px 12px; font-weight: bold; font-size: 13px; letter-spacing: 0.3px; display:flex; align-items:center; justify-content:space-between;">
-                            <span>👥 Integrantes del equipo ({{ count($miembrosFiltrados) }}/{{ count($miembrosGrupo) }})</span>
-                        </div>
-                        <div style="padding: 6px 12px; background: #fafafa; border-bottom: 1px solid #e9aaad;">
-                            <input wire:model.live.debounce.200ms="buscarEstudiante" type="text"
-                                style="width:100%; padding:6px 8px; border:1px solid #d4c5c5; border-radius:4px; font-size:11px; box-sizing:border-box; outline:none;"
-                                placeholder="🔍 Buscar estudiante por nombre o cédula...">
-                        </div>
-                        @if(!empty($miembrosFiltrados))
-                        <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 12px;">
-                            @foreach($miembrosFiltrados as $idx => $miembro)
-                            @php
-                                $esLider = in_array($miembro['cedula'], $selectedLeaders);
-                            @endphp
-                            <tr style="background-color: {{ $idx % 2 == 0 ? '#fafafa' : '#FFFFFF' }}; border-bottom: 1px solid #f0e6e6;">
-                                <td width="36" style="padding: 6px 4px 6px 12px; text-align:center;">
-                                    <div style="width:28px; height:28px; border-radius:50%; background:{{ $esLider ? '#8b0000' : '#d4c5c5' }}; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;">
-                                        {{ $idx + 1 }}
-                                    </div>
-                                </td>
-                                <td width="40" style="padding: 6px 2px;">
-                                    @if($esLider)
-                                        <span style="display:inline-block; background:#8b0000; color:#fff; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:bold; letter-spacing:0.5px;">LÍDER</span>
-                                    @else
-                                        <span style="display:inline-block; background:#e8e0e0; color:#666; padding:2px 8px; border-radius:10px; font-size:9px; font-weight:bold;">AUTOR</span>
-                                    @endif
-                                </td>
-                                <td style="padding: 6px 4px; font-weight:{{ $esLider ? 'bold' : 'normal' }}; color:{{ $esLider ? '#8b0000' : '#333' }};">
-                                    {{ $miembro['nombre'] }} {{ $miembro['apellido'] }}
-                                    <span style="color:#999; font-size:10px; font-weight:normal;"> ({{ $miembro['cedula'] }})</span>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </table>
-                        @else
-                            <div style="padding: 12px; text-align:center; color:#999; font-size:11px;">
-                                😕 No se encontraron estudiantes que coincidan con "{{ $busquedaEst }}"
-                            </div>
-                        @endif
-                        @if(count($selectedLeaders) > 0 && $busquedaEst === '')
-                        <div style="padding: 6px 12px; background: #f9f2f2; border-top: 1px solid #e9aaad; font-size: 10px; color: #8b0000;">
-                            @php $lideresNombres = array_filter($miembrosGrupo, fn($m) => in_array($m['cedula'], $selectedLeaders)); @endphp
-                            <b>Líder{{ count($lideresNombres) > 1 ? 'es' : '' }}:</b>
-                            {{ implode(', ', array_map(fn($m) => $m['nombre'] . ' ' . $m['apellido'], $lideresNombres)) }}
-                        </div>
-                        @endif
-                    </div>
-                    @endif
-                </fieldset>
-                @endif
-
-                {{-- == FECHA SUBIDA == --}}
-                <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
-                    <legend style="font-weight: bold; font-size: 12px;">Fecha de subida</legend>
+                {{-- == SECCIÓN CLASIFICACIÓN (OBJETIVOS) == --}}
+                <div style="margin-bottom: 15px; border: 1px solid #CCC; border-radius: 4px; padding: 10px;">
                     <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px;">
                         <tr>
-                            <td width="20%"><b>Fecha subida:</b></td>
+                            <td width="20%"><b>L&iacute;nea de Investigaci&oacute;n:</b></td>
+                            <td width="30%">
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <select wire:model="linea_investigacion_id" style="flex:1;">
+                                        <option value="">Seleccione...</option>
+                                        @foreach ($lineas ?? [] as $l)
+                                            <option value="{{ $l->id }}">{{ $l->nombre_investigacion }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" wire:click="abrirModalLinea" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap; padding: 4px 8px; font-size: 11px;" title="Buscar o crear nueva línea">+</button>
+                                </div>
+                                @error('linea_investigacion_id')
+                                    <br><span class="obligatorio">{{ $message }}</span>
+                                @enderror
+                            </td>
+                            <td width="20%"><b>Metodolog&iacute;a:</b></td>
+                            <td width="30%">
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <select wire:model="metodologia_id" style="flex:1;">
+                                        <option value="">Seleccione...</option>
+                                        @foreach ($metodologias ?? [] as $m)
+                                            <option value="{{ $m->id }}">{{ $m->nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" wire:click="abrirModalMetodologia" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap; padding: 4px 8px; font-size: 11px;" title="Buscar o crear nueva metodología">+</button>
+                                </div>
+                                @error('metodologia_id')
+                                    <br><span class="obligatorio">{{ $message }}</span>
+                                @enderror
+                            </td>
+                        </tr>
+                        <tr>
+                            <td width="20%"><b>Tipo de Publicaci&oacute;n:</b></td>
                             <td colspan="3">
-                                <input wire:model="fecha_subida" type="date">
-                                <span class="obligatorio">*</span>
-                                @error('fecha_subida')
-                                    <span class="obligatorio">{{ $message }}</span>
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <select wire:model="tipo_publicacion_id" style="flex:1;">
+                                        <option value="">Seleccione...</option>
+                                        @foreach ($tipos_publicacion ?? [] as $tp)
+                                            <option value="{{ $tp->id }}">{{ $tp->nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" wire:click="abrirModalTipoPublicacion" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap; padding: 4px 8px; font-size: 11px;" title="Buscar o crear nuevo tipo de publicación">+</button>
+                                </div>
+                                @error('tipo_publicacion_id')
+                                    <br><span class="obligatorio">{{ $message }}</span>
+                                @enderror
+                            </td>
+                        </tr>
+                        <tr>
+                            <td width="20%"><b>Tipo de Investigaci&oacute;n:</b></td>
+                            <td width="30%">
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <select wire:model="tipo_investigacion_id" style="flex:1;">
+                                        <option value="">Seleccione...</option>
+                                        @foreach ($tipos_investigacion ?? [] as $ti)
+                                            <option value="{{ $ti->id }}">{{ $ti->nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" wire:click="abrirModalTipoInvestigacion" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap; padding: 4px 8px; font-size: 11px;" title="Buscar o crear nuevo tipo de investigación">+</button>
+                                </div>
+                                @error('tipo_investigacion_id')
+                                    <br><span class="obligatorio">{{ $message }}</span>
+                                @enderror
+                            </td>
+                            <td width="20%"><b>Objetivo de Investigaci&oacute;n:</b></td>
+                            <td width="30%">
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <select wire:model="objetivo_investigacion_id" style="flex:1;">
+                                        <option value="">Seleccione...</option>
+                                        @foreach ($objetivos_investigacion ?? [] as $oi)
+                                            <option value="{{ $oi->id }}">{{ $oi->nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                    <button type="button" wire:click="abrirModalObjetivo" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap; padding: 4px 8px; font-size: 11px;" title="Buscar o crear nuevo objetivo de investigación">+</button>
+                                </div>
+                                @error('objetivo_investigacion_id')
+                                    <br><span class="obligatorio">{{ $message }}</span>
                                 @enderror
                             </td>
                         </tr>
                     </table>
+                </div>
+
+                {{-- == EQUIPO (SIMPLE - SOLO MOSTRAR INTEGRANTES) == --}}
+                @if(!empty($miembrosGrupo))
+                <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
+                    <legend style="font-weight: bold; font-size: 12px;">Integrantes del equipo</legend>
+                    <table width="100%" border="1" cellpadding="4" cellspacing="0" style="font-size: 11px; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background:#ddd;">
+                                <th style="padding:4px 8px;">#</th>
+                                <th style="padding:4px 8px;">C&eacute;dula</th>
+                                <th style="padding:4px 8px;">Nombre</th>
+                                <th style="padding:4px 8px;">Rol</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($miembrosGrupo as $idx => $miembro)
+                                @php $esLider = in_array($miembro['cedula'], $selectedLeaders); @endphp
+                                <tr style="background: {{ $idx % 2 == 0 ? '#fafafa' : '#fff' }};">
+                                    <td align="center" style="padding:4px 8px;">{{ $idx + 1 }}</td>
+                                    <td style="padding:4px 8px;">{{ $miembro['cedula'] }}</td>
+                                    <td style="padding:4px 8px; font-weight:{{ $esLider ? 'bold' : 'normal' }};">{{ $miembro['nombre'] }} {{ $miembro['apellido'] }}</td>
+                                    <td style="padding:4px 8px;">
+                                        @if($esLider)
+                                            <span style="color:#8b0000; font-weight:bold;">L&iacute;der</span>
+                                        @else
+                                            <span style="color:#666;">Autor</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </fieldset>
+                @endif
 
                 {{-- == SECCIÓN DOCUMENTOS POR COMPONENTE == --}}
                 @php
@@ -975,93 +1011,6 @@
                     @endif
                 </fieldset>
                 @endif
-
-                {{-- == SECCIÓN CLASIFICACIÓN == --}}
-                <div style="margin-bottom: 15px; border: 1px solid #CCC; border-radius: 4px; padding: 10px;">
-                    <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px;">
-                        <tr>
-                            <td width="20%"><b>L&iacute;nea de Investigaci&oacute;n:</b></td>
-                            <td width="30%">
-                                <div style="display: flex; gap: 4px; align-items: center;">
-                                    <select wire:model="linea_investigacion_id" style="flex:1;">
-                                        <option value="">Seleccione...</option>
-                                        @foreach ($lineas ?? [] as $l)
-                                            <option value="{{ $l->id }}">{{ $l->nombre_investigacion }}</option>
-                                        @endforeach
-                                    </select>
-                                    <button type="button" wire:click="abrirModalLinea" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap; padding: 4px 8px; font-size: 11px;" title="Buscar o crear nueva línea">+</button>
-                                </div>
-                                @error('linea_investigacion_id')
-                                    <br><span class="obligatorio">{{ $message }}</span>
-                                @enderror
-                            </td>
-                            <td width="20%"><b>Metodolog&iacute;a:</b></td>
-                            <td width="30%">
-                                <div style="display: flex; gap: 4px; align-items: center;">
-                                    <select wire:model="metodologia_id" style="flex:1;">
-                                        <option value="">Seleccione...</option>
-                                        @foreach ($metodologias ?? [] as $m)
-                                            <option value="{{ $m->id }}">{{ $m->nombre }}</option>
-                                        @endforeach
-                                    </select>
-                                    <button type="button" wire:click="abrirModalMetodologia" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap; padding: 4px 8px; font-size: 11px;" title="Buscar o crear nueva metodología">+</button>
-                                </div>
-                                @error('metodologia_id')
-                                    <br><span class="obligatorio">{{ $message }}</span>
-                                @enderror
-                            </td>
-                        </tr>
-                        <tr>
-                            <td width="20%"><b>Tipo de Publicaci&oacute;n:</b></td>
-                            <td colspan="3">
-                                <div style="display: flex; gap: 4px; align-items: center;">
-                                    <select wire:model="tipo_publicacion_id" style="flex:1;">
-                                        <option value="">Seleccione...</option>
-                                        @foreach ($tipos_publicacion ?? [] as $tp)
-                                            <option value="{{ $tp->id }}">{{ $tp->nombre }}</option>
-                                        @endforeach
-                                    </select>
-                                    <button type="button" wire:click="abrirModalTipoPublicacion" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap; padding: 4px 8px; font-size: 11px;" title="Buscar o crear nuevo tipo de publicación">+</button>
-                                </div>
-                                @error('tipo_publicacion_id')
-                                    <br><span class="obligatorio">{{ $message }}</span>
-                                @enderror
-                            </td>
-                        </tr>
-                        <tr>
-                            <td width="20%"><b>Tipo de Investigaci&oacute;n:</b></td>
-                            <td width="30%">
-                                <div style="display: flex; gap: 4px; align-items: center;">
-                                    <select wire:model="tipo_investigacion_id" style="flex:1;">
-                                        <option value="">Seleccione...</option>
-                                        @foreach ($tipos_investigacion ?? [] as $ti)
-                                            <option value="{{ $ti->id }}">{{ $ti->nombre }}</option>
-                                        @endforeach
-                                    </select>
-                                    <button type="button" wire:click="abrirModalTipoInvestigacion" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap; padding: 4px 8px; font-size: 11px;" title="Buscar o crear nuevo tipo de investigación">+</button>
-                                </div>
-                                @error('tipo_investigacion_id')
-                                    <br><span class="obligatorio">{{ $message }}</span>
-                                @enderror
-                            </td>
-                            <td width="20%"><b>Objetivo de Investigaci&oacute;n:</b></td>
-                            <td width="30%">
-                                <div style="display: flex; gap: 4px; align-items: center;">
-                                    <select wire:model="objetivo_investigacion_id" style="flex:1;">
-                                        <option value="">Seleccione...</option>
-                                        @foreach ($objetivos_investigacion ?? [] as $oi)
-                                            <option value="{{ $oi->id }}">{{ $oi->nombre }}</option>
-                                        @endforeach
-                                    </select>
-                                    <button type="button" wire:click="abrirModalObjetivo" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap; padding: 4px 8px; font-size: 11px;" title="Buscar o crear nuevo objetivo de investigación">+</button>
-                                </div>
-                                @error('objetivo_investigacion_id')
-                                    <br><span class="obligatorio">{{ $message }}</span>
-                                @enderror
-                            </td>
-                        </tr>
-                    </table>
-                </div>
 
                 {{-- == MODAL LÍNEA DE INVESTIGACIÓN == --}}
                 @if ($mostrarModalLinea)

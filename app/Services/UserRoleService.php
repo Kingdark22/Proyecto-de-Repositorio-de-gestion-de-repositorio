@@ -113,15 +113,19 @@ class UserRoleService
                 $roles['estudiante'] = $this->label('estudiante');
             }
 
-            if (app(IntranetProfessorService::class)->esProfesorProyectoVigente($cedula)) {
-                $roles['profesor proyecto'] = $this->label('profesor proyecto');
+            try {
+                if (app(IntranetProfessorService::class)->esProfesorProyectoVigente($cedula)) {
+                    $roles['profesor proyecto'] = $this->label('profesor proyecto');
 
-                // Auto-habilitar al profesor en el módulo si aplica
-                try {
-                    app(IntranetProfessorService::class)->autoHabilitarProfesorEnModulo($cedula);
-                } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::warning('Auto-habilitar profesor falló: ' . $e->getMessage());
+                    // Auto-habilitar al profesor en el módulo si aplica
+                    try {
+                        app(IntranetProfessorService::class)->autoHabilitarProfesorEnModulo($cedula);
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::warning('Auto-habilitar profesor falló: ' . $e->getMessage());
+                    }
                 }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Error detectando rol profesor proyecto: ' . $e->getMessage());
             }
 
             // Detectar docentes académicos generales con asignación activa en el lapso vigente
@@ -467,8 +471,13 @@ class UserRoleService
         }
 
         if ($active === 'profesor proyecto') {
-            return app(IntranetProfessorService::class)
-                ->esProfesorProyectoVigente(trim((string) $user->usu_cedula));
+            try {
+                return app(IntranetProfessorService::class)
+                    ->esProfesorProyectoVigente(trim((string) $user->usu_cedula));
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Error validando rol profesor proyecto, se mantiene el rol activo: ' . $e->getMessage());
+                return true;
+            }
         }
 
         return true;

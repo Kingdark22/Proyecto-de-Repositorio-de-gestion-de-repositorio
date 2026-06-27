@@ -49,10 +49,11 @@ class ComponenteManager extends Component
         }
     }
 
-    // Vinculación (PNF-centrica para coordinador)
-    public $selectedProgramaId = '';
-    public $vinculacionRows = [];
-    public $trayectosVinculacion = [];
+    // Vinculación (Componente-centrica para coordinador)
+    public $selectedComponenteId = '';
+    public $vinculacionPnfRows = [];
+    public $componentesDisponiblesVinculacion = [];
+    public $trayectosDisponibles = [];
 
     protected function rules()
     {
@@ -76,120 +77,122 @@ class ComponenteManager extends Component
         $this->resetPage();
     }
 
-    // ── Vinculación (Coordinador: PNF → Componentes) ──
+    // ── Vinculación (Coordinador: Componente → PNFs + Trayectos) ──
 
     public function irAVinculacion(): void
     {
         $this->resetValidation();
         $this->resetFields();
-        $this->selectedProgramaId = '';
-        $this->vinculacionRows = [];
-        $this->trayectosVinculacion = [];
+        $this->selectedComponenteId = '';
+        $this->vinculacionPnfRows = [];
+        $this->componentesDisponiblesVinculacion = Componente::where('estado_logico', true)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
+        $this->trayectosDisponibles = [];
         $this->viewMode = 'vinculacion';
     }
 
-    public function updatedSelectedProgramaId(string $value): void
+    public function updatedSelectedComponenteId(string $value): void
     {
-        if ($value !== '') {
-            $this->trayectosVinculacion = app(CatalogoRepository::class)
-                ->trayectosPorPrograma((int) $value)
-                ->toArray();
-        } else {
-            $this->trayectosVinculacion = [];
-        }
+        $this->vinculacionPnfRows = [];
+        $this->trayectosDisponibles = [];
 
-        $this->cargarVinculacionRows();
-    }
+        if ($value === '') return;
 
-    protected function cargarVinculacionRows(): void
-    {
-        $this->vinculacionRows = [];
+        $compCodigo = (int) $value;
+        $catalogoRepo = app(CatalogoRepository::class);
+        $programas = $catalogoRepo->programasDisponibles();
+        $trayectos = $catalogoRepo->trayectosPorPrograma(0);
+        $asignaciones = ComponentePrograma::where('comp_codigo', $compCodigo)->get();
 
-        if ($this->selectedProgramaId === '') return;
+        $this->trayectosDisponibles = $trayectos->toArray();
 
-        $proCodigo = (int) $this->selectedProgramaId;
-
-        $componentes = Componente::where('estado_logico', true)
-            ->orderBy('nombre')
-            ->get();
-
-        $asignaciones = ComponentePrograma::where('pro_codigo', $proCodigo)
-            ->get()
-            ->groupBy('comp_codigo');
-
-        foreach ($componentes as $comp) {
-            $asigs = $asignaciones->get($comp->id, collect());
-
-            $trayectos = [];
-            foreach ($this->trayectosVinculacion as $tra) {
-                $codigo = is_object($tra) ? $tra->tra_codigo : $tra['tra_codigo'];
-                $asig = $asigs->firstWhere('tra_codigo', $codigo);
-                $trayectos[$codigo] = [
+        foreach ($programas as $prog) {
+            $proCodigo = (int) $prog->pro_codigo;
+            $asigsPorPnf = $asignaciones->where('pro_codigo', $proCodigo);
+            $trayectosData = [];
+            foreach ($trayectos as $tra) {
+                $traCodigo = (string) $tra->tra_codigo;
+                $asig = $asigsPorPnf->firstWhere('tra_codigo', $traCodigo);
+                $trayectosData[$traCodigo] = [
                     'selected' => $asig !== null,
                     'cantidad' => $asig ? (int) ($asig->cantidad ?? 1) : 1,
                 ];
             }
-
-            $this->vinculacionRows[$comp->id] = [
-                'comp_codigo' => $comp->id,
-                'nombre' => $comp->nombre,
-                'activo' => $asigs->isNotEmpty(),
-                'trayectos' => $trayectos,
+            $this->vinculacionPnfRows[$proCodigo] = [
+                'pro_codigo' => $proCodigo,
+                'pro_siglas' => $prog->pro_siglas ?? $prog->pro_nombre,
+                'activo' => $asigsPorPnf->isNotEmpty(),
+                'trayectos' => $trayectosData,
             ];
         }
     }
 
-    public function toggleTrayecto(int $compCodigo, string $traCodigo): void
+    public function togglePnfVinculacion(string $proCodigo): void
     {
-        if (!isset($this->vinculacionRows[$compCodigo]['trayectos'][$traCodigo])) return;
-        $this->vinculacionRows[$compCodigo]['trayectos'][$traCodigo]['selected'] =
-            !$this->vinculacionRows[$compCodigo]['trayectos'][$traCodigo]['selected'];
-        $this->vinculacionRows[$compCodigo]['activo'] = collect($this->vinculacionRows[$compCodigo]['trayectos'])
-            ->contains('selected', true);
+        if (!isset($this->vinculacionPnfRows[$proCodigo])) return;
+        $activo = !$this->vinculacionPnfRows[$proCodigo]['activo'];
+        $this->vinculacionPnfRows[$proCodigo]['activo'] = $activo;
+        foreach ($this->vinculacionPnfRows[$proCodigo]['trayectos'] as $traCodigo => $traData) {
+            $this->vinculacionPnfRows[$proCodigo]['trayectos'][$traCodigo]['selected'] = $activo;
+        }
     }
 
-    public function cambiarCantidadTrayecto(int $compCodigo, string $traCodigo, int $cantidad): void
+    public function toggleTrayectoPnf(string $proCodigo, string $traCodigo): void
     {
-        if (isset($this->vinculacionRows[$compCodigo]['trayectos'][$traCodigo])) {
-            $this->vinculacionRows[$compCodigo]['trayectos'][$traCodigo]['cantidad'] = max(1, $cantidad);
+        if (!isset($this->vinculacionPnfRows[$proCodigo]['trayectos'][$traCodigo])) return;
+        $this->vinculacionPnfRows[$proCodigo]['trayectos'][$traCodigo]['selected'] =
+            !$this->vinculacionPnfRows[$proCodigo]['trayectos'][$traCodigo]['selected'];
+        // auto-activar/desactivar el PNF según si hay algún trayecto seleccionado
+        $tieneSeleccion = collect($this->vinculacionPnfRows[$proCodigo]['trayectos'])
+            ->contains('selected', true);
+        $this->vinculacionPnfRows[$proCodigo]['activo'] = $tieneSeleccion;
+    }
+
+    public function cambiarCantidadPnf(string $proCodigo, string $traCodigo, int $cantidad): void
+    {
+        if (isset($this->vinculacionPnfRows[$proCodigo]['trayectos'][$traCodigo])) {
+            $this->vinculacionPnfRows[$proCodigo]['trayectos'][$traCodigo]['cantidad'] = max(1, $cantidad);
         }
     }
 
     public function guardarVinculacion(): void
     {
-        if ($this->selectedProgramaId === '') {
-            $this->safeDispatch('error', 'Debe seleccionar un PNF.');
+        if ($this->selectedComponenteId === '') {
+            $this->safeDispatch('error', 'Debe seleccionar un componente.');
             return;
         }
 
-        $proCodigo = (int) $this->selectedProgramaId;
+        $compCodigo = (int) $this->selectedComponenteId;
 
-        ComponentePrograma::where('pro_codigo', $proCodigo)->delete();
+        // Eliminar todas las asignaciones existentes del componente
+        ComponentePrograma::where('comp_codigo', $compCodigo)->delete();
 
-        foreach ($this->vinculacionRows as $compCodigo => $row) {
+        // Crear las nuevas asignaciones
+        foreach ($this->vinculacionPnfRows as $proCodigo => $row) {
             if (!$row['activo']) continue;
             foreach ($row['trayectos'] ?? [] as $traCodigo => $traData) {
                 if (!($traData['selected'] ?? false)) continue;
                 ComponentePrograma::create([
-                    'comp_codigo' => (int) $compCodigo,
-                    'pro_codigo' => $proCodigo,
+                    'comp_codigo' => $compCodigo,
+                    'pro_codigo' => (int) $proCodigo,
                     'tra_codigo' => $traCodigo,
                     'cantidad' => max(1, (int) ($traData['cantidad'] ?? 1)),
                 ]);
             }
         }
 
-        $this->safeDispatch('success', 'Vinculación PNF → Componentes guardada exitosamente.');
-
+        $this->safeDispatch('success', 'Vinculación del componente guardada exitosamente.');
         $this->viewMode = 'list';
         $this->safeRefreshIcons();
     }
 
     public function cancelarVinculacion(): void
     {
-        $this->selectedProgramaId = '';
-        $this->vinculacionRows = [];
-        $this->trayectosVinculacion = [];
+        $this->selectedComponenteId = '';
+        $this->vinculacionPnfRows = [];
+        $this->componentesDisponiblesVinculacion = [];
+        $this->trayectosDisponibles = [];
         $this->viewMode = 'list';
     }
 

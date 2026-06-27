@@ -9,6 +9,7 @@ use App\Services\GrupoProyectoService;
 use App\Services\UnicidadNombreService;
 use App\Services\ValidacionCorreoService;
 use App\Services\ValidacionRifService;
+use App\Repositories\ProyectoRepository;
 use App\Services\IntranetEquipoSeccionService;
 use App\Services\IntranetProfessorService;
 use App\Services\UserRoleService;
@@ -36,6 +37,33 @@ class GrupoProyectoManager extends Component
     public string $filterSeccion = '';
 
     public string $filterEquipo = '';
+
+    public ?int $selectedGroupId = null;
+
+    public function getSelectedGroupProperty()
+    {
+        if ($this->selectedGroupId === null) {
+            return null;
+        }
+        $grupo = app(GrupoProyectoService::class)->obtener($this->selectedGroupId);
+        $proyecto = null;
+        if ($grupo) {
+            try {
+                $proyecto = app(ProyectoRepository::class)->findFirstByEquipoRef($grupo->clave);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Error cargando proyecto: '.$e->getMessage());
+            }
+        }
+        return (object) [
+            'grupo' => $grupo,
+            'proyecto' => $proyecto,
+        ];
+    }
+
+    public function cerrarInfoGrupo(): void
+    {
+        $this->selectedGroupId = null;
+    }
 
     public Collection $lapsos;
 
@@ -228,6 +256,13 @@ class GrupoProyectoManager extends Component
     public function estudiantesFiltrados(): \Illuminate\Support\Collection
     {
         $candidatos = $this->candidatosActuales();
+
+        // Excluir estudiantes que ya están seleccionados como miembros del grupo
+        $cedulasSeleccionadas = collect($this->miembrosSeleccionados)->pluck('cedula')->filter()->toArray();
+        if ($cedulasSeleccionadas !== []) {
+            $candidatos = $candidatos->reject(fn($c) => in_array($c->cedula, $cedulasSeleccionadas, true));
+        }
+
         $q = trim($this->buscarEstudiante);
 
         if ($q === '') {
@@ -389,7 +424,7 @@ class GrupoProyectoManager extends Component
         if ($est) {
             $this->selectedCedula = $cedula;
             $this->estudianteSeleccionadoLabel = trim($est->apellido . ', ' . $est->nombre) . ' (' . $est->cedula . ')';
-            $this->buscarEstudiante = $this->estudianteSeleccionadoLabel;
+            $this->buscarEstudiante = ''; // Limpiar la barra de búsqueda para no dejar info del seleccionado
         }
         $this->mostrarDropdownEstudiantes = false;
     }
@@ -440,6 +475,9 @@ class GrupoProyectoManager extends Component
             'rol_name' => $rolId === 1 ? 'Autor-Líder' : 'Autor',
         ];
         $this->selectedCedula = '';
+        $this->buscarEstudiante = '';
+        $this->estudianteSeleccionadoLabel = '';
+        $this->mostrarDropdownEstudiantes = false;
     }
 
     protected function estudianteEnOtroGrupo(string $cedula): bool
@@ -699,6 +737,7 @@ class GrupoProyectoManager extends Component
         $this->filterPrograma = '';
         $this->filterSeccion = '';
         $this->loadProgramas();
+        $this->loadSecciones();
         unset($this->estudiantesFiltrados);
     }
 
@@ -717,14 +756,47 @@ class GrupoProyectoManager extends Component
     protected function loadProgramas(): void
     {
         $lapCodigo = $this->filterLapso !== '' ? (int) $this->filterLapso : null;
-        $this->programas = app(IntranetEquipoSeccionService::class)->programasEnLapso($lapCodigo);
+        $user = auth()->user();
+        $activeRole = app(UserRoleService::class)->getActiveRole($user);
+
+        if ($activeRole === 'profesor proyecto' && $lapCodigo) {
+            $proCodigos = app(IntranetProfessorService::class)->programasDelDocente(
+                trim((string) $user->usu_cedula),
+                $lapCodigo,
+            );
+            if ($proCodigos === []) {
+                $this->programas = collect();
+            } else {
+                $this->programas = app(IntranetEquipoSeccionService::class)->programasEnLapso($lapCodigo)
+                    ->whereIn('pro_codigo', $proCodigos)
+                    ->values();
+            }
+        } else {
+            $this->programas = app(IntranetEquipoSeccionService::class)->programasEnLapso($lapCodigo);
+        }
     }
 
     protected function loadSecciones(): void
     {
         $lapCodigo = $this->filterLapso !== '' ? (int) $this->filterLapso : null;
         $programaCodigo = $this->filterPrograma !== '' ? (int) $this->filterPrograma : null;
-        $this->secciones = app(IntranetEquipoSeccionService::class)->seccionesEnLapso($lapCodigo, $programaCodigo);
+        $user = auth()->user();
+        $activeRole = app(UserRoleService::class)->getActiveRole($user);
+
+        if ($activeRole === 'profesor proyecto' && $lapCodigo) {
+            $secCodigos = app(IntranetProfessorService::class)->seccionesDelDocente(
+                trim((string) $user->usu_cedula),
+                $lapCodigo,
+            );
+            if ($secCodigos === []) {
+                $this->secciones = collect();
+            } else {
+                $seccionesBase = app(IntranetEquipoSeccionService::class)->seccionesEnLapso($lapCodigo, $programaCodigo);
+                $this->secciones = $seccionesBase->whereIn('sec_codigo', $secCodigos)->values();
+            }
+        } else {
+            $this->secciones = app(IntranetEquipoSeccionService::class)->seccionesEnLapso($lapCodigo, $programaCodigo);
+        }
     }
 
     protected function candidatosActuales()
@@ -794,6 +866,19 @@ class GrupoProyectoManager extends Component
             }
         }
 
+        // Obtener proyectos asociados a los grupos
+        $proyectoPorClave = collect();
+        if ($lista->isNotEmpty()) {
+            try {
+                $claves = $lista->pluck('clave')->filter()->toArray();
+                if ($claves !== []) {
+                    $proyectoPorClave = app(ProyectoRepository::class)->findByEquipos($claves)->keyBy('equipo_ref');
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Error cargando proyectos de grupos: ' . $e->getMessage());
+            }
+        }
+
         $perPage = 10;
         $page = $this->getPage();
         $items = $lista->slice(($page - 1) * $perPage, $perPage)->values();
@@ -808,6 +893,7 @@ class GrupoProyectoManager extends Component
             'comunidades' => $this->comunidades,
             'tablaLista' => $tablaOk,
             'isProfessor' => $activeRole === 'profesor proyecto',
+            'proyectoPorClave' => $proyectoPorClave,
         ];
     }
 

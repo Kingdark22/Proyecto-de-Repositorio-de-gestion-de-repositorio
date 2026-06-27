@@ -35,7 +35,6 @@
                 </div>
 
                 <p><b>Resumen:</b> {{ $proyecto->resumen ?? '(sin resumen)' }}</p>
-                <p><b>Fecha de aprobaci&oacute;n:</b> {{ $proyecto->fecha_aprobacion ? $proyecto->fecha_aprobacion->format('d/m/Y') : '-' }}</p>
                 @if($proyecto->comunidad)
                     <p><b>Comunidad:</b> {{ $proyecto->comunidad->nombre }}</p>
                 @endif
@@ -124,10 +123,9 @@
                         <thead>
                         <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
                             <th width="4%">N&deg;</th>
-                            <th width="30%">T&iacute;tulo / Equipo</th>
+                            <th width="33%">T&iacute;tulo / Equipo</th>
                             <th width="20%">Resumen</th>
-                            <th width="12%">Comunidad</th>
-                            <th width="8%">Fecha</th>
+                            <th width="17%">Comunidad</th>
                             <th width="26%">Acci&oacute;n</th>
                         </tr>
                     </thead>
@@ -138,7 +136,6 @@
                                 <td style="font-weight:bold;">{{ $proy->titulo ?? 'N/A' }}</td>
                                 <td style="font-size:10px;">{{ \Illuminate\Support\Str::limit($proy->resumen ?? '', 60) }}</td>
                                 <td>{{ $proy->comunidad->nombre ?? '-' }}</td>
-                                <td align="center">{{ $proy->fecha_aprobacion ? $proy->fecha_aprobacion->format('d/m/Y') : '-' }}</td>
                                 <td align="center">
                                     <button type="button" wire:click.prevent="seleccionar({{ $proy->id }})"
                                         class="cm-btn cm-btn-secondary cm-btn-sm">Ver detalle</button>

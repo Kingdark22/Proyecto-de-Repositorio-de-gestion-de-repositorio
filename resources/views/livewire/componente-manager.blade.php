@@ -174,22 +174,22 @@
     @elseif ($viewMode === 'vinculacion')
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">
-                Vinculaci&oacute;n PNF &rarr; Componentes
+                Vinculaci&oacute;n Componente &rarr; PNF + Trayectos
             </legend>
 
             <div style="margin-bottom: 15px;">
-                <label style="font-weight: bold; margin-right: 10px;">Seleccione el PNF:</label>
-                <select wire:model.live="selectedProgramaId" style="width: 400px; padding: 6px; font-size: 13px;">
-                    <option value="">- Seleccione un PNF -</option>
-                    @foreach($programasDisponibles ?? [] as $prog)
-                        <option value="{{ $prog->pro_codigo }}">{{ $prog->pro_siglas ?? $prog->pro_nombre }}</option>
+                <label style="font-weight: bold; margin-right: 10px;">Seleccione el Componente:</label>
+                <select wire:model.live="selectedComponenteId" style="width: 500px; padding: 6px; font-size: 13px;">
+                    <option value="">- Seleccione un componente -</option>
+                    @foreach($componentesDisponiblesVinculacion ?? [] as $comp)
+                        <option value="{{ $comp->id }}">{{ $comp->nombre }}</option>
                     @endforeach
                 </select>
             </div>
 
-            @if($selectedProgramaId !== '' && !empty($vinculacionRows))
+            @if($selectedComponenteId !== '' && !empty($vinculacionPnfRows))
                 <div style="font-size:12px;color:#666;margin-bottom:10px;">
-                    Marque los trayectos que aplican para cada componente y ajuste la cantidad si es necesario.
+                    Seleccione los PNF a los que pertenece el componente y marque los trayectos correspondientes.
                 </div>
 
                 <table width="100%" border="1" cellpadding="6" cellspacing="0"
@@ -197,20 +197,23 @@
                     <thead>
                         <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
                             <th width="5%">N&deg;</th>
-                            <th width="20%">Componente</th>
+                            <th width="15%">PNF</th>
                             <th width="5%">Activo</th>
-                            <th width="55%">Trayectos asignados</th>
+                            <th width="60%">Trayectos asignados</th>
                             <th width="15%"></th>
                         </tr>
                     </thead>
                     <tbody class="Texto">
-                        @foreach($vinculacionRows as $compCodigo => $row)
+                        @foreach($vinculacionPnfRows as $proCodigo => $row)
                             <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }};"
                                 valign="top">
                                 <td align="center">{{ $loop->iteration }}</td>
-                                <td style="font-weight: bold; padding: 8px;">{{ $row['nombre'] }}</td>
+                                <td style="font-weight: bold; padding: 8px;">{{ $row['pro_siglas'] ?? 'PNF #'.$proCodigo }}</td>
                                 <td align="center">
-                                    <input type="checkbox" wire:model="vinculacionRows.{{ $compCodigo }}.activo" style="width:18px;height:18px;cursor:pointer;">
+                                    <input type="checkbox"
+                                        wire:click="togglePnfVinculacion('{{ $proCodigo }}')"
+                                        {{ $row['activo'] ? 'checked' : '' }}
+                                        style="width:18px;height:18px;cursor:pointer;">
                                 </td>
                                 <td style="padding: 6px;">
                                     @if($row['activo'])
@@ -218,16 +221,16 @@
                                             @foreach($row['trayectos'] ?? [] as $traCodigo => $traData)
                                                 <label style="display:flex;align-items:center;gap:4px;background:#f8f8f8;border:1px solid #ddd;border-radius:5px;padding:4px 8px;cursor:pointer;font-size:11px;{{ $traData['selected'] ? 'background:#e8f5e9;border-color:#198754;' : '' }}">
                                                     <input type="checkbox"
-                                                        wire:click="toggleTrayecto({{ $compCodigo }}, '{{ $traCodigo }}')"
+                                                        wire:click="toggleTrayectoPnf('{{ $proCodigo }}', '{{ $traCodigo }}')"
                                                         {{ $traData['selected'] ? 'checked' : '' }}
                                                         style="cursor:pointer;">
                                                     <span style="font-weight:{{ $traData['selected'] ? 'bold' : 'normal' }};">
-                                                        {{ collect($trayectosVinculacion ?? [])->firstWhere('tra_codigo', $traCodigo)?->tra_nombre ?? $traCodigo }}
+                                                        {{ collect($trayectosDisponibles ?? [])->firstWhere('tra_codigo', $traCodigo)?->tra_nombre ?? $traCodigo }}
                                                     </span>
                                                     @if($traData['selected'])
                                                         <span style="font-size:10px;color:#555;">Cantidad:</span>
                                                         <input type="number" min="1" max="200"
-                                                            wire:change="cambiarCantidadTrayecto({{ $compCodigo }}, '{{ $traCodigo }}', $event.target.value)"
+                                                            wire:change="cambiarCantidadPnf('{{ $proCodigo }}', '{{ $traCodigo }}', $event.target.value)"
                                                             value="{{ $traData['cantidad'] }}"
                                                             style="width:45px;padding:2px;text-align:center;font-size:11px;border:1px solid #ccc;border-radius:3px;">
                                                     @endif
@@ -252,9 +255,9 @@
                         Cancelar
                     </button>
                 </div>
-            @elseif($selectedProgramaId !== '' && empty($vinculacionRows))
+            @elseif($selectedComponenteId !== '' && empty($vinculacionPnfRows))
                 <div style="text-align:center;padding:20px;font-weight:bold;color:#999;">
-                    No hay componentes activos disponibles.
+                    No hay PNF disponibles para vincular.
                 </div>
             @endif
         </fieldset>

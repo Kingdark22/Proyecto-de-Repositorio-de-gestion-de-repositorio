@@ -34,35 +34,14 @@ class NotificacionService
             $query = Proyecto::whereIn('estado_validacion', ['pendiente', 'completado']);
 
             if ($isTeacher) {
-                $clavesDocente = app(ProyectoGestionService::class)->clavesEquipoFiltroValidacion($user);
-                if ($clavesDocente !== null && $clavesDocente !== []) {
-                    // Separar claves EQSEC y buscar EQGRP relacionados via contexto JSONB (solo una consulta)
-                    $clavesEqsec = array_filter($clavesDocente, fn($c) => str_starts_with($c, \App\Services\IntranetEquipoSeccionService::PREFIJO_REF . ':'));
+                $cedula = trim($user->usu_cedula);
+                $gruposCreados = app(GrupoProyectoService::class)->listar(['creador' => $cedula]);
+                $clavesCreador = $gruposCreados->pluck('clave')->filter()->values()->toArray();
 
-                    $gruposProfesor = [];
-                    if ($clavesEqsec !== []) {
-                        $equipoService = app(\App\Services\IntranetEquipoSeccionService::class);
-                        $gruposProfesor = GrupoProyectoModulo::where(function ($q) use ($clavesEqsec, $equipoService) {
-                            foreach ($clavesEqsec as $clave) {
-                                $partes = $equipoService->parsearClave($clave);
-                                if ($partes) {
-                                    $q->orWhereRaw(
-                                        "CAST(grp_contexto AS jsonb)->>'lap_codigo' = ? AND CAST(grp_contexto AS jsonb)->>'sec_codigo' = ?",
-                                        [(string) $partes['lap_codigo'], (string) $partes['sec_codigo']]
-                                    );
-                                }
-                            }
-                        })->pluck('grp_codigo')
-                            ->map(fn($id) => \App\Services\GrupoProyectoService::PREFIJO . ':' . $id)
-                            ->toArray();
-                    }
-
-                    $query->where(function ($q) use ($clavesDocente, $gruposProfesor) {
-                        $q->whereIn('pry_direccion_logica', $clavesDocente);
-                        if ($gruposProfesor) {
-                            $q->orWhereIn('pry_direccion_logica', $gruposProfesor);
-                        }
-                    });
+                if ($clavesCreador !== []) {
+                    $query->whereIn('pry_direccion_logica', $clavesCreador);
+                } else {
+                    return [];
                 }
             }
 

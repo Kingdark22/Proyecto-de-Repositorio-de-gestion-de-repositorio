@@ -11,9 +11,6 @@ class Proyecto extends RepositorioModel
     protected $fillable = [
         // titulo es accessor - no se persiste en BD
         'resumen',
-        'fecha_subida',
-        'calificacion',
-        'fecha_aprobacion',
         'linea_investigacion_id',
         'metodologia_id',
         'tipo_publicacion_id',
@@ -61,13 +58,7 @@ class Proyecto extends RepositorioModel
     }
 
     protected $casts = [
-        'fecha_subida' => 'date',
-        'fecha_aprobacion' => 'date',
-        'pry_fecha_subida' => 'date',
-        'pry_fecha_aprobacion' => 'date',
         'estado_logico' => 'boolean',
-
-        'calificacion' => 'integer',
         'actualizado_por_estudiante' => 'boolean',
         'fecha_actualizacion_estudiante' => 'datetime',
     ];
