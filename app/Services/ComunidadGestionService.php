@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Comunidad;
 use App\Models\Direccion;
 use App\Repositories\ComunidadRepository;
+use Illuminate\Support\Facades\DB;
 
 class ComunidadGestionService
 {
@@ -85,7 +86,9 @@ class ComunidadGestionService
      */
     public function eliminar(int $id): void
     {
-        $this->comunidadRepo->delete($id);
+        $conn = config('dual_database.repositorio_connection', 'pgsql');
+        DB::connection($conn)->table('proyectos')->where('com_codigo', $id)->update(['com_codigo' => null]);
+        DB::connection($conn)->table('vinculaciones')->where('comunidad_id', $id)->update(['comunidad_id' => null]);
     }
 
     /**

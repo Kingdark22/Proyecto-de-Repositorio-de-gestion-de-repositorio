@@ -85,9 +85,9 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => 'prefer',
-            'connect_timeout' => '2',
+            'connect_timeout' => '1',
             'options' => [
-                PDO::ATTR_TIMEOUT => 2,
+                PDO::ATTR_TIMEOUT => 1,
             ],
         ],
 

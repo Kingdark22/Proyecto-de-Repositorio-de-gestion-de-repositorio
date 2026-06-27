@@ -17,9 +17,6 @@ use App\Livewire\Concerns\WithSafeNotify;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
-use Livewire\Attributes\Lazy;
-
-#[Lazy]
 class ProyectoManager extends Component
 {
     use WithFileUploads;
@@ -1453,7 +1450,16 @@ class ProyectoManager extends Component
                 'comunidad' => $this->filterComunidadList,
                 'lapso' => $this->filterGruposLapso,
             ], $page, $user),
-            $this->viewMode === 'list' && ($this->esProfesor || $esEstudianteLider) => ['comunidades' => $gestion->comunidadesOrdenadas()],
+            $this->viewMode === 'list' && $this->esProfesor => array_merge(
+                ['comunidades' => $gestion->comunidadesOrdenadas()],
+                $gestion->datosVistaListado([
+                    'search' => $this->search,
+                    'estado' => $this->filterEstadoList,
+                    'comunidad' => $this->filterComunidadList,
+                    'lapso' => $this->filterGruposLapso,
+                ], $page, $user)
+            ),
+            $this->viewMode === 'list' && $esEstudianteLider => ['comunidades' => $gestion->comunidadesOrdenadas()],
             $this->viewMode === 'form' => $gestion->datosVistaFormulario($estado),
             default => ['comunidades' => $gestion->comunidadesOrdenadas()],
         };

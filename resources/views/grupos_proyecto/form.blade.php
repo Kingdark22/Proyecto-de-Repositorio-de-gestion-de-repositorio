@@ -277,7 +277,7 @@
                         <select id="comRifLetra" style="width:60px;height:36px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
                             <option value="J">J</option>
                             <option value="V">V</option>
-                            <option value="E">E</option>
+                            <option value="C">C</option>
                             <option value="G">G</option>
                             <option value="P">P</option>
                         </select>

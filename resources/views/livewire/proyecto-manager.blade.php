@@ -176,7 +176,7 @@
                                     <span style="font-size: 10px;">{{ $p->comunidad->nombre ?? 'N/A' }}</span>
                                 </td>
                                 <td align="center" style="padding: 5px;">
-                                    @if ($p->estado_validacion === 'En proceso')
+                                    @if ($p->estado_validacion === 'pendiente')
                                         <span style="color: #d4a017; font-weight: bold;">En proceso</span>
                                     @elseif($p->estado_validacion === 'completado')
                                         <span style="color: #2e7d32; font-weight: bold;">Completado</span>
@@ -203,7 +203,7 @@
             </fieldset>
             @endif
 
-            @if(!$esProfesor && !$esEstudianteLider)
+            @if(!$esEstudianteLider)
             <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
                 <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Listado de proyectos
                     institucionales</legend>
@@ -215,7 +215,7 @@
                         <td width="33%"><b>Estado:</b><br>
                             <select wire:model.live="filterEstadoList" style="width: 95%;">
                                 <option value="">- Todos -</option>
-                                <option value="En proceso">En proceso</option>
+                                <option value="pendiente">En proceso</option>
                                 <option value="completado">Completado</option>
                                 <option value="aprobado">Aprobado</option>
                                 <option value="rechazado">Rechazado</option>
@@ -236,9 +236,8 @@
                     <thead>
                         <tr style="background-color: #8bb2b7; color: #000; text-align: center; font-weight: bold;">
                             <th width="25%">Título del proyecto</th>
-                            <th width="20%">Comunidad / equipo</th>
-                            <th width="15%">Validación</th>
-                            <th width="10%">Estado</th>
+                            <th width="25%">Comunidad / equipo</th>
+                            <th width="20%">Validación</th>
                             <th width="30%">Acciones</th>
                         </tr>
                     </thead>
@@ -270,7 +269,7 @@
                                     @endif
                                 </td>
                                 <td align="center" style="padding: 5px;">
-                                    @if ($p->estado_validacion === 'En proceso')
+                                    @if ($p->estado_validacion === 'pendiente')
                                         <span style="color: #d4a017; font-weight: bold;">En proceso</span>
                                     @elseif($p->estado_validacion === 'completado')
                                         <span style="color: #2e7d32; font-weight: bold;">Completado</span>
@@ -282,15 +281,8 @@
                                     @endif
                                 </td>
                                 <td align="center" style="padding: 5px;">
-                                    @if ($p->estado_logico)
-                                        <span style="color: #008000; font-weight: bold;">Activo</span>
-                                    @else
-                                        <span style="color: #FF0000; font-weight: bold;">Inactivo</span>
-                                    @endif
-                                </td>
-                                <td align="center" style="padding: 5px;">
                                     <div class="pgm-actions">
-                                        @if (!empty($canValidate) && in_array($p->estado_validacion, ['En proceso', 'completado']))
+                                        @if (!empty($canValidate) && in_array($p->estado_validacion, ['pendiente', 'completado']))
                                             <button type="button" wire:click="approve({{ $p->id }})"
                                                 onclick="return confirm('¿Aprueba este proyecto?')"
                                                 class="pgm-btn-action pgm-btn-action--approve">
@@ -305,11 +297,15 @@
                                                 Ficha
                                             </button>
                                         @endif
-                                        @if (in_array($p->id, $proyectosLiderIds))
-                                            <button type="button" wire:click="edit({{ $p->id }})"
-                                                class="pgm-btn-action pgm-btn-action--edit">
-                                                Actualizar
-                                            </button>
+                                        <button type="button" wire:click="edit({{ $p->id }})"
+                                            class="pgm-btn-action pgm-btn-action--edit">
+                                            Actualizar
+                                        </button>
+                                        @if ($p->estado_validacion === 'aprobado')
+                                            <a href="{{ route('proyectos.gestion.solvencia', $p->id) }}"
+                                                class="pgm-btn-action pgm-btn-action--approve">
+                                                Solvencia
+                                            </a>
                                         @endif
                                     </div>
                                 </td>
@@ -317,7 +313,7 @@
                         @endforeach
                         @if ($proyectos->isEmpty())
                             <tr>
-                                <td colspan="5" align="center" style="padding: 20px; font-weight: bold;">No hay
+                                <td colspan="4" align="center" style="padding: 20px; font-weight: bold;">No hay
                                     expedientes registrados</td>
                             </tr>
                         @endif
