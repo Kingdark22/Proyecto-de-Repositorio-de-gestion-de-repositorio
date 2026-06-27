@@ -11,6 +11,8 @@
         transition: background-color 0.2s ease, transform 0.2s ease;
         text-decoration: none;
     }
+    .cm-btn { color: #fff; }
+    td a.cm-btn:visited { color: #fff; }
     .cm-btn:hover { transform: translateY(-1px); }
     .cm-btn-success { background: #198754; border-color: #166f43; color: #fff; }
     .cm-btn-danger { background: #c82333; border-color: #a71d2a; color: #fff; }
@@ -72,6 +74,9 @@
                             <td align="center" style="padding:5px;">
                                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($g->tiene_proyecto): ?>
                                     <a href="<?php echo e(route('proyectos.gestion.edit', $g->proyecto_id)); ?>" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(($g->proyecto_estado_validacion ?? '') === 'aprobado'): ?>
+                                        <a href="<?php echo e(route('proyectos.gestion.solvencia', $g->proyecto_id)); ?>" class="cm-btn cm-btn-primary cm-btn-sm">Solvencia</a>
+                                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                                 <?php else: ?>
                                     <a href="<?php echo e(route('proyectos.gestion.desde-grupo', $g->grp_codigo)); ?>" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
                                 <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
@@ -119,6 +124,9 @@
                                 </td>
                                 <td align="center" style="padding:5px;">
                                     <a href="<?php echo e(route('proyectos.gestion.edit', $p->id)); ?>" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($p->estado_validacion === 'aprobado'): ?>
+                                        <a href="<?php echo e(route('proyectos.gestion.solvencia', $p->id)); ?>" class="cm-btn cm-btn-primary cm-btn-sm">Solvencia</a>
+                                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                                 </td>
                             </tr>
                         <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
@@ -141,13 +149,13 @@
                             <input name="search" type="text" value="<?php echo e($search); ?>" class="filter-input" style="width:95%;" placeholder="Buscar...">
                         </td>
                         <td width="33%"><b>Estado:</b><br>
-                            <select name="estado" class="filter-select" style="width:95%;" onchange="this.form.submit()">
-                                <option value="">- Todos -</option>
-                                <option value="En proceso" <?php echo e($filterEstado == 'En proceso' ? 'selected' : ''); ?>>En proceso</option>
-                                <option value="completado" <?php echo e($filterEstado == 'completado' ? 'selected' : ''); ?>>Completado</option>
-                                <option value="aprobado" <?php echo e($filterEstado == 'aprobado' ? 'selected' : ''); ?>>Aprobado</option>
-                                <option value="rechazado" <?php echo e($filterEstado == 'rechazado' ? 'selected' : ''); ?>>Rechazado</option>
-                            </select>
+                                <select name="estado" class="filter-select" style="width:95%;" onchange="this.form.submit()">
+                                    <option value="">- Todos -</option>
+                                    <option value="pendiente" <?php echo e($filterEstado == 'pendiente' ? 'selected' : ''); ?>>En proceso</option>
+                                    <option value="completado" <?php echo e($filterEstado == 'completado' ? 'selected' : ''); ?>>Completado</option>
+                                    <option value="aprobado" <?php echo e($filterEstado == 'aprobado' ? 'selected' : ''); ?>>Aprobado</option>
+                                    <option value="rechazado" <?php echo e($filterEstado == 'rechazado' ? 'selected' : ''); ?>>Rechazado</option>
+                                </select>
                         </td>
                         <td width="34%"><b>Comunidad:</b><br>
                             <select name="comunidad" class="filter-select" style="width:95%;" onchange="this.form.submit()">
@@ -170,13 +178,12 @@
                         <th width="25%">Título</th>
                         <th width="20%">Comunidad / equipo</th>
                         <th width="15%">Validación</th>
-                        <th width="10%">Estado</th>
-                        <th width="30%">Acciones</th>
+                        <th width="35%">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $proyectos; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $p): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
-                        <tr style="background: <?php echo e($loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFF'); ?>; <?php echo e(!$p->estado_logico ? 'color: #888;' : 'color: #000;'); ?>" valign="top">
+                        <tr style="background: <?php echo e($loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFF'); ?>; color: #000;" valign="top">
                             <td style="padding:5px;font-weight:bold;">
                                 <?php echo e($p->titulo); ?>
 
@@ -187,7 +194,7 @@
 
                             </td>
                             <td align="center" style="padding:5px;">
-                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($p->estado_validacion === 'En proceso'): ?>
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($p->estado_validacion === 'pendiente'): ?>
                                     <span style="color:#d4a017;font-weight:bold;">En proceso</span>
                                 <?php elseif($p->estado_validacion === 'completado'): ?>
                                     <span style="color:#2e7d32;font-weight:bold;">Completado</span>
@@ -197,33 +204,22 @@
                                     <span style="color:#008000;font-weight:bold;">Aprobado</span>
                                 <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                             </td>
-                            <td align="center">
-                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($p->estado_logico): ?>
-                                    <span style="color:#008000;font-weight:bold;">Activo</span>
-                                <?php else: ?>
-                                    <span style="color:#FF0000;font-weight:bold;">Inactivo</span>
-                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-                            </td>
                             <td align="center" style="padding:5px;">
                                 <div style="display:inline-flex;gap:4px;flex-wrap:wrap;justify-content:center;">
-                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($canValidate) && in_array($p->estado_validacion, ['En proceso', 'completado'])): ?>
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($canValidate) && $p->estado_validacion === 'completado'): ?>
                                         <a href="<?php echo e(route('proyectos.gestion.approve', $p->id)); ?>" class="cm-btn cm-btn-success cm-btn-sm" onclick="return confirm('¿Aprueba este proyecto?')">Aprobar</a>
                                         <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" onclick="abrirRechazar(<?php echo e($p->id); ?>)">Rechazar</button>
                                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(in_array($p->id, $proyectosLiderIds ?? [])): ?>
-                                        <a href="<?php echo e(route('proyectos.gestion.edit', $p->id)); ?>" class="cm-btn cm-btn-primary cm-btn-sm">Actualizar</a>
+                                    <a href="<?php echo e(route('proyectos.gestion.edit', $p->id)); ?>" class="cm-btn cm-btn-primary cm-btn-sm">Actualizar</a>
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($p->estado_validacion === 'aprobado'): ?>
+                                        <a href="<?php echo e(route('proyectos.gestion.solvencia', $p->id)); ?>" class="cm-btn cm-btn-primary cm-btn-sm">Solvencia</a>
                                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-                                    <a href="<?php echo e(route('proyectos.gestion.toggle', $p->id)); ?>" class="cm-btn cm-btn-warning cm-btn-sm" onclick="return confirm('¿Cambiar estado?')"><?php echo e($p->estado_logico ? 'Suspender' : 'Activar'); ?></a>
-                                    <form method="POST" action="<?php echo e(route('proyectos.gestion.destroy', $p->id)); ?>" style="display:inline;" onsubmit="return confirm('¿Eliminar proyecto?')">
-                                        <?php echo csrf_field(); ?> <?php echo method_field('DELETE'); ?>
-                                        <button type="submit" class="cm-btn cm-btn-danger cm-btn-sm">Eliminar</button>
-                                    </form>
                                 </div>
                             </td>
                         </tr>
                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($proyectos->isEmpty()): ?>
-                        <tr><td colspan="5" align="center" style="padding:20px;font-weight:bold;">No hay expedientes registrados</td></tr>
+                        <tr><td colspan="4" align="center" style="padding:20px;font-weight:bold;">No hay expedientes registrados</td></tr>
                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                 </tbody>
             </table>

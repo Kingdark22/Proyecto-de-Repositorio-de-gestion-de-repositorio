@@ -18,11 +18,11 @@ class DbHelper
 
     protected static ?int $intranetPort = null;
 
-    protected const CACHE_TTL = 60;
+    protected const CACHE_TTL = 300;
 
     protected const CACHE_KEY = 'dbhelper_intranet_available';
 
-    protected const INTENTA_CACHE_TTL = 120; // segundos sin reintentar intranet tras un fallo
+    protected const INTENTA_CACHE_TTL = 600; // segundos sin reintentar intranet tras un fallo
 
     /**
      * Retorna el nombre de la conexión activa. Si la intranet está caída, retorna 'simulacion' como fallback.
@@ -82,7 +82,7 @@ class DbHelper
             self::$usingIntranet = true;
             Cache::put(self::CACHE_KEY, 'intranet', now()->addSeconds(self::CACHE_TTL));
             try {
-                $pdo->exec('SET statement_timeout = 1000');
+                $pdo->exec('SET statement_timeout = 500');
             } catch (\Exception $e) {
                 Log::warning('No se pudo ajustar statement_timeout (no crítico): ' . $e->getMessage());
             }

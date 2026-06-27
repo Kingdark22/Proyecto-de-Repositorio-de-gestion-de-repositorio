@@ -15,8 +15,13 @@ Route::get('/', function () {
 });
 
 Route::view('/repositorio', 'repositorio')->name('repositorio');
+Route::view('/publicaciones/publico', 'repositorio')->name('publicaciones.publico');
 
 Route::get('/magic-login', [MagicLoginController::class, 'login'])->name('magic-login');
+Route::middleware('auth')->group(function () {
+    Route::get('/magic-login/seleccionar-rol', [MagicLoginController::class, 'seleccionarRol'])->name('magic-login.seleccionar-rol');
+    Route::post('/magic-login/seleccionar-rol', [MagicLoginController::class, 'aplicarRol'])->name('magic-login.aplicar-rol');
+});
 
 Route::get('/login', function (\Illuminate\Http\Request $request) {
     if ($request->has('payload')) {
@@ -85,33 +90,31 @@ Route::middleware(['auth', 'active.role'])->group(function () {
         });
     });
 
-    Route::middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador,docente')->controller(\App\Http\Controllers\ProyectoController::class)->group(function () {
-        Route::get('/proyectos/gestion', 'index')->name('proyectos.gestion');
-        Route::get('/proyectos/gestion/{id}/editar', 'edit')->name('proyectos.gestion.edit');
-        Route::put('/proyectos/gestion/{id}', 'update')->name('proyectos.gestion.update');
-        Route::get('/proyectos/gestion/{id}/toggle', 'toggleStatus')->name('proyectos.gestion.toggle');
-        Route::get('/proyectos/gestion/{id}/aprobar', 'approve')->name('proyectos.gestion.approve');
-        Route::post('/proyectos/gestion/{id}/rechazar', 'reject')->name('proyectos.gestion.reject');
-        Route::get('/proyectos/gestion/{id}/solvencia', 'solvencia')->name('proyectos.gestion.solvencia');
-        Route::delete('/proyectos/gestion/{id}', 'destroy')->name('proyectos.gestion.destroy');
-        Route::get('/proyectos/gestion/desde-grupo/{grpCodigo}', 'registrarDesdeGrupo')->name('proyectos.gestion.desde-grupo');
+    Route::middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador,docente')->group(function () {
+        Route::get('/proyectos/gestion/{id}/edit', [\App\Http\Controllers\ProyectoController::class, 'edit'])->name('proyectos.gestion.edit');
+        Route::put('/proyectos/gestion/{id}', [\App\Http\Controllers\ProyectoController::class, 'update'])->name('proyectos.gestion.update');
+        Route::get('/proyectos/gestion', [\App\Http\Controllers\ProyectoController::class, 'index'])->name('proyectos.gestion');
+        Route::get('/proyectos/gestion/{id}/aprobar', [\App\Http\Controllers\ProyectoController::class, 'approve'])->name('proyectos.gestion.approve');
+        Route::post('/proyectos/gestion/{id}/rechazar', [\App\Http\Controllers\ProyectoController::class, 'reject'])->name('proyectos.gestion.reject');
+        Route::get('/proyectos/gestion/{id}/solvencia', [\App\Http\Controllers\ProyectoController::class, 'solvencia'])->name('proyectos.gestion.solvencia');
+        Route::get('/proyectos/gestion/desde-grupo/{grpCodigo}', [\App\Http\Controllers\ProyectoController::class, 'registrarDesdeGrupo'])->name('proyectos.gestion.desde-grupo');
         // Involucrados AJAX
-        Route::get('/proyectos/gestion/{id}/involucrados/buscar', 'buscarInvolucrados')->name('proyectos.gestion.involucrados.buscar');
-        Route::get('/proyectos/gestion/involucrados/buscar-persona', 'buscarPersonaPorCedula')->name('proyectos.gestion.involucrados.buscar-persona');
-        Route::get('/proyectos/gestion/{id}/involucrados/roles', 'buscarRoles')->name('proyectos.gestion.involucrados.roles');
-        Route::post('/proyectos/gestion/{id}/involucrados', 'agregarInvolucrado')->name('proyectos.gestion.involucrados.agregar');
-        Route::post('/proyectos/gestion/{id}/involucrados/crear', 'crearInvolucrado')->name('proyectos.gestion.involucrados.crear');
-        Route::delete('/proyectos/gestion/{id}/involucrados/{invId}', 'quitarInvolucrado')->name('proyectos.gestion.involucrados.quitar');
-        Route::post('/proyectos/gestion/{id}/involucrados/{invId}/roles', 'agregarRolInvolucrado')->name('proyectos.gestion.involucrados.roles.asignar');
-        Route::delete('/proyectos/gestion/{id}/involucrados/roles/{pivotId}/{rolId}', 'quitarRolInvolucrado')->name('proyectos.gestion.involucrados.roles.quitar');
-        Route::post('/proyectos/gestion/involucrados/roles/crear', 'crearRol')->name('proyectos.gestion.involucrados.roles.crear');
+        Route::get('/proyectos/gestion/{id}/involucrados/buscar', [\App\Http\Controllers\ProyectoController::class, 'buscarInvolucrados'])->name('proyectos.gestion.involucrados.buscar');
+        Route::get('/proyectos/gestion/involucrados/buscar-persona', [\App\Http\Controllers\ProyectoController::class, 'buscarPersonaPorCedula'])->name('proyectos.gestion.involucrados.buscar-persona');
+        Route::get('/proyectos/gestion/{id}/involucrados/roles', [\App\Http\Controllers\ProyectoController::class, 'buscarRoles'])->name('proyectos.gestion.involucrados.roles');
+        Route::post('/proyectos/gestion/{id}/involucrados', [\App\Http\Controllers\ProyectoController::class, 'agregarInvolucrado'])->name('proyectos.gestion.involucrados.agregar');
+        Route::post('/proyectos/gestion/{id}/involucrados/crear', [\App\Http\Controllers\ProyectoController::class, 'crearInvolucrado'])->name('proyectos.gestion.involucrados.crear');
+        Route::delete('/proyectos/gestion/{id}/involucrados/{invId}', [\App\Http\Controllers\ProyectoController::class, 'quitarInvolucrado'])->name('proyectos.gestion.involucrados.quitar');
+        Route::post('/proyectos/gestion/{id}/involucrados/{invId}/roles', [\App\Http\Controllers\ProyectoController::class, 'agregarRolInvolucrado'])->name('proyectos.gestion.involucrados.roles.asignar');
+        Route::delete('/proyectos/gestion/{id}/involucrados/roles/{pivotId}/{rolId}', [\App\Http\Controllers\ProyectoController::class, 'quitarRolInvolucrado'])->name('proyectos.gestion.involucrados.roles.quitar');
+        Route::post('/proyectos/gestion/involucrados/roles/crear', [\App\Http\Controllers\ProyectoController::class, 'crearRol'])->name('proyectos.gestion.involucrados.roles.crear');
     });
     Route::view('/publicaciones', 'publicaciones.index')->name('publicaciones.index')->middleware('role:gestionador');
 
     Route::view('/vinculacion', 'vinculacion.index')->name('vinculacion.index')->middleware('role:gestionador');
 
     Route::get('/proyectos/crear', function () {
-        return redirect()->route('proyectos.gestion', request()->query());
+        return redirect('/proyectos/gestion?' . http_build_query(request()->query()));
     })->middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador')->name('proyectos.crear');
 
     Route::get('/validaciones', function () {

@@ -11,9 +11,6 @@ use App\Services\ValidacionCorreoService;
 use App\Services\ValidacionRifService;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Livewire\Attributes\Lazy;
-
-#[Lazy]
 
 class ComunidadManager extends Component
 {
@@ -306,8 +303,12 @@ class ComunidadManager extends Component
             return;
         }
 
-        $gestion->eliminar($id);
-        session()->flash('message', 'Comunidad eliminada correctamente.');
+        try {
+            $gestion->eliminar($id);
+            session()->flash('message', 'Comunidad eliminada correctamente.');
+        } catch (\Throwable $e) {
+            session()->flash('message_error', 'Error al eliminar: ' . $e->getMessage());
+        }
     }
 
     public function with(ComunidadGestionService $gestion): array

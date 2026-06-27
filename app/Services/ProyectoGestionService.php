@@ -359,7 +359,6 @@ class ProyectoGestionService
 
             $grupos = $gruposSvc->listar();
             $gruposFiltrados = $grupos
-                ->filter(fn ($g) => $g->creador_cedula === $cedula)
                 ->filter(fn ($g) => collect($clavesDocente)->contains(
                     fn ($clave) => str_contains($clave, ':' . $g->lap_codigo . ':' . $g->sec_codigo)
                 ));

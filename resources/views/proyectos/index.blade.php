@@ -13,6 +13,8 @@
         transition: background-color 0.2s ease, transform 0.2s ease;
         text-decoration: none;
     }
+    .cm-btn { color: #fff; }
+    td a.cm-btn:visited { color: #fff; }
     .cm-btn:hover { transform: translateY(-1px); }
     .cm-btn-success { background: #198754; border-color: #166f43; color: #fff; }
     .cm-btn-danger { background: #c82333; border-color: #a71d2a; color: #fff; }
@@ -148,13 +150,13 @@
                             <input name="search" type="text" value="{{ $search }}" class="filter-input" style="width:95%;" placeholder="Buscar...">
                         </td>
                         <td width="33%"><b>Estado:</b><br>
-                            <select name="estado" class="filter-select" style="width:95%;" onchange="this.form.submit()">
-                                <option value="">- Todos -</option>
-                                <option value="En proceso" {{ $filterEstado == 'En proceso' ? 'selected' : '' }}>En proceso</option>
-                                <option value="completado" {{ $filterEstado == 'completado' ? 'selected' : '' }}>Completado</option>
-                                <option value="aprobado" {{ $filterEstado == 'aprobado' ? 'selected' : '' }}>Aprobado</option>
-                                <option value="rechazado" {{ $filterEstado == 'rechazado' ? 'selected' : '' }}>Rechazado</option>
-                            </select>
+                                <select name="estado" class="filter-select" style="width:95%;" onchange="this.form.submit()">
+                                    <option value="">- Todos -</option>
+                                    <option value="pendiente" {{ $filterEstado == 'pendiente' ? 'selected' : '' }}>En proceso</option>
+                                    <option value="completado" {{ $filterEstado == 'completado' ? 'selected' : '' }}>Completado</option>
+                                    <option value="aprobado" {{ $filterEstado == 'aprobado' ? 'selected' : '' }}>Aprobado</option>
+                                    <option value="rechazado" {{ $filterEstado == 'rechazado' ? 'selected' : '' }}>Rechazado</option>
+                                </select>
                         </td>
                         <td width="34%"><b>Comunidad:</b><br>
                             <select name="comunidad" class="filter-select" style="width:95%;" onchange="this.form.submit()">
@@ -177,13 +179,12 @@
                         <th width="25%">Título</th>
                         <th width="20%">Comunidad / equipo</th>
                         <th width="15%">Validación</th>
-                        <th width="10%">Estado</th>
-                        <th width="30%">Acciones</th>
+                        <th width="35%">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($proyectos as $p)
-                        <tr style="background: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFF' }}; {{ !$p->estado_logico ? 'color: #888;' : 'color: #000;' }}" valign="top">
+                        <tr style="background: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFF' }}; color: #000;" valign="top">
                             <td style="padding:5px;font-weight:bold;">
                                 {{ $p->titulo }}
                             </td>
@@ -192,7 +193,7 @@
                                 Comunidad: {{ $p->comunidad->nombre ?? 'N/A' }}
                             </td>
                             <td align="center" style="padding:5px;">
-                                @if ($p->estado_validacion === 'En proceso')
+                                @if ($p->estado_validacion === 'pendiente')
                                     <span style="color:#d4a017;font-weight:bold;">En proceso</span>
                                 @elseif($p->estado_validacion === 'completado')
                                     <span style="color:#2e7d32;font-weight:bold;">Completado</span>
@@ -202,36 +203,22 @@
                                     <span style="color:#008000;font-weight:bold;">Aprobado</span>
                                 @endif
                             </td>
-                            <td align="center">
-                                @if ($p->estado_logico)
-                                    <span style="color:#008000;font-weight:bold;">Activo</span>
-                                @else
-                                    <span style="color:#FF0000;font-weight:bold;">Inactivo</span>
-                                @endif
-                            </td>
                             <td align="center" style="padding:5px;">
                                 <div style="display:inline-flex;gap:4px;flex-wrap:wrap;justify-content:center;">
-                                    @if (!empty($canValidate) && in_array($p->estado_validacion, ['En proceso', 'completado']))
+                                    @if (!empty($canValidate) && $p->estado_validacion === 'completado')
                                         <a href="{{ route('proyectos.gestion.approve', $p->id) }}" class="cm-btn cm-btn-success cm-btn-sm" onclick="return confirm('¿Aprueba este proyecto?')">Aprobar</a>
                                         <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" onclick="abrirRechazar({{ $p->id }})">Rechazar</button>
                                     @endif
-                                    @if (in_array($p->id, $proyectosLiderIds ?? []))
-                                        <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-primary cm-btn-sm">Actualizar</a>
-                                    @endif
+                                    <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-primary cm-btn-sm">Actualizar</a>
                                     @if ($p->estado_validacion === 'aprobado')
                                         <a href="{{ route('proyectos.gestion.solvencia', $p->id) }}" class="cm-btn cm-btn-primary cm-btn-sm">Solvencia</a>
                                     @endif
-                                    <a href="{{ route('proyectos.gestion.toggle', $p->id) }}" class="cm-btn cm-btn-warning cm-btn-sm" onclick="return confirm('¿Cambiar estado?')">{{ $p->estado_logico ? 'Suspender' : 'Activar' }}</a>
-                                    <form method="POST" action="{{ route('proyectos.gestion.destroy', $p->id) }}" style="display:inline;" onsubmit="return confirm('¿Eliminar proyecto?')">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="cm-btn cm-btn-danger cm-btn-sm">Eliminar</button>
-                                    </form>
                                 </div>
                             </td>
                         </tr>
                     @endforeach
                     @if ($proyectos->isEmpty())
-                        <tr><td colspan="5" align="center" style="padding:20px;font-weight:bold;">No hay expedientes registrados</td></tr>
+                        <tr><td colspan="4" align="center" style="padding:20px;font-weight:bold;">No hay expedientes registrados</td></tr>
                     @endif
                 </tbody>
             </table>

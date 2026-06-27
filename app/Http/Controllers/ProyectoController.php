@@ -62,9 +62,9 @@ class ProyectoController extends Controller
             }
         }
 
-        // Listado general (solo para no-profesores ni estudiantes líder)
+        // Listado general (todos menos estudiantes líder)
         $datosListado = [];
-        $mostrarListado = !$esProfesor && !$esEstudianteLider;
+        $mostrarListado = !$esEstudianteLider;
         if ($mostrarListado) {
             $datosListado = $this->gestion->datosVistaListado([
                 'search' => $search,
@@ -141,9 +141,12 @@ class ProyectoController extends Controller
 
         $activeRole = $this->userRoleService->getActiveRole($user);
         $esProfesor = $this->userRoleService->roleMatches('profesor proyecto', $activeRole);
+        $esLider = $this->gestion->usuarioEsLiderDelProyecto($user, $proyecto);
+        $esAdmin = $this->gestion->usuarioEsAdminEnSistema($user);
+        $modoActualizacion = $esLider && !$esAdmin;
 
         $estadoForm = [
-            'resumen' => $request->input('resumen'),
+            'resumen' => $request->input('resumen', $proyecto->resumen ?? ''),
             'linea_investigacion_id' => $request->input('linea_investigacion_id'),
             'metodologia_id' => $request->input('metodologia_id'),
             'tipo_publicacion_id' => $request->input('tipo_publicacion_id'),
@@ -159,14 +162,19 @@ class ProyectoController extends Controller
             'trayecto' => $request->input('trayecto_derived', ''),
         ];
 
-        $rules = $this->gestion->reglasValidacion($estadoForm, $user, true);
-        $request->validate($rules, [
-            'titulo.required' => 'El título del proyecto es obligatorio.',
-            'resumen.required' => 'El resumen es obligatorio.',
-            'comunidad_id.required' => 'La comunidad es obligatoria.',
-        ]);
+        if ($modoActualizacion) {
+            $request->validate([
+                'documentos' => 'nullable|array',
+            ]);
+        } else {
+            $rules = $this->gestion->reglasValidacion($estadoForm, $user, true);
+            $request->validate($rules, [
+                'titulo.required' => 'El título del proyecto es obligatorio.',
+                'resumen.required' => 'El resumen es obligatorio.',
+                'comunidad_id.required' => 'La comunidad es obligatoria.',
+            ]);
+        }
 
-        // Solo procesa documentos si NO es profesor (profesor no puede subir archivos)
         $documentos = $esProfesor ? [] : $request->file('documentos', []);
 
         $this->gestion->guardar(
@@ -176,6 +184,15 @@ class ProyectoController extends Controller
             $documentos,
             [],
         );
+
+        if ($modoActualizacion) {
+            $proyecto->update([
+                'actualizado_por_estudiante' => true,
+                'fecha_actualizacion_estudiante' => now(),
+                'estado_validacion' => 'completado',
+                'estado_logico' => true,
+            ]);
+        }
 
         return redirect()->route('proyectos.gestion')
             ->with('success', 'Proyecto actualizado con éxito.');

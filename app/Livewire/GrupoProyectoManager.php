@@ -17,10 +17,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Livewire\Attributes\Lazy;
 use Livewire\Attributes\Computed;
-
-#[Lazy]
 
 class GrupoProyectoManager extends Component
 {

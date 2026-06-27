@@ -46,6 +46,44 @@ class GenerateLoginLink extends Command
         return base64_encode($json_payload);
     }
 
+    protected function buscarUsuarios(string $cedula): array
+    {
+        $usuarios = [];
+        $vistos = [];
+
+        foreach (['simulacion', 'intranet'] as $conn) {
+            if ($conn === 'intranet' && !config('database.connections.intranet.enabled', true)) {
+                continue;
+            }
+            try {
+                $rows = DB::connection($conn)
+                    ->table('usuario')
+                    ->leftJoin('persona', DB::raw('TRIM(usuario.usu_cedula)'), '=', DB::raw('TRIM(persona.per_cedula)'))
+                    ->where(DB::raw('TRIM(usuario.usu_cedula)'), $cedula)
+                    ->select(['usuario.usu_cedula', 'usuario.usu_nombre', 'persona.per_nombres', 'persona.per_apellidos'])
+                    ->get();
+
+                foreach ($rows as $r) {
+                    $key = trim($r->usu_nombre ?? '');
+                    if ($key === '' || isset($vistos[$key])) continue;
+                    $vistos[$key] = true;
+                    $usuarios[] = [
+                        'cedula' => trim($r->usu_cedula),
+                        'usu_nombre' => $key,
+                        'nombre_completo' => trim($r->per_nombres ?? '') . ' ' . trim($r->per_apellidos ?? ''),
+                        'fuente' => $conn,
+                    ];
+                }
+            } catch (\Throwable $e) {
+                if ($conn === 'intranet') {
+                    $this->warn('Intranet no disponible, usando solo simulación.');
+                }
+            }
+        }
+
+        return $usuarios;
+    }
+
     public function handle()
     {
         $this->info('--- Generador de Enlace ---');
@@ -62,53 +100,41 @@ class GenerateLoginLink extends Command
             return 1;
         }
 
+        $input = trim($input);
+
         try {
-            // Buscar usuario: intentar intranet primero, si no responde usar simulación
-            $extUser = null;
+            // Buscar por cédula o nombre de usuario
+            $usuarios = [];
+            $cedula = $input;
 
-            try {
-                $conn = DualDatabase::academicConnection();
-                $extUser = DB::connection($conn)
-                    ->table('usuario')
-                    ->leftJoin('persona', DB::raw('TRIM(usuario.usu_cedula)'), '=', DB::raw('TRIM(persona.per_cedula)'))
-                    ->where(function($q) use ($input) {
-                        $inputTrim = trim($input);
-                        $q->where(DB::raw('TRIM(usuario.usu_nombre)'), $inputTrim)
-                          ->orWhere(DB::raw('TRIM(usuario.usu_cedula)'), $inputTrim);
-                    })
-                    ->select(['usuario.usu_cedula', 'usuario.usu_nombre', 'usuario.usu_clave', 'persona.per_nombres', 'persona.per_apellidos'])
-                    ->first();
-            } catch (\Throwable $e) {
-                DbHelper::handleQueryError($e);
-                $this->warn('Intranet no disponible, intentando con simulación...');
-            }
-
-            // Si no se encontró en la conexión académica, intentar directamente en simulación
-            if (!$extUser) {
-                try {
-                    $extUser = DB::connection('simulacion')
-                        ->table('usuario')
-                        ->leftJoin('persona', DB::raw('TRIM(usuario.usu_cedula)'), '=', DB::raw('TRIM(persona.per_cedula)'))
-                        ->where(function($q) use ($input) {
-                            $inputTrim = trim($input);
-                            $q->where(DB::raw('TRIM(usuario.usu_nombre)'), $inputTrim)
-                              ->orWhere(DB::raw('TRIM(usuario.usu_cedula)'), $inputTrim);
-                        })
-                        ->select(['usuario.usu_cedula', 'usuario.usu_nombre', 'usuario.usu_clave', 'persona.per_nombres', 'persona.per_apellidos'])
-                        ->first();
-                } catch (\Throwable $e) {
-                    $this->error('Error consultando simulación: ' . $e->getMessage());
+            if (is_numeric($input)) {
+                $usuarios = $this->buscarUsuarios($input);
+            } else {
+                // Buscar por nombre de usuario — obtener la cédula primero
+                foreach (['simulacion', 'intranet'] as $conn) {
+                    if ($conn === 'intranet' && !config('database.connections.intranet.enabled', true)) continue;
+                    try {
+                        $u = DB::connection($conn)->table('usuario')
+                            ->where(DB::raw('TRIM(usu_nombre)'), $input)
+                            ->first(['usu_cedula']);
+                        if ($u) {
+                            $cedula = trim($u->usu_cedula);
+                            $usuarios = $this->buscarUsuarios($cedula);
+                            break;
+                        }
+                    } catch (\Throwable $e) {}
                 }
             }
 
-            if (!$extUser) {
-                $this->error('Usuario no encontrado en la base de datos.');
+            if (empty($usuarios)) {
+                $this->error('No se encontraron usuarios para: ' . $input);
                 return 1;
             }
 
-            $cedula = trim($extUser->usu_cedula);
+            $cedula = $usuarios[0]['cedula'];
+            $nombreCompleto = $usuarios[0]['nombre_completo'];
 
-            // Exportar información consultada de inmediato a la BD de simulación (si se obtuvo desde intranet)
+            // Exportar contexto a simulación
             if (!ini_get('safe_mode')) set_time_limit(300);
             try {
                 $mirror = app(\App\Services\IntranetSimulationMirrorService::class);
@@ -118,18 +144,109 @@ class GenerateLoginLink extends Command
                 $this->warn('No se pudo exportar a simulación (no crítico): ' . $e->getMessage());
             }
 
-            $nombre = trim($extUser->per_nombres ?? '') . ' ' . trim($extUser->per_apellidos ?? '');
+            $this->line('');
+            $this->info('Persona: ' . $nombreCompleto . ' (C.I. ' . $cedula . ')');
+            $this->line('');
+
+            // Mostrar usuarios disponibles
+            $this->info('Usuarios encontrados en la base de datos:');
+            $this->line('');
+
+            $roleService = app(\App\Services\UserRoleService::class);
+            $idxUsuario = 1;
+            $userMap = [];
+
+            foreach ($usuarios as $u) {
+                $label = "[" . $idxUsuario . "] " . $u['usu_nombre'] . '  (' . $u['fuente'] . ')';
+
+                // Detectar roles para este usuario
+                $tempUser = new \App\Models\User();
+                $tempUser->usu_cedula = $u['cedula'];
+                try {
+                    $roles = $roleService->detectAvailableRoles($tempUser);
+                    if (!empty($roles)) {
+                        $label .= '  → ' . implode(', ', array_values($roles));
+                    } else {
+                        $label .= '  → (sin roles detectados)';
+                    }
+                } catch (\Throwable $e) {
+                    $label .= '  → (error detectando roles)';
+                }
+
+                $this->line($label);
+                $userMap[$idxUsuario] = $u;
+                $idxUsuario++;
+            }
+
+            $this->line('  [0] Cancelar');
+            $this->line('');
+
+            fwrite(STDOUT, "Selecciona el usuario (0-" . ($idxUsuario - 1) . "): ");
+            $userChoice = trim(fgets(STDIN));
+
+            if ($userChoice === '' || (int) $userChoice === 0 || !isset($userMap[(int) $userChoice])) {
+                $this->warn('Operación cancelada.');
+                return 1;
+            }
+
+            $selectedUser = $userMap[(int) $userChoice];
+            $selectedUsuNombre = $selectedUser['usu_nombre'];
+            $this->info('Usuario seleccionado: ' . $selectedUsuNombre);
+            $this->line('');
+
+            // Detectar roles para el usuario seleccionado
+            $preRole = null;
+            try {
+                $tempUser = new \App\Models\User();
+                $tempUser->usu_cedula = $cedula;
+                $availableRoles = $roleService->detectAvailableRoles($tempUser);
+
+                if (count($availableRoles) > 0) {
+                    $this->info('Roles disponibles para ' . $selectedUsuNombre . ':');
+                    $this->line('');
+
+                    $index = 1;
+                    $roleMap = [];
+                    foreach ($availableRoles as $slug => $label) {
+                        $this->line("  [$index] $label");
+                        $roleMap[$index] = $slug;
+                        $index++;
+                    }
+
+                    $this->line('  [0] Ninguno (seleccionar después en el navegador)');
+                    $this->line('');
+
+                    fwrite(STDOUT, "Selecciona el rol (0-" . ($index - 1) . "): ");
+                    $choice = trim(fgets(STDIN));
+
+                    if ($choice !== '' && isset($roleMap[(int) $choice])) {
+                        $preRole = $roleMap[(int) $choice];
+                        $this->info('Rol seleccionado: ' . $availableRoles[$preRole]);
+                    } else {
+                        $this->warn('No se seleccionó rol — se elegirá en el navegador.');
+                    }
+                } else {
+                    $this->warn('No se detectaron roles para esta cédula.');
+                }
+            } catch (\Throwable $e) {
+                $this->warn('No se pudieron detectar roles (no crítico): ' . $e->getMessage());
+            }
 
             $timestamp = time();
             $firma = hash('sha256', $cedula . $timestamp . config('app.sogac_key', 'RXN0ZUVzVW5TZWNyZXRvRGUzMkJ5dGVzRXhhY3Rvc3M='));
 
             $payload = [
                 'cedula' => $cedula,
-                'nombre' => $nombre,
+                'usu_nombre' => $selectedUsuNombre,
+                'nombre' => $nombreCompleto,
                 'fecha_creacion' => $timestamp,
                 'firma_validacion' => $firma,
                 'timestamp' => $timestamp,
             ];
+
+            if ($preRole) {
+                $payload['pre_role'] = $preRole;
+            }
 
             $ticket = $this->encryptPayload($payload);
             $baseUrl = config('app.url');
