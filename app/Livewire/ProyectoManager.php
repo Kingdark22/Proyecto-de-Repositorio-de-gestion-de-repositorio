@@ -30,12 +30,6 @@ class ProyectoManager extends Component
 
     public ?string $resumen = '';
 
-    public ?string $fecha_subida = '';
-
-    public ?string $calificacion = '';
-
-    public ?string $fecha_aprobacion = '';
-
     public ?string $linea_investigacion_id = '';
 
     public ?string $metodologia_id = '';
@@ -373,6 +367,10 @@ class ProyectoManager extends Component
             $this->openDetails((int) $detailsId, $gestion);
         }
 
+        if ($desdeGrupo = request()->query('desde_grupo')) {
+            $this->registrarProyectoGrupo((int) $desdeGrupo);
+        }
+
         $this->cargarGruposDocente($gestion);
 
         $this->lineasEncontradas = collect();
@@ -457,12 +455,6 @@ class ProyectoManager extends Component
             'titulo.min' => 'El título debe tener al menos 5 caracteres.',
             'resumen.required' => 'El resumen es obligatorio.',
             'resumen.min' => 'El resumen debe tener al menos 10 caracteres.',
-            'fecha_subida.required' => 'La fecha de subida es obligatoria.',
-            'calificacion.required' => 'La calificación es obligatoria.',
-            'calificacion.integer' => 'La calificación debe ser un número entero.',
-            'calificacion.min' => 'La calificación mínima es 1.',
-            'calificacion.max' => 'La calificación máxima es 20.',
-            'fecha_aprobacion.required' => 'La fecha de aprobación es obligatoria.',
 
             'lapso_academico_id.required' => 'Debe seleccionar un lapso académico.',
             'equipo_seccion_clave.required' => 'Debe validar el equipo (sección intranet).',
@@ -514,7 +506,8 @@ class ProyectoManager extends Component
                         $traRow = \Illuminate\Support\Facades\DB::connection($equipos->academicConnection())
                             ->table('seccion as sec')
                             ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
-                            ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'mal.mal_cod_trayecto')
+                            ->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
+                            ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'sem.sem_cod_trayecto')
                             ->where('sec.sec_codigo', $grupo->sec_codigo)
                             ->where('sec.sec_cod_lapso_academico', $grupo->lap_codigo)
                             ->value('tra.tra_nombre');
@@ -547,7 +540,8 @@ class ProyectoManager extends Component
                 ->join('lapso_academico as lap', 'lap.lap_codigo', '=', 'sec.sec_cod_lapso_academico')
                 ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
                 ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
-                ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'mal.mal_cod_trayecto')
+                ->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
+                ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'sem.sem_cod_trayecto')
                 ->where('sec.sec_codigo', $partes['sec_codigo'])
                 ->where('lap.lap_codigo', $partes['lap_codigo'])
                 ->select(['sec.sec_nombre', 'lap.lap_nombre', 'pro.pro_codigo', 'pro.pro_siglas', 'tra.tra_nombre'])
@@ -1447,7 +1441,7 @@ class ProyectoManager extends Component
                 && !$userRoleService->roleMatches('coordinador', $activeRole)
                 && !$userRoleService->roleMatches('gestionador', $activeRole)) {
                 $esEstudianteLider = true;
-                $proyectosLiderIds = $gestion->proyectosDondeEsLider($user);
+                $proyectosLiderIds = $gestion->proyectosDondeEsMiembro($user);
                 $proyectosLider = $gestion->proyectosLider($user);
             }
         }
@@ -1487,6 +1481,56 @@ class ProyectoManager extends Component
         $activeRole = $userRoleService->getActiveRole($user);
         $puedeFiltrarGrupos = true;
 
+        // Team selection filter data (for showTeamFilters section)
+        $equipoLapso = $this->filterLapsoEquipo !== '' ? (int) $this->filterLapsoEquipo : null;
+        $equipoPrograma = $this->filterProgramaEquipo !== '' ? (int) $this->filterProgramaEquipo : null;
+        $equipoSeccionCodigo = $this->filterSeccionEquipo !== '' ? (int) $this->filterSeccionEquipo : null;
+
+        $lapsos = $lapsosFiltro;
+
+        $programasEquipo = collect();
+        if ($equipoLapso) {
+            $programasEquipo = $equipoSeccion->programasEnLapso($equipoLapso);
+        }
+
+        $seccionesEquipo = collect();
+        if ($equipoLapso && $equipoPrograma) {
+            $seccionesEquipo = $equipoSeccion->seccionesEnLapso($equipoLapso, $equipoPrograma);
+        }
+
+        // Available groups for the selected filters
+        $equipos_disp = collect();
+        try {
+            $gruposSvc = app(GrupoProyectoService::class);
+            if ($gruposSvc->tablaDisponible()) {
+                $filtrosEquipos = [];
+                if ($equipoLapso) $filtrosEquipos['lapso'] = $equipoLapso;
+                if ($equipoPrograma) $filtrosEquipos['programa'] = $equipoPrograma;
+                if ($equipoSeccionCodigo) $filtrosEquipos['seccion'] = $equipoSeccionCodigo;
+                if (!empty($filtrosEquipos)) {
+                    $equipos_disp = $gruposSvc->listar($filtrosEquipos);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Silently fail
+        }
+
+        // Validated team and its members
+        $equipoValidado = null;
+        $integrantesEquipo = collect();
+        if ($this->equipo_seccion_clave) {
+            try {
+                $gruposSvc = app(GrupoProyectoService::class);
+                $g = $gruposSvc->obtenerPorClave($this->equipo_seccion_clave);
+                if ($g) {
+                    $equipoValidado = $g;
+                    $integrantesEquipo = collect($g->miembros ?? []);
+                }
+            } catch (\Throwable $e) {
+                // Silently fail
+            }
+        }
+
         return view('livewire.proyecto-manager', array_merge($datos, [
             'viewMode' => $this->viewMode,
             'editingId' => $this->editingId,
@@ -1505,6 +1549,13 @@ class ProyectoManager extends Component
             'puedeFiltrarGrupos' => $puedeFiltrarGrupos,
             'esGestionador' => $this->esGestionador,
             'esProfesor' => $this->esProfesor,
+            // Team filter variables
+            'lapsos' => $lapsos,
+            'programasEquipo' => $programasEquipo,
+            'seccionesEquipo' => $seccionesEquipo,
+            'equipos_disp' => $equipos_disp,
+            'equipoValidado' => $equipoValidado,
+            'integrantesEquipo' => $integrantesEquipo,
         ]));
     }
 
@@ -1512,9 +1563,6 @@ class ProyectoManager extends Component
     {
         $this->titulo = '';
         $this->resumen = '';
-        $this->fecha_subida = '';
-        $this->calificacion = '';
-        $this->fecha_aprobacion = '';
         $this->linea_investigacion_id = '';
         $this->metodologia_id = '';
         $this->tipo_publicacion_id = '';
@@ -1567,9 +1615,6 @@ class ProyectoManager extends Component
             'trayecto' => $this->trayecto_derived,
             'titulo' => $this->titulo,
             'resumen' => $this->resumen,
-            'fecha_subida' => $this->fecha_subida,
-            'calificacion' => $this->calificacion,
-            'fecha_aprobacion' => $this->fecha_aprobacion,
             'linea_investigacion_id' => $this->linea_investigacion_id,
             'metodologia_id' => $this->metodologia_id,
         'tipo_publicacion_id' => $this->tipo_publicacion_id,

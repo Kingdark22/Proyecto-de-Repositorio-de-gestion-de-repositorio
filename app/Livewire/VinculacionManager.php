@@ -261,7 +261,6 @@ class VinculacionManager extends Component
                   ->orWhereRaw('pry_direccion_logica ILIKE ?', [$term])
                   ->orWhereRaw('pry_motivo_rechazo ILIKE ?', [$term])
                   ->orWhereRaw('pry_creador_cedula ILIKE ?', [$term])
-                  ->orWhereRaw('cast(pry_calificacion as text) ILIKE ?', [$term])
                   ->orWhereHas('comunidad', fn($cq) => $cq->whereRaw('com_nombre ILIKE ?', [$term]))
                   ->orWhereHas('linea_investigacion', fn($cq) => $cq->whereRaw('lin_nombre_investigacion ILIKE ?', [$term]))
                   ->orWhereHas('metodologia', fn($cq) => $cq->whereRaw('mei_nombre ILIKE ?', [$term]))

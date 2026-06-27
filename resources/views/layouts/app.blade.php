@@ -276,7 +276,6 @@
         }
     </style>
     @stack('styles')
-    @livewireStyles
 </head>
 <body>
     <div id="contenedor">
@@ -427,16 +426,6 @@
             setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
         }
         function closeNotifyModal() {} // stub legacy
-        document.addEventListener('livewire:initialized', function() {
-            try {
-                Livewire.on('notify', function(data) {
-                    showNotifyToast(data.type || 'info', data.message || '');
-                });
-            } catch(e) {
-                console.warn('Error registrando listener notify:', e);
-            }
-        });
-
 
         </script>
 
@@ -486,7 +475,6 @@
         </div>
     </div>
 
-    @livewireScripts
     <script>
         // Heartbeat para mantener la sesión activa (cada 30 segundos)
         (function() {
@@ -547,16 +535,8 @@
         })();
 
         lucide.createIcons();
-        document.addEventListener('livewire:navigated', () => {
-            lucide.createIcons();
-        });
-        document.addEventListener('livewire:initialized', () => {
-            Livewire.hook('morph.updated', ({ el, component }) => {
-                lucide.createIcons();
-            });
-        });
-
     </script>
+    @stack('scripts')
 </body>
 </html>
 

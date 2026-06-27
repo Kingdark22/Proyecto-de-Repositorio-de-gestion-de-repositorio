@@ -82,7 +82,8 @@ class IntranetEquipoSeccionService
             ->whereIn('ins.ins_estatus', $this->inscripcionActivaEstatus())
             ->where('lap.lap_estatus', config('proyecto_profesor.lapso_estatus_activo', 'A'));
 
-        $query->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'mal.mal_cod_trayecto');
+        $query->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre');
+        $query->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'sem.sem_cod_trayecto');
 
         return $query;
     }
@@ -440,11 +441,12 @@ class IntranetEquipoSeccionService
                     ->table('seccion as sec')
                     ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
                     ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
+                    ->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
                     ->where('sec.sec_cod_lapso_academico', $lapCodigo)
-                    ->select(['sec.sec_codigo', 'sec.sec_nombre', 'pro.pro_siglas']);
+                    ->select(['sec.sec_codigo', 'sec.sec_nombre', 'pro.pro_siglas', 'sem.sem_codigo', 'sem.sem_nombre as semestre_nombre']);
 
-                $query->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'mal.mal_cod_trayecto')
-                    ->addSelect('tra.tra_nombre');
+                $query->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'sem.sem_cod_trayecto')
+                    ->addSelect('tra.tra_nombre', 'tra.tra_codigo');
 
                 if ($programaCodigo) {
                     $query->where('pro.pro_codigo', $programaCodigo);
@@ -461,29 +463,27 @@ class IntranetEquipoSeccionService
 
     public function trayectosEnLapso(?int $lapCodigo = null, ?int $programaCodigo = null): Collection
     {
-        $cacheKey = 'equipos_trayectos_v3_'.($lapCodigo ?? '0').'_'.($programaCodigo ?? '0').'_'.DbHelper::connection();
+        $cacheKey = 'equipos_trayectos_v4_'.($lapCodigo ?? '0').'_'.($programaCodigo ?? '0').'_'.DbHelper::connection();
 
         return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($lapCodigo, $programaCodigo) {
             try {
                 $query = DB::connection($this->academicConnection())
                     ->table('trayecto as tra')
-                    ->select(['tra.tra_codigo', 'tra.tra_nombre']);
+                    ->select(['tra.tra_codigo', 'tra.tra_nombre'])
+                    ->join('semestre as sem', 'sem.sem_cod_trayecto', '=', 'tra.tra_codigo')
+                    ->join('seccion as sec', 'sec.sec_cod_semestre', '=', 'sem.sem_codigo');
+
+                if ($lapCodigo) {
+                    $query->where('sec.sec_cod_lapso_academico', $lapCodigo);
+                }
 
                 if ($programaCodigo) {
-                    $query->join('malla as mal', 'mal.mal_cod_trayecto', '=', 'tra.tra_codigo')
+                    $query->join('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
                         ->where('mal.mal_cod_programa', $programaCodigo);
                 }
 
-                // If lapso is provided, filter secciones in that lapso
-                if ($lapCodigo) {
-                    $query->join('seccion as sec', function ($join) use ($lapCodigo) {
-                        $join->on('sec.sec_cod_malla', 'mal.mal_codigo')
-                            ->where('sec.sec_cod_lapso_academico', $lapCodigo);
-                    });
-                }
-
                 return $query->distinct()
-                    ->orderBy('tra.tra_nombre')
+                    ->orderBy('tra.tra_codigo')
                     ->get();
             } catch (\Throwable) {
                 return collect();
@@ -512,7 +512,8 @@ class IntranetEquipoSeccionService
                 ->join('lapso_academico as lap', 'lap.lap_codigo', '=', 'sec.sec_cod_lapso_academico')
                 ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
                 ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
-                ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'mal.mal_cod_trayecto')
+                ->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
+                ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'sem.sem_cod_trayecto')
                 ->where('lap.lap_codigo', $lapCodigo)
                 ->where('sec.sec_codigo', $secCodigo)
                 ->select([
@@ -533,7 +534,8 @@ class IntranetEquipoSeccionService
                     ->join('lapso_academico as lap', 'lap.lap_codigo', '=', 'sec.sec_cod_lapso_academico')
                     ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
                     ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
-                    ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'mal.mal_cod_trayecto')
+                    ->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
+                    ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'sem.sem_cod_trayecto')
                     ->where('lap.lap_codigo', $lapCodigo)
                     ->where('sec.sec_codigo', $secCodigo)
                     ->select([

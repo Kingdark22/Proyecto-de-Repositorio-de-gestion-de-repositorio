@@ -276,8 +276,6 @@
         }
     </style>
     <?php echo $__env->yieldPushContent('styles'); ?>
-    <?php echo \Livewire\Mechanisms\FrontendAssets\FrontendAssets::styles(); ?>
-
 </head>
 <body>
     <div id="contenedor">
@@ -449,16 +447,6 @@
             setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
         }
         function closeNotifyModal() {} // stub legacy
-        document.addEventListener('livewire:initialized', function() {
-            try {
-                Livewire.on('notify', function(data) {
-                    showNotifyToast(data.type || 'info', data.message || '');
-                });
-            } catch(e) {
-                console.warn('Error registrando listener notify:', e);
-            }
-        });
-
 
         </script>
 
@@ -507,8 +495,6 @@
             Todos los Derechos Reservados 2014 UPTP - Créditos Unidad de Sistemas / Desarrollo de Software.
         </div>
     </div>
-
-    <?php echo \Livewire\Mechanisms\FrontendAssets\FrontendAssets::scripts(); ?>
 
     <script>
         // Heartbeat para mantener la sesión activa (cada 30 segundos)
@@ -570,16 +556,8 @@
         })();
 
         lucide.createIcons();
-        document.addEventListener('livewire:navigated', () => {
-            lucide.createIcons();
-        });
-        document.addEventListener('livewire:initialized', () => {
-            Livewire.hook('morph.updated', ({ el, component }) => {
-                lucide.createIcons();
-            });
-        });
-
     </script>
+    <?php echo $__env->yieldPushContent('scripts'); ?>
 </body>
 </html>
 

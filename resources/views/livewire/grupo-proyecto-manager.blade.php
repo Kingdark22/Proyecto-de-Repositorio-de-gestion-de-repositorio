@@ -170,7 +170,7 @@
                     <option value="{{ $l->lap_codigo }}">{{ $l->lap_nombre }}</option>
                 @endforeach
             </select>
-            <select wire:model.live="filterPrograma" class="grp-filter-select" @if (!$filterLapso || $isProfessor) disabled @endif wire:loading.attr="disabled">
+            <select wire:model.live="filterPrograma" class="grp-filter-select" @if (!$filterLapso) disabled @endif wire:loading.attr="disabled">
                 <option value="">PNF / Programa</option>
                 @foreach ($programas as $p)
                     <option value="{{ $p->pro_codigo }}">{{ $p->pro_siglas }}</option>
@@ -198,19 +198,41 @@
                         <th>Lapso</th>
                         <th>Integrantes</th>
                         <th>Clave</th>
+                        <th>Proyecto</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($gruposList as $g)
+                        @php
+                            $proyecto = $proyectoPorClave->get($g->clave);
+                            $tieneProyecto = $proyecto !== null;
+                        @endphp
                         <tr>
-                            <td><b>{{ $g->nombre }}</b></td>
+                            <td>
+                                <b style="cursor: pointer;" wire:click="$set('selectedGroupId', {{ $g->grp_codigo }})" title="Ver información del grupo">{{ $g->nombre }}</b>
+                            </td>
                             <td>{{ $g->pro_siglas ?: ($g->pro_nombre ?: '—') }}</td>
                             <td>{{ $g->sec_nombre ?: 'Sec. ' . $g->sec_codigo }}</td>
                             <td>{{ $g->lap_nombre ?: '—' }}</td>
                             <td align="center">{{ $g->integrantes }}</td>
                             <td><code style="font-size:9px;">{{ $g->clave }}</code></td>
+                            <td align="center">
+                                @if($tieneProyecto)
+                                    @php
+                                        $estadoVal = $proyecto->estado_validacion ?? '';
+                                        $colorMap = ['aprobado' => '#008000', 'rechazado' => '#FF0000', 'completado' => '#2e7d32', 'pendiente' => '#d4a017'];
+                                        $labelMap = ['aprobado' => 'Aprobado', 'rechazado' => 'Rechazado', 'completado' => 'Completado', 'pendiente' => 'En proceso'];
+                                    @endphp
+                                    <span style="color: {{ $colorMap[$estadoVal] ?? '#d4a017' }}; font-weight: bold; font-size: 10px;">{{ $labelMap[$estadoVal] ?? 'En proceso' }}</span>
+                                @else
+                                    <span style="color: #999; font-size: 10px;">Sin proyecto</span>
+                                @endif
+                            </td>
                             <td align="center" nowrap>
+                                <button type="button" class="cm-btn cm-btn-success cm-btn-sm"
+                                    onclick="window.location='{{ $tieneProyecto ? route('proyectos.gestion.edit', $proyecto->id) : route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}'"
+                                    title="Ir al formulario de proyecto">Actualizar</button>
                                 <button type="button" class="cm-btn cm-btn-secondary cm-btn-sm"
                                     wire:click="editarGrupo({{ $g->grp_codigo }})">Editar</button>
                                 <button type="button" class="cm-btn cm-btn-danger cm-btn-sm"
@@ -220,7 +242,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" align="center">No hay grupos registrados. Cree uno con integrantes de la
+                            <td colspan="8" align="center">No hay grupos registrados. Cree uno con integrantes de la
                                 secci&oacute;n.</td>
                         </tr>
                     @endforelse
@@ -244,34 +266,41 @@
                     </td>
                      <td><b>Comunidad:</b><br>
                          <div style="display: flex; gap: 4px; align-items: center;">
-                              <div class="comunidad-search-container" id="comunidad-search-container">
-                                  <input wire:model.live.debounce.300ms="searchComunidad" 
-                                         type="text" 
-                                         class="grp-filter-input" 
-                                         style="width: 100%;" 
-                                         placeholder="Buscar comunidad..."
-                                         autocomplete="off"
-                                         wire:focus="$set('mostrarDropdownComunidad', true)">
-                                 
-                                 @if($mostrarDropdownComunidad)
-                                     <div class="comunidad-dropdown">
-                                         @forelse($this->comunidadesFiltradas as $c)
-                                             <div class="comunidad-option" 
-                                                  wire:click="selectComunidad('{{ $c->com_codigo }}')">
-                                                 {{ $c->com_nombre }} 
-                                                 @if($c->com_rif)
-                                                     <span style="color:#888; font-size:10px; margin-left:5px;">({{ $c->com_rif }})</span>
-                                                 @endif
-                                             </div>
-                                         @empty
-                                             <div class="comunidad-option" style="color:#888; cursor:default;">
-                                                 No se encontraron comunidades.
-                                             </div>
-                                         @endforelse
-                                     </div>
-                                 @endif
-                             </div>
-                             <button type="button" wire:click="abrirModalComunidad" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap;" title="Crear nueva comunidad">+</button>
+                             @if($comunidadId !== '')
+                                 <div style="display: flex; align-items: center; gap: 6px; background: #f0f7f0; border: 1px solid #b8d4b8; border-radius: 4px; padding: 4px 10px; font-size: 12px; flex: 1;">
+                                     <span style="font-weight: bold;">{{ $searchComunidad }}</span>
+                                     <button type="button" wire:click="$set('comunidadId', ''); $set('searchComunidad', '')" style="background: none; border: none; cursor: pointer; color: #991b1b; font-size: 14px; padding: 0 2px;" title="Cambiar comunidad">✕</button>
+                                 </div>
+                             @else
+                                 <div class="comunidad-search-container" id="comunidad-search-container" style="flex:1;">
+                                     <input wire:model.live.debounce.300ms="searchComunidad" 
+                                            type="text" 
+                                            class="grp-filter-input" 
+                                            style="width: 100%;" 
+                                            placeholder="Buscar comunidad..."
+                                            autocomplete="off"
+                                            wire:focus="$set('mostrarDropdownComunidad', true)">
+                                    
+                                    @if($mostrarDropdownComunidad)
+                                        <div class="comunidad-dropdown">
+                                            @forelse($this->comunidadesFiltradas as $c)
+                                                <div class="comunidad-option" 
+                                                     wire:click="selectComunidad('{{ $c->com_codigo }}')">
+                                                    {{ $c->com_nombre }} 
+                                                    @if($c->com_rif)
+                                                        <span style="color:#888; font-size:10px; margin-left:5px;">({{ $c->com_rif }})</span>
+                                                    @endif
+                                                </div>
+                                            @empty
+                                                <div class="comunidad-option" style="color:#888; cursor:default;">
+                                                    No se encontraron comunidades.
+                                                </div>
+                                            @endforelse
+                                        </div>
+                                    @endif
+                                </div>
+                                <button type="button" wire:click="abrirModalComunidad" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap;" title="Crear nueva comunidad">+</button>
+                             @endif
                          </div>
                      </td>
 
@@ -279,15 +308,22 @@
                 <tr>
                     <td colspan="2" style="padding-top:8px;">
                         <b>Contexto acad&eacute;mico:</b>
-                        <div style="display: flex; gap: 16px; margin-top: 4px;">
-                            <select wire:model.live="filterLapso" class="grp-filter-select" wire:loading.attr="disabled">
-                                <option value="">Lapso</option>
-                                @foreach ($lapsos as $l)
-                                    <option value="{{ $l->lap_codigo }}">{{ $l->lap_nombre }}</option>
-                                @endforeach
-                            </select>
+                        <div style="display: flex; gap: 16px; margin-top: 4px; align-items: center;">
+                            @if($isProfessor && $viewMode === 'form')
+                                @php $lapsoActual = $lapsos->firstWhere('lap_codigo', (int)$filterLapso); @endphp
+                                <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; height: 32px; background: #f0f7f0; border: 1px solid #b8d4b8; border-radius: 4px; font-size: 12px; font-weight: bold; box-sizing: border-box;">
+                                    📅 {{ $lapsoActual->lap_nombre ?? 'Lapso #'.$filterLapso }}
+                                </span>
+                            @else
+                                <select wire:model.live="filterLapso" class="grp-filter-select" wire:loading.attr="disabled">
+                                    <option value="">Lapso</option>
+                                    @foreach ($lapsos as $l)
+                                        <option value="{{ $l->lap_codigo }}">{{ $l->lap_nombre }}</option>
+                                    @endforeach
+                                </select>
+                            @endif
                             <select wire:model.live="filterPrograma" class="grp-filter-select"
-                                @if (!$filterLapso || ($isProfessor && $viewMode === 'form')) disabled @endif wire:loading.attr="disabled">
+                                @if (!$filterLapso) disabled @endif wire:loading.attr="disabled">
                                 <option value="">PNF</option>
                                 @foreach ($programas as $p)
                                     <option value="{{ $p->pro_codigo }}">{{ $p->pro_siglas }}</option>
@@ -401,7 +437,7 @@
                                 <td>{{ $m['apellido'] }}, {{ $m['nombre'] }}</td>
                                 <td>{{ $m['rol_name'] }}</td>
                                 <td><a href="#"
-                                        wire:click.prevent="quitarIntegrante({{ json_encode($m['cedula']) }})">Quitar</a>
+                                        wire:click.prevent="quitarIntegrante('{{ $m['cedula'] }}')">Quitar</a>
                                 </td>
                             </tr>
                         @empty
@@ -531,6 +567,74 @@
                 </div>
             @endif
         </fieldset>
+    @endif
+    @if ($selectedGroupId !== null && $this->selectedGroup)
+        @php $info = $this->selectedGroup; @endphp
+        @if ($info->grupo)
+        <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;" wire:click.self="cerrarInfoGrupo">
+            <div style="background:#fff;border-radius:8px;padding:20px;max-width:600px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:15px;padding-bottom:10px;border-bottom:2px solid #8b0000;">
+                    <h3 style="margin:0;font-size:16px;font-weight:bold;color:#333;">Informaci&oacute;n del grupo</h3>
+                    <button type="button" wire:click="cerrarInfoGrupo" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999;padding:0 4px;">&times;</button>
+                </div>
+                <table width="100%" style="font-size:12px;border-collapse:collapse;">
+                    <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;width:35%;">Nombre:</td><td style="padding:6px 8px;">{{ $info->grupo->nombre }}</td></tr>
+                    <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Clave:</td><td style="padding:6px 8px;"><code>{{ $info->grupo->clave }}</code></td></tr>
+                    <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Lapso:</td><td style="padding:6px 8px;">{{ $info->grupo->lap_nombre ?: 'Lapso #'.$info->grupo->lap_codigo }}</td></tr>
+                    <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">PNF:</td><td style="padding:6px 8px;">{{ $info->grupo->pro_siglas ?: ($info->grupo->pro_nombre ?: '—') }}</td></tr>
+                    <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Secci&oacute;n:</td><td style="padding:6px 8px;">{{ $info->grupo->sec_nombre ?: 'Sec. '.$info->grupo->sec_codigo }}</td></tr>
+                    <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;vertical-align:top;">Integrantes:</td>
+                        <td style="padding:6px 8px;">
+                            @php $miembros = $info->grupo->miembros ?? []; @endphp
+                            @if(!empty($miembros))
+                                <table width="100%" style="font-size:11px;border-collapse:collapse;">
+                                    <tr style="background:#ddd;">
+                                        <th style="padding:3px 6px;">C&eacute;dula</th>
+                                        <th style="padding:3px 6px;">Nombre</th>
+                                        <th style="padding:3px 6px;">Rol</th>
+                                    </tr>
+                                    @foreach($miembros as $m)
+                                        <tr style="border-bottom:1px solid #eee;">
+                                            <td style="padding:3px 6px;">{{ $m['cedula'] }}</td>
+                                            <td style="padding:3px 6px;">{{ $m['apellido'] ?? '' }}, {{ $m['nombre'] ?? '' }}</td>
+                                            <td style="padding:3px 6px;">
+                                                @if(($m['rol_id'] ?? 2) == 1)
+                                                    <span style="color:#8b0000;font-weight:bold;">L&iacute;der</span>
+                                                @else
+                                                    <span style="color:#666;">Autor</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </table>
+                            @else
+                                <span style="color:#999;">Sin integrantes</span>
+                            @endif
+                        </td>
+                    </tr>
+                    @if($info->proyecto)
+                    <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Proyecto:</td>
+                        <td style="padding:6px 8px;">
+                            <span style="font-weight:bold;">{{ $info->proyecto->titulo }}</span><br>
+                            <span style="font-size:10px;color:#666;">
+                                Estado: 
+                                @php
+                                    $ev = $info->proyecto->estado_validacion ?? '';
+                                    $cMap = ['aprobado'=>'#008000','rechazado'=>'#FF0000','completado'=>'#2e7d32','pendiente'=>'#d4a017'];
+                                    $lMap = ['aprobado'=>'Aprobado','rechazado'=>'Rechazado','completado'=>'Completado','pendiente'=>'En proceso'];
+                                @endphp
+                                <span style="color:{{ $cMap[$ev] ?? '#d4a017' }};font-weight:bold;">{{ $lMap[$ev] ?? 'En proceso' }}</span>
+                            </span>
+                        </td>
+                    </tr>
+                    @endif
+                </table>
+                <div style="margin-top:15px;text-align:center;">
+                    <button type="button" class="cm-btn cm-btn-secondary" wire:click="cerrarInfoGrupo">Cerrar</button>
+                </div>
+            </div>
+        </div>
+        @endif
     @endif
 </div>
 

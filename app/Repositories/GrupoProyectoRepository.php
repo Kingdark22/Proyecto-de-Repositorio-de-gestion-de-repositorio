@@ -93,6 +93,9 @@ class GrupoProyectoRepository
                 $term = '%' . mb_strtolower(trim((string) $filtros['busqueda'])) . '%';
                 $query->whereRaw('LOWER(grp_nombre) LIKE ?', [$term]);
             }
+            if (!empty($filtros['creador'])) {
+                $query->where('grp_creador_cedula', trim((string) $filtros['creador']));
+            }
 
             return $query->orderByDesc($this->columnaId())->get();
         });

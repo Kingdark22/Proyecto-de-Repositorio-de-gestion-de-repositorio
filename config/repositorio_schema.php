@@ -11,9 +11,6 @@ return [
             'id'                  => 'pry_codigo',
             // titulo es accessor derivado de equipo_ref
             'resumen'             => 'pry_resumen',
-            'fecha_subida'        => 'pry_fecha_subida',
-            'calificacion'        => 'pry_calificacion',
-            'fecha_aprobacion'    => 'pry_fecha_aprobacion',
             'linea_investigacion_id' => 'lin_codigo',
             'metodologia_id' => 'mei_codigo',
             'tipo_publicacion_id' => 'tpu_codigo',

@@ -68,6 +68,8 @@ class IntranetProfessorService
      */
     public function esDocenteVigente(string $cedula, ?int $lapCodigo = null): bool
     {
+        $cedula = trim($cedula);
+        $cedulaNumerica = preg_replace('/^[A-Z]-/i', '', $cedula);
         $lapCodigo = $lapCodigo ?? $this->lapsoVigenteCodigo();
         if ($lapCodigo === null) {
             return false;
@@ -75,7 +77,12 @@ class IntranetProfessorService
 
         try {
             return $this->baseDocenteQuery($lapCodigo)
-                ->where('sud.sud_ced_docente', $cedula)
+                ->where(function($q) use ($cedula, $cedulaNumerica) {
+                    $q->where('sud.sud_ced_docente', $cedula);
+                    if ($cedulaNumerica !== $cedula) {
+                        $q->orWhere('sud.sud_ced_docente', $cedulaNumerica);
+                    }
+                })
                 ->whereNotNull('pro.pro_codigo')
                 ->exists();
         } catch (\Throwable) {
@@ -89,20 +96,57 @@ class IntranetProfessorService
      */
     public function esProfesorProyectoVigente(string $cedula, ?int $lapCodigo = null): bool
     {
+        $cedula = trim($cedula);
+        $cedulaNumerica = preg_replace('/^[A-Z]-/i', '', $cedula);
         $lapCodigo = $lapCodigo ?? $this->lapsoVigenteCodigo();
-        if ($lapCodigo === null) {
+        if ($cedula === '' || $lapCodigo === null) {
             return false;
         }
 
-        // Query única: debe tener asignación activa en UC de proyecto Y al menos un PNF
-        try {
-            return $this->baseProfesorProyectoQuery($lapCodigo)
-                ->where('sud.sud_ced_docente', $cedula)
-                ->whereNotNull('pro.pro_codigo')
-                ->exists();
-        } catch (\Throwable) {
-            return false;
+        $prefijos = config('proyecto_profesor.unidad_siglas_prefijos', []);
+        $patrones = config('proyecto_profesor.unidad_nombre_patrones', []);
+
+        $query = DB::connection($this->academicConnection())
+            ->table('seccion_unidad_docente as sud')
+            ->join('seccion as sec', 'sec.sec_codigo', '=', 'sud.sud_cod_seccion')
+            ->join('unidad_curricular as ucu', 'ucu.ucu_codigo', '=', 'sud.sud_cod_unidad')
+            ->where(function($q) use ($cedula, $cedulaNumerica) {
+                $q->where('sud.sud_ced_docente', $cedula);
+                if ($cedulaNumerica !== $cedula) {
+                    $q->orWhere('sud.sud_ced_docente', $cedulaNumerica);
+                }
+            })
+            ->where('sec.sec_cod_lapso_academico', $lapCodigo);
+
+        $sudActivo = config('proyecto_profesor.sud_estatus_activo');
+        if ($sudActivo) {
+            $query->where('sud.sud_estatus', $sudActivo);
         }
+
+        if ($prefijos !== [] || $patrones !== []) {
+            $colSiglas = 'ucu.ucu_siglas';
+            $colNombre = 'ucu.ucu_nombre';
+            $query->where(function ($q) use ($prefijos, $patrones, $colSiglas, $colNombre) {
+                foreach ($prefijos as $prefijo) {
+                    $prefijo = trim((string) $prefijo);
+                    if ($prefijo !== '') {
+                        $q->orWhereRaw('TRIM('.$colSiglas.') ILIKE ?', [$prefijo.'%']);
+                    }
+                }
+                foreach ($patrones as $patron) {
+                    $patron = trim((string) $patron);
+                    if ($patron !== '') {
+                        $q->orWhereRaw('UPPER(TRIM('.$colNombre.')) LIKE ?', ['%'.$patron.'%']);
+                    }
+                }
+            });
+        }
+
+        return $query->exists();
+    }
+
+    public function clearProfesorVigenteCache(string $cedula): void
+    {
     }
 
     /**
@@ -111,13 +155,19 @@ class IntranetProfessorService
     public function esProfesorProyectoEnLapso(string $cedula, ?int $lapCodigo = null, array $filtros = []): bool
     {
         $cedula = trim($cedula);
+        $cedulaNumerica = preg_replace('/^[A-Z]-/i', '', $cedula);
         if ($cedula === '' || $lapCodigo === null) {
             return false;
         }
 
         try {
             return $this->baseProfesorProyectoQuery($lapCodigo, $filtros)
-                ->where('sud.sud_ced_docente', $cedula)
+                ->where(function($q) use ($cedula, $cedulaNumerica) {
+                    $q->where('sud.sud_ced_docente', $cedula);
+                    if ($cedulaNumerica !== $cedula) {
+                        $q->orWhere('sud.sud_ced_docente', $cedulaNumerica);
+                    }
+                })
                 ->exists();
         } catch (\Throwable) {
             return false;
@@ -132,6 +182,7 @@ class IntranetProfessorService
     public function clavesEquipoSeccionDocente(string $cedula, ?int $lapCodigo = null): array
     {
         $cedula = trim($cedula);
+        $cedulaNumerica = preg_replace('/^[A-Z]-/i', '', $cedula);
         $lapCodigo = $lapCodigo ?? $this->lapsoVigenteCodigo();
         if ($cedula === '' || $lapCodigo === null) {
             return [];
@@ -141,7 +192,12 @@ class IntranetProfessorService
             $equipos = app(IntranetEquipoSeccionService::class);
 
             return $this->baseProfesorProyectoQuery($lapCodigo)
-                ->where('sud.sud_ced_docente', $cedula)
+                ->where(function($q) use ($cedula, $cedulaNumerica) {
+                    $q->where('sud.sud_ced_docente', $cedula);
+                    if ($cedulaNumerica !== $cedula) {
+                        $q->orWhere('sud.sud_ced_docente', $cedulaNumerica);
+                    }
+                })
                 ->select(['lap.lap_codigo', 'sec.sec_codigo'])
                 ->distinct()
                 ->get()
@@ -162,6 +218,7 @@ class IntranetProfessorService
     public function programasDelDocente(string $cedula, ?int $lapCodigo = null): array
     {
         $cedula = trim($cedula);
+        $cedulaNumerica = preg_replace('/^[A-Z]-/i', '', $cedula);
         $lapCodigo = $lapCodigo ?? $this->lapsoVigenteCodigo();
         if ($cedula === '' || $lapCodigo === null) {
             return [];
@@ -169,7 +226,12 @@ class IntranetProfessorService
 
         try {
             return $this->baseProfesorProyectoQuery($lapCodigo)
-                ->where('sud.sud_ced_docente', $cedula)
+                ->where(function($q) use ($cedula, $cedulaNumerica) {
+                    $q->where('sud.sud_ced_docente', $cedula);
+                    if ($cedulaNumerica !== $cedula) {
+                        $q->orWhere('sud.sud_ced_docente', $cedulaNumerica);
+                    }
+                })
                 ->whereNotNull('pro.pro_codigo')
                 ->select(['pro.pro_codigo'])
                 ->distinct()
@@ -192,6 +254,7 @@ class IntranetProfessorService
     public function seccionesDelDocente(string $cedula, ?int $lapCodigo = null): array
     {
         $cedula = trim($cedula);
+        $cedulaNumerica = preg_replace('/^[A-Z]-/i', '', $cedula);
         $lapCodigo = $lapCodigo ?? $this->lapsoVigenteCodigo();
         if ($cedula === '' || $lapCodigo === null) {
             return [];
@@ -199,7 +262,12 @@ class IntranetProfessorService
 
         try {
             return $this->baseProfesorProyectoQuery($lapCodigo)
-                ->where('sud.sud_ced_docente', $cedula)
+                ->where(function($q) use ($cedula, $cedulaNumerica) {
+                    $q->where('sud.sud_ced_docente', $cedula);
+                    if ($cedulaNumerica !== $cedula) {
+                        $q->orWhere('sud.sud_ced_docente', $cedulaNumerica);
+                    }
+                })
                 ->select(['sec.sec_codigo'])
                 ->distinct()
                 ->get()
@@ -215,6 +283,7 @@ class IntranetProfessorService
     public function esDocenteIntranet(string $cedula): bool
     {
         $cedula = trim($cedula);
+        $cedulaNumerica = preg_replace('/^[A-Z]-/i', '', $cedula);
         if ($cedula === '') {
             return false;
         }
@@ -222,9 +291,13 @@ class IntranetProfessorService
         try {
             return DB::connection($this->academicConnection())
                 ->table('seccion_unidad_docente')
-                ->where('sud_ced_docente', $cedula)
-                ->where("sud_ced_docente", "NOT LIKE", '%-%')
-                ->whereRaw('LENGTH(sud_ced_docente) >= 6')
+                ->where(function($q) use ($cedula, $cedulaNumerica) {
+                    $q->where('sud_ced_docente', $cedula);
+                    if ($cedulaNumerica !== $cedula) {
+                        $q->orWhere('sud_ced_docente', $cedulaNumerica);
+                    }
+                })
+                ->whereRaw('LENGTH(TRIM(sud_ced_docente)) >= 6')
                 ->exists();
         } catch (\Throwable) {
             return false;
@@ -672,7 +745,9 @@ class IntranetProfessorService
                     ->select(['tra.tra_codigo', 'tra.tra_nombre']);
 
                 if ($programaCodigo) {
-                    $query->join('malla as mal', 'mal.mal_cod_trayecto', '=', 'tra.tra_codigo')
+                    $query->join('semestre as sem', 'sem.sem_cod_trayecto', '=', 'tra.tra_codigo')
+                        ->join('seccion as sec', 'sec.sec_cod_semestre', '=', 'sem.sem_codigo')
+                        ->join('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
                         ->where('mal.mal_cod_programa', $programaCodigo);
                 }
 
@@ -704,10 +779,11 @@ class IntranetProfessorService
                     ->join('lapso_academico as lap', 'lap.lap_codigo', '=', 'sec.sec_cod_lapso_academico')
                     ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
                     ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
+                    ->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
                     ->where('lap.lap_codigo', $lapCodigo)
                     ->select(['sec.sec_codigo', 'sec.sec_nombre', 'pro.pro_siglas']);
 
-                $query->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'mal.mal_cod_trayecto')
+                $query->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'sem.sem_cod_trayecto')
                     ->addSelect('tra.tra_nombre');
 
                 if ($programaCodigo) {
@@ -741,9 +817,9 @@ class IntranetProfessorService
             ->join('unidad_curricular as ucu', 'ucu.ucu_codigo', '=', 'sud.sud_cod_unidad')
             ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
             ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
-            ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'mal.mal_cod_trayecto')
-            ->where("sud.sud_ced_docente", "NOT LIKE", '%-%')
-            ->whereRaw('LENGTH(sud.sud_ced_docente) >= 6');
+            ->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
+            ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'sem.sem_cod_trayecto')
+            ->whereRaw('LENGTH(TRIM(sud.sud_ced_docente)) >= 6');
 
         if ($lapCodigo !== null) {
             $query->where('lap.lap_codigo', $lapCodigo);
@@ -821,9 +897,9 @@ class IntranetProfessorService
             ->join('unidad_curricular as ucu_v', 'ucu_v.ucu_codigo', '=', 'sud_v.sud_cod_unidad')
             ->leftJoin('malla as mal_v', 'mal_v.mal_codigo', '=', 'sec_v.sec_cod_malla')
             ->leftJoin('programa as pro_v', 'pro_v.pro_codigo', '=', 'mal_v.mal_cod_programa')
-            ->leftJoin('trayecto as tra_v', 'tra_v.tra_codigo', '=', 'mal_v.mal_cod_trayecto')
-            ->where("sud_v.sud_ced_docente", "NOT LIKE", '%-%')
-            ->whereRaw('LENGTH(sud_v.sud_ced_docente) >= 6');
+            ->leftJoin('semestre as sem_v', 'sem_v.sem_codigo', '=', 'sec_v.sec_cod_semestre')
+            ->leftJoin('trayecto as tra_v', 'tra_v.tra_codigo', '=', 'sem_v.sem_cod_trayecto')
+            ->whereRaw('LENGTH(TRIM(sud_v.sud_ced_docente)) >= 6');
 
         if ($lapCodigo !== null) {
             $sub->where('lap_v.lap_codigo', $lapCodigo);

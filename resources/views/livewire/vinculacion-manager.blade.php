@@ -74,10 +74,6 @@
                             </div>
                         </td>
                     </tr>
-                    <tr>
-                        <td style="font-weight:bold; vertical-align:top; color:#555; white-space:nowrap;">Fecha aprobaci&oacute;n:</td>
-                        <td style="color:#222;">{{ $selectedProyecto->fecha_aprobacion ? $selectedProyecto->fecha_aprobacion->format('d/m/Y') : '-' }}</td>
-                    </tr>
                 </table>
 
                 {{-- Documentos del proyecto --}}
@@ -181,9 +177,8 @@
                     <thead>
                         <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
                             <th width="5%" style="padding:8px 4px;">N&deg;</th>
-                            <th width="30%" style="padding:8px 4px;">T&iacute;tulo</th>
-                            <th width="15%" style="padding:8px 4px;">Comunidad</th>
-                            <th width="10%" style="padding:8px 4px;">Fecha Aprob.</th>
+                            <th width="35%" style="padding:8px 4px;">T&iacute;tulo</th>
+                            <th width="20%" style="padding:8px 4px;">Comunidad</th>
                             <th width="20%" style="padding:8px 4px;">Vinculaci&oacute;n</th>
                             <th width="20%" style="padding:8px 4px;">Acci&oacute;n</th>
                         </tr>
@@ -198,7 +193,6 @@
                                 <td align="center" style="padding:6px 4px;">{{ $rowNum }}</td>
                                 <td style="font-weight:bold; padding:6px 4px;">{{ $proy->titulo ?? 'N/A' }}</td>
                                 <td style="padding:6px 4px;">{{ $proy->comunidad->nombre ?? '-' }}</td>
-                                <td align="center" style="padding:6px 4px;">{{ $proy->fecha_aprobacion ? $proy->fecha_aprobacion->format('d/m/Y') : '-' }}</td>
                                 <td align="center" style="padding:6px 4px;">
                                     @if($vin)
                                         <span class="cm-tag" style="background: #198754; font-size:11px;">Vinculado</span>

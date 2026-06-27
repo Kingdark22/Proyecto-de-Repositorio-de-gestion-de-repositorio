@@ -184,9 +184,8 @@
             style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px; min-height: 160px;">
             <thead>
                 <tr style="background-color: #8bb2b7; color: #000; text-align: center; font-weight: bold;">
-                    <th width="40%">Título / equipo / comunidad</th>
+                    <th width="50%">Título / equipo / comunidad</th>
                     <th width="25%">Resumen</th>
-                    <th width="10%">Fecha</th>
                     <th width="25%">Acciones</th>
                 </tr>
             </thead>
@@ -209,8 +208,6 @@
                             @endif
                         </td>
                         <td style="padding: 5px; font-size: 10px;">{{ Str::limit($p->resumen, 100) }}</td>
-                        <td align="center" style="font-size: 10px;">{{ $p->fecha_subida?->format('d/m/Y') ?? '-' }}
-                        </td>
                         <td align="center" style="padding: 5px;">
                             <a href="#" wire:click.prevent="openDetails({{ $p->id }})"
                                 style="color: #0000EE; font-weight: bold;">[Ver detalles]</a>
@@ -226,7 +223,7 @@
                 @endforeach
                 @if ($proyectos->isEmpty())
                     <tr>
-                        <td colspan="4" align="center" style="padding: 20px; font-weight: bold;">
+                        <td colspan="3" align="center" style="padding: 20px; font-weight: bold;">
                             No se encontraron proyectos con los criterios seleccionados
                         </td>
                     </tr>
@@ -245,12 +242,6 @@
                 <div
                     style="display: flex; justify-content: space-between; border-bottom: 1px solid #CCC; padding-bottom: 10px; margin-bottom: 15px;">
                     <div style="width: 90%;">
-                        @if ($selectedProject->fecha_subida)
-                            <span
-                                style="background-color: #8bb2b7; font-size: 10px; font-weight: bold; padding: 2px 5px; border: 1px solid #777;">
-                                {{ $selectedProject->fecha_subida->format('d/m/Y') }}
-                            </span>
-                        @endif
                         <h3 style="margin: 5px 0; font-size: 16px; font-weight: bold;">{{ $selectedProject->titulo }}
                         </h3>
                         <span style="font-size: 10px;"><b>Equipo:</b> {{ $selectedProject->equipo_resumen }}</span>

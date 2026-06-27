@@ -369,6 +369,8 @@ class GrupoProyectoService
             'lap_codigo' => 0,
             'sec_codigo' => 0,
             'pro_codigo' => null,
+            'tra_codigo' => null,
+            'trayecto_nombre' => '',
             'lap_nombre' => '',
             'sec_nombre' => '',
             'pro_siglas' => '',
@@ -384,6 +386,8 @@ class GrupoProyectoService
                     'lap_codigo' => (int) ($ctx['lap_codigo'] ?? 0),
                     'sec_codigo' => (int) ($ctx['sec_codigo'] ?? 0),
                     'pro_codigo' => isset($ctx['pro_codigo']) ? (int) $ctx['pro_codigo'] : null,
+                    'tra_codigo' => isset($ctx['tra_codigo']) ? (int) $ctx['tra_codigo'] : null,
+                    'trayecto_nombre' => trim((string) ($ctx['trayecto_nombre'] ?? ($ctx['tra_nombre'] ?? ''))),
                     'lap_nombre' => trim((string) ($ctx['lap_nombre'] ?? '')),
                     'sec_nombre' => trim((string) ($ctx['sec_nombre'] ?? '')),
                     'pro_siglas' => trim((string) ($ctx['pro_siglas'] ?? '')),
@@ -449,6 +453,9 @@ class GrupoProyectoService
         if ($grupo->pro_nombre === '') {
             $grupo->pro_nombre = $etiq['pro_nombre'];
         }
+
+        $grupo->tra_codigo = $etiq['tra_codigo'] ?? null;
+        $grupo->tra_nombre = $etiq['trayecto_nombre'] ?? '';
 
         $grupo->resumen_pnf_sec = $this->formatearResumenPnfSec($grupo);
 
@@ -543,6 +550,8 @@ class GrupoProyectoService
             'lap_codigo' => $ctx['lap_codigo'],
             'sec_codigo' => $ctx['sec_codigo'],
             'pro_codigo' => $ctx['pro_codigo'],
+            'tra_codigo' => $ctx['tra_codigo'],
+            'tra_nombre' => $ctx['trayecto_nombre'],
             'lap_nombre' => $ctx['lap_nombre'],
             'sec_nombre' => $ctx['sec_nombre'],
             'pro_siglas' => $ctx['pro_siglas'],

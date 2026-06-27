@@ -101,7 +101,7 @@ class ProyectoGestionService
             return static::$roleCache[$key] ?? collect();
         }
 
-        $ids = $this->proyectosDondeEsLider($user);
+        $ids = $this->proyectosDondeEsMiembro($user);
         if (empty($ids)) {
             return static::$roleCache[$key] = collect();
         }
@@ -182,7 +182,8 @@ class ProyectoGestionService
                     ->table('seccion as sec')
                     ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
                     ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
-                    ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'mal.mal_cod_trayecto')
+                    ->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
+                    ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'sem.sem_cod_trayecto')
                     ->where('sec.sec_codigo', $partes['sec_codigo'])
                     ->select(['pro.pro_codigo', 'tra.tra_nombre'])
                     ->first();
@@ -206,9 +207,6 @@ class ProyectoGestionService
             'editingId' => $id,
             'titulo' => $item->titulo,
             'resumen' => $item->resumen,
-            'fecha_subida' => $item->fecha_subida?->format('Y-m-d') ?? '',
-            'calificacion' => $item->calificacion !== null ? (string) $item->calificacion : '',
-            'fecha_aprobacion' => $item->fecha_aprobacion?->format('Y-m-d') ?? '',
             'linea_investigacion_id' => (string) ($item->linea_investigacion_id ?? ''),
             'metodologia_id' => (string) ($item->metodologia_id ?? ''),
             'tipo_publicacion_id' => (string) ($item->tipo_publicacion_id ?? ''),
@@ -236,10 +234,7 @@ class ProyectoGestionService
         $existing = $editingId ? $this->proyectoRepo->findWithDocuments($editingId) : null;
 
         $payload = [
-            'resumen' => $datos['resumen'],
-            'fecha_subida' => $datos['fecha_subida'],
-            'calificacion' => ($datos['calificacion'] ?? '') !== '' ? (int) $datos['calificacion'] : null,
-            'fecha_aprobacion' => ($datos['fecha_aprobacion'] ?? '') !== '' ? $datos['fecha_aprobacion'] : now()->format('Y-m-d'),
+            'resumen' => $datos['resumen'] ?? '',
             'linea_investigacion_id' => $datos['linea_investigacion_id'] ?? null,
             'metodologia_id' => $datos['metodologia_id'] ?? null,
             'tipo_publicacion_id' => $datos['tipo_publicacion_id'] ?? null,
@@ -363,9 +358,11 @@ class ProyectoGestionService
             }
 
             $grupos = $gruposSvc->listar();
-            $gruposFiltrados = $grupos->filter(fn ($g) => collect($clavesDocente)->contains(
-                fn ($clave) => str_contains($clave, ':' . $g->lap_codigo . ':' . $g->sec_codigo)
-            ));
+            $gruposFiltrados = $grupos
+                ->filter(fn ($g) => $g->creador_cedula === $cedula)
+                ->filter(fn ($g) => collect($clavesDocente)->contains(
+                    fn ($clave) => str_contains($clave, ':' . $g->lap_codigo . ':' . $g->sec_codigo)
+                ));
         } else {
             $lapso = !empty($filtros['lapso']) ? (int) $filtros['lapso'] : null;
             $programa = !empty($filtros['programa']) ? (int) $filtros['programa'] : null;
@@ -413,13 +410,12 @@ class ProyectoGestionService
         }
 
         $proyecto = $this->proyectoRepo->create([
-            'resumen' => 'Proyecto del grupo ' . $grupo->nombre,
+            'resumen' => '',
             'comunidad_id' => $grupo->com_codigo,
             'equipo_ref' => $clave,
             'estado_validacion' => 'pendiente',
             'estado_logico' => false,
             'creador_cedula' => trim((string) $user->usu_cedula),
-            'fecha_subida' => now()->format('Y-m-d'),
         ]);
 
         $this->registrarAuditoria($proyecto, 'registrar');
@@ -478,7 +474,6 @@ class ProyectoGestionService
         $rules = [
             'titulo' => 'required|min:5|max:255',
             'resumen' => 'required|min:10',
-            'fecha_subida' => 'required|date',
 
             'linea_investigacion_id' => ['nullable', Rule::exists('\App\Models\LineaInvestigacion', (new \App\Models\LineaInvestigacion())->getKeyName())],
             'metodologia_id' => ['nullable', Rule::exists('\App\Models\MetodologiaInvestigacion', (new \App\Models\MetodologiaInvestigacion())->getKeyName())],
@@ -495,22 +490,22 @@ class ProyectoGestionService
                         return;
                     }
                     if (! $this->usuarioEsAdminEnSistema($user)) {
-                        $cedula = trim((string) $user->usu_cedula);
-                        if (! $this->equipoSeccion->estudiantePerteneceEquipo($cedula, $value)) {
-                            $fail('No pertenece al equipo/grupo seleccionado.');
+                        $activeRole = app(UserRoleService::class)->getActiveRole($user);
+                        $esStaff = app(UserRoleService::class)->roleMatches('profesor proyecto', $activeRole)
+                            || app(UserRoleService::class)->roleMatches('gestionador', $activeRole)
+                            || app(UserRoleService::class)->roleMatches('coordinador', $activeRole);
+                        if (! $esStaff) {
+                            $cedula = trim((string) $user->usu_cedula);
+                            if (! $this->equipoSeccion->estudiantePerteneceEquipo($cedula, $value)) {
+                                $fail('No pertenece al equipo/grupo seleccionado.');
+                            }
                         }
                     }
                 },
             ],
         ];
 
-        if ($esEdicion) {
-            $rules['calificacion'] = 'nullable|integer|min:1|max:20';
-            $rules['fecha_aprobacion'] = 'nullable|date';
-        } else {
-            $rules['calificacion'] = 'nullable|integer|min:1|max:20';
-            $rules['fecha_aprobacion'] = 'nullable|date';
-        }
+
 
         return $rules;
     }
@@ -625,7 +620,8 @@ class ProyectoGestionService
             $row = DB::connection($this->equipoSeccion->academicConnection())
                 ->table('seccion as sec')
                 ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
-                ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'mal.mal_cod_trayecto')
+                ->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
+                ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'sem.sem_cod_trayecto')
                 ->where('sec.sec_codigo', $partes['sec_codigo'])
                 ->where('tra.tra_nombre', $trayectoNombre)
                 ->select('tra.tra_codigo')
@@ -741,11 +737,11 @@ class ProyectoGestionService
     }
 
     /**
-     * @return array<int> IDs de proyectos donde el usuario es líder
+     * @return array<int> IDs de proyectos donde el usuario es miembro del equipo
      */
-    public function proyectosDondeEsLider(User $user): array
+    public function proyectosDondeEsMiembro(User $user): array
     {
-        $key = 'lider_ids_' . $user->getKey();
+        $key = 'miembro_ids_' . $user->getKey();
         if (array_key_exists($key, static::$roleCache)) {
             return static::$roleCache[$key] ?? [];
         }
@@ -756,7 +752,7 @@ class ProyectoGestionService
         }
 
         try {
-            $grupos = $this->grupoRepo->findLiderByCedula($cedula);
+            $grupos = $this->grupoRepo->findByMiembroCedula($cedula);
 
             $claves = $grupos->map(fn ($g) => 'EQGRP:' . $g->grp_codigo)->toArray();
             if (empty($claves)) {
@@ -899,6 +895,112 @@ class ProyectoGestionService
             ->orderBy('nombre')
             ->limit(15)
             ->get();
+    }
+
+    /**
+     * Busca una persona primero en intranet (tabla persona) y luego en involucrados.
+     * @return array{found: bool, source: string, data: array}|null
+     */
+    public function buscarPersonaPorCedula(string $cedula): ?array
+    {
+        $cedula = trim($cedula);
+        if ($cedula === '') {
+            return null;
+        }
+
+        // 1. Buscar en intranet (tabla persona)
+        try {
+            $conn = \App\Helpers\DualDatabase::academicConnection();
+            $persona = \Illuminate\Support\Facades\DB::connection($conn)
+                ->table('persona')
+                ->where('per_cedula', $cedula)
+                ->select(['per_cedula', 'per_nombre', 'per_apellido'])
+                ->first();
+
+            if ($persona) {
+                return [
+                    'found' => true,
+                    'source' => 'intranet',
+                    'data' => [
+                        'cedula' => trim($persona->per_cedula),
+                        'nombre' => trim($persona->per_nombre),
+                        'apellido' => trim($persona->per_apellido ?? ''),
+                    ],
+                ];
+            }
+        } catch (\Throwable) {
+            // Intranet no disponible, continuar con involucrados
+        }
+
+        // 2. Buscar en involucrados (repositorio)
+        $involucrado = Involucrado::where('cedula', $cedula)->first();
+        if ($involucrado) {
+            return [
+                'found' => true,
+                'source' => 'involucrados',
+                'data' => [
+                    'id' => $involucrado->id,
+                    'cedula' => $involucrado->cedula,
+                    'nombre' => $involucrado->nombre,
+                    'apellido' => $involucrado->apellido,
+                ],
+            ];
+        }
+
+        // 3. No encontrado
+        return [
+            'found' => false,
+            'source' => 'none',
+            'data' => [
+                'cedula' => $cedula,
+                'nombre' => '',
+                'apellido' => '',
+            ],
+        ];
+    }
+
+    /**
+     * Busca o crea un involucrado a partir de una cédula.
+     * Si existe en intranet (persona) y no en involucrados, crea desde persona.
+     * Si existe en involucrados, lo retorna.
+     * Si no existe en ningún lado, crea uno nuevo con los datos proporcionados.
+     */
+    public function buscarOCrearInvolucrado(string $cedula, ?string $nombre = null, ?string $apellido = null): Involucrado
+    {
+        $cedula = trim($cedula);
+
+        // Buscar en involucrados primero
+        $existing = Involucrado::where('cedula', $cedula)->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        // Buscar en intranet (persona)
+        try {
+            $conn = \App\Helpers\DualDatabase::academicConnection();
+            $persona = \Illuminate\Support\Facades\DB::connection($conn)
+                ->table('persona')
+                ->where('per_cedula', $cedula)
+                ->select(['per_nombre', 'per_apellido'])
+                ->first();
+
+            if ($persona) {
+                return Involucrado::create([
+                    'nombre' => trim($persona->per_nombre),
+                    'apellido' => trim($persona->per_apellido ?? ''),
+                    'cedula' => $cedula,
+                ]);
+            }
+        } catch (\Throwable) {
+            // Intranet no disponible
+        }
+
+        // Crear nuevo con datos proporcionados (o con cédula)
+        return Involucrado::create([
+            'nombre' => trim($nombre ?: 'Sin nombre'),
+            'apellido' => trim($apellido ?: ''),
+            'cedula' => $cedula,
+        ]);
     }
 
     /**
@@ -1046,6 +1148,73 @@ class ProyectoGestionService
                 ->where('id', $pivot->id)
                 ->delete();
         }
+    }
+
+    /**
+     * Retorna los datos necesarios para generar una solvencia de proyecto.
+     * @return array<string, mixed>
+     */
+    public function datosSolvencia(int $proyectoId): array
+    {
+        $proyecto = $this->proyectoRepo->findOrFail($proyectoId);
+
+        if ($proyecto->estado_validacion !== 'aprobado') {
+            throw new \RuntimeException('El proyecto debe estar aprobado para generar la solvencia.');
+        }
+
+        $clave = $proyecto->equipo_ref ?? '';
+        $gruposSvc = app(GrupoProyectoService::class);
+        $integrantes = $gruposSvc->integrantes($clave);
+
+        $lider = $integrantes->first(fn($m) => ($m->rol_id ?? 0) === IntranetEquipoSeccionService::ROL_LIDER);
+        $estudiante = $lider ?: $integrantes->first();
+
+        $estudianteNombre = $estudiante
+            ? trim(($estudiante->nombre ?? '') . ' ' . ($estudiante->apellido ?? ''))
+            : 'N/A';
+        $estudianteCedula = $estudiante ? trim($estudiante->cedula ?? '') : 'N/A';
+
+        $partes = $this->equipoSeccion->parsearClave($clave);
+        $lapNombre = '';
+        $secNombre = '';
+        $proSiglas = '';
+        $traNombre = '';
+
+        if ($partes) {
+            if (str_starts_with($clave, GrupoProyectoService::PREFIJO.':')) {
+                $grupo = $this->grupoRepo->find($partes['grp_codigo']);
+                if ($grupo && $grupo->grp_contexto) {
+                    $ctx = $grupo->grp_contexto;
+                    $lapNombre = $ctx['lap_nombre'] ?? '';
+                    $secNombre = $ctx['sec_nombre'] ?? '';
+                    $proSiglas = $ctx['pro_siglas'] ?? '';
+                    $traNombre = $ctx['tra_nombre'] ?? '';
+                }
+            }
+            if (!$proSiglas) {
+                try {
+                    $etiquetas = $this->equipoSeccion->etiquetasContexto(
+                        $partes['lap_codigo'],
+                        $partes['sec_codigo']
+                    );
+                    $lapNombre = $etiquetas['lap_nombre'] ?? $lapNombre;
+                    $secNombre = $etiquetas['sec_nombre'] ?? $secNombre;
+                    $proSiglas = $etiquetas['pro_siglas'] ?? $proSiglas;
+                    $traNombre = $etiquetas['trayecto_nombre'] ?? $traNombre;
+                } catch (\Throwable) {
+                }
+            }
+        }
+
+        return [
+            'estudiante_nombre' => $estudianteNombre,
+            'estudiante_cedula' => $estudianteCedula,
+            'titulo_proyecto' => $proyecto->titulo,
+            'pnf' => $proSiglas,
+            'trayecto' => $traNombre,
+            'seccion' => $secNombre,
+            'lapso' => $lapNombre,
+        ];
     }
 
     /**
