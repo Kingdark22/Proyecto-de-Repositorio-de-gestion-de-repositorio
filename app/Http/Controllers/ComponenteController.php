@@ -6,6 +6,7 @@ use App\Models\Componente;
 use App\Models\ComponentePrograma;
 use App\Repositories\CatalogoRepository;
 use App\Services\UnicidadNombreService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ComponenteController extends Controller
@@ -159,6 +160,25 @@ class ComponenteController extends Controller
 
         return redirect()->route('componentes.index')
             ->with('success', 'Componente eliminado correctamente.');
+    }
+
+    public function checkNombre(Request $request, UnicidadNombreService $unicidadService): JsonResponse
+    {
+        $nombre = trim($request->get('nombre', ''));
+        $ignoreId = $request->integer('ignore_id', 0) ?: null;
+
+        if ($nombre === '' || strlen($nombre) < 3) {
+            return response()->json(['disponible' => false, 'error' => 'too_short']);
+        }
+
+        $disponible = $unicidadService->check(
+            Componente::class,
+            'nombre',
+            $nombre,
+            $ignoreId,
+        );
+
+        return response()->json(['disponible' => $disponible]);
     }
 
     // ── Vinculación Componente → PNF + Trayectos (MVC) ──

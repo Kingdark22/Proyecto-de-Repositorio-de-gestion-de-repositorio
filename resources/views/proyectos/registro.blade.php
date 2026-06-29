@@ -144,20 +144,6 @@
                         </td>
                     </tr>
                     <tr>
-                        <td><b>Tipo de Publicaci&oacute;n:</b></td>
-                        <td colspan="3">
-                            <div style="display:flex;gap:4px;align-items:center;">
-                                <select name="tipo_publicacion_id" style="flex:1;font-size:11px;">
-                                    <option value="">Seleccione...</option>
-                                    @foreach(($catalogosForm['tipos_publicacion'] ?? []) as $tp)
-                                        <option value="{{ $tp->id }}" {{ old('tipo_publicacion_id', $datosForm['tipo_publicacion_id'] ?? '') == $tp->id ? 'selected' : '' }}>{{ $tp->nombre }}</option>
-                                    @endforeach
-                                </select>
-                                <button type="button" onclick="abrirModalCatalogo('tipo_publicacion')" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space:nowrap;padding:4px 8px;font-size:11px;" title="Nuevo tipo de publicación">+</button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
                         <td><b>Tipo de Investigaci&oacute;n:</b></td>
                         <td>
                             <div style="display:flex;gap:4px;align-items:center;">
@@ -389,21 +375,14 @@
                     {{-- Nombre --}}
                     <div style="margin-bottom:12px;">
                         <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Nombre: <span style="color:red;">*</span></label>
-                        <input type="text" id="modal-catalogo-nombre" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:13px;" placeholder="Nombre...">
+                        <input type="text" id="modal-catalogo-nombre" oninput="validarNombre(this)" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:13px;" placeholder="Nombre...">
+                        <span id="nombreStatus" style="font-size:11px;display:none;"></span>
                     </div>
 
                     {{-- Descripción (opcional) --}}
                     <div style="margin-bottom:12px;">
                         <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Descripci&oacute;n:</label>
                         <textarea id="modal-catalogo-descripcion" rows="2" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></textarea>
-                    </div>
-
-                    {{-- Mención honorífica (solo para tipo publicación) --}}
-                    <div id="modal-catalogo-mencion" style="margin-bottom:12px;display:none;">
-                        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
-                            <input type="checkbox" id="modal-catalogo-mencion-check" style="width:16px;height:16px;cursor:pointer;">
-                            ¿Tiene menci&oacute;n honor&iacute;fica?
-                        </label>
                     </div>
 
                     <div id="modal-catalogo-error" style="color:#dc3545;font-size:11px;margin-bottom:8px;display:none;"></div>
@@ -697,30 +676,28 @@ const catalogoConfig = {
     linea: {
         titulo: 'Nueva L&iacute;nea de Investigaci&oacute;n',
         ruta: '{{ route("lineas-investigacion.store") }}',
+        checkRuta: '{{ route("lineas-investigacion.check-nombre") }}',
         campoNombre: 'nombre_investigacion',
         mostrarMencion: false
     },
     metodologia: {
         titulo: 'Nueva Metodolog&iacute;a de Investigaci&oacute;n',
         ruta: '{{ route("metodologia-investigacion.store") }}',
+        checkRuta: '{{ route("metodologia-investigacion.check-nombre") }}',
         campoNombre: 'nombre',
         mostrarMencion: false
-    },
-    tipo_publicacion: {
-        titulo: 'Nuevo Tipo de Publicaci&oacute;n',
-        ruta: '{{ route("tipos-publicacion.store") }}',
-        campoNombre: 'nombre',
-        mostrarMencion: true
     },
     tipo_investigacion: {
         titulo: 'Nuevo Tipo de Investigaci&oacute;n',
         ruta: '{{ route("tipos-investigacion.store") }}',
+        checkRuta: '{{ route("tipos-investigacion.check-nombre") }}',
         campoNombre: 'nombre',
         mostrarMencion: false
     },
     objetivo_investigacion: {
         titulo: 'Nuevo Objetivo de Investigaci&oacute;n',
         ruta: '{{ route("objetivos-investigacion.store") }}',
+        checkRuta: '{{ route("objetivos-investigacion.check-nombre") }}',
         campoNombre: 'nombre',
         mostrarMencion: false
     }
@@ -732,17 +709,25 @@ function abrirModalCatalogo(tipo) {
     document.getElementById('modal-catalogo-titulo').innerHTML = cfg.titulo;
     document.getElementById('modal-catalogo-tipo').value = tipo;
     document.getElementById('modal-catalogo-ruta').value = cfg.ruta;
-    document.getElementById('modal-catalogo-nombre').value = '';
+    const input = document.getElementById('modal-catalogo-nombre');
+    input.value = '';
+    input.dataset.checkUrl = cfg.checkRuta;
+    input.dataset.nombreOk = '';
     document.getElementById('modal-catalogo-descripcion').value = '';
     document.getElementById('modal-catalogo-mencion').style.display = cfg.mostrarMencion ? 'block' : 'none';
     document.getElementById('modal-catalogo-mencion-check').checked = false;
     document.getElementById('modal-catalogo-error').style.display = 'none';
+    document.getElementById('nombreStatus').style.display = 'none';
     document.getElementById('modal-catalogo').style.display = 'flex';
-    document.getElementById('modal-catalogo-nombre').focus();
+    input.focus();
 }
 
 function cerrarModalCatalogo() {
     document.getElementById('modal-catalogo').style.display = 'none';
+    const input = document.getElementById('modal-catalogo-nombre');
+    if (input) input.dataset.nombreOk = '';
+    const status = document.getElementById('nombreStatus');
+    if (status) status.style.display = 'none';
 }
 
 function guardarCatalogo() {
@@ -750,9 +735,20 @@ function guardarCatalogo() {
     const cfg = catalogoConfig[tipo];
     if (!cfg) return;
 
-    const nombre = document.getElementById('modal-catalogo-nombre').value.trim();
+    const input = document.getElementById('modal-catalogo-nombre');
+    const nombre = input.value.trim();
     if (!nombre) {
         document.getElementById('modal-catalogo-error').textContent = 'El nombre es obligatorio.';
+        document.getElementById('modal-catalogo-error').style.display = 'block';
+        return;
+    }
+    if (input.dataset.nombreOk === 'false') {
+        document.getElementById('modal-catalogo-error').textContent = 'Este nombre ya está en uso.';
+        document.getElementById('modal-catalogo-error').style.display = 'block';
+        return;
+    }
+    if (input.dataset.nombreOk === 'checking') {
+        document.getElementById('modal-catalogo-error').textContent = 'Verificando disponibilidad, espere...';
         document.getElementById('modal-catalogo-error').style.display = 'block';
         return;
     }
@@ -762,7 +758,7 @@ function guardarCatalogo() {
     const data = { _token: '{{ csrf_token() }}' };
     data[cfg.campoNombre] = nombre;
     const desc = document.getElementById('modal-catalogo-descripcion').value.trim();
-    if (desc && tipo !== 'tipo_publicacion') data.descripcion = desc;
+    if (desc) data.descripcion = desc;
     if (cfg.mostrarMencion) {
         data.mencion_honorifica = document.getElementById('modal-catalogo-mencion-check').checked ? '1' : '0';
     }

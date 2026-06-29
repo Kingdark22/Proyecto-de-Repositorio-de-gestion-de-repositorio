@@ -282,7 +282,7 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
             </table>
 
             <div style="margin-top:14px;text-align:center;">
-                <button type="submit" class="cm-btn cm-btn-success" id="guardarBtn" <?php echo e(!$tablaOk ? 'disabled' : ''); ?>>
+                <button type="submit" class="cm-btn cm-btn-success" id="guardarBtn" data-confirm-register data-entity-type="Grupo de Proyecto" <?php echo e(!$tablaOk ? 'disabled' : ''); ?>>
                     <?php echo e(isset($grupo) ? 'Actualizar Grupo' : 'Registrar Grupo'); ?>
 
                 </button>
@@ -304,14 +304,14 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                 <div class="grp-field" style="grid-column:span 2;">
                     <label>Nombre de la comunidad <span style="color:#c82333;">*</span></label>
-                    <input type="text" id="comNombre" placeholder="Nombre completo" style="width:100%;max-width:100%;">
+                    <input type="text" id="comNombre" placeholder="Nombre completo" style="width:100%;max-width:100%;" oninput="validarNombre(this)">
                     <span id="comNombreStatus" class="status-indicator"></span>
                 </div>
 
                 <div class="grp-field">
                     <label>RIF</label>
                     <div style="display:flex;gap:6px;align-items:center;">
-                        <select id="comRifLetra" style="width:60px;height:36px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+                        <select id="comRifLetra" style="width:60px;height:36px;border:1px solid #ccc;border-radius:4px;font-size:13px;" onchange="validarRif(document.getElementById('comRifNumero'))">
                             <option value="J">J</option>
                             <option value="V">V</option>
                             <option value="C">C</option>
@@ -320,7 +320,12 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
                         </select>
                         <span style="font-size:16px;">-</span>
                         <input type="text" id="comRifNumero" placeholder="123456789" maxlength="9"
-                            style="flex:1;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+                            style="flex:1;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;"
+                            data-check-url="<?php echo e(route('comunidades.check-rif')); ?>"
+                            data-status-span="comRifStatus"
+                            data-digito-span="comRifDigito"
+                            data-select-id="comRifLetra"
+                            oninput="this.value=this.value.replace(/\D/g,''); validarRif(this)">
                         <span style="font-size:16px;">-</span>
                         <span id="comRifDigito" style="font-weight:bold;font-size:16px;min-width:16px;">?</span>
                     </div>
@@ -330,7 +335,10 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
                 <div class="grp-field">
                     <label>Correo electr&oacute;nico</label>
                     <input type="email" id="comCorreo" placeholder="comunidad@ejemplo.com"
-                        style="width:100%;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+                        style="width:100%;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;" maxlength="40"
+                        data-check-url="<?php echo e(route('comunidades.check-email')); ?>"
+                        data-status-span="comCorreoStatus"
+                        oninput="validarCorreoRemoto(this)">
                     <span id="comCorreoStatus" class="status-indicator"></span>
                 </div>
 
@@ -349,7 +357,8 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
                             <option value="0271">0271</option>
                         </select>
                         <input type="text" id="comTelefono" placeholder="5555555" maxlength="7"
-                            style="flex:1;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+                            style="flex:1;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;"
+                            oninput="this.value=this.value.replace(/\D/g,'').slice(0,7)">
                     </div>
                 </div>
 
@@ -433,7 +442,12 @@ lapsoSelect.addEventListener('change', function() {
         miembros = [];
         renderMiembros();
     }
-    nombreStatus.textContent = '';
+    // Re-verificar nombre al cambiar lapso
+    if (nombreInput.value.trim().length >= 2) {
+        recheckNombreDisponible(nombreInput.value.trim());
+    } else {
+        nombreStatus.textContent = '';
+    }
 
     if (!lapso) return;
 
@@ -711,11 +725,42 @@ function renderMiembros() {
 
 // ========== Real-time nombre availability (via AJAX) ==========
 var nombreTimeout = null;
+
+function recheckNombreDisponible(nombre) {
+    <?php if(isset($grupo)): ?>
+    var exclude = <?php echo e($grupo->grp_codigo); ?>;
+    <?php else: ?>
+    var exclude = 0;
+    <?php endif; ?>
+
+    var url = '/grupos-proyecto/api/check-nombre/' + encodeURIComponent(nombre);
+    if (exclude) { url += '?exclude=' + exclude; }
+
+    return fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.available) {
+                nombreStatus.textContent = 'Disponible';
+                nombreStatus.className = 'status-indicator status-ok';
+                nombreInput.dataset.nombreDisponible = 'true';
+            } else {
+                nombreStatus.textContent = 'No disponible';
+                nombreStatus.className = 'status-indicator status-err';
+                nombreInput.dataset.nombreDisponible = 'false';
+            }
+            return data.available;
+        })
+        .catch(function() {
+            nombreStatus.textContent = '';
+            nombreInput.dataset.nombreDisponible = '';
+            return false;
+        });
+}
+
 nombreInput.addEventListener('input', function() {
     var nombre = this.value.trim();
-    var lapso = lapsoSelect.value;
 
-    if (nombre.length < 2 || !lapso) {
+    if (nombre.length < 2) {
         nombreStatus.textContent = '';
         return;
     }
@@ -723,31 +768,10 @@ nombreInput.addEventListener('input', function() {
     clearTimeout(nombreTimeout);
     nombreStatus.textContent = 'Verificando...';
     nombreStatus.className = 'status-indicator';
+    nombreInput.dataset.nombreDisponible = 'checking';
 
     nombreTimeout = setTimeout(function() {
-        <?php if(isset($grupo)): ?>
-        var exclude = <?php echo e($grupo->grp_codigo); ?>;
-        <?php else: ?>
-        var exclude = 0;
-        <?php endif; ?>
-
-        var url = '/grupos-proyecto/api/check-nombre/' + lapso + '/' + encodeURIComponent(nombre);
-        if (exclude) { url += '?exclude=' + exclude; }
-
-        fetch(url)
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data.available) {
-                    nombreStatus.textContent = 'Disponible';
-                    nombreStatus.className = 'status-indicator status-ok';
-                } else {
-                    nombreStatus.textContent = 'No disponible';
-                    nombreStatus.className = 'status-indicator status-err';
-                }
-            })
-            .catch(function() {
-                nombreStatus.textContent = '';
-            });
+        recheckNombreDisponible(nombre);
     }, 400);
 });
 
@@ -778,8 +802,12 @@ function showComunidadDropdown(data) {
                 (c.rif ? ' <span style="color:#666;font-size:10px;">(' + escapeHtml(c.rif) + ')</span>' : '');
             div.onclick = function() {
                 comunidadId.value = c.id;
-                comunidadSearch.value = c.nombre;
+                comunidadSearch.value = '';
                 comunidadDropdown.classList.remove('show');
+                document.getElementById('comunidadSearchWrapper').style.display = 'none';
+                var badge = document.getElementById('comunidadBadge');
+                badge.querySelector('span').textContent = c.nombre;
+                badge.style.display = 'flex';
             };
             comunidadDropdown.appendChild(div);
         });
@@ -794,10 +822,14 @@ function abrirModalComunidad() {
     document.getElementById('comNombre').value = '';
     document.getElementById('comNombreStatus').textContent = '';
     document.getElementById('comRifNumero').value = '';
+    document.getElementById('comRifNumero').dataset.rifOk = '';
     document.getElementById('comRifDigito').textContent = '?';
     document.getElementById('comRifStatus').textContent = '';
+    document.getElementById('comRifStatus').style.display = 'none';
     document.getElementById('comCorreo').value = '';
+    document.getElementById('comCorreo').dataset.correoOk = '';
     document.getElementById('comCorreoStatus').textContent = '';
+    document.getElementById('comCorreoStatus').style.display = 'none';
     document.getElementById('comTelefono').value = '';
     document.getElementById('comEstado').value = '';
     document.getElementById('comMunicipio').disabled = true;
@@ -813,63 +845,7 @@ document.getElementById('comunidadModal').addEventListener('click', function(e) 
     if (e.target === this) cerrarModalComunidad();
 });
 
-// ========== Community modal: RIF validation ==========
-document.getElementById('comRifNumero').addEventListener('input', function() {
-    var num = this.value.replace(/\D/g, '');
-    this.value = num;
-    var statusEl = document.getElementById('comRifStatus');
-    var digitoEl = document.getElementById('comRifDigito');
-
-    if (num.length < 9) {
-        digitoEl.textContent = '?';
-        statusEl.textContent = num.length > 0 ? 'Debe tener 9 dígitos' : '';
-        statusEl.className = 'status-indicator status-err';
-        return;
-    }
-
-    var letra = document.getElementById('comRifLetra').value;
-    var digito = calcularDigitoRIF(letra, num);
-    digitoEl.textContent = digito || '?';
-    statusEl.textContent = digito ? 'Válido' : 'Inválido';
-    statusEl.className = 'status-indicator ' + (digito ? 'status-ok' : 'status-err');
-});
-
-document.getElementById('comRifLetra').addEventListener('change', function() {
-    var num = document.getElementById('comRifNumero').value;
-    if (num.length >= 9) {
-        document.getElementById('comRifNumero').dispatchEvent(new Event('input'));
-    }
-});
-
-function calcularDigitoRIF(letra, numero) {
-    var pesos = [4, 3, 2, 7, 6, 5, 4, 3, 2];
-    var letrasVal = { 'V': 1, 'E': 2, 'J': 3, 'G': 4, 'P': 5 };
-    var valorLetra = letrasVal[letra] || 1;
-    var padded = ('00000000' + numero).slice(-8);
-    var digitos = [valorLetra].concat(padded.split('').map(Number));
-    var suma = 0;
-    for (var i = 0; i < 9; i++) { suma += digitos[i] * pesos[i]; }
-    var resto = suma % 11;
-    var digito = 11 - resto;
-    return (digito === 11 || digito === 10) ? '0' : String(digito);
-}
-
-// ========== Community modal: Email validation ==========
-document.getElementById('comCorreo').addEventListener('input', function() {
-    var correo = this.value.trim();
-    var statusEl = document.getElementById('comCorreoStatus');
-    if (correo.length < 5) {
-        statusEl.textContent = '';
-        return;
-    }
-    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
-        statusEl.textContent = 'Formato válido';
-        statusEl.className = 'status-indicator status-ok';
-    } else {
-        statusEl.textContent = 'Formato inválido';
-        statusEl.className = 'status-indicator status-err';
-    }
-});
+// ========== Community modal: RIF & Email validation now handled by global functions validarRif / validarCorreoRemoto (HTML onchange/oninput) ==========
 
 // ========== Community modal: Estado \u2192 Municipio ==========
 document.getElementById('comEstado').addEventListener('change', function() {
@@ -939,11 +915,25 @@ function guardarComunidadAjax() {
     if (!municipio) { showModalError('Seleccione un municipio.'); return; }
     if (!direccion) { showModalError('La dirección es obligatoria.'); return; }
 
+    var rifNumero = document.getElementById('comRifNumero').value.trim();
+    var correo = document.getElementById('comCorreo').value.trim();
+    var rifInput = document.getElementById('comRifNumero');
+    var correoInput = document.getElementById('comCorreo');
+
+    if (rifNumero.length > 0 && rifInput.dataset.rifOk !== 'true') {
+        showModalError('Corrige el RIF antes de guardar.');
+        return;
+    }
+    if (correo.length >= 5 && correoInput.dataset.correoOk !== 'true') {
+        showModalError('Corrige el correo antes de guardar.');
+        return;
+    }
+
     var data = {
         nombre: nombre,
         rif_letra: document.getElementById('comRifLetra').value,
-        rif_numero: document.getElementById('comRifNumero').value,
-        correo: document.getElementById('comCorreo').value.trim(),
+        rif_numero: rifNumero,
+        correo: correo,
         prefijo_telefono: document.getElementById('comTelPrefijo').value,
         numero_telefono: document.getElementById('comTelefono').value,
         estado_id: estado,
@@ -1008,12 +998,33 @@ document.getElementById('grupoForm').addEventListener('submit', function(e) {
         return;
     }
 
-    // Verificar que no haya nombres no disponibles antes de enviar
-    var status = nombreStatus.textContent;
-    if (status === 'No disponible') {
-        e.preventDefault();
-        alert('El nombre del grupo no está disponible. Cámbielo antes de guardar.');
-        return;
+    // Verificar disponibilidad del nombre
+    var nombre = nombreInput.value.trim();
+    var estadoNombre = nombreInput.dataset.nombreDisponible;
+
+    if (nombre.length >= 2) {
+        if (estadoNombre === 'false' || estadoNombre === 'checking') {
+            e.preventDefault();
+            if (estadoNombre === 'false') {
+                alert('El nombre del grupo no está disponible. Cámbielo antes de guardar.');
+            } else {
+                alert('Verificando disponibilidad del nombre... Espere un momento y vuelva a intentar.');
+            }
+            return;
+        }
+        if (estadoNombre !== 'true') {
+            e.preventDefault();
+            nombreStatus.textContent = 'Verificando...';
+            nombreStatus.className = 'status-indicator';
+            recheckNombreDisponible(nombre).then(function(available) {
+                if (!available) {
+                    alert('El nombre del grupo no está disponible. Cámbielo antes de guardar.');
+                } else {
+                    document.getElementById('grupoForm').submit();
+                }
+            });
+            return;
+        }
     }
 });
 
@@ -1066,4 +1077,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <?php $__env->stopPush(); ?>
 
-<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\tu hermana\Downloads\proyecto\Proyecto-de-Repositorio-de-gestion-de-repositorio\resources\views/grupos_proyecto/form.blade.php ENDPATH**/ ?>
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\Emanuel\Desktop\Sistemax\Proyecto-de-Repositorio-de-gestion-de-repositorio\resources\views/grupos_proyecto/form.blade.php ENDPATH**/ ?>

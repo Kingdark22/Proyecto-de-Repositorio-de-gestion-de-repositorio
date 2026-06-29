@@ -70,11 +70,12 @@
                 <tr>
                     <td width="30%"><b>Nombre Línea de Inv.:</b></td>
                     <td width="70%">
-                        <input name="nombre_investigacion" type="text" value="{{ old('nombre_investigacion') }}" maxlength="100" style="width: 90%;" required>
-                        <span class="obligatorio">*</span>
-                        @error('nombre_investigacion')
-                            <br><span class="validation-error">{{ $message }}</span>
-                        @enderror
+                                <input name="nombre_investigacion" type="text" value="{{ old('nombre_investigacion') }}" maxlength="100" style="width: 90%;" required oninput="validarNombre(this)" data-check-url="/lineas-investigacion/check-nombre">
+                                <span class="obligatorio">*</span>
+                                <span id="nombreStatus" style="font-size:11px;display:none;"></span>
+                                @error('nombre_investigacion')
+                                    <br><span class="validation-error">{{ $message }}</span>
+                                @enderror
                     </td>
                 </tr>
                 <tr>

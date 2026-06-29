@@ -200,10 +200,10 @@ class GrupoProyectoController extends Controller
         $proCodigo = $request->input('programa') ? (int) $request->input('programa') : null;
         $comCodigo = (int) $request->input('comunidad');
 
-        // Validar unicidad del nombre en el lapso
-        if (! $this->grupos->nombreDisponibleEnLapso($nombre, $lapCodigo)) {
+        // Validar unicidad global del nombre
+        if (! $this->grupos->nombreDisponibleEnLapso($nombre)) {
             return redirect()->back()->withInput()
-                ->withErrors(['nombre' => 'Este nombre de grupo ya está en uso en el lapso académico seleccionado.']);
+                ->withErrors(['nombre' => 'Este nombre de grupo ya está en uso.']);
         }
 
         // Parsear miembros desde JSON
@@ -337,10 +337,10 @@ class GrupoProyectoController extends Controller
         $proCodigo = $request->input('programa') ? (int) $request->input('programa') : null;
         $comCodigo = (int) $request->input('comunidad');
 
-        // Validar unicidad del nombre (excluyendo este grupo)
-        if (! $this->grupos->nombreDisponibleEnLapso($nombre, $lapCodigo, $grpCodigo)) {
+        // Validar unicidad global del nombre (excluyendo este grupo)
+        if (! $this->grupos->nombreDisponibleEnLapso($nombre, null, $grpCodigo)) {
             return redirect()->back()->withInput()
-                ->withErrors(['nombre' => 'Este nombre de grupo ya está en uso en el lapso académico seleccionado.']);
+                ->withErrors(['nombre' => 'Este nombre de grupo ya está en uso.']);
         }
 
         $miembros = json_decode($request->input('miembros'), true);
@@ -501,17 +501,16 @@ class GrupoProyectoController extends Controller
     }
 
     /**
-     * Check if a group name is available in a given lapso (for real-time validation).
+     * Check if a group name is available globally (for real-time validation).
      */
-    public function checkNombreDisponible($lapso, $nombre)
+    public function checkNombreDisponible($nombre)
     {
-        $lapCodigo = (int) $lapso;
-        $nombreLimpio = $nombre; // Laravel ya decodifica URL parameters
+        $nombreLimpio = $nombre;
 
         $grpCodigo = request()->get('exclude');
         $excludeId = $grpCodigo ? (int) $grpCodigo : null;
 
-        $available = $this->grupos->nombreDisponibleEnLapso($nombreLimpio, $lapCodigo, $excludeId);
+        $available = $this->grupos->nombreDisponibleEnLapso($nombreLimpio, null, $excludeId);
 
         return response()->json(['available' => $available]);
     }

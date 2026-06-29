@@ -329,9 +329,10 @@ class GrupoProyectoService
     }
 
     /**
-     * Verifica si un nombre de grupo está disponible dentro de un lapso específico.
+     * Verifica si un nombre de grupo está disponible. Si se proporciona $lapCodigo,
+     * verifica dentro de ese lapso; si es null, verifica globalmente.
      */
-    public function nombreDisponibleEnLapso(string $nombre, int $lapCodigo, ?int $excludeGrpCodigo = null): bool
+    public function nombreDisponibleEnLapso(string $nombre, ?int $lapCodigo = null, ?int $excludeGrpCodigo = null): bool
     {
         if (! $this->tablaDisponible()) {
             return true;

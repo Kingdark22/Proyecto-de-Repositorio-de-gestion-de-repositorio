@@ -242,4 +242,34 @@ class ComunidadController extends Controller
 
         return response()->json(['disponible' => $disponible]);
     }
+
+    public function checkEmail(Request $request, ValidacionCorreoService $correoService): JsonResponse
+    {
+        $correo = trim($request->get('correo', ''));
+
+        if ($correo === '' || strlen($correo) < 5) {
+            return response()->json(['valido' => false, 'error' => null, 'errores' => []]);
+        }
+
+        $resultado = $correoService->validarCompleto($correo, true);
+
+        return response()->json($resultado);
+    }
+
+    public function checkRif(Request $request, ValidacionRifService $rifService): JsonResponse
+    {
+        $letra = $request->get('letra', '');
+        $numero = $request->get('numero', '');
+
+        if ($numero === '' || strlen($numero) < 9) {
+            return response()->json(['valido' => false, 'error' => 'Debe tener 9 dígitos']);
+        }
+
+        $digito = $rifService->calcularDigito($letra, $numero);
+        if ($digito === null) {
+            return response()->json(['valido' => false, 'error' => 'RIF no válido']);
+        }
+
+        return response()->json(['valido' => true, 'digito' => $digito]);
+    }
 }

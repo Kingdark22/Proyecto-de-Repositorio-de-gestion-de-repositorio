@@ -70,6 +70,14 @@ Route::middleware(['auth', 'active.role'])->group(function () {
         });
         Route::get('/comunidades/municipios/{estadoId}', [\App\Http\Controllers\ComunidadController::class, 'municipios']);
         Route::get('/comunidades/check-nombre', [\App\Http\Controllers\ComunidadController::class, 'checkNombre'])->name('comunidades.check-nombre');
+        Route::get('/comunidades/check-email', [\App\Http\Controllers\ComunidadController::class, 'checkEmail'])->name('comunidades.check-email');
+        Route::get('/comunidades/check-rif', [\App\Http\Controllers\ComunidadController::class, 'checkRif'])->name('comunidades.check-rif');
+        Route::get('/componentes/check-nombre', [\App\Http\Controllers\ComponenteController::class, 'checkNombre'])->name('componentes.check-nombre');
+        Route::get('/tipos-publicacion/check-nombre', [\App\Http\Controllers\TipoPublicacionController::class, 'checkNombre'])->name('tipos-publicacion.check-nombre');
+        Route::get('/tipos-investigacion/check-nombre', [\App\Http\Controllers\TipoInvestigacionController::class, 'checkNombre'])->name('tipos-investigacion.check-nombre');
+        Route::get('/objetivos-investigacion/check-nombre', [\App\Http\Controllers\ObjetivoInvestigacionController::class, 'checkNombre'])->name('objetivos-investigacion.check-nombre');
+        Route::get('/metodologia-investigacion/check-nombre', [\App\Http\Controllers\MetodologiaInvestigacionController::class, 'checkNombre'])->name('metodologia-investigacion.check-nombre');
+        Route::get('/lineas-investigacion/check-nombre', [\App\Http\Controllers\LineaInvestigacionController::class, 'checkNombre'])->name('lineas-investigacion.check-nombre');
 
         // Grupos de Proyecto
         Route::controller(\App\Http\Controllers\GrupoProyectoController::class)->group(function () {
@@ -85,7 +93,7 @@ Route::middleware(['auth', 'active.role'])->group(function () {
             Route::get('/grupos-proyecto/api/estudiantes/{lapso}/{seccion}', 'getEstudiantes')->name('grupos-proyecto.api.estudiantes');
             Route::get('/grupos-proyecto/api/trayectos/{lapso}/{programa}', 'getTrayectos')->name('grupos-proyecto.api.trayectos');
             // API endpoint para validar disponibilidad de nombre en tiempo real
-            Route::get('/grupos-proyecto/api/check-nombre/{lapso}/{nombre}', 'checkNombreDisponible')->name('grupos-proyecto.api.check-nombre');
+            Route::get('/grupos-proyecto/api/check-nombre/{nombre}', 'checkNombreDisponible')->name('grupos-proyecto.api.check-nombre');
             // AJAX endpoint para crear comunidad desde el formulario
             Route::post('/grupos-proyecto/api/crear-comunidad', 'crearComunidadAjax')->name('grupos-proyecto.api.crear-comunidad');
         });
