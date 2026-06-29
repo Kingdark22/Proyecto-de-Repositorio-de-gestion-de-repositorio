@@ -540,23 +540,6 @@
                             </td>
                         </tr>
                         <tr>
-                            <td width="20%"><b>Tipo de Publicaci&oacute;n:</b></td>
-                            <td colspan="3">
-                                <div style="display: flex; gap: 4px; align-items: center;">
-                                    <select wire:model="tipo_publicacion_id" style="flex:1;">
-                                        <option value="">Seleccione...</option>
-                                        @foreach ($tipos_publicacion ?? [] as $tp)
-                                            <option value="{{ $tp->id }}">{{ $tp->nombre }}</option>
-                                        @endforeach
-                                    </select>
-                                    <button type="button" wire:click="abrirModalTipoPublicacion" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space: nowrap; padding: 4px 8px; font-size: 11px;" title="Buscar o crear nuevo tipo de publicación">+</button>
-                                </div>
-                                @error('tipo_publicacion_id')
-                                    <br><span class="obligatorio">{{ $message }}</span>
-                                @enderror
-                            </td>
-                        </tr>
-                        <tr>
                             <td width="20%"><b>Tipo de Investigaci&oacute;n:</b></td>
                             <td width="30%">
                                 <div style="display: flex; gap: 4px; align-items: center;">
@@ -1047,7 +1030,12 @@
                             <table width="100%" style="font-size:12px;margin-top:4px;border-collapse:separate;border-spacing:0 6px;">
                                 <tr>
                                     <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
-                                    <td><input wire:model="modalLineaNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
+                                     <td><input wire:model.live.debounce.500ms="modalLineaNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
+                                     @if($modalLineaNombreStatus === 'disponible')
+                                         <tr><td></td><td style="color: #28a745; font-size: 11px;">✓ Nombre disponible</td></tr>
+                                     @elseif($modalLineaNombreStatus === 'no_disponible')
+                                         <tr><td></td><td class="validation-error">✗ Este nombre ya está en uso</td></tr>
+                                     @endif
                                 </tr>
                                 @error('modalLineaNombre') <tr><td></td><td class="validation-error">⚠ {{ $message }}</td></tr> @enderror
                                 <tr>
@@ -1107,7 +1095,12 @@
                             <table width="100%" style="font-size:12px;margin-top:4px;border-collapse:separate;border-spacing:0 6px;">
                                 <tr>
                                     <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
-                                    <td><input wire:model="modalMetodologiaNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
+                                     <td><input wire:model.live.debounce.500ms="modalMetodologiaNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
+                                     @if($modalMetodologiaNombreStatus === 'disponible')
+                                         <tr><td></td><td style="color: #28a745; font-size: 11px;">✓ Nombre disponible</td></tr>
+                                     @elseif($modalMetodologiaNombreStatus === 'no_disponible')
+                                         <tr><td></td><td class="validation-error">✗ Este nombre ya está en uso</td></tr>
+                                     @endif
                                 </tr>
                                 @error('modalMetodologiaNombre') <tr><td></td><td class="validation-error">⚠ {{ $message }}</td></tr> @enderror
                                 <tr>
@@ -1163,7 +1156,12 @@
                             <table width="100%" style="font-size:12px;margin-top:4px;border-collapse:separate;border-spacing:0 6px;">
                                 <tr>
                                     <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
-                                    <td><input wire:model="modalTipoInvNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
+                                     <td><input wire:model.live.debounce.500ms="modalTipoInvNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
+                                     @if($modalTipoInvNombreStatus === 'disponible')
+                                         <tr><td></td><td style="color: #28a745; font-size: 11px;">✓ Nombre disponible</td></tr>
+                                     @elseif($modalTipoInvNombreStatus === 'no_disponible')
+                                         <tr><td></td><td class="validation-error">✗ Este nombre ya está en uso</td></tr>
+                                     @endif
                                 </tr>
                                 @error('modalTipoInvNombre') <tr><td></td><td class="validation-error">⚠ {{ $message }}</td></tr> @enderror
                                 <tr>
@@ -1175,67 +1173,6 @@
                             <div style="margin-top:20px;text-align:center;display:flex;gap:10px;justify-content:center;">
                                 <button type="button" class="cm-btn cm-btn-success" wire:click="guardarTipoInvestigacionModal" style="padding:8px 20px;font-size:13px;">Guardar tipo</button>
                                 <button type="button" class="cm-btn cm-btn-danger" wire:click="cerrarModalTipoInvestigacion" style="padding:8px 20px;font-size:13px;">Cancelar</button>
-                            </div>
-                        </div>
-                    </div>
-                @endif
-
-                {{-- == MODAL TIPO DE PUBLICACIÓN == --}}
-                @if ($mostrarModalTipoPublicacion)
-                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;">
-                        <div style="background:#fff;border-radius:10px;padding:24px;max-width:520px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
-                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #8b0000;">
-                                <div style="width:36px;height:36px;border-radius:50%;background:#8b0000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;">📄</div>
-                                <h3 style="margin:0;font-size:16px;font-weight:bold;color:#333;">Tipo de Publicación</h3>
-                            </div>
-
-                            {{-- Buscar existente --}}
-                            <div style="margin-bottom: 14px;">
-                                <b style="font-size:12px;color:#555;">Buscar tipo existente:</b>
-                                <input wire:model.live="buscarTipoPublicacion" type="text" style="width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;margin-top:4px;font-size:13px;" placeholder="Escriba nombre...">
-                                @if($tiposPublicacionEncontradas->isNotEmpty())
-                                    <div style="margin-top:6px;border:1px solid #e0e0e0;border-radius:6px;max-height:180px;overflow-y:auto;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
-                                        @foreach($tiposPublicacionEncontradas as $tp)
-                                            <div wire:click="seleccionarTipoPublicacion({{ $tp->id }})" style="padding:8px 10px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:12px;transition:background 0.15s;"
-                                                 onmouseover="this.style.background='#f5f0f0';this.style.borderLeft='3px solid #8b0000'" onmouseout="this.style.background='';this.style.borderLeft=''">
-                                                <b style="color:#8b0000;">{{ $tp->nombre }}</b>
-                                                @if($tp->mencion_honorifica)<br><small style="color:#888;">(Mención honorífica)</small>@endif
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @endif
-                                @if($buscarTipoPublicacion && $tiposPublicacionEncontradas->isEmpty())
-                                    <div style="margin-top:4px;font-size:11px;color:#999;padding:4px 0;">No se encontraron tipos. Cree uno nuevo abajo.</div>
-                                @endif
-                            </div>
-
-                            <hr style="border:none;border-top:1px solid #e8e8e8;margin:14px 0;">
-
-                            {{-- Crear nuevo --}}
-                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-                                <div style="width:24px;height:24px;border-radius:50%;background:#198754;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:bold;">+</div>
-                                <b style="font-size:13px;color:#333;">O crear nuevo tipo</b>
-                            </div>
-                            <table width="100%" style="font-size:12px;margin-top:4px;border-collapse:separate;border-spacing:0 6px;">
-                                <tr>
-                                    <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
-                                    <td><input wire:model="modalTipoPubNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
-                                </tr>
-                                @error('modalTipoPubNombre') <tr><td></td><td class="validation-error">⚠ {{ $message }}</td></tr> @enderror
-                                <tr>
-                                    <td><b>Men. honorífica:</b></td>
-                                    <td>
-                                        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
-                                            <input wire:model="modalTipoPubMencionHonorifica" type="checkbox" style="width:16px;height:16px;cursor:pointer;">
-                                            ¿Tiene mención honorífica?
-                                        </label>
-                                    </td>
-                                </tr>
-                            </table>
-
-                            <div style="margin-top:20px;text-align:center;display:flex;gap:10px;justify-content:center;">
-                                <button type="button" class="cm-btn cm-btn-success" wire:click="guardarTipoPublicacionModal" style="padding:8px 20px;font-size:13px;">Guardar tipo</button>
-                                <button type="button" class="cm-btn cm-btn-danger" wire:click="cerrarModalTipoPublicacion" style="padding:8px 20px;font-size:13px;">Cancelar</button>
                             </div>
                         </div>
                     </div>
@@ -1280,7 +1217,12 @@
                             <table width="100%" style="font-size:12px;margin-top:4px;border-collapse:separate;border-spacing:0 6px;">
                                 <tr>
                                     <td width="30%"><b>Nombre:</b> <span style="color:red;">*</span></td>
-                                    <td><input wire:model="modalObjetivoNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
+                                     <td><input wire:model.live.debounce.500ms="modalObjetivoNombre" type="text" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></td>
+                                     @if($modalObjetivoNombreStatus === 'disponible')
+                                         <tr><td></td><td style="color: #28a745; font-size: 11px;">✓ Nombre disponible</td></tr>
+                                     @elseif($modalObjetivoNombreStatus === 'no_disponible')
+                                         <tr><td></td><td class="validation-error">✗ Este nombre ya está en uso</td></tr>
+                                     @endif
                                 </tr>
                                 @error('modalObjetivoNombre') <tr><td></td><td style="color:#dc3545;font-size:11px;">⚠ {{ $message }}</td></tr> @enderror
                                 <tr>

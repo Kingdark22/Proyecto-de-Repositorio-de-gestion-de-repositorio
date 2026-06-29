@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ObjetivoInvestigacion;
 use App\Services\UnicidadNombreService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -153,5 +154,24 @@ class ObjetivoInvestigacionController extends Controller
             return redirect()->route('objetivos-investigacion')
                 ->with('error', 'No se pudo eliminar el objetivo porque está siendo utilizado por uno o más proyectos.');
         }
+    }
+
+    public function checkNombre(Request $request, UnicidadNombreService $unicidadService): JsonResponse
+    {
+        $nombre = trim($request->get('nombre', ''));
+        $ignoreId = $request->integer('ignore_id', 0) ?: null;
+
+        if ($nombre === '' || strlen($nombre) < 3) {
+            return response()->json(['disponible' => false, 'error' => 'too_short']);
+        }
+
+        $disponible = $unicidadService->check(
+            ObjetivoInvestigacion::class,
+            'nombre',
+            $nombre,
+            $ignoreId,
+        );
+
+        return response()->json(['disponible' => $disponible]);
     }
 }

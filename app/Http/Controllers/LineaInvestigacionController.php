@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\DualDatabase;
 use App\Models\LineaInvestigacion;
 use App\Services\UnicidadNombreService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -187,6 +188,25 @@ class LineaInvestigacionController extends Controller
             return redirect()->route('lineas-investigacion')
                 ->with('error', 'No se pudo eliminar la línea porque está siendo utilizada por uno o más proyectos.');
         }
+    }
+
+    public function checkNombre(Request $request, UnicidadNombreService $unicidadService): JsonResponse
+    {
+        $nombre = trim($request->get('nombre', ''));
+        $ignoreId = $request->integer('ignore_id', 0) ?: null;
+
+        if ($nombre === '' || strlen($nombre) < 3) {
+            return response()->json(['disponible' => false, 'error' => 'too_short']);
+        }
+
+        $disponible = $unicidadService->check(
+            LineaInvestigacion::class,
+            'nombre_investigacion',
+            $nombre,
+            $ignoreId,
+        );
+
+        return response()->json(['disponible' => $disponible]);
     }
 
     private function getProgramas()

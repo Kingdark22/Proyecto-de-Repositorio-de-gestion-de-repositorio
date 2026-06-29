@@ -119,8 +119,41 @@ class ValidacionCorreoService
             return ['valido' => false, 'error' => null, 'errores' => []];
         }
 
+        // Signos de exclamación no permitidos
+        if (str_contains($correo, '!')) {
+            return ['valido' => false, 'error' => 'El correo no puede contener signos de exclamación', 'errores' => ['exclamacion']];
+        }
+
         if (!$this->validarSintaxis($correo)) {
             return ['valido' => false, 'error' => 'Formato de correo inválido', 'errores' => ['sintaxis']];
+        }
+
+        $partes = explode('@', $correo);
+        $local = $partes[0];
+        $dominio = $partes[1];
+
+        // Validar parte local
+        if (strlen($local) > 64) {
+            return ['valido' => false, 'error' => 'La parte local del correo excede los 64 caracteres', 'errores' => ['local_larga']];
+        }
+        if (str_starts_with($local, '.')) {
+            return ['valido' => false, 'error' => 'La parte local no puede comenzar con punto', 'errores' => ['local_punto_inicio']];
+        }
+        if (str_ends_with($local, '.')) {
+            return ['valido' => false, 'error' => 'La parte local no puede terminar con punto', 'errores' => ['local_punto_fin']];
+        }
+        if (str_contains($local, '..')) {
+            return ['valido' => false, 'error' => 'La parte local no puede contener puntos consecutivos', 'errores' => ['local_puntos_consecutivos']];
+        }
+
+        // Validar TLD (extensión del dominio)
+        $ultimoPunto = strrpos($dominio, '.');
+        if ($ultimoPunto === false) {
+            return ['valido' => false, 'error' => 'El dominio debe tener una extensión (ej. .com, .org)', 'errores' => ['dominio_sin_punto']];
+        }
+        $tld = substr($dominio, $ultimoPunto + 1);
+        if (!preg_match('/^[a-zA-Z]{2,}$/', $tld)) {
+            return ['valido' => false, 'error' => 'La extensión del dominio debe tener al menos 2 letras', 'errores' => ['tld_invalido']];
         }
 
         if ($this->esDesechable($correo)) {

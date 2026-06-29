@@ -42,9 +42,6 @@ $notificacionesCount = count($notificacionesList);
                         investigación</a>
                     <a href="{{ route('metodologia-investigacion') }}"
                         class="{{ request()->routeIs('metodologia-investigacion') ? 'active-sub' : '' }}">Metodologías</a>
-                    <a href="{{ route('tipos-publicacion') }}"
-                        class="{{ request()->routeIs('tipos-publicacion') ? 'active-sub' : '' }}">Tipos de
-                        publicación</a>
                     <a href="{{ route('objetivos-investigacion') }}"
                         class="{{ request()->routeIs('objetivos-investigacion') ? 'active-sub' : '' }}">Objetivos de
                         investigación</a>

@@ -46,11 +46,12 @@
             <tr>
                 <td width="35%"><b>Nombre del Tipo:</b></td>
                 <td width="65%">
-                    <input type="text" name="nombre" value="{{ old('nombre') }}" style="width: 90%;">
-                    <span class="obligatorio">*</span>
-                    @error('nombre')
-                        <br><span class="validation-error">{{ $message }}</span>
-                    @enderror
+                                <input type="text" name="nombre" value="{{ old('nombre') }}" style="width: 90%;" required oninput="validarNombre(this)" data-check-url="/tipos-publicacion/check-nombre">
+                                <span class="obligatorio">*</span>
+                                <span id="nombreStatus" style="font-size:11px;display:none;"></span>
+                                @error('nombre')
+                                    <br><span class="validation-error">{{ $message }}</span>
+                                @enderror
                 </td>
             </tr>
             <tr>

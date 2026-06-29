@@ -68,11 +68,12 @@
                 <tr>
                     <td width="30%"><b>Nombre de Metodología:</b></td>
                     <td width="70%">
-                        <input name="nombre" type="text" value="{{ old('nombre') }}" maxlength="100" style="width: 90%;" required>
-                        <span class="obligatorio">*</span>
-                        @error('nombre')
-                            <br><span class="validation-error">{{ $message }}</span>
-                        @enderror
+                                <input name="nombre" type="text" value="{{ old('nombre') }}" maxlength="100" style="width: 90%;" required oninput="validarNombre(this)" data-check-url="/metodologia-investigacion/check-nombre">
+                                <span class="obligatorio">*</span>
+                                <span id="nombreStatus" style="font-size:11px;display:none;"></span>
+                                @error('nombre')
+                                    <br><span class="validation-error">{{ $message }}</span>
+                                @enderror
                     </td>
                 </tr>
                 <tr>

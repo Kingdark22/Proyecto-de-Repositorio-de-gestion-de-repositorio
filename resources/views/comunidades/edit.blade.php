@@ -46,7 +46,7 @@
                         <div style="display: flex; align-items: flex-start; gap: 6px;">
                             <b style="white-space: nowrap; padding-top: 8px; min-width: 60px;">Nombre:</b>
                             <div style="flex: 1;">
-                                <input name="nombre" type="text" value="{{ old('nombre', $datos['nombre']) }}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" required oninput="validarNombre(this)">
+                                 <input name="nombre" type="text" value="{{ old('nombre', $datos['nombre']) }}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" required oninput="validarNombre(this)" data-check-url="/comunidades/check-nombre">
                                 <span class="obligatorio">*</span>
                                 <span id="nombreStatus" style="font-size:11px;display:none;"></span>
                                 @error('nombre')<br><span class="validation-error">{{ $message }}</span>@enderror
@@ -58,14 +58,17 @@
                             <b style="white-space: nowrap; padding-top: 8px; min-width: 40px;">RIF:</b>
                             <div style="flex: 1;">
                                 <div style="display: flex; gap: 5px; align-items: center;">
-                                    <select name="rif_letra" style="padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-size: 11px; width: 48px;">
+                                    <select name="rif_letra" style="padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-size: 11px; width: 48px;" onchange="validarRif(this)">
                                         @foreach(['V','C','J','G','P'] as $l)
                                             <option value="{{ $l }}" {{ ($parsed['letra'] ?? 'J') == $l ? 'selected' : '' }}>{{ $l }}</option>
                                         @endforeach
                                     </select>
                                     <input name="rif_numero" type="text" inputmode="numeric" maxlength="9" value="{{ old('rif_numero', $parsed['numero'] ?? '') }}"
                                         style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;"
-                                        oninput="this.value=this.value.replace(/[^0-9]/g,'')" placeholder="Número (máx. 9 dígitos)">
+                                        data-check-url="{{ route('comunidades.check-rif') }}"
+                                        oninput="this.value=this.value.replace(/[^0-9]/g,''); validarRif(this)"
+                                        placeholder="Número (máx. 9 dígitos)">
+                                    <span id="rifStatus" style="display:none; font-size:11px;"></span>
                                 </div>
                                 <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
                                 @error('rif_numero')<br><span class="validation-error">{{ $message }}</span>@enderror
@@ -78,8 +81,9 @@
                         <div style="display: flex; align-items: flex-start; gap: 6px;">
                             <b style="white-space: nowrap; padding-top: 8px; min-width: 60px;">Correo:</b>
                             <div style="flex: 1;">
-                                    <input name="correo" type="email" value="{{ old('correo', $datos['correo']) }}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" placeholder="ejemplo@gmail.com" maxlength="40" oninput="validarCorreo(this)">
+                                    <input name="correo" type="email" value="{{ old('correo', $datos['correo']) }}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" placeholder="ejemplo@gmail.com" maxlength="40" data-check-url="{{ route('comunidades.check-email') }}" oninput="validarCorreoRemoto(this)">
                                 <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
+                                <span id="correoStatus" style="display:none; font-size:11px;"></span>
                                 @error('correo')<br><span class="validation-error">{{ $message }}</span>@enderror
                             </div>
                         </div>

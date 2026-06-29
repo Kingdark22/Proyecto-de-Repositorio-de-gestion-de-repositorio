@@ -183,15 +183,23 @@ class GrupoProyectoRepository
     }
 
     /**
-     * Verifica si un nombre de grupo está disponible (no existe otro con el mismo nombre en el mismo lapso).
+     * Verifica si un nombre de grupo está disponible. Si se proporciona $lapCodigo,
+     * verifica dentro de ese lapso; si es null, verifica globalmente.
      * Usa LOWER() con índice funcional para búsqueda case-insensitive eficiente.
      */
-    public function nombreDisponibleEnLapso(string $nombre, int $lapCodigo, ?int $excludeGrpCodigo = null): bool
+    public function nombreDisponibleEnLapso(string $nombre, ?int $lapCodigo = null, ?int $excludeGrpCodigo = null): bool
     {
         $query = GrupoProyectoModulo::whereRaw(
-            'LOWER(grp_nombre) = ? AND CAST(grp_contexto AS jsonb)->>\'lap_codigo\' = ?',
-            [mb_strtolower(trim($nombre)), (string) $lapCodigo]
+            'LOWER(grp_nombre) = ?',
+            [mb_strtolower(trim($nombre))]
         );
+
+        if ($lapCodigo !== null) {
+            $query->whereRaw(
+                "CAST(grp_contexto AS jsonb)->>'lap_codigo' = ?",
+                [(string) $lapCodigo]
+            );
+        }
 
         if ($excludeGrpCodigo !== null) {
             $query->where('grp_codigo', '!=', $excludeGrpCodigo);

@@ -31,7 +31,6 @@ class ProyectoManager extends Component
 
     public ?string $metodologia_id = '';
 
-    public ?string $tipo_publicacion_id = '';
     public ?string $tipo_investigacion_id = '';
     public ?string $objetivo_investigacion_id = '';
     public ?string $comunidad_id = '';
@@ -247,38 +246,6 @@ class ProyectoManager extends Component
     /** Resultados de búsqueda */
     public Collection $tiposInvestigacionEncontradas;
 
-    /** Modal crear tipo de publicación */
-    public bool $mostrarModalTipoPublicacion = false;
-
-    public string $modalTipoPubNombre = '';
-
-    public ?string $modalTipoPubNombreStatus = null;
-
-    public function updatedModalTipoPubNombre(): void
-    {
-        if (strlen(trim($this->modalTipoPubNombre)) < 3) {
-            $this->modalTipoPubNombreStatus = null;
-            $this->resetValidation('modalTipoPubNombre');
-            return;
-        }
-        $this->modalTipoPubNombreStatus = app(UnicidadNombreService::class)->check(
-            \App\Models\TipoPublicacion::class,
-            'nombre',
-            $this->modalTipoPubNombre,
-        ) ? 'disponible' : 'no_disponible';
-        if ($this->modalTipoPubNombreStatus === 'disponible') {
-            $this->resetValidation('modalTipoPubNombre');
-        }
-    }
-
-    public bool $modalTipoPubMencionHonorifica = false;
-
-    /** Búsqueda de tipos de publicación */
-    public string $buscarTipoPublicacion = '';
-
-    /** Resultados de búsqueda */
-    public Collection $tiposPublicacionEncontradas;
-
     /** Modal crear objetivo de investigación */
     public bool $mostrarModalObjetivo = false;
     public string $modalObjetivoNombre = '';
@@ -373,7 +340,6 @@ class ProyectoManager extends Component
         $this->lineasEncontradas = collect();
         $this->metodologiasEncontradas = collect();
         $this->tiposInvestigacionEncontradas = collect();
-        $this->tiposPublicacionEncontradas = collect();
         $this->objetivosEncontrados = collect();
         $this->resultadosInvolucrados = collect();
         $this->resultadosRoles = collect();
@@ -744,17 +710,6 @@ class ProyectoManager extends Component
         $this->cerrarModalTipoInvestigacion();
     }
 
-    // ─── Tipo de Publicación ────────────────────────────────
-    public function abrirModalTipoPublicacion(): void
-    {
-        $this->mostrarModalTipoPublicacion = true;
-        $this->modalTipoPubNombre = '';
-        $this->modalTipoPubNombreStatus = null;
-        $this->modalTipoPubMencionHonorifica = false;
-        $this->buscarTipoPublicacion = '';
-        $this->tiposPublicacionEncontradas = collect();
-    }
-
     public function abrirModalObjetivo(): void
     {
         $this->mostrarModalObjetivo = true;
@@ -811,53 +766,6 @@ class ProyectoManager extends Component
 
         $this->objetivo_investigacion_id = (string) $objetivo->id;
         $this->cerrarModalObjetivo();
-    }
-
-    public function cerrarModalTipoPublicacion(): void
-    {
-        $this->mostrarModalTipoPublicacion = false;
-    }
-
-    public function updatedBuscarTipoPublicacion(): void
-    {
-        $q = trim($this->buscarTipoPublicacion);
-        if ($q === '') {
-            $this->tiposPublicacionEncontradas = collect();
-            return;
-        }
-        $this->tiposPublicacionEncontradas = \App\Models\TipoPublicacion::whereRaw('tpu_nombre ILIKE ?', ["%{$q}%"])
-            ->orderByRaw('tpu_nombre')
-            ->get();
-    }
-
-    public function seleccionarTipoPublicacion(int $id): void
-    {
-        $this->tipo_publicacion_id = (string) $id;
-        $this->buscarTipoPublicacion = '';
-        $this->tiposPublicacionEncontradas = collect();
-    }
-
-    public function guardarTipoPublicacionModal(): void
-    {
-        $this->validate([
-            'modalTipoPubNombre' => 'required|string|max:255',
-        ], [
-            'modalTipoPubNombre.required' => 'El nombre del tipo de publicación es obligatorio.',
-        ]);
-
-        if ($this->modalTipoPubNombreStatus === 'no_disponible') {
-            $this->addError('modalTipoPubNombre', 'Este nombre ya está en uso.');
-            return;
-        }
-
-        $tipo = \App\Models\TipoPublicacion::create([
-            'nombre' => $this->modalTipoPubNombre,
-            'mencion_honorifica' => $this->modalTipoPubMencionHonorifica,
-            'estado_logico' => true,
-        ]);
-
-        $this->tipo_publicacion_id = (string) $tipo->id;
-        $this->cerrarModalTipoPublicacion();
     }
 
     // ─────────────────────────────────────────────────────────
@@ -1571,7 +1479,6 @@ class ProyectoManager extends Component
         $this->resumen = '';
         $this->linea_investigacion_id = '';
         $this->metodologia_id = '';
-        $this->tipo_publicacion_id = '';
         $this->tipo_investigacion_id = '';
         $this->objetivo_investigacion_id = '';
         $this->comunidad_id = '';
@@ -1623,7 +1530,6 @@ class ProyectoManager extends Component
             'resumen' => $this->resumen,
             'linea_investigacion_id' => $this->linea_investigacion_id,
             'metodologia_id' => $this->metodologia_id,
-        'tipo_publicacion_id' => $this->tipo_publicacion_id,
         'tipo_investigacion_id' => $this->tipo_investigacion_id,
         'objetivo_investigacion_id' => $this->objetivo_investigacion_id,
         'comunidad_id' => $this->comunidad_id,

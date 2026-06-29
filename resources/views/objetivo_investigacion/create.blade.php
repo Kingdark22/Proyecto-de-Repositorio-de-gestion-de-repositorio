@@ -70,12 +70,13 @@
                 <tr>
                     <td width="30%"><b>Nombre del Objetivo:</b></td>
                     <td width="70%">
-                        <input name="nombre" type="text" value="{{ old('nombre') }}"
-                            style="width: 90%;" required>
-                        <span class="obligatorio">*</span>
-                        @error('nombre')
-                            <br><span class="obligatorio" style="font-size: 11px;">{{ $message }}</span>
-                        @enderror
+                                <input name="nombre" type="text" value="{{ old('nombre') }}"
+                                    style="width: 90%;" required oninput="validarNombre(this)" data-check-url="/objetivos-investigacion/check-nombre">
+                                <span class="obligatorio">*</span>
+                                <span id="nombreStatus" style="font-size:11px;display:none;"></span>
+                                @error('nombre')
+                                    <br><span class="obligatorio" style="font-size: 11px;">{{ $message }}</span>
+                                @enderror
                     </td>
                 </tr>
                 <tr>

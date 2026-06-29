@@ -274,7 +274,7 @@
                 <div class="grp-field">
                     <label>RIF</label>
                     <div style="display:flex;gap:6px;align-items:center;">
-                        <select id="comRifLetra" style="width:60px;height:36px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+                        <select id="comRifLetra" style="width:60px;height:36px;border:1px solid #ccc;border-radius:4px;font-size:13px;" onchange="validarRif(document.getElementById('comRifNumero'))">
                             <option value="J">J</option>
                             <option value="V">V</option>
                             <option value="C">C</option>
@@ -283,7 +283,12 @@
                         </select>
                         <span style="font-size:16px;">-</span>
                         <input type="text" id="comRifNumero" placeholder="123456789" maxlength="9"
-                            style="flex:1;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+                            style="flex:1;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;"
+                            data-check-url="{{ route('comunidades.check-rif') }}"
+                            data-status-span="comRifStatus"
+                            data-digito-span="comRifDigito"
+                            data-select-id="comRifLetra"
+                            oninput="this.value=this.value.replace(/\D/g,''); validarRif(this)">
                         <span style="font-size:16px;">-</span>
                         <span id="comRifDigito" style="font-weight:bold;font-size:16px;min-width:16px;">?</span>
                     </div>
@@ -294,7 +299,9 @@
                     <label>Correo electr&oacute;nico</label>
                     <input type="email" id="comCorreo" placeholder="comunidad@ejemplo.com"
                         style="width:100%;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;" maxlength="40"
-                        oninput="this.style.borderColor=this.value.includes('@')?'#ccc':'red'">
+                        data-check-url="{{ route('comunidades.check-email') }}"
+                        data-status-span="comCorreoStatus"
+                        oninput="validarCorreoRemoto(this)">
                     <span id="comCorreoStatus" class="status-indicator"></span>
                 </div>
 
@@ -399,8 +406,8 @@ lapsoSelect.addEventListener('change', function() {
         renderMiembros();
     }
     // Re-verificar nombre al cambiar lapso
-    if (nombreInput.value.trim().length >= 2 && lapso) {
-        recheckNombreDisponible(lapso, nombreInput.value.trim());
+    if (nombreInput.value.trim().length >= 2) {
+        recheckNombreDisponible(nombreInput.value.trim());
     } else {
         nombreStatus.textContent = '';
     }
@@ -682,14 +689,14 @@ function renderMiembros() {
 // ========== Real-time nombre availability (via AJAX) ==========
 var nombreTimeout = null;
 
-function recheckNombreDisponible(lapso, nombre) {
+function recheckNombreDisponible(nombre) {
     @if (isset($grupo))
     var exclude = {{ $grupo->grp_codigo }};
     @else
     var exclude = 0;
     @endif
 
-    var url = '/grupos-proyecto/api/check-nombre/' + lapso + '/' + encodeURIComponent(nombre);
+    var url = '/grupos-proyecto/api/check-nombre/' + encodeURIComponent(nombre);
     if (exclude) { url += '?exclude=' + exclude; }
 
     return fetch(url)
@@ -715,9 +722,8 @@ function recheckNombreDisponible(lapso, nombre) {
 
 nombreInput.addEventListener('input', function() {
     var nombre = this.value.trim();
-    var lapso = lapsoSelect.value;
 
-    if (nombre.length < 2 || !lapso) {
+    if (nombre.length < 2) {
         nombreStatus.textContent = '';
         return;
     }
@@ -728,7 +734,7 @@ nombreInput.addEventListener('input', function() {
     nombreInput.dataset.nombreDisponible = 'checking';
 
     nombreTimeout = setTimeout(function() {
-        recheckNombreDisponible(lapso, nombre);
+        recheckNombreDisponible(nombre);
     }, 400);
 });
 
@@ -779,10 +785,14 @@ function abrirModalComunidad() {
     document.getElementById('comNombre').value = '';
     document.getElementById('comNombreStatus').textContent = '';
     document.getElementById('comRifNumero').value = '';
+    document.getElementById('comRifNumero').dataset.rifOk = '';
     document.getElementById('comRifDigito').textContent = '?';
     document.getElementById('comRifStatus').textContent = '';
+    document.getElementById('comRifStatus').style.display = 'none';
     document.getElementById('comCorreo').value = '';
+    document.getElementById('comCorreo').dataset.correoOk = '';
     document.getElementById('comCorreoStatus').textContent = '';
+    document.getElementById('comCorreoStatus').style.display = 'none';
     document.getElementById('comTelefono').value = '';
     document.getElementById('comEstado').value = '';
     document.getElementById('comMunicipio').disabled = true;
@@ -798,63 +808,7 @@ document.getElementById('comunidadModal').addEventListener('click', function(e) 
     if (e.target === this) cerrarModalComunidad();
 });
 
-// ========== Community modal: RIF validation ==========
-document.getElementById('comRifNumero').addEventListener('input', function() {
-    var num = this.value.replace(/\D/g, '');
-    this.value = num;
-    var statusEl = document.getElementById('comRifStatus');
-    var digitoEl = document.getElementById('comRifDigito');
-
-    if (num.length < 9) {
-        digitoEl.textContent = '?';
-        statusEl.textContent = num.length > 0 ? 'Debe tener 9 dígitos' : '';
-        statusEl.className = 'status-indicator status-err';
-        return;
-    }
-
-    var letra = document.getElementById('comRifLetra').value;
-    var digito = calcularDigitoRIF(letra, num);
-    digitoEl.textContent = digito || '?';
-    statusEl.textContent = digito ? 'Válido' : 'Inválido';
-    statusEl.className = 'status-indicator ' + (digito ? 'status-ok' : 'status-err');
-});
-
-document.getElementById('comRifLetra').addEventListener('change', function() {
-    var num = document.getElementById('comRifNumero').value;
-    if (num.length >= 9) {
-        document.getElementById('comRifNumero').dispatchEvent(new Event('input'));
-    }
-});
-
-function calcularDigitoRIF(letra, numero) {
-    var pesos = [4, 3, 2, 7, 6, 5, 4, 3, 2];
-    var letrasVal = { 'V': 1, 'E': 2, 'J': 3, 'G': 4, 'P': 5 };
-    var valorLetra = letrasVal[letra] || 1;
-    var padded = ('00000000' + numero).slice(-8);
-    var digitos = [valorLetra].concat(padded.split('').map(Number));
-    var suma = 0;
-    for (var i = 0; i < 9; i++) { suma += digitos[i] * pesos[i]; }
-    var resto = suma % 11;
-    var digito = 11 - resto;
-    return (digito === 11 || digito === 10) ? '0' : String(digito);
-}
-
-// ========== Community modal: Email validation ==========
-document.getElementById('comCorreo').addEventListener('input', function() {
-    var correo = this.value.trim();
-    var statusEl = document.getElementById('comCorreoStatus');
-    if (correo.length < 5) {
-        statusEl.textContent = '';
-        return;
-    }
-    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
-        statusEl.textContent = 'Formato válido';
-        statusEl.className = 'status-indicator status-ok';
-    } else {
-        statusEl.textContent = 'Formato inválido';
-        statusEl.className = 'status-indicator status-err';
-    }
-});
+// ========== Community modal: RIF & Email validation now handled by global functions validarRif / validarCorreoRemoto (HTML onchange/oninput) ==========
 
 // ========== Community modal: Estado \u2192 Municipio ==========
 document.getElementById('comEstado').addEventListener('change', function() {
@@ -924,11 +878,25 @@ function guardarComunidadAjax() {
     if (!municipio) { showModalError('Seleccione un municipio.'); return; }
     if (!direccion) { showModalError('La dirección es obligatoria.'); return; }
 
+    var rifNumero = document.getElementById('comRifNumero').value.trim();
+    var correo = document.getElementById('comCorreo').value.trim();
+    var rifInput = document.getElementById('comRifNumero');
+    var correoInput = document.getElementById('comCorreo');
+
+    if (rifNumero.length > 0 && rifInput.dataset.rifOk !== 'true') {
+        showModalError('Corrige el RIF antes de guardar.');
+        return;
+    }
+    if (correo.length >= 5 && correoInput.dataset.correoOk !== 'true') {
+        showModalError('Corrige el correo antes de guardar.');
+        return;
+    }
+
     var data = {
         nombre: nombre,
         rif_letra: document.getElementById('comRifLetra').value,
-        rif_numero: document.getElementById('comRifNumero').value,
-        correo: document.getElementById('comCorreo').value.trim(),
+        rif_numero: rifNumero,
+        correo: correo,
         prefijo_telefono: document.getElementById('comTelPrefijo').value,
         numero_telefono: document.getElementById('comTelefono').value,
         estado_id: estado,
@@ -995,10 +963,9 @@ document.getElementById('grupoForm').addEventListener('submit', function(e) {
 
     // Verificar disponibilidad del nombre
     var nombre = nombreInput.value.trim();
-    var lapso = lapsoSelect.value;
     var estadoNombre = nombreInput.dataset.nombreDisponible;
 
-    if (nombre.length >= 2 && lapso) {
+    if (nombre.length >= 2) {
         if (estadoNombre === 'false' || estadoNombre === 'checking') {
             e.preventDefault();
             if (estadoNombre === 'false') {
@@ -1008,11 +975,11 @@ document.getElementById('grupoForm').addEventListener('submit', function(e) {
             }
             return;
         }
-        if (estadoNombre !== 'true' && nombre.length >= 2 && lapso) {
+        if (estadoNombre !== 'true') {
             e.preventDefault();
             nombreStatus.textContent = 'Verificando...';
             nombreStatus.className = 'status-indicator';
-            recheckNombreDisponible(lapso, nombre).then(function(available) {
+            recheckNombreDisponible(nombre).then(function(available) {
                 if (!available) {
                     alert('El nombre del grupo no está disponible. Cámbielo antes de guardar.');
                 } else {

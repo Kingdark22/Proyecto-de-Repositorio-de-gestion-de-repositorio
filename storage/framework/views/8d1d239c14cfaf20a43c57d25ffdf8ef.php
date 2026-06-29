@@ -42,9 +42,6 @@ $notificacionesCount = count($notificacionesList);
                         investigación</a>
                     <a href="<?php echo e(route('metodologia-investigacion')); ?>"
                         class="<?php echo e(request()->routeIs('metodologia-investigacion') ? 'active-sub' : ''); ?>">Metodologías</a>
-                    <a href="<?php echo e(route('tipos-publicacion')); ?>"
-                        class="<?php echo e(request()->routeIs('tipos-publicacion') ? 'active-sub' : ''); ?>">Tipos de
-                        publicación</a>
                     <a href="<?php echo e(route('objetivos-investigacion')); ?>"
                         class="<?php echo e(request()->routeIs('objetivos-investigacion') ? 'active-sub' : ''); ?>">Objetivos de
                         investigación</a>
@@ -114,19 +111,9 @@ $notificacionesCount = count($notificacionesList);
                         class="<?php echo e(request()->routeIs('publicaciones.index') ? 'active-sub' : ''); ?>">
                         Proyectos Publicados
                     </a>
-                    <a href="<?php echo e(route('publicaciones.publico')); ?>"
-                        class="<?php echo e(request()->routeIs('publicaciones.publico') ? 'active-sub' : ''); ?>">
-                        Vista P&uacute;blica
-                    </a>
                 </div>
             </li>
             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-
-            <li>
-                <div class="legacy-menu-item" style="padding: 6px 12px;">
-                    Mi cuenta
-                </div>
-            </li>
 
             <li>
                 <form method="POST" action="<?php echo e(route('logout')); ?>" style="margin:0;">
@@ -262,4 +249,4 @@ $notificacionesCount = count($notificacionesList);
         initSidebarAccordion();
     }
     document.addEventListener('livewire:navigated', initSidebarAccordion);
-</script><?php /**PATH C:\Users\tu hermana\Downloads\proyecto\Proyecto-de-Repositorio-de-gestion-de-repositorio\resources\views/components/sidebar.blade.php ENDPATH**/ ?>
+</script><?php /**PATH C:\Users\Emanuel\Desktop\Sistemax\Proyecto-de-Repositorio-de-gestion-de-repositorio\resources\views/components/sidebar.blade.php ENDPATH**/ ?>

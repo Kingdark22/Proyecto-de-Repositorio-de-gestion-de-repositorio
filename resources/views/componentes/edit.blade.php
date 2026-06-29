@@ -43,10 +43,11 @@
                 <tr>
                     <td width="25%"><b>Nombre del componente:</b></td>
                     <td width="75%">
-                        <input name="nombre" type="text" value="{{ old('nombre', $item->nombre) }}"
-                            style="width: 95%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" required>
-                        <span class="obligatorio">*</span>
-                        @error('nombre')<br><span class="validation-error">{{ $message }}</span>@enderror
+                                <input name="nombre" type="text" value="{{ old('nombre', $item->nombre) }}"
+                                    style="width: 95%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" required oninput="validarNombre(this)" data-check-url="/componentes/check-nombre">
+                                <span class="obligatorio">*</span>
+                                <span id="nombreStatus" style="font-size:11px;display:none;"></span>
+                                @error('nombre')<br><span class="validation-error">{{ $message }}</span>@enderror
                     </td>
                 </tr>
                 <tr>

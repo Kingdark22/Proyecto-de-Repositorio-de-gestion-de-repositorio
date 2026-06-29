@@ -209,15 +209,9 @@ class GrupoProyectoManager extends Component
             return;
         }
 
-        $lapCodigo = (int) $this->filterLapso;
-        if ($lapCodigo <= 0) {
-            $this->nombreGrupoStatus = null;
-            return;
-        }
-
         $this->nombreGrupoStatus = app(GrupoProyectoService::class)->nombreDisponibleEnLapso(
             $this->nombreGrupo,
-            $lapCodigo,
+            null,
             $this->editingGrpCodigo,
         ) ? 'disponible' : 'no_disponible';
 
@@ -525,14 +519,13 @@ class GrupoProyectoManager extends Component
             return;
         }
 
-        // Validación server-side: verificar que el nombre sea único en el lapso
-        $lapCodigo = (int) $this->filterLapso;
-        if ($lapCodigo > 0 && ! app(GrupoProyectoService::class)->nombreDisponibleEnLapso(
+        // Validación server-side: verificar que el nombre sea único globalmente
+        if (! app(GrupoProyectoService::class)->nombreDisponibleEnLapso(
             $this->nombreGrupo,
-            $lapCodigo,
+            null,
             $this->editingGrpCodigo,
         )) {
-            session()->flash('message_error', 'Este nombre de grupo ya está en uso en el lapso académico seleccionado.');
+            session()->flash('message_error', 'Este nombre de grupo ya está en uso.');
             return;
         }
 

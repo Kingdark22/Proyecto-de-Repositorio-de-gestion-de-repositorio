@@ -91,11 +91,12 @@
                 <tr>
                     <td width="30%"><b>Nombre del Tipo:</b></td>
                     <td width="70%">
-                        <input name="nombre" type="text" value="{{ old('nombre', $item->nombre) }}" required style="width: 90%;">
-                        <span class="obligatorio">*</span>
-                        @error('nombre')
-                            <br><span class="validation-error">{{ $message }}</span>
-                        @enderror
+                                <input name="nombre" type="text" value="{{ old('nombre', $item->nombre) }}" required style="width: 90%;" oninput="validarNombre(this)" data-check-url="/tipos-investigacion/check-nombre">
+                                <span class="obligatorio">*</span>
+                                <span id="nombreStatus" style="font-size:11px;display:none;"></span>
+                                @error('nombre')
+                                    <br><span class="validation-error">{{ $message }}</span>
+                                @enderror
                     </td>
                 </tr>
                 <tr>
