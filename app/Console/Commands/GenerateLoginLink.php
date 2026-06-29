@@ -60,6 +60,7 @@ class GenerateLoginLink extends Command
                     ->table('usuario')
                     ->leftJoin('persona', DB::raw('TRIM(usuario.usu_cedula)'), '=', DB::raw('TRIM(persona.per_cedula)'))
                     ->where(DB::raw('TRIM(usuario.usu_cedula)'), $cedula)
+                    ->where('usuario.usu_estatus', 'A')
                     ->select(['usuario.usu_cedula', 'usuario.usu_nombre', 'persona.per_nombres', 'persona.per_apellidos'])
                     ->get();
 

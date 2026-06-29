@@ -62,9 +62,9 @@
 
 @section('content')
     <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
-        <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Editar Objetivo</legend>
+        <legend style="padding:0 5px;font-weight:bold;">&nbsp;</legend>
 
-        <form action="{{ route('objetivos-investigacion.update', $item->id) }}" method="POST" style="margin: 0;">
+        <form action="{{ route('objetivos-investigacion.update', $item->id) }}" method="POST" style="margin: 0;" onsubmit="return validarFormulario(this)">
             @csrf
             @method('PUT')
             <table width="100%" border="0" cellpadding="4" cellspacing="0" style="margin-top: 15px;">

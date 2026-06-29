@@ -2,7 +2,6 @@
 
 namespace App\Helpers;
 
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -18,59 +17,23 @@ class DbHelper
 
     protected static ?int $intranetPort = null;
 
-    protected const CACHE_TTL = 300;
-
-    protected const CACHE_KEY = 'dbhelper_intranet_available';
-
-    protected const INTENTA_CACHE_TTL = 600; // segundos sin reintentar intranet tras un fallo
-
-    /**
-     * Retorna el nombre de la conexión activa. Si la intranet está caída, retorna 'simulacion' como fallback.
-     */
     public static function connection()
     {
         if (self::$resolved && self::$connectionName !== null) {
             return self::$connectionName;
         }
 
-        // Si DB_INTRANET_ENABLED es false, no intentar intranet nunca
         if (!config('database.connections.intranet.enabled', true)) {
             self::$connectionName = 'simulacion';
             self::$usingIntranet = false;
             self::$resolved = true;
-            Cache::put(self::CACHE_KEY, 'simulacion', now()->addSeconds(self::INTENTA_CACHE_TTL));
             return self::$connectionName;
         }
 
-        $cached = Cache::get(self::CACHE_KEY);
-
-        // Si hay un fallo reciente en caché, no intentar intranet
-        if ($cached === 'simulacion') {
-            self::$connectionName = 'simulacion';
-            self::$usingIntranet = false;
-            self::$resolved = true;
-            return self::$connectionName;
-        }
-
+        // Socket check rápido (50ms) — si falla, ni tocamos PDO
         if (!self::intranetAlcanzable()) {
             self::$connectionName = 'simulacion';
             self::$usingIntranet = false;
-            self::$resolved = true;
-            Cache::put(self::CACHE_KEY, 'simulacion', now()->addSeconds(self::INTENTA_CACHE_TTL));
-            return self::$connectionName;
-        }
-
-        if ($cached === 'intranet') {
-            // Verificacion rapida con socket antes de confiar en cache
-            if (!self::intranetAlcanzable()) {
-                Cache::put(self::CACHE_KEY, 'simulacion', now()->addSeconds(self::INTENTA_CACHE_TTL));
-                self::$connectionName = 'simulacion';
-                self::$usingIntranet = false;
-                self::$resolved = true;
-                return self::$connectionName;
-            }
-            self::$connectionName = 'intranet';
-            self::$usingIntranet = true;
             self::$resolved = true;
             return self::$connectionName;
         }
@@ -80,7 +43,6 @@ class DbHelper
             $pdo->query('SELECT 1')->fetch();
             self::$connectionName = 'intranet';
             self::$usingIntranet = true;
-            Cache::put(self::CACHE_KEY, 'intranet', now()->addSeconds(self::CACHE_TTL));
             try {
                 $pdo->exec('SET statement_timeout = 500');
             } catch (\Exception $e) {
@@ -90,8 +52,6 @@ class DbHelper
             Log::warning('Intranet no disponible (PDO/query): ' . $e->getMessage());
             self::$connectionName = 'simulacion';
             self::$usingIntranet = false;
-            // Cache negativo: no reintentar intranet por 30 segundos
-            Cache::put(self::CACHE_KEY, 'simulacion', now()->addSeconds(self::INTENTA_CACHE_TTL));
         }
 
         self::$resolved = true;
@@ -100,23 +60,20 @@ class DbHelper
     }
 
     /**
-     * Verifica si un error de base de datos es por timeout/caída de intranet.
-     * Si es así, resetea el cache para que la siguiente petición pruebe simulación.
+     * Si una query falla en medio del request, resetea para que la siguiente
+     * llamada vuelva a evaluar la conexión.
      */
     public static function handleQueryError(\Exception $e): void
     {
         $msg = $e->getMessage();
         if (str_contains($msg, 'timeout expired') || str_contains($msg, '08006') || str_contains($msg, 'could not connect') || str_contains($msg, 'connection refused') || str_contains($msg, '08001')) {
-            if (self::$usingIntranet || Cache::get(self::CACHE_KEY) === 'intranet') {
+            if (self::$usingIntranet) {
                 Log::warning('Intranet query falló, cambiando a simulación: ' . $msg);
                 self::reset();
             }
         }
     }
 
-    /**
-     * Verifica si el host:puerto de intranet es alcanzable con un socket rápido (150ms).
-     */
     protected static function intranetAlcanzable(): bool
     {
         if (self::$intranetHost === null) {
@@ -149,8 +106,6 @@ class DbHelper
 
     /**
      * Verifica si la intranet está realmente disponible (conexión directa).
-     * Útil para comandos de espejado y login que necesitan saber si pueden consultar intranet
-     * independientemente de la caché de DbHelper.
      */
     public static function intranetAvailable(): bool
     {
@@ -179,6 +134,5 @@ class DbHelper
         self::$usingIntranet = false;
         self::$intranetHost = null;
         self::$intranetPort = null;
-        // No limpiar caché: mantener simulación si intranet falló
     }
 }

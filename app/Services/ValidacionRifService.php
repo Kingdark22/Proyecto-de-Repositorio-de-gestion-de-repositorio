@@ -6,7 +6,7 @@ class ValidacionRifService
 {
     protected array $letras = [
         'V' => 'Venezolano',
-        'E' => 'Extranjero',
+        'C' => 'Cédula',
         'J' => 'Jurídico',
         'G' => 'Gubernamental',
         'P' => 'Pasaporte',
@@ -65,7 +65,7 @@ class ValidacionRifService
             return true;
         }
 
-        if (!preg_match('/^([VEGJP])-(\d{9})-(\d)$/', strtoupper($rif), $m)) {
+        if (!preg_match('/^([VCGJP])-(\d{9})-(\d)$/', strtoupper($rif), $m)) {
             return false;
         }
 
@@ -80,7 +80,7 @@ class ValidacionRifService
             return ['letra' => 'J', 'numero' => '', 'digito' => null];
         }
 
-        if (preg_match('/^([VEGJP])-?(\d{1,9})-?(\d)$/', strtoupper($rif), $m)) {
+        if (preg_match('/^([VCGJP])-?(\d{1,9})-?(\d)$/', strtoupper($rif), $m)) {
             return [
                 'letra' => $m[1],
                 'numero' => $m[2],

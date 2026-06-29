@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ObjetivoInvestigacion;
 use App\Services\UnicidadNombreService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ObjetivoInvestigacionController extends Controller
 {
@@ -26,8 +27,15 @@ class ObjetivoInvestigacionController extends Controller
     public function store(Request $request, UnicidadNombreService $unicidadService)
     {
         $validated = $request->validate([
-            'nombre' => 'required|min:3|max:255',
+            'nombre' => 'required|min:3|max:100',
             'descripcion' => 'required|min:3|max:500',
+        ], [
+            'nombre.required' => 'El nombre del objetivo de investigación es obligatorio.',
+            'nombre.min' => 'El nombre debe tener al menos 3 caracteres.',
+            'nombre.max' => 'El nombre no puede exceder 100 caracteres.',
+            'descripcion.required' => 'La descripción es obligatoria.',
+            'descripcion.min' => 'La descripción debe tener al menos 3 caracteres.',
+            'descripcion.max' => 'La descripción no puede exceder 500 caracteres.',
         ]);
 
         $nombre = trim($validated['nombre']);
@@ -62,8 +70,15 @@ class ObjetivoInvestigacionController extends Controller
     public function update(Request $request, $id, UnicidadNombreService $unicidadService)
     {
         $validated = $request->validate([
-            'nombre' => 'required|min:3|max:255',
+            'nombre' => 'required|min:3|max:100',
             'descripcion' => 'required|min:3|max:500',
+        ], [
+            'nombre.required' => 'El nombre del objetivo de investigación es obligatorio.',
+            'nombre.min' => 'El nombre debe tener al menos 3 caracteres.',
+            'nombre.max' => 'El nombre no puede exceder 100 caracteres.',
+            'descripcion.required' => 'La descripción es obligatoria.',
+            'descripcion.min' => 'La descripción debe tener al menos 3 caracteres.',
+            'descripcion.max' => 'La descripción no puede exceder 500 caracteres.',
         ]);
 
         $nombre = trim($validated['nombre']);
@@ -91,7 +106,7 @@ class ObjetivoInvestigacionController extends Controller
             ->with('success', 'Objetivo de Investigación actualizado con éxito.');
     }
 
-    public function toggleStatus($id)
+    public function toggleStatus(Request $request, $id)
     {
         $item = ObjetivoInvestigacion::findOrFail($id);
         $item->alternarEstado();
@@ -100,16 +115,43 @@ class ObjetivoInvestigacionController extends Controller
             ? 'Objetivo habilitado correctamente.'
             : 'Objetivo deshabilitado correctamente.';
 
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $mensaje,
+                'nuevo_estado' => $item->estado_logico,
+            ]);
+        }
+
         return redirect()->route('objetivos-investigacion')
             ->with('success', $mensaje);
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $item = ObjetivoInvestigacion::findOrFail($id);
-        $item->borrar();
 
-        return redirect()->route('objetivos-investigacion')
-            ->with('success', 'Objetivo de Investigación eliminado correctamente.');
+        try {
+            DB::connection(config('dual_database.repositorio_connection', 'pgsql'))
+                ->table('proyectos')
+                ->where('objetivo_investigacion_id', $id)
+                ->update(['objetivo_investigacion_id' => null]);
+
+            $item->borrar();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => 'Objetivo de Investigación eliminado correctamente.']);
+            }
+
+            return redirect()->route('objetivos-investigacion')
+                ->with('success', 'Objetivo de Investigación eliminado correctamente.');
+        } catch (\Exception $e) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'No se pudo eliminar: ' . $e->getMessage()]);
+            }
+
+            return redirect()->route('objetivos-investigacion')
+                ->with('error', 'No se pudo eliminar el objetivo porque está siendo utilizado por uno o más proyectos.');
+        }
     }
 }

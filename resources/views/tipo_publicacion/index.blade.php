@@ -30,26 +30,26 @@
 
 @section('content')
 
+<div id="flashContainer">
 @if (session('success'))
-    <div style="background: #d4edda; color: #155724; padding: 12px 18px; border-radius: 6px; margin-bottom: 16px; border: 1px solid #c3e6cb; font-weight: bold;">{{ session('success') }}</div>
+    <div data-flash-msg style="background: #d4edda; color: #155724; padding: 12px 18px; border-radius: 6px; margin-bottom: 16px; border: 1px solid #c3e6cb; font-weight: bold;">{{ session('success') }}</div>
 @endif
 
 @if (session('error'))
-    <div style="background: #f8d7da; color: #721c24; padding: 12px 18px; border-radius: 6px; margin-bottom: 16px; border: 1px solid #f5c6cb; font-weight: bold;">{{ session('error') }}</div>
+    <div data-flash-msg style="background: #f8d7da; color: #721c24; padding: 12px 18px; border-radius: 6px; margin-bottom: 16px; border: 1px solid #f5c6cb; font-weight: bold;">{{ session('error') }}</div>
 @endif
+</div>
 
 <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; gap: 20px;">
-    <div>
+    <form method="GET" action="{{ route('tipos-publicacion') }}" style="display:inline;" id="searchForm">
         <b>Buscar Tipo:</b>
-        <form method="GET" action="{{ route('tipos-publicacion') }}" style="display:inline;">
-            <input type="text" name="search" value="{{ $search }}" style="width: 500px; padding: 4px 6px; border-radius: 4px; border: 1px solid #999;" placeholder="Nombre del tipo...">
-            <button type="submit" class="cm-btn cm-btn-sm">Buscar</button>
-        </form>
-    </div>
+        <input type="text" name="search" value="{{ $search }}" style="width: 500px; padding: 4px 6px; border-radius: 4px; border: 1px solid #999;" placeholder="Nombre del tipo..." oninput="buscarConDebounce(this)">
+    </form>
 
     <button type="button" onclick="window.location='{{ route('tipos-publicacion.create') }}'" class="cm-btn cm-btn-success cm-btn-sm" style="margin-right: 30px;">Registrar Tipo</button>
 </div>
 
+<div id="searchResults">
 <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
     <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Listado de Tipos de Publicación</legend>
 
@@ -83,11 +83,11 @@
                     <td align="center">
                         <div style="display: inline-flex; align-items: center; gap: 4px;">
                             <button type="button" onclick="window.location='{{ route('tipos-publicacion.edit', $item->id) }}'" title="Editar" class="cm-btn cm-btn-secondary cm-btn-sm">Editar</button>
-                            <button type="button" onclick="if(confirm('¿Cambiar estado de este tipo?'))window.location='{{ route('tipos-publicacion.toggle', $item->id) }}'" title="{{ $item->estado_logico ? 'Deshabilitar' : 'Habilitar' }}" class="cm-btn cm-btn-warning cm-btn-sm">{{ $item->estado_logico ? 'Deshabilitar' : 'Habilitar' }}</button>
-                            <form method="POST" action="{{ route('tipos-publicacion.destroy', $item->id) }}" style="display:inline;" onsubmit="return confirm('¿Estás seguro de eliminar PERMANENTEMENTE este tipo de publicación?')">
+                            <button type="button" data-ajax-toggle="{{ route('tipos-publicacion.toggle', $item->id) }}" data-toggle-name="{{ $item->nombre }}" title="{{ $item->estado_logico ? 'Deshabilitar' : 'Habilitar' }}" class="cm-btn cm-btn-warning cm-btn-sm">{{ $item->estado_logico ? 'Deshabilitar' : 'Habilitar' }}</button>
+                            <form method="POST" action="{{ route('tipos-publicacion.destroy', $item->id) }}" style="display:inline;" >
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" title="Eliminar" class="cm-btn cm-btn-danger cm-btn-sm">Eliminar</button>
+                                <button type="submit" title="Eliminar" class="cm-btn cm-btn-danger cm-btn-sm" data-ajax-delete data-delete-name="{{ $item->nombre }}">Eliminar</button>
                             </form>
                         </div>
                     </td>
@@ -103,5 +103,6 @@
 
     <div style="margin-top: 10px;">{{ $items->links() }}</div>
 </fieldset>
+</div>
 
 @endsection

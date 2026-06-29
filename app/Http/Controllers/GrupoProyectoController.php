@@ -399,9 +399,14 @@ class GrupoProyectoController extends Controller
             ->with('success', 'Grupo actualizado correctamente. Clave: ' . $clave);
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $this->grupos->eliminar((int) $id);
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Grupo eliminado correctamente.']);
+        }
+
         return redirect()->route('grupos-proyecto.index')
             ->with('success', 'Grupo eliminado correctamente.');
     }

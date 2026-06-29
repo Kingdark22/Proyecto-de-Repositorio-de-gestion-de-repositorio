@@ -152,7 +152,9 @@ class ProyectoGestionService
             ? (int) $estado['programa_id']
             : $this->resolverProgramaDesdeClave($estado['equipo_seccion_clave'] ?? '');
 
-        $trayectoCodigo = $this->resolverTrayectoDesdeEstado($estado);
+        $trayectoCodigo = !empty($estado['trayecto_codigo'])
+            ? (string) $estado['trayecto_codigo']
+            : $this->resolverTrayectoDesdeEstado($estado);
 
         $datos = array_merge($this->catalogoRepo->catalogos($programaId, $trayectoCodigo), $equipoCtx, [
             'canRegister' => $user ? $this->usuarioPuedeRegistrar($user) : false,
@@ -176,6 +178,7 @@ class ProyectoGestionService
 
         $programaDerived = null;
         $trayectoDerived = '';
+        $traCodigo = null;
         if ($partes) {
             try {
                 $row = DB::connection($this->equipoSeccion->academicConnection())
@@ -185,10 +188,11 @@ class ProyectoGestionService
                     ->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
                     ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'sem.sem_cod_trayecto')
                     ->where('sec.sec_codigo', $partes['sec_codigo'])
-                    ->select(['pro.pro_codigo', 'tra.tra_nombre'])
+                    ->select(['pro.pro_codigo', 'tra.tra_codigo', 'tra.tra_nombre'])
                     ->first();
                 if ($row) {
                     $programaDerived = $row->pro_codigo ?? null;
+                    $traCodigo = isset($row->tra_codigo) ? (string) $row->tra_codigo : null;
                     $trayectoDerived = trim($row->tra_nombre ?? '');
                 }
             } catch (\Throwable) {
@@ -219,6 +223,7 @@ class ProyectoGestionService
             'filterSeccionEquipo' => $partes ? (string) $partes['sec_codigo'] : '',
             'programa_id_derived' => $programaDerived,
             'trayecto_derived' => $trayectoDerived,
+            'trayecto_derived_codigo' => $traCodigo ?? '',
             'archivos_actuales' => $docsExistentes,
         ];
     }
@@ -299,7 +304,7 @@ class ProyectoGestionService
             if ($docsActuales->has($compCodigo)) {
                 $docViejo = $docsActuales->get($compCodigo);
                 $this->proyectoRepo->eliminarDocumentoViejo($docViejo->pd_archivo_path);
-                $this->proyectoRepo->actualizarDocumento($docViejo->id, [
+                $this->proyectoRepo->actualizarDocumento($docViejo->pd_codigo, [
                     'pd_archivo_path' => $path,
                     'pd_orden' => 0,
                 ]);
@@ -912,8 +917,12 @@ class ProyectoGestionService
             $conn = \App\Helpers\DualDatabase::academicConnection();
             $persona = \Illuminate\Support\Facades\DB::connection($conn)
                 ->table('persona')
-                ->where('per_cedula', $cedula)
-                ->select(['per_cedula', 'per_nombre', 'per_apellido'])
+                ->whereRaw('TRIM(per_cedula) = ?', [$cedula])
+                ->select([
+                    \Illuminate\Support\Facades\DB::raw("TRIM(per_cedula) as per_cedula"),
+                    \Illuminate\Support\Facades\DB::raw("TRIM(per_nombres) as per_nombre"),
+                    \Illuminate\Support\Facades\DB::raw("TRIM(per_apellidos) as per_apellido"),
+                ])
                 ->first();
 
             if ($persona) {
@@ -921,9 +930,9 @@ class ProyectoGestionService
                     'found' => true,
                     'source' => 'intranet',
                     'data' => [
-                        'cedula' => trim($persona->per_cedula),
-                        'nombre' => trim($persona->per_nombre),
-                        'apellido' => trim($persona->per_apellido ?? ''),
+                        'cedula' => $persona->per_cedula,
+                        'nombre' => $persona->per_nombre,
+                        'apellido' => $persona->per_apellido ?? '',
                     ],
                 ];
             }
@@ -1068,7 +1077,7 @@ class ProyectoGestionService
     /**
      * Agrega un involucrado a un proyecto con sus roles.
      */
-    public function agregarInvolucradoAProyecto(int $proyectoId, int $involucradoId, array $roleIds): void
+    public function agregarInvolucradoAProyecto(int $proyectoId, int $involucradoId, array $roleIds): int
     {
         $connection = (string) config('dual_database.repositorio_connection', 'pgsql');
 
@@ -1107,6 +1116,8 @@ class ProyectoGestionService
                 ]);
             }
         }
+
+        return $pivotId;
     }
 
     /**

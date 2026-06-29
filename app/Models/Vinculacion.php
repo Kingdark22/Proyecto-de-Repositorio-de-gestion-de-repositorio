@@ -10,7 +10,7 @@ class Vinculacion extends RepositorioModel
         'proyecto_id',
         'vin_titulo',
         'vin_descripcion',
-        'comunidad_id',
+        'com_codigo',
         'tipo',
     ];
 
@@ -31,6 +31,6 @@ class Vinculacion extends RepositorioModel
 
     public function comunidad()
     {
-        return $this->belongsTo(Comunidad::class, 'comunidad_id', 'com_codigo');
+        return $this->belongsTo(Comunidad::class, 'com_codigo', 'com_codigo');
     }
 }

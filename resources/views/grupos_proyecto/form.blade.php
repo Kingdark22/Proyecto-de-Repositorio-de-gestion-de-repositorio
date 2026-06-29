@@ -244,7 +244,7 @@
             </table>
 
             <div style="margin-top:14px;text-align:center;">
-                <button type="submit" class="cm-btn cm-btn-success" id="guardarBtn" {{ !$tablaOk ? 'disabled' : '' }}>
+                <button type="submit" class="cm-btn cm-btn-success" id="guardarBtn" data-confirm-register data-entity-type="Grupo de Proyecto" {{ !$tablaOk ? 'disabled' : '' }}>
                     {{ isset($grupo) ? 'Actualizar Grupo' : 'Registrar Grupo' }}
                 </button>
                 <a href="{{ route('grupos-proyecto.index') }}" class="cm-btn cm-btn-danger">Cancelar</a>
@@ -267,7 +267,7 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                 <div class="grp-field" style="grid-column:span 2;">
                     <label>Nombre de la comunidad <span style="color:#c82333;">*</span></label>
-                    <input type="text" id="comNombre" placeholder="Nombre completo" style="width:100%;max-width:100%;">
+                    <input type="text" id="comNombre" placeholder="Nombre completo" style="width:100%;max-width:100%;" oninput="validarNombre(this)">
                     <span id="comNombreStatus" class="status-indicator"></span>
                 </div>
 
@@ -293,7 +293,8 @@
                 <div class="grp-field">
                     <label>Correo electr&oacute;nico</label>
                     <input type="email" id="comCorreo" placeholder="comunidad@ejemplo.com"
-                        style="width:100%;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+                        style="width:100%;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;" maxlength="40"
+                        oninput="this.style.borderColor=this.value.includes('@')?'#ccc':'red'">
                     <span id="comCorreoStatus" class="status-indicator"></span>
                 </div>
 
@@ -312,7 +313,8 @@
                             <option value="0271">0271</option>
                         </select>
                         <input type="text" id="comTelefono" placeholder="5555555" maxlength="7"
-                            style="flex:1;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+                            style="flex:1;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;"
+                            oninput="this.value=this.value.replace(/\D/g,'').slice(0,7)">
                     </div>
                 </div>
 
@@ -396,7 +398,12 @@ lapsoSelect.addEventListener('change', function() {
         miembros = [];
         renderMiembros();
     }
-    nombreStatus.textContent = '';
+    // Re-verificar nombre al cambiar lapso
+    if (nombreInput.value.trim().length >= 2 && lapso) {
+        recheckNombreDisponible(lapso, nombreInput.value.trim());
+    } else {
+        nombreStatus.textContent = '';
+    }
 
     if (!lapso) return;
 
@@ -674,6 +681,38 @@ function renderMiembros() {
 
 // ========== Real-time nombre availability (via AJAX) ==========
 var nombreTimeout = null;
+
+function recheckNombreDisponible(lapso, nombre) {
+    @if (isset($grupo))
+    var exclude = {{ $grupo->grp_codigo }};
+    @else
+    var exclude = 0;
+    @endif
+
+    var url = '/grupos-proyecto/api/check-nombre/' + lapso + '/' + encodeURIComponent(nombre);
+    if (exclude) { url += '?exclude=' + exclude; }
+
+    return fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.available) {
+                nombreStatus.textContent = 'Disponible';
+                nombreStatus.className = 'status-indicator status-ok';
+                nombreInput.dataset.nombreDisponible = 'true';
+            } else {
+                nombreStatus.textContent = 'No disponible';
+                nombreStatus.className = 'status-indicator status-err';
+                nombreInput.dataset.nombreDisponible = 'false';
+            }
+            return data.available;
+        })
+        .catch(function() {
+            nombreStatus.textContent = '';
+            nombreInput.dataset.nombreDisponible = '';
+            return false;
+        });
+}
+
 nombreInput.addEventListener('input', function() {
     var nombre = this.value.trim();
     var lapso = lapsoSelect.value;
@@ -686,31 +725,10 @@ nombreInput.addEventListener('input', function() {
     clearTimeout(nombreTimeout);
     nombreStatus.textContent = 'Verificando...';
     nombreStatus.className = 'status-indicator';
+    nombreInput.dataset.nombreDisponible = 'checking';
 
     nombreTimeout = setTimeout(function() {
-        @if (isset($grupo))
-        var exclude = {{ $grupo->grp_codigo }};
-        @else
-        var exclude = 0;
-        @endif
-
-        var url = '/grupos-proyecto/api/check-nombre/' + lapso + '/' + encodeURIComponent(nombre);
-        if (exclude) { url += '?exclude=' + exclude; }
-
-        fetch(url)
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data.available) {
-                    nombreStatus.textContent = 'Disponible';
-                    nombreStatus.className = 'status-indicator status-ok';
-                } else {
-                    nombreStatus.textContent = 'No disponible';
-                    nombreStatus.className = 'status-indicator status-err';
-                }
-            })
-            .catch(function() {
-                nombreStatus.textContent = '';
-            });
+        recheckNombreDisponible(lapso, nombre);
     }, 400);
 });
 
@@ -741,8 +759,12 @@ function showComunidadDropdown(data) {
                 (c.rif ? ' <span style="color:#666;font-size:10px;">(' + escapeHtml(c.rif) + ')</span>' : '');
             div.onclick = function() {
                 comunidadId.value = c.id;
-                comunidadSearch.value = c.nombre;
+                comunidadSearch.value = '';
                 comunidadDropdown.classList.remove('show');
+                document.getElementById('comunidadSearchWrapper').style.display = 'none';
+                var badge = document.getElementById('comunidadBadge');
+                badge.querySelector('span').textContent = c.nombre;
+                badge.style.display = 'flex';
             };
             comunidadDropdown.appendChild(div);
         });
@@ -971,12 +993,34 @@ document.getElementById('grupoForm').addEventListener('submit', function(e) {
         return;
     }
 
-    // Verificar que no haya nombres no disponibles antes de enviar
-    var status = nombreStatus.textContent;
-    if (status === 'No disponible') {
-        e.preventDefault();
-        alert('El nombre del grupo no está disponible. Cámbielo antes de guardar.');
-        return;
+    // Verificar disponibilidad del nombre
+    var nombre = nombreInput.value.trim();
+    var lapso = lapsoSelect.value;
+    var estadoNombre = nombreInput.dataset.nombreDisponible;
+
+    if (nombre.length >= 2 && lapso) {
+        if (estadoNombre === 'false' || estadoNombre === 'checking') {
+            e.preventDefault();
+            if (estadoNombre === 'false') {
+                alert('El nombre del grupo no está disponible. Cámbielo antes de guardar.');
+            } else {
+                alert('Verificando disponibilidad del nombre... Espere un momento y vuelva a intentar.');
+            }
+            return;
+        }
+        if (estadoNombre !== 'true' && nombre.length >= 2 && lapso) {
+            e.preventDefault();
+            nombreStatus.textContent = 'Verificando...';
+            nombreStatus.className = 'status-indicator';
+            recheckNombreDisponible(lapso, nombre).then(function(available) {
+                if (!available) {
+                    alert('El nombre del grupo no está disponible. Cámbielo antes de guardar.');
+                } else {
+                    document.getElementById('grupoForm').submit();
+                }
+            });
+            return;
+        }
     }
 });
 

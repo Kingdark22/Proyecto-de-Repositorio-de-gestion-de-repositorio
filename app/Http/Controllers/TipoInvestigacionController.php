@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\TipoInvestigacion;
 use App\Services\UnicidadNombreService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TipoInvestigacionController extends Controller
 {
@@ -26,8 +27,15 @@ class TipoInvestigacionController extends Controller
     public function store(Request $request, UnicidadNombreService $unicidadService)
     {
         $validated = $request->validate([
-            'nombre' => 'required|min:3|max:255',
+            'nombre' => 'required|min:3|max:100',
             'descripcion' => 'required|min:3|max:500',
+        ], [
+            'nombre.required' => 'El nombre del tipo de investigación es obligatorio.',
+            'nombre.min' => 'El nombre debe tener al menos 3 caracteres.',
+            'nombre.max' => 'El nombre no puede exceder 100 caracteres.',
+            'descripcion.required' => 'La descripción es obligatoria.',
+            'descripcion.min' => 'La descripción debe tener al menos 3 caracteres.',
+            'descripcion.max' => 'La descripción no puede exceder 500 caracteres.',
         ]);
 
         $nombre = trim($validated['nombre']);
@@ -62,8 +70,15 @@ class TipoInvestigacionController extends Controller
     public function update(Request $request, $id, UnicidadNombreService $unicidadService)
     {
         $validated = $request->validate([
-            'nombre' => 'required|min:3|max:255',
+            'nombre' => 'required|min:3|max:100',
             'descripcion' => 'required|min:3|max:500',
+        ], [
+            'nombre.required' => 'El nombre del tipo de investigación es obligatorio.',
+            'nombre.min' => 'El nombre debe tener al menos 3 caracteres.',
+            'nombre.max' => 'El nombre no puede exceder 100 caracteres.',
+            'descripcion.required' => 'La descripción es obligatoria.',
+            'descripcion.min' => 'La descripción debe tener al menos 3 caracteres.',
+            'descripcion.max' => 'La descripción no puede exceder 500 caracteres.',
         ]);
 
         $nombre = trim($validated['nombre']);
@@ -91,7 +106,7 @@ class TipoInvestigacionController extends Controller
             ->with('success', 'Tipo de Investigación actualizado con éxito.');
     }
 
-    public function toggleStatus($id)
+    public function toggleStatus(Request $request, $id)
     {
         $item = TipoInvestigacion::findOrFail($id);
         $item->alternarEstado();
@@ -100,16 +115,54 @@ class TipoInvestigacionController extends Controller
             ? 'Tipo habilitado correctamente.'
             : 'Tipo deshabilitado correctamente.';
 
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $mensaje,
+                'nuevo_estado' => $item->estado_logico,
+            ]);
+        }
+
         return redirect()->route('tipos-investigacion')
             ->with('success', $mensaje);
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $item = TipoInvestigacion::findOrFail($id);
-        $item->borrar();
 
-        return redirect()->route('tipos-investigacion')
-            ->with('success', 'Tipo de Investigación eliminado correctamente.');
+        try {
+            try {
+                DB::connection(config('dual_database.repositorio_connection', 'pgsql'))
+                    ->table('proyectos')
+                    ->where('tin_codigo', $id)
+                    ->update(['tin_codigo' => null]);
+            } catch (\Exception $e) {
+            }
+
+            try {
+                DB::connection(config('dual_database.repositorio_connection', 'pgsql'))
+                    ->table('proyectos')
+                    ->where('tipo_investigacion_id', $id)
+                    ->update(['tipo_investigacion_id' => null]);
+            } catch (\Exception $e) {
+            }
+
+            $item->borrar();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => 'Tipo de Investigación eliminado correctamente.']);
+            }
+
+            return redirect()->route('tipos-investigacion')
+                ->with('success', 'Tipo de Investigación eliminado correctamente.');
+        } catch (\Exception $e) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'No se pudo eliminar: ' . $e->getMessage()]);
+            }
+
+            return redirect()->route('tipos-investigacion')
+                ->with('error', 'No se pudo eliminar el tipo porque está siendo utilizado por uno o más proyectos.');
+        }
     }
 }

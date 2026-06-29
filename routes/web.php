@@ -69,6 +69,7 @@ Route::middleware(['auth', 'active.role'])->group(function () {
             Route::delete('/comunidades/{id}', 'destroy')->name('comunidades.destroy');
         });
         Route::get('/comunidades/municipios/{estadoId}', [\App\Http\Controllers\ComunidadController::class, 'municipios']);
+        Route::get('/comunidades/check-nombre', [\App\Http\Controllers\ComunidadController::class, 'checkNombre'])->name('comunidades.check-nombre');
 
         // Grupos de Proyecto
         Route::controller(\App\Http\Controllers\GrupoProyectoController::class)->group(function () {
@@ -133,8 +134,6 @@ Route::middleware(['auth', 'active.role'])->group(function () {
             Route::put('/configuracion/componentes/{id}', 'update')->name('componentes.update');
             Route::get('/configuracion/componentes/{id}/toggle', 'toggleStatus')->name('componentes.toggle');
             Route::delete('/configuracion/componentes/{id}', 'destroy')->name('componentes.destroy');
-            // Redirigir URLs antiguas al index de componentes
-            Route::redirect('/configuracion/componentes/gestion', '/configuracion/componentes')->name('componentes.manage');
             // Vinculación múltiple: seleccionar componentes y vincular a PNF + Trayectos
             Route::get('/configuracion/componentes/vinculacion', 'vinculacionGlobal')->name('componentes.vinculacion');
             Route::post('/configuracion/componentes/vinculacion/guardar', 'vinculacionStore')->name('componentes.vinculacion.guardar');

@@ -31,7 +31,8 @@ class NotificacionService
         $notificaciones = [];
 
         if ($isAdmin || $isCoordinator || $isTeacher) {
-            $query = Proyecto::whereIn('estado_validacion', ['pendiente', 'completado']);
+            $query = Proyecto::whereIn('estado_validacion', ['completado']);
+            $query2 = Proyecto::where('estado_validacion', 'pendiente')->where('actualizado_por_estudiante', true);
 
             if ($isTeacher) {
                 $cedula = trim($user->usu_cedula);
@@ -40,31 +41,33 @@ class NotificacionService
 
                 if ($clavesCreador !== []) {
                     $query->whereIn('pry_direccion_logica', $clavesCreador);
+                    $query2->whereIn('pry_direccion_logica', $clavesCreador);
                 } else {
                     return [];
                 }
             }
 
             $proyectos = $query->get();
+            $proyectosActualizados = $query2->get();
 
             foreach ($proyectos as $p) {
-                if ($p->actualizado_por_estudiante) {
-                    $notificaciones[] = [
-                        'type' => 'info',
-                        'title' => 'Proyecto actualizado',
-                        'mensaje' => 'Proyecto actualizado por el líder: ' . $p->titulo,
-                        'url' => route('proyectos.gestion', ['details' => $p->id]),
-                        'proyecto_id' => $p->id,
-                    ];
-                } else {
-                    $notificaciones[] = [
-                        'type' => 'info',
-                        'title' => 'Proyecto registrado',
-                        'mensaje' => 'Nuevo proyecto registrado: ' . $p->titulo,
-                        'url' => route('proyectos.gestion', ['details' => $p->id]),
-                        'proyecto_id' => $p->id,
-                    ];
-                }
+                $notificaciones[] = [
+                    'type' => 'warning',
+                    'title' => 'Pendiente de revisión',
+                    'mensaje' => $p->titulo,
+                    'url' => route('proyectos.gestion.edit', $p->id),
+                    'proyecto_id' => $p->id,
+                ];
+            }
+
+            foreach ($proyectosActualizados as $p) {
+                $notificaciones[] = [
+                    'type' => 'info',
+                    'title' => 'Actualizado por el líder',
+                    'mensaje' => $p->titulo,
+                    'url' => route('proyectos.gestion.edit', $p->id),
+                    'proyecto_id' => $p->id,
+                ];
             }
         } elseif ($isStudent) {
             $cedula = trim($user->usu_cedula);
