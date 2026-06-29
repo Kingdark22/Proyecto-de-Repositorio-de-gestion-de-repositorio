@@ -114,19 +114,9 @@ $notificacionesCount = count($notificacionesList);
                         class="{{ request()->routeIs('publicaciones.index') ? 'active-sub' : '' }}">
                         Proyectos Publicados
                     </a>
-                    <a href="{{ route('publicaciones.publico') }}"
-                        class="{{ request()->routeIs('publicaciones.publico') ? 'active-sub' : '' }}">
-                        Vista P&uacute;blica
-                    </a>
                 </div>
             </li>
             @endif
-
-            <li>
-                <div class="legacy-menu-item" style="padding: 6px 12px;">
-                    Mi cuenta
-                </div>
-            </li>
 
             <li>
                 <form method="POST" action="{{ route('logout') }}" style="margin:0;">

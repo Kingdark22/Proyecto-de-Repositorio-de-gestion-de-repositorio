@@ -29,10 +29,22 @@ class LineaInvestigacionController extends Controller
     public function store(Request $request, UnicidadNombreService $unicidadService)
     {
         $validated = $request->validate([
-            'nombre_investigacion' => 'required|min:3|max:255',
-            'area_de_investigacion' => 'required|min:3|max:255',
+            'nombre_investigacion' => 'required|min:3|max:100',
+            'area_de_investigacion' => 'required|min:3|max:100',
             'programa_id' => 'required|integer',
             'descripcion' => 'required|min:3|max:500',
+        ], [
+            'nombre_investigacion.required' => 'El nombre de la línea es obligatorio.',
+            'nombre_investigacion.min' => 'El nombre debe tener al menos 3 caracteres.',
+            'nombre_investigacion.max' => 'El nombre no puede exceder 100 caracteres.',
+            'area_de_investigacion.required' => 'El área de investigación es obligatoria.',
+            'area_de_investigacion.min' => 'El área debe tener al menos 3 caracteres.',
+            'area_de_investigacion.max' => 'El área no puede exceder 100 caracteres.',
+            'programa_id.required' => 'Debe seleccionar un programa.',
+            'programa_id.integer' => 'El programa seleccionado no es válido.',
+            'descripcion.required' => 'La descripción es obligatoria.',
+            'descripcion.min' => 'La descripción debe tener al menos 3 caracteres.',
+            'descripcion.max' => 'La descripción no puede exceder 500 caracteres.',
         ]);
 
         $nombre = trim($validated['nombre_investigacion']);
@@ -70,10 +82,22 @@ class LineaInvestigacionController extends Controller
     public function update(Request $request, $id, UnicidadNombreService $unicidadService)
     {
         $validated = $request->validate([
-            'nombre_investigacion' => 'required|min:3|max:255',
-            'area_de_investigacion' => 'required|min:3|max:255',
+            'nombre_investigacion' => 'required|min:3|max:100',
+            'area_de_investigacion' => 'required|min:3|max:100',
             'programa_id' => 'required|integer',
             'descripcion' => 'required|min:3|max:500',
+        ], [
+            'nombre_investigacion.required' => 'El nombre de la línea es obligatorio.',
+            'nombre_investigacion.min' => 'El nombre debe tener al menos 3 caracteres.',
+            'nombre_investigacion.max' => 'El nombre no puede exceder 100 caracteres.',
+            'area_de_investigacion.required' => 'El área de investigación es obligatoria.',
+            'area_de_investigacion.min' => 'El área debe tener al menos 3 caracteres.',
+            'area_de_investigacion.max' => 'El área no puede exceder 100 caracteres.',
+            'programa_id.required' => 'Debe seleccionar un programa.',
+            'programa_id.integer' => 'El programa seleccionado no es válido.',
+            'descripcion.required' => 'La descripción es obligatoria.',
+            'descripcion.min' => 'La descripción debe tener al menos 3 caracteres.',
+            'descripcion.max' => 'La descripción no puede exceder 500 caracteres.',
         ]);
 
         $nombre = trim($validated['nombre_investigacion']);
@@ -103,7 +127,7 @@ class LineaInvestigacionController extends Controller
             ->with('success', 'Línea de Investigación actualizada con éxito.');
     }
 
-    public function toggleStatus($id)
+    public function toggleStatus(Request $request, $id)
     {
         $item = LineaInvestigacion::findOrFail($id);
         $item->alternarEstado();
@@ -112,17 +136,57 @@ class LineaInvestigacionController extends Controller
             ? 'Línea habilitada correctamente.'
             : 'Línea deshabilitada correctamente.';
 
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $mensaje,
+                'nuevo_estado' => $item->activo,
+            ]);
+        }
+
         return redirect()->route('lineas-investigacion')
             ->with('success', $mensaje);
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $item = LineaInvestigacion::findOrFail($id);
-        $item->borrar();
 
-        return redirect()->route('lineas-investigacion')
-            ->with('success', 'Línea de Investigación eliminada correctamente.');
+        try {
+            // Limpiar columna legacy lin_codigo
+            try {
+                DB::connection(config('dual_database.repositorio_connection', 'pgsql'))
+                    ->table('proyectos')
+                    ->where('lin_codigo', $id)
+                    ->update(['lin_codigo' => null]);
+            } catch (\Exception $e) {
+            }
+
+            // Limpiar columna FK linea_investigacion_id
+            try {
+                DB::connection(config('dual_database.repositorio_connection', 'pgsql'))
+                    ->table('proyectos')
+                    ->where('linea_investigacion_id', $id)
+                    ->update(['linea_investigacion_id' => null]);
+            } catch (\Exception $e) {
+            }
+
+            $item->borrar();
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => 'Línea de Investigación eliminada correctamente.']);
+            }
+
+            return redirect()->route('lineas-investigacion')
+                ->with('success', 'Línea de Investigación eliminada correctamente.');
+        } catch (\Exception $e) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'No se pudo eliminar: ' . $e->getMessage()]);
+            }
+
+            return redirect()->route('lineas-investigacion')
+                ->with('error', 'No se pudo eliminar la línea porque está siendo utilizada por uno o más proyectos.');
+        }
     }
 
     private function getProgramas()

@@ -190,8 +190,8 @@
 
         {{-- Botones --}}
         <div style="text-align: center; margin-top: 20px;">
-            <button type="submit" class="cm-btn cm-btn-success" style="margin-right: 10px;"
-                onclick="return validarFormulario()">
+            <button type="button" class="cm-btn cm-btn-success" style="margin-right: 10px;"
+                onclick="validarFormulario()">
                 Guardar Vinculaci&oacute;n
             </button>
             <a href="{{ route('componentes.index') }}" class="cm-btn cm-btn-danger">
@@ -199,10 +199,25 @@
             </a>
         </div>
     </form>
+
+    {{-- Modal confirmación --}}
+    <div id="confirmModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarConfirmModal()">
+        <div style="background:#fff;border-radius:10px;padding:28px;max-width:440px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,0.2);text-align:center;">
+            <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+            <h3 style="margin:0 0 8px;font-size:16px;color:#333;">¿Está seguro?</h3>
+            <p id="confirmMsg" style="margin:0 0 20px;font-size:13px;color:#666;">Se guardará la vinculación seleccionada.</p>
+            <div style="display:flex;gap:12px;justify-content:center;">
+                <button type="button" class="cm-btn cm-btn-success" onclick="confirmarGuardar()" style="min-width:100px;">Sí, guardar</button>
+                <button type="button" class="cm-btn cm-btn-danger" onclick="cerrarConfirmModal()" style="min-width:100px;">Cancelar</button>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
 <script>
+    var pendienteSubmit = false;
+
     function toggleComponenteLabel(checkbox) {
         var label = checkbox.closest('.comp-label');
         if (checkbox.checked) {
@@ -252,14 +267,24 @@
         var componentesSeleccionados = document.querySelectorAll('.comp-checkbox:checked');
         if (componentesSeleccionados.length === 0) {
             alert('Debe seleccionar al menos un componente.');
-            return false;
+            return;
         }
         var pnfActivos = document.querySelectorAll('input[name^="pnf_activo["]:checked');
         if (pnfActivos.length === 0) {
             alert('Debe seleccionar al menos un PNF con trayectos.');
-            return false;
+            return;
         }
-        return confirm('¿Guardar vinculación para ' + componentesSeleccionados.length + ' componente(s)?');
+        document.getElementById('confirmMsg').textContent =
+            'Se guardará la vinculación para ' + componentesSeleccionados.length + ' componente(s).';
+        document.getElementById('confirmModal').style.display = 'flex';
+    }
+
+    function cerrarConfirmModal() {
+        document.getElementById('confirmModal').style.display = 'none';
+    }
+
+    function confirmarGuardar() {
+        document.getElementById('vinculacionForm').submit();
     }
 
     // Inicializar contador

@@ -160,6 +160,7 @@ class ProyectoController extends Controller
             'filterSeccionEquipo' => $request->input('filterSeccionEquipo', ''),
             'programa_id' => $request->input('programa_id_derived'),
             'trayecto' => $request->input('trayecto_derived', ''),
+            'trayecto_codigo' => $request->input('trayecto_derived_codigo', ''),
         ];
 
         if ($modoActualizacion) {
@@ -353,14 +354,14 @@ class ProyectoController extends Controller
             'rol_id' => 'required|integer',
         ]);
 
-        $this->gestion->agregarInvolucradoAProyecto(
+        $pivotId = $this->gestion->agregarInvolucradoAProyecto(
             (int) $id,
             (int) $invId,
             [(int) $request->input('rol_id')]
         );
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true]);
+            return response()->json(['success' => true, 'pivot_id' => $pivotId]);
         }
         return redirect()->route('proyectos.gestion.edit', $id)
             ->with('success', 'Rol asignado al involucrado.');
@@ -428,6 +429,7 @@ class ProyectoController extends Controller
             'filterSeccionEquipo' => $datos['filterSeccionEquipo'] ?? '',
             'programa_id' => $datos['programa_id_derived'] ?? null,
             'trayecto' => $datos['trayecto_derived'] ?? '',
+            'trayecto_codigo' => $datos['trayecto_derived_codigo'] ?? '',
             'titulo' => $datos['titulo'] ?? '',
             'resumen' => $datos['resumen'] ?? '',
             'linea_investigacion_id' => $datos['linea_investigacion_id'] ?? '',

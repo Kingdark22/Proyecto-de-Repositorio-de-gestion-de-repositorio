@@ -28,7 +28,7 @@
 
 @section('content')
     <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
-        <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Editar Componente</legend>
+        <legend style="padding:0 5px;font-weight:bold;">&nbsp;</legend>
 
         @if ($errors->any())
             <div style="background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px; font-weight: bold;">
@@ -36,7 +36,7 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('componentes.update', $item->id) }}" style="margin: 0;">
+        <form method="POST" action="{{ route('componentes.update', $item->id) }}" style="margin: 0;" onsubmit="return validarFormulario(this)">
             @csrf
             @method('PUT')
             <table width="100%" border="0" cellpadding="6" cellspacing="0" style="font-size: 12px;">

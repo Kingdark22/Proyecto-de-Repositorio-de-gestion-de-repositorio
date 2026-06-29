@@ -62,15 +62,15 @@
 
 @section('content')
     <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
-        <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Registrar Línea</legend>
+        <legend style="padding:0 5px;font-weight:bold;">&nbsp;</legend>
 
-        <form method="POST" action="{{ route('lineas-investigacion.store') }}" style="margin: 0;">
+        <form method="POST" action="{{ route('lineas-investigacion.store') }}" style="margin: 0;" onsubmit="return validarFormulario(this)">
             @csrf
             <table width="100%" border="0" cellpadding="4" cellspacing="0" style="margin-top: 15px;">
                 <tr>
                     <td width="30%"><b>Nombre Línea de Inv.:</b></td>
                     <td width="70%">
-                        <input name="nombre_investigacion" type="text" value="{{ old('nombre_investigacion') }}" style="width: 90%;" required>
+                        <input name="nombre_investigacion" type="text" value="{{ old('nombre_investigacion') }}" maxlength="100" style="width: 90%;" required>
                         <span class="obligatorio">*</span>
                         @error('nombre_investigacion')
                             <br><span class="validation-error">{{ $message }}</span>
@@ -80,7 +80,7 @@
                 <tr>
                     <td width="30%"><b>Área Académica:</b></td>
                     <td width="70%">
-                        <input name="area_de_investigacion" type="text" value="{{ old('area_de_investigacion') }}" style="width: 90%;" required>
+                        <input name="area_de_investigacion" type="text" value="{{ old('area_de_investigacion') }}" maxlength="100" style="width: 90%;" required>
                         <span class="obligatorio">*</span>
                         @error('area_de_investigacion')
                             <br><span class="validation-error">{{ $message }}</span>
@@ -105,7 +105,7 @@
                 <tr>
                     <td width="30%" valign="top"><b>Descripción Breve:</b></td>
                     <td width="70%">
-                        <textarea name="descripcion" rows="3" style="width: 90%;" required>{{ old('descripcion') }}</textarea>
+                        <textarea name="descripcion" rows="3" maxlength="500" style="width: 90%;" required>{{ old('descripcion') }}</textarea>
                         <span class="obligatorio">*</span>
                         @error('descripcion')
                             <br><span class="validation-error">{{ $message }}</span>
@@ -120,7 +120,7 @@
 
             <div style="text-align: center; margin-top: 20px;">
                 <button type="button" onclick="window.location='{{ route('lineas-investigacion') }}'" class="cm-btn cm-btn-danger" style="margin-right: 10px;">Cancelar</button>
-                <button type="submit" class="cm-btn cm-btn-primary">Guardar</button>
+                <button type="submit" class="cm-btn cm-btn-primary" data-confirm-register data-entity-type="Línea de Investigación">Guardar</button>
             </div>
         </form>
     </fieldset>

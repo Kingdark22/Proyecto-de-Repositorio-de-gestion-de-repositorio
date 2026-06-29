@@ -10,6 +10,7 @@ use App\Services\ComunidadGestionService;
 use App\Services\UnicidadNombreService;
 use App\Services\ValidacionCorreoService;
 use App\Services\ValidacionRifService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ComunidadController extends Controller
@@ -202,9 +203,14 @@ class ComunidadController extends Controller
             ->with('success', 'Comunidad actualizada con éxito.');
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         $this->gestion->eliminar($id);
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Comunidad eliminada correctamente.']);
+        }
+
         return redirect()->route('comunidades.index')
             ->with('success', 'Comunidad eliminada correctamente.');
     }
@@ -216,5 +222,24 @@ class ComunidadController extends Controller
             ->get(['mun_codigo', 'mun_nombre']);
 
         return response()->json($municipios);
+    }
+
+    public function checkNombre(Request $request, UnicidadNombreService $unicidadService): JsonResponse
+    {
+        $nombre = trim($request->get('nombre', ''));
+        $ignoreId = $request->integer('ignore_id', 0) ?: null;
+
+        if ($nombre === '' || strlen($nombre) < 3) {
+            return response()->json(['disponible' => false, 'error' => 'too_short']);
+        }
+
+        $disponible = $unicidadService->check(
+            Comunidad::class,
+            'nombre',
+            $nombre,
+            $ignoreId,
+        );
+
+        return response()->json(['disponible' => $disponible]);
     }
 }

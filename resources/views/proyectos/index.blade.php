@@ -147,8 +147,17 @@
                 <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size:11px;">
                     <tr>
                         <td width="33%"><b>Título:</b><br>
-                            <input name="search" type="text" value="{{ $search }}" class="filter-input" style="width:95%;" placeholder="Buscar...">
+                            <input name="search" type="text" value="{{ $search }}" class="filter-input" style="width:95%;" placeholder="Buscar..." oninput="buscarProyectos()">
                         </td>
+                        <script>
+                            let timerProyectos;
+                            function buscarProyectos() {
+                                clearTimeout(timerProyectos);
+                                timerProyectos = setTimeout(function() {
+                                    document.querySelector('.filter-input').closest('form').submit();
+                                }, 400);
+                            }
+                        </script>
                         <td width="33%"><b>Estado:</b><br>
                                 <select name="estado" class="filter-select" style="width:95%;" onchange="this.form.submit()">
                                     <option value="">- Todos -</option>

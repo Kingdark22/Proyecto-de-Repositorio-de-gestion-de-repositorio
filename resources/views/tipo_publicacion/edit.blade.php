@@ -37,9 +37,9 @@
 @endif
 
 <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
-    <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Editar Tipo</legend>
+    <legend style="padding:0 5px;font-weight:bold;">&nbsp;</legend>
 
-    <form method="POST" action="{{ route('tipos-publicacion.update', $item->id) }}" style="margin: 0;">
+    <form method="POST" action="{{ route('tipos-publicacion.update', $item->id) }}" style="margin: 0;" onsubmit="return validarFormulario(this)">
         @csrf
         @method('PUT')
 
@@ -47,7 +47,7 @@
             <tr>
                 <td width="35%"><b>Nombre del Tipo:</b></td>
                 <td width="65%">
-                    <input type="text" name="nombre" value="{{ old('nombre', $item->nombre) }}" style="width: 90%;">
+                    <input type="text" name="nombre" value="{{ old('nombre', $item->nombre) }}" required style="width: 90%;">
                     <span class="obligatorio">*</span>
                     @error('nombre')
                         <br><span class="validation-error">{{ $message }}</span>

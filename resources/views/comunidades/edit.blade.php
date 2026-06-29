@@ -28,7 +28,7 @@
 
 @section('content')
     <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
-        <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Modificar comunidad</legend>
+        <legend style="padding:0 5px;font-weight:bold;">&nbsp;</legend>
 
         @if ($errors->any())
             <div style="background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px; font-weight: bold;">
@@ -36,17 +36,19 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('comunidades.update', $id) }}" style="margin: 0;">
+        <form method="POST" action="{{ route('comunidades.update', $id) }}" style="margin: 0;" onsubmit="return validarFormularioComunidad(this)">
             @csrf
             @method('PUT')
+            <input type="hidden" name="id_edit" value="{{ $id }}">
             <table width="100%" border="0" cellpadding="6" cellspacing="0" style="font-size: 11px;">
                 <tr>
                     <td width="50%" style="vertical-align: top; padding: 0 4px 10px 0;">
                         <div style="display: flex; align-items: flex-start; gap: 6px;">
                             <b style="white-space: nowrap; padding-top: 8px; min-width: 60px;">Nombre:</b>
                             <div style="flex: 1;">
-                                <input name="nombre" type="text" value="{{ old('nombre', $datos['nombre']) }}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" required>
+                                <input name="nombre" type="text" value="{{ old('nombre', $datos['nombre']) }}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" required oninput="validarNombre(this)">
                                 <span class="obligatorio">*</span>
+                                <span id="nombreStatus" style="font-size:11px;display:none;"></span>
                                 @error('nombre')<br><span class="validation-error">{{ $message }}</span>@enderror
                             </div>
                         </div>
@@ -57,7 +59,7 @@
                             <div style="flex: 1;">
                                 <div style="display: flex; gap: 5px; align-items: center;">
                                     <select name="rif_letra" style="padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-size: 11px; width: 48px;">
-                                        @foreach(['V','E','J','G','P'] as $l)
+                                        @foreach(['V','C','J','G','P'] as $l)
                                             <option value="{{ $l }}" {{ ($parsed['letra'] ?? 'J') == $l ? 'selected' : '' }}>{{ $l }}</option>
                                         @endforeach
                                     </select>
@@ -76,7 +78,7 @@
                         <div style="display: flex; align-items: flex-start; gap: 6px;">
                             <b style="white-space: nowrap; padding-top: 8px; min-width: 60px;">Correo:</b>
                             <div style="flex: 1;">
-                                <input name="correo" type="email" value="{{ old('correo', $datos['correo']) }}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" placeholder="ejemplo@gmail.com">
+                                    <input name="correo" type="email" value="{{ old('correo', $datos['correo']) }}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" placeholder="ejemplo@gmail.com" maxlength="40" oninput="validarCorreo(this)">
                                 <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
                                 @error('correo')<br><span class="validation-error">{{ $message }}</span>@enderror
                             </div>
@@ -92,7 +94,7 @@
                                             <option value="{{ $p }}" {{ $prefijo == $p ? 'selected' : '' }}>{{ $p }}</option>
                                         @endforeach
                                     </select>
-                                    <input name="numero_telefono" type="text" value="{{ old('numero_telefono', $numeroTel) }}" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" placeholder="XXX-XXXX">
+                                    <input name="numero_telefono" type="text" value="{{ old('numero_telefono', $numeroTel) }}" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" placeholder="XXX-XXXX" maxlength="7" oninput="this.value=this.value.replace(/\D/g,'').slice(0,7)">
                                 </div>
                                 <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
                                 @error('numero_telefono')<br><span class="validation-error">{{ $message }}</span>@enderror
@@ -190,5 +192,9 @@ function cargarMunicipios(estadoId) {
             munSelect.innerHTML = '<option value="">-- Error al cargar --</option>';
         });
 }
+document.addEventListener('DOMContentLoaded', function() {
+    var est = document.getElementById('estado_id');
+    if (est && est.value) { cargarMunicipios(est.value); }
+});
 </script>
 @endpush

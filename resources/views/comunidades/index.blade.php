@@ -27,27 +27,37 @@
 @endpush
 
 @section('content')
+    <div id="flashContainer">
     @if (session('success'))
-        <div style="background-color: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border: 1px solid #c3e6cb; border-radius: 4px; font-weight: bold; text-align: center;">
+        <div data-flash-msg style="background-color: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border: 1px solid #c3e6cb; border-radius: 4px; font-weight: bold; text-align: center;">
             {{ session('success') }}
         </div>
     @endif
     @if (session('error'))
-        <div style="background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px; font-weight: bold; text-align: center;">
+        <div data-flash-msg style="background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px; font-weight: bold; text-align: center;">
             {{ session('error') }}
         </div>
     @endif
+    </div>
 
     <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin-bottom: 20px;">
         <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Buscador y listado</legend>
         <table width="100%" border="0" cellpadding="8" cellspacing="0" style="font-size: 11px;">
             <tr>
                 <td width="65%">
-                    <form method="GET" action="{{ route('comunidades.index') }}" style="display: flex; align-items: center; gap: 8px; margin: 0;">
+                    <form method="GET" action="{{ route('comunidades.index') }}" id="searchForm" style="display: flex; align-items: center; gap: 8px; margin: 0;">
                         <b>Buscar (nombre / RIF):</b>
-                        <input name="search" type="text" value="{{ $search }}" style="width: 70%; padding: 3px;" placeholder="Nombre o RIF...">
-                        <button type="submit" class="cm-btn cm-btn-sm">Buscar</button>
+                        <input name="search" type="text" value="{{ $search }}" style="width: 70%; padding: 3px;" placeholder="Nombre o RIF..." oninput="buscarTiempoReal()">
                     </form>
+                    <script>
+                        let timerBusqueda;
+                        function buscarTiempoReal() {
+                            clearTimeout(timerBusqueda);
+                            timerBusqueda = setTimeout(function() {
+                                document.getElementById('searchForm').submit();
+                            }, 400);
+                        }
+                    </script>
                 </td>
                 <td width="35%" align="right">
                     @if ($puedeGestionar)
@@ -86,10 +96,10 @@
                                     <button type="button" onclick="window.location='{{ route('comunidades.edit', $c->id) }}'"
                                         class="cm-btn cm-btn-secondary cm-btn-sm">Editar</button>
                                     <form method="POST" action="{{ route('comunidades.destroy', $c->id) }}" style="display: inline; margin: 0;"
-                                        onsubmit="return confirm('¿Estás seguro de eliminar esta comunidad?')">
+                                        >
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="cm-btn cm-btn-danger cm-btn-sm">Eliminar</button>
+                                        <button type="submit" class="cm-btn cm-btn-danger cm-btn-sm" data-ajax-delete data-delete-name="{{ $c->nombre }}">Eliminar</button>
                                     </form>
                                 </div>
                             @else

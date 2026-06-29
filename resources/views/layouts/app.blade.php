@@ -274,6 +274,95 @@
             background: #dbeafe;
             color: #2563eb;
         }
+
+        /* ─── Modal de confirmación de registro ─── */
+        .confirm-modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 99999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: confirmFadeIn 0.2s ease;
+        }
+        .confirm-modal-overlay.show { display: flex; }
+        @keyframes confirmFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .confirm-modal-content {
+            background: #fff;
+            border-radius: 12px;
+            max-width: 480px;
+            width: 92%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+            animation: confirmSlideIn 0.25s ease;
+            overflow: hidden;
+        }
+        @keyframes confirmSlideIn {
+            from { transform: translateY(-20px) scale(0.97); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .confirm-modal-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 20px 24px 0;
+        }
+        .confirm-modal-icon {
+            width: 42px; height: 42px;
+            border-radius: 50%;
+            background: #fef3c7;
+            color: #d97706;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .confirm-modal-header h3 {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        .confirm-modal-body {
+            padding: 16px 24px 20px;
+            font-size: 14px;
+            color: #475569;
+            line-height: 1.5;
+        }
+        .confirm-modal-body p { margin: 0 0 12px; }
+        .confirm-modal-detail-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #19692e;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin: 10px 0 0;
+        }
+        .confirm-modal-detail-box .detail-label {
+            font-size: 11px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .confirm-modal-detail-box .detail-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: #0f172a;
+            word-break: break-word;
+        }
+        .confirm-modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            padding: 16px 24px 24px;
+            border-top: 1px solid #f1f5f9;
+        }
     </style>
     @stack('styles')
 </head>
@@ -440,6 +529,30 @@
             @yield('content')
         </main>
 
+        {{-- Modal de confirmación de acciones (reutilizable: registrar, eliminar, toggle) --}}
+        <div id="confirmModal" class="confirm-modal-overlay">
+            <div class="confirm-modal-content">
+                <div class="confirm-modal-header">
+                    <div class="confirm-modal-icon" id="confirmModalIcon">📋</div>
+                    <h3 id="confirmModalTitle">Confirmar acción</h3>
+                </div>
+                <div class="confirm-modal-body">
+                    <p id="confirmModalMessage">¿Está seguro de realizar esta acción?</p>
+                    <p id="confirmModalHint" style="font-size: 13px; color: #94a3b8;"></p>
+                    <div class="confirm-modal-detail-box" id="confirmModalDetail">
+                        <div class="detail-label" id="confirmDetailLabel">Nombre</div>
+                        <div class="detail-value" id="confirmDetailValue"></div>
+                    </div>
+                </div>
+                <div class="confirm-modal-footer">
+                    <button type="button" onclick="cerrarModalConfirmacion()" class="cm-btn cm-btn-secondary" style="min-width: 120px;">Cancelar</button>
+                    <button type="button" id="confirmActionBtn" class="cm-btn" style="min-width: 160px;">
+                        <span id="confirmBtnText">Confirmar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         {{-- Auto-detectar session flashes y mostrarlos como modal visual --}}
         @php
             $_flashMsg = session('message');
@@ -535,6 +648,392 @@
         })();
 
         lucide.createIcons();
+    </script>
+    <script>
+        function validarCorreo(el) {
+            el.style.borderColor = el.value.includes('@') ? '#ccc' : 'red';
+        }
+        function validarNombre(el) {
+            el.value = el.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ0-9\s]/g, '');
+            var span = document.getElementById('nombreStatus');
+            if (!span) return;
+            var val = el.value.trim();
+            if (val.length === 0) {
+                span.style.display = 'inline'; span.style.color = '#dc3545'; span.textContent = 'El nombre no puede estar vacío';
+                el.dataset.nombreOk = 'false';
+                return;
+            }
+            if (val.length < 3) {
+                span.style.display = 'inline'; span.style.color = 'orange'; span.textContent = 'Mínimo 3 caracteres';
+                el.dataset.nombreOk = 'false';
+                return;
+            }
+            span.style.display = 'inline'; span.style.color = '#888'; span.textContent = 'Verificando disponibilidad...';
+            el.dataset.nombreOk = 'checking';
+            var url = '/comunidades/check-nombre?nombre=' + encodeURIComponent(val);
+            var ignore = el.form ? el.form.querySelector('[name="id_edit"]') : null;
+            if (ignore && ignore.value) url += '&ignore_id=' + ignore.value;
+            fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.disponible) {
+                    span.style.color = '#28a745'; span.textContent = '✓ Nombre disponible';
+                    el.dataset.nombreOk = 'true';
+                } else {
+                    span.style.color = '#dc3545'; span.textContent = 'Este nombre ya está en uso';
+                    el.dataset.nombreOk = 'false';
+                }
+            }).catch(function() {
+                span.style.color = '#28a745'; span.textContent = '✓ Nombre disponible';
+                el.dataset.nombreOk = 'true';
+            });
+        }
+        function validarFormularioComunidad(form) {
+            if (!form.reportValidity()) return false;
+            var nombre = form.querySelector('[name="nombre"]');
+            var span = document.getElementById('nombreStatus');
+            if (!nombre || !nombre.value.trim()) {
+                if (span) { span.style.display = 'inline'; span.style.color = '#dc3545'; span.textContent = 'El nombre es obligatorio'; }
+                if (nombre) nombre.focus();
+                return false;
+            }
+            if (nombre.dataset.nombreOk === 'false') {
+                if (span) { span.style.display = 'inline'; span.style.color = '#dc3545'; span.textContent = 'Corrige el nombre antes de guardar'; }
+                nombre.focus();
+                return false;
+            }
+            if (nombre.dataset.nombreOk === 'checking') {
+                if (span) { span.style.display = 'inline'; span.style.color = '#888'; span.textContent = 'Espera a que se verifique el nombre...'; }
+                return false;
+            }
+            return true;
+        }
+        function validarFormulario(form) {
+            return form.reportValidity();
+        }
+        var _debounceTimers = {};
+        function buscarConDebounce(el) {
+            var form = el.closest('form') || document.getElementById('searchForm');
+            var key = form.id || 'search';
+            clearTimeout(_debounceTimers[key]);
+            _debounceTimers[key] = setTimeout(function() {
+                var form = el.closest('form') || document.getElementById('searchForm');
+                if (!form) return;
+                var url = new URL(form.action, window.location.origin);
+                var fd = new FormData(form);
+                fd.forEach(function(v, k) { url.searchParams.set(k, v); });
+                url.searchParams.set('page', '1');
+                fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function(r) { return r.text(); })
+                    .then(function(html) {
+                        var parser = new DOMParser();
+                        var doc = parser.parseFromString(html, 'text/html');
+                        var newResults = doc.getElementById('searchResults');
+                        if (newResults) {
+                            var oldResults = document.getElementById('searchResults');
+                            if (oldResults) oldResults.innerHTML = newResults.innerHTML;
+                        }
+                    });
+            }, 50);
+        }
+
+        // Eliminación vía AJAX con modal de confirmación visual
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('[data-ajax-delete]');
+            if (!btn) return;
+            e.preventDefault();
+            var form = btn.closest('form');
+            if (!form) return;
+
+            var nombre = btn.getAttribute('data-delete-name') || 'este registro';
+            var tr = btn.closest('tr');
+            var originalText = btn.textContent;
+
+            mostrarModalAccion({
+                icon: '🗑️',
+                title: 'Eliminar registro',
+                message: '¿Está seguro de eliminar <strong>' + nombre + '</strong>?',
+                hint: 'Esta acción no se puede deshacer.',
+                detailLabel: 'Registro a eliminar',
+                detailValue: nombre,
+                confirmText: 'Sí, eliminar',
+                confirmClass: 'cm-btn-danger',
+                onConfirm: function() {
+                    btn.disabled = true;
+                    btn.textContent = '...';
+
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: new FormData(form),
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        }
+                    })
+                    .then(function(r) {
+                        var ct = r.headers.get('content-type') || '';
+                        if (ct.indexOf('application/json') === -1) {
+                            throw new Error('El servidor no devolvió JSON. Recargue la página e intente de nuevo.');
+                        }
+                        return r.json();
+                    })
+                    .then(function(data) {
+                        if (data.success) {
+                            if (typeof showNotifyToast === 'function') {
+                                showNotifyToast('success', data.message || 'Registro eliminado correctamente.');
+                            }
+                            if (tr) {
+                                tr.style.transition = 'opacity 0.3s';
+                                tr.style.opacity = '0';
+                                setTimeout(function() {
+                                    if (tr.parentNode) tr.parentNode.removeChild(tr);
+                                }, 300);
+                            }
+                        } else {
+                            btn.disabled = false;
+                            btn.textContent = originalText;
+                            if (typeof showNotifyToast === 'function') {
+                                showNotifyToast('error', data.message || 'No se pudo eliminar el registro.');
+                            }
+                        }
+                    })
+                    .catch(function(err) {
+                        console.error('Error en eliminación AJAX:', err);
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                        if (typeof showNotifyToast === 'function') {
+                            showNotifyToast('error', 'Error al eliminar: ' + err.message);
+                        }
+                    });
+                }
+            });
+        });
+
+        // ─── Modal de confirmación dinámico (reutilizable) ───
+        // Uso: mostrarModalAccion({ icon, title, message, hint, detailLabel, detailValue, confirmText, confirmClass, onConfirm })
+        function mostrarModalAccion(config) {
+            var modal = document.getElementById('confirmModal');
+            if (!modal) return;
+
+            document.getElementById('confirmModalIcon').textContent = config.icon || '📋';
+            document.getElementById('confirmModalTitle').textContent = config.title || 'Confirmar acción';
+            document.getElementById('confirmModalMessage').innerHTML = config.message || '¿Está seguro de realizar esta acción?';
+            document.getElementById('confirmModalHint').textContent = config.hint || '';
+            document.getElementById('confirmDetailLabel').textContent = config.detailLabel || 'Nombre';
+            document.getElementById('confirmDetailValue').textContent = config.detailValue || '';
+            document.getElementById('confirmBtnText').textContent = config.confirmText || 'Confirmar';
+
+            var confirmBtn = document.getElementById('confirmActionBtn');
+            confirmBtn.className = 'cm-btn ' + (config.confirmClass || 'cm-btn-primary');
+
+            modal._onConfirm = config.onConfirm || null;
+            modal.classList.add('show');
+        }
+
+        function cerrarModalConfirmacion() {
+            var modal = document.getElementById('confirmModal');
+            if (modal) {
+                modal.classList.remove('show');
+                modal._onConfirm = null;
+                modal._targetForm = null;
+            }
+        }
+
+        // Evento para el botón confirmar del modal (acciones generales)
+        document.addEventListener('click', function(e) {
+            var confirmBtn = e.target.closest('#confirmActionBtn');
+            if (!confirmBtn) return;
+
+            var modal = document.getElementById('confirmModal');
+            if (!modal || !modal.classList.contains('show')) return;
+
+            // Si tiene un callback registrado (delete/toggle), ejecutarlo
+            if (typeof modal._onConfirm === 'function') {
+                modal._onConfirm();
+                modal.classList.remove('show');
+                modal._onConfirm = null;
+                return;
+            }
+
+            // Si tiene un formulario pendiente (registro), enviarlo
+            var form = modal._targetForm;
+            if (form) {
+                form.dataset.confirmedByModal = 'true';
+                var origBtn = form.querySelector('[data-confirm-register]');
+                if (origBtn) {
+                    origBtn.disabled = true;
+                    origBtn.textContent = 'Guardando...';
+                }
+                form.submit();
+            }
+            modal.classList.remove('show');
+            modal._targetForm = null;
+        });
+
+        // Delegación de submit para formularios con data-confirm-register
+        document.addEventListener('submit', function(e) {
+            var form = e.target;
+            if (form.tagName !== 'FORM') return;
+
+            var btn = form.querySelector('[data-confirm-register]');
+            if (!btn) return;
+
+            if (form.dataset.confirmedByModal === 'true') {
+                delete form.dataset.confirmedByModal;
+                return;
+            }
+
+            if (e.defaultPrevented) return;
+
+            e.preventDefault();
+
+            var entityType = btn.getAttribute('data-entity-type') || 'registro';
+
+            // Buscar el nombre del registro
+            var nameInput = form.querySelector('[name="nombre"], [name="nombre_investigacion"], [name="titulo"]');
+            var nameVal = '';
+            if (nameInput && nameInput.value.trim()) {
+                nameVal = nameInput.value.trim();
+            } else {
+                nameVal = '(nuevo ' + entityType.toLowerCase() + ')';
+            }
+
+            var modal = document.getElementById('confirmModal');
+            modal._targetForm = form;
+
+            mostrarModalAccion({
+                icon: '📋',
+                title: 'Guardar ' + entityType.toLowerCase(),
+                message: '¿Está seguro de registrar <strong>' + nameVal + '</strong>?',
+                hint: 'Revise los datos antes de confirmar. Una vez guardado podrá editarlo después.',
+                detailLabel: entityType,
+                detailValue: nameVal,
+                confirmText: 'Sí, guardar',
+                confirmClass: 'cm-btn-primary',
+            });
+        });
+
+        // Cerrar modal al hacer clic fuera del contenido
+        document.addEventListener('click', function(e) {
+            var modal = document.getElementById('confirmModal');
+            if (modal && modal.classList.contains('show') && e.target === modal) {
+                cerrarModalConfirmacion();
+            }
+        });
+
+        // Cerrar con tecla Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                cerrarModalConfirmacion();
+            }
+        });
+
+        // ─── Toggle status via AJAX ───
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('[data-ajax-toggle]');
+            if (!btn) return;
+            e.preventDefault();
+
+            var url = btn.getAttribute('data-ajax-toggle');
+            var name = btn.getAttribute('data-toggle-name') || 'registro';
+            var actionLabel = btn.textContent.trim();
+            var originalText = btn.textContent;
+
+            mostrarModalAccion({
+                icon: '🔄',
+                title: 'Cambiar estado',
+                message: '¿Está seguro de ' + actionLabel.toLowerCase() + ' <strong>' + name + '</strong>?',
+                hint: 'El estado del registro se actualizará inmediatamente.',
+                detailLabel: 'Registro',
+                detailValue: name,
+                confirmText: 'Sí, ' + actionLabel.toLowerCase(),
+                confirmClass: 'cm-btn-warning',
+                onConfirm: function() {
+                    btn.disabled = true;
+                    btn.textContent = '...';
+
+                    fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        }
+                    })
+                    .then(function(r) {
+                        var ct = r.headers.get('content-type') || '';
+                        if (ct.indexOf('application/json') === -1) {
+                            throw new Error('Respuesta inesperada del servidor.');
+                        }
+                        return r.json();
+                    })
+                    .then(function(data) {
+                        if (data.success) {
+                            if (typeof showNotifyToast === 'function') {
+                                showNotifyToast('success', data.message || 'Estado actualizado.');
+                            }
+                            // Refrescar los resultados de búsqueda vía AJAX
+                            var searchForm = document.getElementById('searchForm');
+                            if (searchForm) {
+                                var inputs = searchForm.querySelectorAll('input, select');
+                                var lastInput = null;
+                                inputs.forEach(function(inp) {
+                                    if (inp.name === 'search' || inp.name === 'buscar') {
+                                        lastInput = inp;
+                                    }
+                                });
+                                if (lastInput && typeof buscarConDebounce === 'function') {
+                                    buscarConDebounce(lastInput);
+                                } else {
+                                    searchForm.submit();
+                                }
+                            } else {
+                                window.location.reload();
+                            }
+                        } else {
+                            btn.disabled = false;
+                            btn.textContent = originalText;
+                            if (typeof showNotifyToast === 'function') {
+                                showNotifyToast('error', data.message || 'No se pudo cambiar el estado.');
+                            }
+                        }
+                    })
+                    .catch(function(err) {
+                        console.error('Error en toggle AJAX:', err);
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                        if (typeof showNotifyToast === 'function') {
+                            showNotifyToast('error', 'Error: ' + err.message);
+                        }
+                    });
+                }
+            });
+        });
+
+        // ─── Paginación AJAX dentro de #searchResults ───
+        document.addEventListener('click', function(e) {
+            var link = e.target.closest('#searchResults a[href*="page="]');
+            if (!link) return;
+            // No interceptar botones de acción dentro de searchResults
+            if (link.classList.contains('cm-btn') || link.closest('.cm-btn-group')) return;
+
+            e.preventDefault();
+            var url = link.href;
+
+            fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(r) { return r.text(); })
+            .then(function(html) {
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(html, 'text/html');
+                var newResults = doc.getElementById('searchResults');
+                if (newResults) {
+                    var oldResults = document.getElementById('searchResults');
+                    if (oldResults) oldResults.innerHTML = newResults.innerHTML;
+                }
+            })
+            .catch(function() {
+                window.location.href = url;
+            });
+        });
     </script>
     @stack('scripts')
 </body>

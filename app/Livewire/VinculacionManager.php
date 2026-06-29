@@ -203,7 +203,7 @@ class VinculacionManager extends Component
 
         if ($this->vinculacionExistente) {
             $this->vinculacionTitulo = $this->vinculacionExistente->titulo;
-            $this->vinculacionComunidadId = (string) ($this->vinculacionExistente->comunidad_id ?? '');
+            $this->vinculacionComunidadId = (string) ($this->vinculacionExistente->com_codigo ?? '');
         } else {
             $this->vinculacionTitulo = '';
             $this->vinculacionComunidadId = '';
@@ -234,7 +234,7 @@ class VinculacionManager extends Component
         $data = [
             'proyecto_id' => $this->selectedProyecto->id,
             'vin_titulo' => $titulo,
-            'comunidad_id' => $this->vinculacionComunidadId !== '' ? (int) $this->vinculacionComunidadId : null,
+            'com_codigo' => $this->vinculacionComunidadId !== '' ? (int) $this->vinculacionComunidadId : null,
             'tipo' => 'Vinculación',
         ];
 

@@ -139,7 +139,7 @@
                             <b style="white-space: nowrap; padding-top: 8px; min-width: 60px;">Nombre:</b>
                             <div style="flex: 1;">
                                 <div style="display: flex; align-items: center; gap: 4px;">
-                                    <input wire:model.live.debounce.500ms="nombre" type="text" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                                    <input wire:model.live.debounce.500ms="nombre" type="text" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" oninput="validarNombre(this)">
                                     <span class="obligatorio" style="color: red; font-weight: bold;">*</span>
                                 </div>
                                 @if($nombreStatus === 'disponible')
@@ -160,7 +160,7 @@
                                 <div style="display: flex; gap: 5px; align-items: center;">
                                     <select wire:model.live="rifLetra" style="padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; background: #fff; font-size: 11px; width: 48px;" @if($editingId) disabled @endif>
                                         <option value="V">V</option>
-                                        <option value="E">E</option>
+                                        <option value="C">C</option>
                                         <option value="J">J</option>
                                         <option value="G">G</option>
                                         <option value="P">P</option>
@@ -185,7 +185,7 @@
                         <div style="display: flex; align-items: flex-start; gap: 6px;">
                             <b style="white-space: nowrap; padding-top: 8px; min-width: 60px;">Correo:</b>
                             <div style="flex: 1;">
-                                <input wire:model.live.debounce.500ms="correo" type="email" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" placeholder="ejemplo@gmail.com">
+                                    <input wire:model.live.debounce.500ms="correo" type="email" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" placeholder="ejemplo@gmail.com" maxlength="40" oninput="validarCorreo(this)">
                                 <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
                                 @if($correoStatus === 'valido')
                                     <span style="color: #28a745; font-size: 11px;">✓ Correo válido</span>
@@ -211,7 +211,7 @@
                                         <option value="0416">0416</option>
                                         <option value="0426">0426</option>
                                     </select>
-                                    <input wire:model="numero_telefono" type="text" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" placeholder="XXX-XXXX">
+                                    <input wire:model="numero_telefono" type="text" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;" placeholder="XXX-XXXX" maxlength="7" oninput="this.value=this.value.replace(/\D/g,'').slice(0,7)">
                                 </div>
                                 <div style="font-size:10px; color:#888; margin-top:2px;">(opcional)</div>
                                 @error('prefijo_telefono')

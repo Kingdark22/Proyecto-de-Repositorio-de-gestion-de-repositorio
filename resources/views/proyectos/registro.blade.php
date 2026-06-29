@@ -67,12 +67,11 @@
         <input type="hidden" name="filterSeccionEquipo" value="{{ $datosForm['filterSeccionEquipo'] ?? '' }}">
         <input type="hidden" name="programa_id_derived" value="{{ $datosForm['programa_id_derived'] ?? '' }}">
         <input type="hidden" name="trayecto_derived" value="{{ $datosForm['trayecto_derived'] ?? '' }}">
+        <input type="hidden" name="trayecto_derived_codigo" value="{{ $datosForm['trayecto_derived_codigo'] ?? '' }}">
         <input type="hidden" name="comunidad_id" value="{{ $datosForm['comunidad_id'] ?? '' }}">
 
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
-            <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">
-                {{ $esProfesor ? 'Actualizar expediente (docente)' : ($modoActualizacion ? 'Subir documentos del proyecto' : 'Actualizar expediente') }}
-            </legend>
+            <legend style="color: #000; font-weight: bold; padding: 0 5px;">&nbsp;</legend>
 
             {{-- == DATOS DEL PROYECTO == --}}
             <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
@@ -201,39 +200,37 @@
                 {{-- Involucrados actuales --}}
                 <div id="involucrados-list">
                     @if(!empty($involucradosProyecto))
-                    <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 11px; margin-bottom: 10px;">
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="font-size:12px;margin-bottom:10px;border-collapse:collapse;">
                         <thead>
-                            <tr style="background: #e8e0e0; font-weight: bold;">
-                                <th width="12%" style="padding:4px 8px;">C&eacute;dula</th>
-                                <th width="23%" style="padding:4px 8px;">Nombre</th>
-                                <th width="35%" style="padding:4px 8px;">Roles</th>
-                                <th width="30%" style="padding:4px 8px;">Acci&oacute;n</th>
+                            <tr style="background:#f0f0f0;font-weight:bold;">
+                                <th style="padding:5px 8px;text-align:left;">C&eacute;dula</th>
+                                <th style="padding:5px 8px;text-align:left;">Nombre</th>
+                                <th style="padding:5px 8px;text-align:left;">Roles</th>
+                                <th style="padding:5px 8px;text-align:center;">Acci&oacute;n</th>
                             </tr>
                         </thead>
                         <tbody id="involucrados-tbody">
                             @foreach($involucradosProyecto as $inv)
-                            <tr id="inv-row-{{ $inv['id'] }}" style="border-bottom:1px solid #e0e0e0;">
-                                <td style="padding:4px 8px;font-weight:bold;">{{ $inv['cedula'] }}</td>
-                                <td style="padding:4px 8px;">{{ $inv['nombre'] }} {{ $inv['apellido'] }}</td>
-                                <td style="padding:4px 8px;">
-                                    <div class="inv-roles" style="display:flex;flex-wrap:wrap;gap:2px;">
+                            <tr id="inv-row-{{ $inv['id'] }}" style="border-bottom:1px solid #ddd;">
+                                <td style="padding:5px 8px;font-weight:bold;">{{ $inv['cedula'] }}</td>
+                                <td style="padding:5px 8px;">{{ $inv['nombre'] }} {{ $inv['apellido'] }}</td>
+                                <td id="inv-roles-{{ $inv['id'] }}" style="padding:5px 8px;">
+                                    <div class="inv-roles" style="display:flex;flex-wrap:wrap;gap:3px;">
                                         @if(!empty($inv['roles']))
                                             @foreach($inv['roles'] as $rol)
-                                                <span style="display:inline-flex;align-items:center;background:#8b0000;color:#fff;padding:1px 8px;border-radius:10px;font-size:9px;margin:1px;">
+                                                <span id="rol-badge-{{ $inv['id'] }}-{{ $rol['id'] }}" style="display:inline-flex;align-items:center;background:#8b0000;color:#fff;padding:1px 8px;border-radius:10px;font-size:10px;">
                                                     {{ $rol['nombre'] }}
-                                                    <button type="button" onclick="quitarRol({{ $proyectoId }}, {{ $inv['pivot_id'] }}, {{ $rol['id'] }})" style="background:none;border:none;color:#ffcccc;cursor:pointer;font-size:11px;padding:0 2px;margin-left:3px;line-height:1;" title="Quitar rol">&times;</button>
+                                                    <button type="button" onclick="quitarRol({{ $proyectoId }}, {{ $inv['pivot_id'] }}, {{ $rol['id'] }}, {{ $inv['id'] }})" style="background:none;border:none;color:#ffcccc;cursor:pointer;font-size:12px;padding:0 0 0 3px;line-height:1;">&times;</button>
                                                 </span>
                                             @endforeach
                                         @else
-                                            <span style="color:#999;">Sin roles</span>
+                                            <span id="inv-no-roles-{{ $inv['id'] }}" style="color:#999;font-size:11px;">Sin roles</span>
                                         @endif
                                     </div>
                                 </td>
-                                <td style="padding:4px 8px;">
-                                    <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                                        <button type="button" onclick="abrirRolesModal({{ $proyectoId }}, {{ $inv['id'] }}, '{{ addslashes($inv['nombre']) }} {{ addslashes($inv['apellido']) }}')" style="background:#8b0000;color:#fff;border:none;border-radius:3px;padding:2px 8px;font-size:9px;cursor:pointer;">+ Roles</button>
-                                        <button type="button" onclick="quitarInvolucrado({{ $proyectoId }}, {{ $inv['id'] }})" style="background:#dc3545;color:#fff;border:none;border-radius:3px;padding:2px 8px;font-size:9px;cursor:pointer;">Quitar</button>
-                                    </div>
+                                <td style="padding:5px 8px;text-align:center;">
+                                    <button type="button" onclick="abrirRolesModal({{ $proyectoId }}, {{ $inv['id'] }}, '{{ addslashes($inv['nombre']) }} {{ addslashes($inv['apellido']) }}')" style="background:#8b0000;color:#fff;border:none;border-radius:3px;padding:3px 10px;font-size:11px;cursor:pointer;">+ Roles</button>
+                                    <button type="button" onclick="quitarInvolucrado({{ $proyectoId }}, {{ $inv['id'] }})" style="background:#dc3545;color:#fff;border:none;border-radius:3px;padding:3px 10px;font-size:11px;cursor:pointer;">Quitar</button>
                                 </td>
                             </tr>
                             @endforeach
@@ -244,36 +241,38 @@
                     @endif
                 </div>
 
-                <hr style="border:none;border-top:1px solid #e0e0e0;margin:10px 0;">
-
-                {{-- Formulario rápido: cédula primero (busca en intranet persona -> involucrados -> crear) --}}
-                <div style="margin-bottom:8px;">
-                    <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Agregar involucrado al proyecto:</label>
-                    <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 11px;">
-                        <tr>
-                            <td width="18%"><b>C&eacute;dula:</b> <span style="color:red;">*</span></td>
-                            <td width="32%">
-                                <input type="text" id="inv-cedula" onkeyup="buscarPersonaPorCedula()" style="width:95%;padding:5px 6px;border:1px solid #ccc;border-radius:3px;font-size:12px;" placeholder="V-12345678">
-                                <div id="inv-cedula-msg" style="font-size:10px;color:#666;margin-top:2px;"></div>
-                            </td>
-                            <td width="15%"><b>Nombre:</b></td>
-                            <td width="35%">
-                                <input type="text" id="inv-nombre" style="width:95%;padding:5px 6px;border:1px solid #ccc;border-radius:3px;font-size:12px;" placeholder="Se auto-completa">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><b>Apellido:</b></td>
-                            <td>
-                                <input type="text" id="inv-apellido" style="width:95%;padding:5px 6px;border:1px solid #ccc;border-radius:3px;font-size:12px;" placeholder="Se auto-completa">
-                            </td>
-                            <td colspan="2">
-                                <button type="button" onclick="agregarInvolucradoAlProyecto({{ $proyectoId }})" style="background:#198754;color:#fff;border:none;border-radius:4px;padding:6px 16px;font-size:12px;cursor:pointer;font-weight:bold;">+ Agregar</button>
-                                <span id="inv-source" style="font-size:10px;color:#999;margin-left:8px;"></span>
-                            </td>
-                        </tr>
-                    </table>
+                <hr style="border:none;border-top:1px solid #ddd;margin:8px 0;">
+                <div style="text-align:center;">
+                    <button type="button" onclick="abrirModalInvolucrado()" style="background:#8b0000;color:#fff;border:none;border-radius:3px;padding:6px 16px;font-size:12px;cursor:pointer;">+ Insertar involucrado</button>
                 </div>
             </fieldset>
+
+            {{-- Modal: Insertar involucrado --}}
+            <div id="modal-involucrado" onclick="if(event.target===this)cerrarModalInvolucrado()" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;">
+                <div style="background:#fff;border-radius:6px;padding:16px;width:420px;max-width:90%;box-shadow:0 4px 20px rgba(0,0,0,0.2);">
+                    <h3 style="margin:0 0 12px;font-size:14px;color:#333;">Insertar involucrado</h3>
+                    <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size:12px;">
+                        <tr>
+                            <td width="22%"><b>C&eacute;dula:</b></td>
+                            <td width="78%" colspan="3">
+                                <input type="text" id="inv-cedula" onkeyup="this.value=this.value.replace(/[^0-9]/g,'');buscarPersonaPorCedula()" style="width:95%;padding:5px 6px;border:1px solid #ccc;border-radius:3px;font-size:12px;" placeholder="12345678" autocomplete="off">
+                                <div id="inv-cedula-msg" style="font-size:10px;color:#666;margin-top:2px;"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><b>Nombre:</b></td>
+                            <td><input type="text" id="inv-nombre" style="width:95%;padding:5px 6px;border:1px solid #ccc;border-radius:3px;font-size:12px;" placeholder="Se auto-completa"></td>
+                            <td width="15%"><b>Apellido:</b></td>
+                            <td width="23%"><input type="text" id="inv-apellido" style="width:95%;padding:5px 6px;border:1px solid #ccc;border-radius:3px;font-size:12px;" placeholder="Se auto-completa"></td>
+                        </tr>
+                    </table>
+                    <div style="margin-top:10px;text-align:right;display:flex;gap:6px;justify-content:flex-end;">
+                        <span id="inv-source" style="font-size:10px;color:#999;margin-right:auto;align-self:center;"></span>
+                        <button type="button" onclick="cerrarModalInvolucrado()" style="background:#6c757d;color:#fff;border:none;border-radius:3px;padding:5px 14px;font-size:12px;cursor:pointer;">Cancelar</button>
+                        <button type="button" id="btn-agregar-inv" onclick="agregarInvolucradoAlProyecto({{ $proyectoId }})" style="background:#8b0000;color:#fff;border:none;border-radius:3px;padding:5px 14px;font-size:12px;cursor:pointer;">Agregar</button>
+                    </div>
+                </div>
+            </div>
             @endif
 
             {{-- == INTEGRANTES DEL EQUIPO == --}}
@@ -418,38 +417,38 @@
 
             {{-- MODAL ASIGNAR ROLES --}}
             <div id="modal-roles" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarRolesModal()">
-                <div style="background:#fff;border-radius:8px;padding:20px;max-width:450px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
-                    <h3 style="margin:0 0 10px;font-size:14px;color:#8b0000;">Asignar roles a: <span id="rol-modal-nombre" style="color:#333;"></span></h3>
+                <div style="background:#fff;border-radius:6px;padding:16px;max-width:400px;width:90%;box-shadow:0 4px 20px rgba(0,0,0,0.2);">
+                    <h3 style="margin:0 0 10px;font-size:14px;color:#8b0000;">Roles para: <span id="rol-modal-nombre" style="color:#333;"></span></h3>
                     <input type="hidden" id="rol-modal-proyecto-id" value="">
                     <input type="hidden" id="rol-modal-inv-id" value="">
-                    
-                    <div style="margin-bottom:8px;">
-                        <input type="text" id="buscar-rol" onkeyup="buscarRoles()" style="width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:11px;box-sizing:border-box;" placeholder="Buscar rol existente...">
-                        <div id="resultados-roles" style="margin-top:4px;border:1px solid #e0e0e0;border-radius:4px;max-height:150px;overflow-y:auto;background:#fff;display:none;"></div>
+
+                    <input type="text" id="buscar-rol" onkeyup="buscarRoles()" style="width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:3px;font-size:12px;box-sizing:border-box;" placeholder="Buscar rol..." autocomplete="off">
+                    <div id="resultados-roles" style="margin-top:3px;border:1px solid #e0e0e0;border-radius:3px;max-height:150px;overflow-y:auto;background:#fff;display:none;"></div>
+
+                    <div style="margin-top:6px;">
+                        <button type="button" onclick="toggleFormNuevoRol()" style="background:none;border:1px dashed #198754;color:#198754;border-radius:3px;font-size:11px;cursor:pointer;padding:3px 10px;width:100%;">+ Nuevo rol</button>
                     </div>
 
-                    <div style="margin-top:4px;">
-                        <button type="button" onclick="toggleFormNuevoRol()" style="background:none;border:none;color:#198754;font-size:11px;cursor:pointer;padding:2px 0;">+ Crear nuevo rol</button>
-                    </div>
-
-                    <div id="form-nuevo-rol" style="display:none;margin-top:6px;">
-                        <div style="display:flex;gap:6px;align-items:center;">
-                            <input type="text" id="nuevo-rol-nombre" style="flex:1;padding:4px 6px;border:1px solid #ccc;border-radius:3px;font-size:11px;" placeholder="Nombre del nuevo rol">
-                            <button type="button" onclick="crearRol()" style="background:#198754;color:#fff;border:none;border-radius:3px;padding:4px 10px;font-size:10px;cursor:pointer;">Crear</button>
+                    <div id="form-nuevo-rol" style="display:none;margin-top:6px;padding:8px;background:#f9fff9;border:1px solid #c3e6cb;border-radius:3px;">
+                        <div style="display:flex;gap:6px;">
+                            <input type="text" id="nuevo-rol-nombre" style="flex:1;padding:5px 6px;border:1px solid #ccc;border-radius:3px;font-size:12px;" placeholder="Nombre">
+                            <button type="button" onclick="crearRol()" style="background:#198754;color:#fff;border:none;border-radius:3px;padding:5px 12px;font-size:11px;cursor:pointer;">Crear</button>
                         </div>
                     </div>
 
-                    <div style="margin-top:12px;text-align:center;">
-                        <button type="button" onclick="cerrarRolesModal()" class="cm-btn cm-btn-secondary cm-btn-sm">Cerrar</button>
-                    </div>
+                    <div style="margin-top:6px;font-size:10px;color:#999;text-align:center;" id="rol-asignado-msg"></div>
                 </div>
             </div>
 
             {{-- == BOTONES == --}}
             <div style="text-align:center;margin-top:20px;">
-                <a href="{{ route('proyectos.gestion') }}" class="pgm-btn-cancel" style="margin-right:10px;">Cancelar</a>
+                @if($proyecto->estado_validacion === 'completado')
+                    <a href="{{ route('proyectos.gestion') }}" class="pgm-btn-cancel" style="margin-right:10px;">Cerrar</a>
+                @else
+                    <a href="{{ route('proyectos.gestion') }}" class="pgm-btn-cancel" style="margin-right:10px;">Cancelar</a>
+                @endif
                 <button type="submit" class="pgm-btn-save">{{ $modoActualizacion ? 'Subir documentos' : 'Guardar cambios' }}</button>
-                @if (!empty($canValidate) && in_array($proyecto->estado_validacion, ['En proceso', 'completado']))
+                @if (!empty($canValidate) && $proyecto->estado_validacion === 'completado')
                     <button type="button" class="cm-btn cm-btn-success cm-btn-sm" style="margin-left:10px;" onclick="if(confirm('¿Aprueba este proyecto?'))window.location='{{ route('proyectos.gestion.approve', $proyecto->id) }}'">Aprobar</button>
                     <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" style="margin-left:5px;" onclick="abrirRechazar({{ $proyecto->id }})">Rechazar</button>
                 @endif
@@ -487,6 +486,20 @@
 let personaTimer = null;
 let rolesTimer = null;
 
+// ─── Modal involucrado ──────────────────────────────────────────
+function abrirModalInvolucrado() {
+    document.getElementById('inv-cedula').value = '';
+    document.getElementById('inv-nombre').value = '';
+    document.getElementById('inv-apellido').value = '';
+    document.getElementById('inv-cedula-msg').textContent = '';
+    document.getElementById('inv-source').textContent = '';
+    document.getElementById('modal-involucrado').style.display = 'flex';
+    document.getElementById('inv-cedula').focus();
+}
+function cerrarModalInvolucrado() {
+    document.getElementById('modal-involucrado').style.display = 'none';
+}
+
 // ─── Buscar persona por cédula (intranet -> involucrados -> nuevo) ─
 function buscarPersonaPorCedula() {
     clearTimeout(personaTimer);
@@ -498,6 +511,7 @@ function buscarPersonaPorCedula() {
 
     if (cedula.length < 3) {
         msgDiv.textContent = '';
+        document.getElementById('btn-agregar-inv').disabled = false;
         return;
     }
 
@@ -515,18 +529,37 @@ function buscarPersonaPorCedula() {
                 if (data.found) {
                     nombreInput.value = data.data.nombre || '';
                     apellidoInput.value = data.data.apellido || '';
-                    if (data.source === 'intranet') {
+                    var yaAgregado = false;
+                    if (data.data.id) {
+                        yaAgregado = !!document.getElementById('inv-row-' + data.data.id);
+                    }
+                    if (!yaAgregado) {
+                        var rows = document.querySelectorAll('#involucrados-tbody tr');
+                        rows.forEach(function(r) {
+                            if (r.cells && r.cells[0] && r.cells[0].textContent.trim() === cedula) {
+                                yaAgregado = true;
+                            }
+                        });
+                    }
+                    if (yaAgregado) {
+                        msgDiv.innerHTML = '⚠ Ya agregado a este proyecto';
+                        msgDiv.style.color = '#856404';
+                        document.getElementById('btn-agregar-inv').disabled = true;
+                    } else if (data.source === 'intranet') {
                         msgDiv.innerHTML = '✅ Encontrado en <b>persona</b> (intranet)';
                         msgDiv.style.color = '#198754';
+                        document.getElementById('btn-agregar-inv').disabled = false;
                     } else {
                         msgDiv.innerHTML = '✅ Ya registrado en <b>involucrados</b>';
                         msgDiv.style.color = '#198754';
+                        document.getElementById('btn-agregar-inv').disabled = false;
                     }
                 } else {
                     nombreInput.value = '';
                     apellidoInput.value = '';
                     msgDiv.innerHTML = '⚠ No encontrado. Complete los datos para crear uno nuevo.';
                     msgDiv.style.color = '#856404';
+                    document.getElementById('btn-agregar-inv').disabled = false;
                 }
             })
             .catch(() => {
@@ -547,7 +580,7 @@ function agregarInvolucradoAlProyecto(proyectoId) {
         return;
     }
 
-    const btn = document.querySelector('button[onclick*="agregarInvolucradoAlProyecto"]');
+    const btn = document.getElementById('btn-agregar-inv');
     btn.disabled = true;
     btn.textContent = 'Agregando...';
 
@@ -560,7 +593,7 @@ function agregarInvolucradoAlProyecto(proyectoId) {
     }).catch(() => {
         alert('Error al agregar el involucrado');
         btn.disabled = false;
-        btn.textContent = '+ Agregar';
+        btn.textContent = 'Agregar';
     });
 }
 
@@ -606,7 +639,7 @@ function buscarRoles() {
                     container.innerHTML = '<div style="padding:6px 8px;font-size:10px;color:#999;">No se encontraron roles</div>';
                 } else {
                     container.innerHTML = data.map(rol =>
-                        '<div onclick="asignarRol(' + proyectoId + ',' + invId + ',' + rol.id + ')" style="padding:6px 8px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:11px;" onmouseover="this.style.background=\'#f5f0f0\'" onmouseout="this.style.background=\'\'">' +
+                        '<div onclick="asignarRolConNombre(' + proyectoId + ',' + invId + ',' + rol.id + ',\'' + rol.nombre.replace(/'/g, "\\'") + '\')" style="padding:6px 8px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:11px;" onmouseover="this.style.background=\'#f5f0f0\'" onmouseout="this.style.background=\'\'">' +
                             '<b>' + rol.nombre + '</b>' +
                         '</div>'
                     ).join('');
@@ -616,20 +649,47 @@ function buscarRoles() {
     }, 300);
 }
 
-function asignarRol(proyectoId, invId, rolId) {
+function asignarRolConNombre(proyectoId, invId, rolId, rolNombre) {
     fetch('{{ route("proyectos.gestion.involucrados.roles.asignar", ["PLACEHOLDER_PROY", "PLACEHOLDER_INV"]) }}'.replace('PLACEHOLDER_PROY', proyectoId).replace('PLACEHOLDER_INV', invId), {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'},
         body: JSON.stringify({ rol_id: rolId })
-    }).then(r => r.json()).then(() => location.reload());
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            var noRoles = document.getElementById('inv-no-roles-' + invId);
+            if (noRoles) noRoles.remove();
+            var container = document.querySelector('#inv-roles-' + invId + ' .inv-roles');
+            var badge = document.createElement('span');
+            badge.id = 'rol-badge-' + invId + '-' + rolId;
+            badge.style.cssText = 'display:inline-flex;align-items:center;background:#8b0000;color:#fff;padding:1px 8px;border-radius:10px;font-size:10px;';
+            badge.innerHTML = rolNombre +
+                '<button type="button" onclick="quitarRol(' + proyectoId + ',' + data.pivot_id + ',' + rolId + ',' + invId + ')" style="background:none;border:none;color:#ffcccc;cursor:pointer;font-size:12px;padding:0 0 0 3px;line-height:1;">&times;</button>';
+            container.appendChild(badge);
+            document.getElementById('rol-asignado-msg').textContent = 'Rol asignado correctamente';
+            document.getElementById('rol-asignado-msg').style.color = '#198754';
+        }
+    }).catch(() => {
+        alert('Error al asignar rol');
+    });
 }
 
-function quitarRol(proyectoId, pivotId, rolId) {
-    if (!confirm('¿Quitar este rol del involucrado?')) return;
+function quitarRol(proyectoId, pivotId, rolId, invId) {
+    if (!confirm('Quitar este rol del involucrado?')) return;
     fetch('{{ route("proyectos.gestion.involucrados.roles.quitar", ["PLACEHOLDER_PROY", "PLACEHOLDER_PIVOT", "PLACEHOLDER_ROL"]) }}'.replace('PLACEHOLDER_PROY', proyectoId).replace('PLACEHOLDER_PIVOT', pivotId).replace('PLACEHOLDER_ROL', rolId), {
         method: 'DELETE',
         headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'}
-    }).then(r => r.json()).then(() => location.reload());
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            var badge = document.getElementById('rol-badge-' + invId + '-' + rolId);
+            if (badge) badge.remove();
+            var container = document.querySelector('#inv-roles-' + invId + ' .inv-roles');
+            if (container && container.children.length === 0) {
+                container.innerHTML = '<span id="inv-no-roles-' + invId + '" style="color:#999;font-size:11px;">Sin roles</span>';
+            }
+        }
+    }).catch(() => {
+        alert('Error al quitar rol');
+    });
 }
 
 // ─── Catálogos (modal genérico) ──────────────────────────────────
@@ -745,7 +805,9 @@ function crearRol() {
         if (data.success) {
             const proyectoId = document.getElementById('rol-modal-proyecto-id').value;
             const invId = document.getElementById('rol-modal-inv-id').value;
-            asignarRol(proyectoId, invId, data.id);
+            asignarRolConNombre(proyectoId, invId, data.id, nombre);
+            document.getElementById('nuevo-rol-nombre').value = '';
+            document.getElementById('form-nuevo-rol').style.display = 'none';
         }
     });
 }

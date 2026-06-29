@@ -62,9 +62,9 @@
 
 @section('content')
     <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
-        <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Registrar Objetivo</legend>
+        <legend style="padding:0 5px;font-weight:bold;">&nbsp;</legend>
 
-        <form action="{{ route('objetivos-investigacion.store') }}" method="POST" style="margin: 0;">
+        <form action="{{ route('objetivos-investigacion.store') }}" method="POST" style="margin: 0;" onsubmit="return validarFormulario(this)">
             @csrf
             <table width="100%" border="0" cellpadding="4" cellspacing="0" style="margin-top: 15px;">
                 <tr>
@@ -96,8 +96,7 @@
 
             <div style="text-align: center; margin-top: 20px;">
                 <button type="button" onclick="window.location='{{ route('objetivos-investigacion') }}'"
-                    class="cm-btn cm-btn-danger" style="margin-right: 10px;">Cancelar</button>
-                <button type="submit" class="cm-btn cm-btn-primary">Guardar</button>
+                    class="cm-btn cm-btn-danger" style="margin-right: 10px;">Cancelar</button>                                <button type="submit" class="cm-btn cm-btn-primary" data-confirm-register data-entity-type="Objetivo de Investigación">Guardar</button>
             </div>
         </form>
     </fieldset>

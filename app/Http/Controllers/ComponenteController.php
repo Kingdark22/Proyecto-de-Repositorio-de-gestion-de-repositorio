@@ -33,10 +33,20 @@ class ComponenteController extends Controller
     public function store(Request $request, UnicidadNombreService $unicidadService)
     {
         $request->validate([
-            'nombre' => 'required|string|min:3|max:255',
+            'nombre' => 'required|string|min:3|max:100',
             'tipo_archivo' => 'required|string|max:100',
             'tamano_maximo_mb' => 'required|integer|min:1|max:200',
             'es_obligatorio' => 'boolean',
+        ], [
+            'nombre.required' => 'El nombre del componente es obligatorio.',
+            'nombre.min' => 'El nombre debe tener al menos 3 caracteres.',
+            'nombre.max' => 'El nombre no puede exceder 100 caracteres.',
+            'tipo_archivo.required' => 'El tipo de archivo es obligatorio.',
+            'tipo_archivo.max' => 'El tipo de archivo no puede exceder 100 caracteres.',
+            'tamano_maximo_mb.required' => 'El tamaño máximo es obligatorio.',
+            'tamano_maximo_mb.integer' => 'El tamaño máximo debe ser un número entero.',
+            'tamano_maximo_mb.min' => 'El tamaño máximo debe ser al menos 1 MB.',
+            'tamano_maximo_mb.max' => 'El tamaño máximo no puede exceder 200 MB.',
         ]);
 
         $nombre = trim($request->input('nombre'));
@@ -73,10 +83,20 @@ class ComponenteController extends Controller
     public function update(Request $request, $id, UnicidadNombreService $unicidadService)
     {
         $request->validate([
-            'nombre' => 'required|string|min:3|max:255',
+            'nombre' => 'required|string|min:3|max:100',
             'tipo_archivo' => 'required|string|max:100',
             'tamano_maximo_mb' => 'required|integer|min:1|max:200',
             'es_obligatorio' => 'boolean',
+        ], [
+            'nombre.required' => 'El nombre del componente es obligatorio.',
+            'nombre.min' => 'El nombre debe tener al menos 3 caracteres.',
+            'nombre.max' => 'El nombre no puede exceder 100 caracteres.',
+            'tipo_archivo.required' => 'El tipo de archivo es obligatorio.',
+            'tipo_archivo.max' => 'El tipo de archivo no puede exceder 100 caracteres.',
+            'tamano_maximo_mb.required' => 'El tamaño máximo es obligatorio.',
+            'tamano_maximo_mb.integer' => 'El tamaño máximo debe ser un número entero.',
+            'tamano_maximo_mb.min' => 'El tamaño máximo debe ser al menos 1 MB.',
+            'tamano_maximo_mb.max' => 'El tamaño máximo no puede exceder 200 MB.',
         ]);
 
         $item = Componente::findOrFail($id);
@@ -105,17 +125,38 @@ class ComponenteController extends Controller
             ->with('success', 'Componente actualizado con éxito.');
     }
 
-    public function toggleStatus($id)
+    public function toggleStatus(Request $request, $id)
     {
         $item = Componente::findOrFail($id);
-        $item->update(['estado_logico' => !$item->estado_logico]);
+        $nuevoEstado = !$item->estado_logico;
+        $item->update(['estado_logico' => $nuevoEstado]);
+
+        $mensaje = $nuevoEstado
+            ? 'Componente activado correctamente.'
+            : 'Componente suspendido correctamente.';
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => $mensaje,
+                'nuevo_estado' => $nuevoEstado,
+            ]);
+        }
+
         return redirect()->route('componentes.index')
-            ->with('success', 'Estado del componente actualizado.');
+            ->with('success', $mensaje);
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        Componente::findOrFail($id)->delete();
+        $item = Componente::findOrFail($id);
+        ComponentePrograma::where('comp_codigo', $item->comp_codigo)->delete();
+        $item->delete();
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Componente eliminado correctamente.']);
+        }
+
         return redirect()->route('componentes.index')
             ->with('success', 'Componente eliminado correctamente.');
     }
@@ -181,7 +222,7 @@ class ComponenteController extends Controller
     {
         $request->validate([
             'componente_ids' => 'required|array|min:1',
-            'componente_ids.*' => 'required|integer|min:1|exists:componentes,id',
+            'componente_ids.*' => 'required|integer|min:1|exists:componentes,comp_codigo',
         ]);
 
         $componenteIds = $request->input('componente_ids', []);
@@ -222,7 +263,7 @@ class ComponenteController extends Controller
         }
 
         $numComponentes = count($componenteIds);
-        return redirect()->route('componentes.vinculacion')
+        return redirect()->route('componentes.index')
             ->with('success', "Vinculación guardada: {$totalVinculaciones} registro(s) creado(s) para {$numComponentes} componente(s).");
     }
 }
