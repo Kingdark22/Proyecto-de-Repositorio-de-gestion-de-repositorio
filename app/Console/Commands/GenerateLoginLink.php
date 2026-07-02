@@ -163,6 +163,7 @@ class GenerateLoginLink extends Command
                 // Detectar roles para este usuario
                 $tempUser = new \App\Models\User();
                 $tempUser->usu_cedula = $u['cedula'];
+                $tempUser->usu_nombre = $u['usu_nombre'];
                 try {
                     $roles = $roleService->detectAvailableRoles($tempUser);
                     if (!empty($roles)) {
@@ -200,6 +201,7 @@ class GenerateLoginLink extends Command
             try {
                 $tempUser = new \App\Models\User();
                 $tempUser->usu_cedula = $cedula;
+                $tempUser->usu_nombre = $selectedUsuNombre;
                 $availableRoles = $roleService->detectAvailableRoles($tempUser);
 
                 if (count($availableRoles) > 0) {

@@ -106,6 +106,15 @@ Route::middleware(['auth', 'active.role'])->group(function () {
         Route::get('/proyectos/gestion/{id}/aprobar', [\App\Http\Controllers\ProyectoController::class, 'approve'])->name('proyectos.gestion.approve');
         Route::post('/proyectos/gestion/{id}/rechazar', [\App\Http\Controllers\ProyectoController::class, 'reject'])->name('proyectos.gestion.reject');
         Route::get('/proyectos/gestion/{id}/solvencia', [\App\Http\Controllers\ProyectoController::class, 'solvencia'])->name('proyectos.gestion.solvencia');
+    });
+
+    // Reporte Excel del Depósito de Proyectos — solo admin y coordinador
+    Route::get('/proyectos/gestion/exportar-excel', [\App\Http\Controllers\ProyectoController::class, 'exportarExcel'])
+        ->name('proyectos.gestion.exportar-excel')
+        ->middleware('auth')
+        ->middleware('role:administrador,coordinador');
+
+    Route::middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador,docente')->group(function () {
         Route::get('/proyectos/gestion/desde-grupo/{grpCodigo}', [\App\Http\Controllers\ProyectoController::class, 'registrarDesdeGrupo'])->name('proyectos.gestion.desde-grupo');
         // Involucrados AJAX
         Route::get('/proyectos/gestion/{id}/involucrados/buscar', [\App\Http\Controllers\ProyectoController::class, 'buscarInvolucrados'])->name('proyectos.gestion.involucrados.buscar');

@@ -475,9 +475,13 @@ class ProyectoGestionService
 
     public function reglasValidacion(array $estado, User $user, bool $esEdicion = false): array
     {
+        $activeRole = app(UserRoleService::class)->getActiveRole($user);
+        $esProfesor = app(UserRoleService::class)->roleMatches('profesor proyecto', $activeRole)
+            || app(UserRoleService::class)->roleMatches('administrador', $activeRole);
+
         $rules = [
             'titulo' => 'required|min:5|max:255',
-            'resumen' => 'required|min:10',
+            'resumen' => $esProfesor ? 'nullable|min:10' : 'required|min:10',
 
             'linea_investigacion_id' => ['nullable', Rule::exists('\App\Models\LineaInvestigacion', (new \App\Models\LineaInvestigacion())->getKeyName())],
             'metodologia_id' => ['nullable', Rule::exists('\App\Models\MetodologiaInvestigacion', (new \App\Models\MetodologiaInvestigacion())->getKeyName())],
@@ -1192,13 +1196,18 @@ class ProyectoGestionService
 
         if ($partes) {
             if (str_starts_with($clave, GrupoProyectoService::PREFIJO.':')) {
-                $grupo = $this->grupoRepo->find($partes['grp_codigo']);
-                if ($grupo && $grupo->grp_contexto) {
-                    $ctx = $grupo->grp_contexto;
-                    $lapNombre = $ctx['lap_nombre'] ?? '';
-                    $secNombre = $ctx['sec_nombre'] ?? '';
-                    $proSiglas = $ctx['pro_siglas'] ?? '';
-                    $traNombre = $ctx['tra_nombre'] ?? '';
+                $partesGrp = $gruposSvc->parsearClave($clave);
+                if (!empty($partesGrp['grp_codigo'])) {
+                    try {
+                        $grupo = \App\Models\GrupoProyectoModulo::find((int) $partesGrp['grp_codigo']);
+                        if ($grupo && $grupo->grp_contexto) {
+                            $lapNombre = $grupo->grp_contexto['lap_nombre'] ?? '';
+                            $secNombre = $grupo->grp_contexto['sec_nombre'] ?? '';
+                            $proSiglas = $grupo->grp_contexto['pro_siglas'] ?? '';
+                            $traNombre = $grupo->grp_contexto['tra_nombre'] ?? '';
+                        }
+                    } catch (\Throwable) {
+                    }
                 }
             }
             if (!$proSiglas) {

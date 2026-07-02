@@ -416,7 +416,7 @@ class ProyectoManager extends Component
         return [
             'titulo.required' => 'El título del proyecto es obligatorio.',
             'titulo.min' => 'El título debe tener al menos 5 caracteres.',
-            'resumen.required' => 'El resumen es obligatorio.',
+            'resumen.required' => 'El resumen es obligatorio para los estudiantes.',
             'resumen.min' => 'El resumen debe tener al menos 10 caracteres.',
 
             'lapso_academico_id.required' => 'Debe seleccionar un lapso académico.',
@@ -1209,8 +1209,10 @@ class ProyectoManager extends Component
       */
      public function cerrarFormulario(ProyectoGestionService $gestion): void
      {
-         if (!empty($this->archivosComponente)) {
-             // Usar las mismas reglas dinámicas que save()
+         $user = auth()->user();
+         $estado = $this->estadoFormulario();
+
+         if (!empty(array_filter($this->archivosComponente))) {
              $componentes = \App\Models\Componente::whereIn('id', array_keys($this->archivosComponente))->get()->keyBy('id');
              $docRules = [];
              foreach ($this->archivosComponente as $compId => $file) {
@@ -1228,15 +1230,19 @@ class ProyectoManager extends Component
              $this->validate($docRules);
          }
 
+         $rules = $gestion->reglasValidacion($estado, $user, $this->editingId !== null);
+         $this->validate($rules, $this->messages());
+
          $gestion->guardar(
              $this->editingId,
-             $this->estadoFormulario(),
-             auth()->user(),
+             $estado,
+             $user,
              $this->archivosComponente,
              $this->esGrupoRegistrado ? $this->selectedLeaders : [],
          );
- 
+
          $this->safeDispatch('success', 'Formulario guardado con éxito. Se han guardado los datos y documentos del proyecto.');
+         $this->resetFormulario();
          $this->irAListado();
      }
 

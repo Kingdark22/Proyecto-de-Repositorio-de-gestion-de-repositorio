@@ -6,6 +6,8 @@ use App\Models\Proyecto;
 use App\Services\ProyectoGestionService;
 use App\Services\GrupoProyectoService;
 use App\Services\IntranetEquipoSeccionService;
+use App\Services\ReporteDepositoService;
+use App\Services\SpreadsheetMlWriter;
 use App\Services\UserRoleService;
 use App\Repositories\CatalogoRepository;
 use App\Repositories\ComunidadRepository;
@@ -18,6 +20,7 @@ class ProyectoController extends Controller
         protected ProyectoGestionService $gestion,
         protected GrupoProyectoService $grupos,
         protected IntranetEquipoSeccionService $equipoSeccion,
+        protected ReporteDepositoService $reporteDeposito,
         protected UserRoleService $userRoleService,
         protected CatalogoRepository $catalogoRepo,
         protected ComunidadRepository $comunidadRepo,
@@ -171,7 +174,7 @@ class ProyectoController extends Controller
             $rules = $this->gestion->reglasValidacion($estadoForm, $user, true);
             $request->validate($rules, [
                 'titulo.required' => 'El título del proyecto es obligatorio.',
-                'resumen.required' => 'El resumen es obligatorio.',
+                'resumen.required' => 'El resumen es obligatorio para los estudiantes.',
                 'comunidad_id.required' => 'La comunidad es obligatoria.',
             ]);
         }
@@ -390,6 +393,117 @@ class ProyectoController extends Controller
             return response()->json(['success' => true, 'id' => $rol->id, 'nombre' => $rol->nombre]);
         }
         return back()->with('success', 'Rol creado correctamente.');
+    }
+
+    // ─── Reporte Excel (Depósito de Proyectos) ──────────────────────────────
+
+    /**
+     * Genera y descarga el reporte Excel del Depósito de Proyectos.
+     * Accesible únicamente para administrador y coordinador.
+     */
+    public function exportarExcel(Request $request)
+    {
+        $filtros = [
+            'estado'    => $request->get('estado', ''),
+            'comunidad' => $request->get('comunidad', ''),
+        ];
+
+        $datos   = $this->reporteDeposito->construirFilasReporte($filtros);
+        $filas   = $datos['filas'];
+        $maxInt  = $datos['maxIntegrantes'];
+        $lapso   = $datos['lapsoMasActual']  ?? '';
+        $pnf     = $datos['pnfPredominante'] ?? '';
+
+        $writer  = new SpreadsheetMlWriter();
+        $writer->setTitle('Deposito de Proyectos');
+
+        // ── Calcular número total de columnas ──────────────────────────────
+        // Fijas: N°, Sede, PNF, Trayecto, Sección, Lapso, Título, Comunidad, Equipo
+        //       + (Nombre + Cédula) * maxInt  +  Tutor + Estado + Cant.Beneficiados
+        $colsFijas       = 9;
+        $colsIntegrantes = $maxInt * 2;
+        $colsFinales     = 3;
+        $totalCols       = $colsFijas + $colsIntegrantes + $colsFinales;
+
+        // ── Fila de título ─────────────────────────────────────────────────
+        $writer->addMergedTitleRow(
+            'UPTP JUAN DE JESÚS MONTILLA – DEPÓSITO DE PROYECTOS',
+            $totalCols,
+            '#1F3864'
+        );
+
+        // ── Anchos de columna (puntos) ─────────────────────────────────────
+        $widths = [
+            25,   // N°
+            90,   // Sede
+            60,   // PNF
+            60,   // Trayecto
+            60,   // Sección
+            80,   // Lapso
+            200,  // Título
+            100,  // Comunidad
+            100,  // Equipo
+        ];
+        // Nombre + Cédula por integrante
+        for ($i = 0; $i < $maxInt; $i++) {
+            $widths[] = 130; // Nombre
+            $widths[] = 70;  // Cédula
+        }
+        $widths[] = 130; // Tutor Académico
+        $widths[] = 70;  // Estado
+        $widths[] = 80;  // Cant. Beneficiados
+
+        // ── Encabezados ───────────────────────────────────────────────────
+        $headers = [
+            'N°', 'Sede', 'PNF', 'Trayecto', 'Sección',
+            'Lapso Académico', 'Título del Proyecto', 'Comunidad', 'Nombre del Equipo',
+        ];
+        for ($i = 1; $i <= $maxInt; $i++) {
+            $headers[] = "Integrante {$i} – Nombre Completo";
+            $headers[] = "Integrante {$i} – Cédula";
+        }
+        $headers[] = 'Tutor Académico';
+        $headers[] = 'Estado de Validación';
+        $headers[] = 'Cantidad de Beneficiados';
+
+        $writer->addRow($headers, isHeader: true, height: 35, widths: $widths);
+
+        // ── Filas de datos ────────────────────────────────────────────────
+        foreach ($filas as $fila) {
+            $celdas = [
+                $fila['numero'],
+                $fila['sede'],
+                $fila['pnf'],
+                $fila['trayecto'],
+                $fila['seccion'],
+                $fila['lapso'],
+                $fila['titulo'],
+                $fila['comunidad'],
+                $fila['equipo'],
+            ];
+
+            // Integrantes (dinámico, rellena con vacíos hasta maxInt)
+            $integrantes = $fila['integrantes'];
+            for ($i = 0; $i < $maxInt; $i++) {
+                $celdas[] = $integrantes[$i]['nombre'] ?? '';
+                $celdas[] = $integrantes[$i]['cedula'] ?? '';
+            }
+
+            $celdas[] = $fila['tutor_academico'];
+            $celdas[] = $fila['estado_validacion'];
+            $celdas[] = $fila['cant_beneficiados']; // siempre vacío
+
+            $writer->addRow($celdas, wrap: true);
+        }
+
+        // ── Generar nombre de archivo ──────────────────────────────────────
+        // Formato: "DEPOSITO PROYECTOS INFORMATICA 2024 II.xls"
+        // Si no hay PNF/lapso disponible, usa fecha como fallback.
+        $partesPnf   = $pnf   !== '' ? ' ' . strtoupper($pnf)   : '';
+        $partesLapso = $lapso !== '' ? ' ' . strtoupper($lapso) : (' ' . now()->format('Y'));
+        $filename = 'DEPOSITO PROYECTOS' . $partesPnf . $partesLapso . '.xls';
+
+        return $writer->download($filename);
     }
 
     public function solvencia($id)

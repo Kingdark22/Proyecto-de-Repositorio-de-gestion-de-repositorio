@@ -70,7 +70,7 @@
                 placeholder="Componente...">
             <span style="margin-left: auto;"></span>
             <button wire:click="irAVinculacion" class="cm-btn cm-btn-primary" style="font-size: 13px; padding: 6px 14px;">
-                Vinculaci&oacute;n PNF &rarr; Componentes
+                Vinculaci&oacute;n de Componentes
             </button>
             <button wire:click="create" class="cm-btn cm-btn-success" style="font-size: 13px; padding: 6px 14px;">
                 Nuevo Componente
@@ -174,7 +174,7 @@
     @elseif ($viewMode === 'vinculacion')
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">
-                Vinculaci&oacute;n Componente &rarr; PNF + Trayectos
+                Vinculaci&oacute;n de Componentes
             </legend>
 
             <div style="margin-bottom: 15px;">

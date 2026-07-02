@@ -73,7 +73,6 @@
             style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 10px;">
             <thead>
                 <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
-                    <th width="4%">N°</th>
                     <th width="30%">Comunidad / dirección</th>
                     <th width="11%">RIF</th>
                     <th width="16%">Contacto</th>

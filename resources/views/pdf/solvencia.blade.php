@@ -104,7 +104,8 @@
 <body>
 
     <div class="header">
-        <div class="logo-text">República Bolivariana de Venezuela</div>
+        <img src="{{ public_path('imagenes/barras.jpeg') }}" alt="Encabezado Institucional" style="width:100%;height:auto;max-height:90px;object-fit:fill;display:block;">
+        <div class="logo-text" style="margin-top:8px;">República Bolivariana de Venezuela</div>
         <div class="institution">Ministerio del Poder Popular para la Educación Universitaria</div>
         <div class="sub">Universidad Politécnica Territorial del Estado Cojedes</div>
         <div class="institution" style="font-weight:bold;font-size:10pt;">{{ $pnf ? "Programa Nacional de Formación en $pnf" : 'Programa Nacional de Formación' }}</div>

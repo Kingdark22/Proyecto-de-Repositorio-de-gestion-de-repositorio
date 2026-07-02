@@ -138,6 +138,21 @@ class NotificacionService
                     ];
                 }
             }
+
+            // 3. Proyectos aprobados con solvencia disponible
+            $proyectosAprobados = Proyecto::where('estado_validacion', 'aprobado')->where('estado_logico', true)->get();
+            $gruposCacheAprob = $this->precargarGruposProyecto($proyectosAprobados, $gruposSvc);
+            foreach ($proyectosAprobados as $p) {
+                if ($this->esLiderDelProyecto($p, $cedula, $gruposSvc, $gruposCacheAprob)) {
+                    $notificaciones[] = [
+                        'type' => 'success',
+                        'title' => 'Solvencia disponible',
+                        'mensaje' => 'Tu proyecto "' . $p->titulo . '" ha sido aprobado. Ya puedes descargar la solvencia.',
+                        'url' => route('proyectos.gestion.solvencia', $p->id),
+                        'proyecto_id' => $p->id,
+                    ];
+                }
+            }
         }
 
         return $notificaciones;

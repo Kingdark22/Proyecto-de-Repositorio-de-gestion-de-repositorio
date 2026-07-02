@@ -369,6 +369,7 @@
             text-transform: uppercase;
         }
     </style>
+    @livewireStyles
     @stack('styles')
 </head>
 <body>
@@ -521,6 +522,13 @@
         }
         function closeNotifyModal() {} // stub legacy
 
+        document.addEventListener('livewire:init', function () {
+            window.addEventListener('notify', function (e) {
+                if (typeof showNotifyToast === 'function' && e.detail) {
+                    showNotifyToast(e.detail.type || 'info', e.detail.message || '');
+                }
+            });
+        });
         </script>
 
         <!-- Main Content (Centro) -->
@@ -1161,7 +1169,6 @@
             });
         });
     </script>
-
     <script>
     // Convertir texto a mayúsculas en tiempo real
     document.addEventListener('input', function(e) {
@@ -1173,6 +1180,7 @@
         }
     });
     </script>
+    @livewireScripts
     @stack('scripts')
 </body>
 </html>

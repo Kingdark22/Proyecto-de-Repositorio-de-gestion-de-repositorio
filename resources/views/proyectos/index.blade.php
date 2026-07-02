@@ -143,6 +143,22 @@
     @if ($mostrarListado)
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Listado de proyectos institucionales</legend>
+
+            {{-- Botón Exportar Excel (solo coordinador y administrador) --}}
+            @php
+                $activeRoleExport = app(\App\Services\UserRoleService::class)->getActiveRole(auth()->user());
+            @endphp
+            @if(in_array($activeRoleExport, ['administrador', 'coordinador']))
+            <div style="margin-bottom:8px; text-align:right;">
+                <a href="{{ route('proyectos.gestion.exportar-excel', array_filter(['estado' => $filterEstado, 'comunidad' => $filterComunidad])) }}"
+                   class="cm-btn cm-btn-success"
+                   style="background:#155724; border-color:#0d3d19; font-size:0.8rem; padding:0.4rem 0.9rem;"
+                   title="Descarga el reporte Excel del depósito de proyectos con los filtros actuales">
+                    &#8595; Exportar a Excel
+                </a>
+            </div>
+            @endif
+
             <form method="GET" action="{{ route('proyectos.gestion') }}" style="margin-bottom:8px;">
                 <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size:11px;">
                     <tr>

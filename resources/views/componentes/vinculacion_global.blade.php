@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Vinculación de Componentes')
-@section('header', 'Vinculaci&oacute;n de Componentes &rarr; PNF + Trayectos')
+@section('header', 'Vinculaci&oacute;n de Componentes')
 
 @push('styles')
 <style>
