@@ -160,6 +160,7 @@ class IntranetSimulationMirrorService
 
     /**
      * Contexto académico de un usuario (login / detectar roles).
+     * Solo se ejecuta una vez cada 10 minutos por cédula para evitar lentitud en logins repetidos.
      */
     public function mirrorUserContext(string $cedula): int
     {
@@ -171,6 +172,13 @@ class IntranetSimulationMirrorService
         if ($cedula === '') {
             return 0;
         }
+
+        // Cache persistente entre requests: solo mirror una vez cada 10 minutos
+        $cacheKey = 'mirror_user_ctx_' . $cedula;
+        if (\Illuminate\Support\Facades\Cache::get($cacheKey)) {
+            return 0;
+        }
+        \Illuminate\Support\Facades\Cache::put($cacheKey, true, now()->addMinutes(10));
 
         if (isset(self::$mirroredUserContexts[$cedula])) {
             return 0;

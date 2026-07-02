@@ -6,6 +6,8 @@ use App\Models\Proyecto;
 use App\Services\ProyectoGestionService;
 use App\Services\GrupoProyectoService;
 use App\Services\IntranetEquipoSeccionService;
+use App\Services\ReporteDepositoService;
+use App\Services\SpreadsheetMlWriter;
 use App\Services\UserRoleService;
 use App\Repositories\CatalogoRepository;
 use App\Repositories\ComunidadRepository;
@@ -18,6 +20,7 @@ class ProyectoController extends Controller
         protected ProyectoGestionService $gestion,
         protected GrupoProyectoService $grupos,
         protected IntranetEquipoSeccionService $equipoSeccion,
+        protected ReporteDepositoService $reporteDeposito,
         protected UserRoleService $userRoleService,
         protected CatalogoRepository $catalogoRepo,
         protected ComunidadRepository $comunidadRepo,
@@ -108,8 +111,8 @@ class ProyectoController extends Controller
         $esGestionador = $this->userRoleService->roleMatches('gestionador', $activeRole);
 
         $proyecto = Proyecto::findOrFail($id);
-        $esLider = $this->gestion->usuarioEsLiderDelProyecto($user, $proyecto);
-        $modoActualizacion = $esLider && !$this->gestion->usuarioEsAdminEnSistema($user);
+        $esMiembro = $this->gestion->usuarioEsMiembroDelProyecto($user, $proyecto);
+        $modoActualizacion = $esMiembro && !$this->gestion->usuarioEsAdminEnSistema($user);
         $canValidate = $user ? $this->gestion->usuarioPuedeValidar($user) : false;
 
         $datosForm = $this->gestion->cargarParaEdicion($id);
@@ -122,13 +125,13 @@ class ProyectoController extends Controller
         // Miembros del grupo
         $miembrosGrupo = [];
         $clave = $datosForm['equipo_seccion_clave'] ?? '';
-        if (str_starts_with($clave, 'EQGRP:')) {
+        if (str_starts_with($clave, 'EQGRP:') || !str_starts_with($clave, 'EQSEC:')) {
             $this->cargarMiembrosGrupo($clave, $miembrosGrupo);
         }
 
         return view('proyectos.registro', compact(
             'proyecto', 'datosForm', 'catalogosForm',
-            'esProfesor', 'esGestionador', 'esLider', 'modoActualizacion',
+            'esProfesor', 'esGestionador', 'modoActualizacion',
             'involucradosProyecto', 'miembrosGrupo', 'clave',
             'canValidate',
         ));
@@ -141,9 +144,9 @@ class ProyectoController extends Controller
 
         $activeRole = $this->userRoleService->getActiveRole($user);
         $esProfesor = $this->userRoleService->roleMatches('profesor proyecto', $activeRole);
-        $esLider = $this->gestion->usuarioEsLiderDelProyecto($user, $proyecto);
+        $esMiembro = $this->gestion->usuarioEsMiembroDelProyecto($user, $proyecto);
         $esAdmin = $this->gestion->usuarioEsAdminEnSistema($user);
-        $modoActualizacion = $esLider && !$esAdmin;
+        $modoActualizacion = $esMiembro && !$esAdmin;
 
         $estadoForm = [
             'resumen' => $request->input('resumen', $proyecto->resumen ?? ''),
@@ -171,7 +174,7 @@ class ProyectoController extends Controller
             $rules = $this->gestion->reglasValidacion($estadoForm, $user, true);
             $request->validate($rules, [
                 'titulo.required' => 'El título del proyecto es obligatorio.',
-                'resumen.required' => 'El resumen es obligatorio.',
+                'resumen.required' => 'El resumen es obligatorio para los estudiantes.',
                 'comunidad_id.required' => 'La comunidad es obligatoria.',
             ]);
         }
@@ -291,8 +294,11 @@ class ProyectoController extends Controller
     {
         $request->validate([
             'involucrado_id' => 'required|integer',
-            'roles' => 'nullable|array',
+            'roles' => 'required|array|min:1',
             'roles.*' => 'integer',
+        ], [
+            'roles.required' => 'Debe asignar al menos un rol al involucrado.',
+            'roles.min' => 'Debe asignar al menos un rol al involucrado.',
         ]);
 
         $this->gestion->agregarInvolucradoAProyecto(
@@ -314,8 +320,11 @@ class ProyectoController extends Controller
             'nombre' => 'required|min:2|max:255',
             'apellido' => 'required|min:2|max:255',
             'cedula' => 'required|min:5|max:20',
-            'roles' => 'nullable|array',
+            'roles' => 'required|array|min:1',
             'roles.*' => 'integer',
+        ], [
+            'roles.required' => 'Debe asignar al menos un rol al involucrado.',
+            'roles.min' => 'Debe asignar al menos un rol al involucrado.',
         ]);
 
         $involucrado = $this->gestion->crearInvolucrado(
@@ -392,25 +401,184 @@ class ProyectoController extends Controller
         return back()->with('success', 'Rol creado correctamente.');
     }
 
-    public function solvencia($id)
+    // ─── Reporte Excel (Depósito de Proyectos) ──────────────────────────────
+
+    /**
+     * Genera y descarga el reporte Excel del Depósito de Proyectos.
+     * Accesible únicamente para administrador y coordinador.
+     */
+    public function exportarExcel(Request $request)
+    {
+        $user = auth()->user();
+        $activeRole = $this->userRoleService->getActiveRole($user);
+
+        // ── Filtro de lapso (opcional — si se envía, filtra por ese lapso) ──
+        $lapsoCodigo = $request->get('lapso', '');
+        $lapsoNombre = '';
+        if ($lapsoCodigo !== '') {
+            try {
+                $lap = \App\Models\LapsoAcademico::find((int) $lapsoCodigo);
+                if ($lap) {
+                    $lapsoNombre = trim($lap->lap_nombre ?? '');
+                }
+            } catch (\Throwable) {}
+        }
+
+        // ── Detectar PNF del usuario ───────────────────────────────────────
+        $proSiglas = $request->get('pnf', '');
+        if ($proSiglas === '') {
+            // Intentar detectar PNF desde las secciones del usuario
+            try {
+                $proCodigos = app(\App\Services\IntranetProfessorService::class)
+                    ->programasDelDocente(trim($user->usu_cedula));
+
+                if (count($proCodigos) === 1) {
+                    // Un solo PNF → usarlo automáticamente
+                    $prog = \Illuminate\Support\Facades\DB::connection(
+                        app(\App\Services\IntranetEquipoSeccionService::class)->academicConnection()
+                    )->table('programa')->where('pro_codigo', $proCodigos[0])->first();
+                    if ($prog) {
+                        $proSiglas = trim($prog->pro_siglas ?? '');
+                    }
+                }
+            } catch (\Throwable) {}
+
+            // Si sigue vacío y el rol es admin/coordinador sin PNF definido, se exportan todos
+        }
+
+        $filtros = [
+            'estado'       => $request->get('estado', ''),
+            'comunidad'    => $request->get('comunidad', ''),
+            'lapso_codigo' => $lapsoCodigo,
+            'pro_siglas'   => $proSiglas,
+        ];
+
+        $datos   = $this->reporteDeposito->construirFilasReporte($filtros);
+        $filas   = $datos['filas'];
+        $maxInt  = $datos['maxIntegrantes'];
+        $lapso   = $datos['lapsoMasActual']  ?? ($lapsoNombre ?: '');
+        $pnf     = $datos['pnfPredominante'] ?? ($proSiglas ?: '');
+
+        $writer  = new SpreadsheetMlWriter();
+        $writer->setTitle('Deposito de Proyectos');
+
+        // ── Calcular número total de columnas ──────────────────────────────
+        $colsFijas       = 9;
+        $colsIntegrantes = $maxInt * 2;
+        $colsFinales     = 3;
+        $totalCols       = $colsFijas + $colsIntegrantes + $colsFinales;
+
+        // ── Fila de título ─────────────────────────────────────────────────
+        $tituloReporte = 'UPTP JUAN DE JESÚS MONTILLA – DEPÓSITO DE PROYECTOS';
+        if ($lapso !== '') {
+            $tituloReporte .= ' — ' . mb_strtoupper($lapso);
+        }
+        if ($pnf !== '') {
+            $tituloReporte .= ' — ' . mb_strtoupper($pnf);
+        }
+        $writer->addMergedTitleRow($tituloReporte, $totalCols, '#1F3864');
+
+        // ── Anchos de columna (puntos) ─────────────────────────────────────
+        $widths = [
+            25,   // N°
+            90,   // Sede
+            60,   // PNF
+            60,   // Trayecto
+            60,   // Sección
+            80,   // Lapso
+            200,  // Título
+            100,  // Comunidad
+            100,  // Equipo
+        ];
+        for ($i = 0; $i < $maxInt; $i++) {
+            $widths[] = 130; // Nombre
+            $widths[] = 70;  // Cédula
+        }
+        $widths[] = 130; // Tutor Académico
+        $widths[] = 70;  // Cumplió Requisitos
+        $widths[] = 80;  // Cant. Beneficiados
+
+        // ── Encabezados ───────────────────────────────────────────────────
+        $headers = [
+            'N°', 'Sede', 'PNF', 'Trayecto', 'Sección',
+            'Lapso Académico', 'Título del Proyecto', 'Comunidad', 'Nombre del Equipo',
+        ];
+        for ($i = 1; $i <= $maxInt; $i++) {
+            $headers[] = "Integrante {$i} – Nombre Completo";
+            $headers[] = "Integrante {$i} – Cédula";
+        }
+        $headers[] = 'Tutor Académico';
+        $headers[] = 'Cumplió Requisitos';
+        $headers[] = 'Cantidad de Beneficiados';
+
+        $writer->addRow($headers, isHeader: true, height: 35, widths: $widths);
+
+        // ── Filas de datos ────────────────────────────────────────────────
+        foreach ($filas as $fila) {
+            $celdas = [
+                $fila['numero'],
+                $fila['sede'],
+                $fila['pnf'],
+                $fila['trayecto'],
+                $fila['seccion'],
+                $fila['lapso'],
+                $fila['titulo'],
+                $fila['comunidad'],
+                $fila['equipo'],
+            ];
+
+            $integrantes = $fila['integrantes'];
+            for ($i = 0; $i < $maxInt; $i++) {
+                $celdas[] = $integrantes[$i]['nombre'] ?? '';
+                $celdas[] = $integrantes[$i]['cedula'] ?? '';
+            }
+
+            $celdas[] = $fila['tutor_academico'];
+            $celdas[] = $fila['cumplio_requisitos'];
+            $celdas[] = $fila['cant_beneficiados'];
+
+            $writer->addRow($celdas, wrap: true);
+        }
+
+        // ── Generar nombre de archivo ──────────────────────────────────────
+        $partesPnf   = $pnf   !== '' ? ' ' . mb_strtoupper($pnf)   : '';
+        $partesLapso = $lapso !== '' ? ' ' . mb_strtoupper($lapso) : (' ' . now()->format('Y'));
+        $filename = 'DEPOSITO PROYECTOS' . $partesPnf . $partesLapso . '.xls';
+
+        return $writer->download($filename);
+    }
+
+    public function solvencia($id, $cedula = null)
     {
         try {
-            $datos = $this->gestion->datosSolvencia((int) $id);
-            $now = now();
-            $folio = 'SOL-' . str_pad((string) $id, 5, '0', STR_PAD_LEFT) . '-' . $now->format('Y');
+            // Si no se proporcionó cédula, usar la del usuario autenticado
+            if ($cedula === null) {
+                $user = auth()->user();
+                $cedula = $user ? trim((string) $user->usu_cedula) : '';
+            }
+
+            $datos  = $this->gestion->datosSolvencia((int) $id, $cedula);
+            $now    = now();
+            $folio  = 'SOL-' . str_pad((string) $id, 5, '0', STR_PAD_LEFT)
+                    . '-' . $cedula
+                    . '-' . $now->format('Y');
+
+            // Tomar el primer (y único) integrante filtrado
+            $integrante = $datos['integrantes'][0] ?? null;
 
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.solvencia', [
-                'folio' => $folio,
-                'estudiante_nombre' => $datos['estudiante_nombre'],
-                'estudiante_cedula' => $datos['estudiante_cedula'],
-                'titulo_proyecto' => $datos['titulo_proyecto'],
-                'pnf' => $datos['pnf'],
-                'trayecto' => $datos['trayecto'],
-                'seccion' => $datos['seccion'],
-                'lapso' => $datos['lapso'],
-                'dia' => $now->day,
-                'mes' => ucfirst($now->translatedFormat('F')),
-                'anio' => $now->year,
+                'folio'          => $folio,
+                'integrante'     => $integrante,
+                'titulo_proyecto'=> $datos['titulo_proyecto'],
+                'comunidad'      => $datos['comunidad'],
+                'pnf'            => $datos['pnf'],
+                'pnf_nombre'     => $datos['pnf_nombre'],
+                'trayecto'       => $datos['trayecto'],
+                'seccion'        => $datos['seccion'],
+                'lapso'          => $datos['lapso'],
+                'dia'            => $now->day,
+                'mes'            => ucfirst($now->translatedFormat('F')),
+                'anio'           => $now->year,
             ]);
 
             return $pdf->download("solvencia_{$folio}.pdf");

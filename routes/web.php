@@ -93,7 +93,7 @@ Route::middleware(['auth', 'active.role'])->group(function () {
             Route::get('/grupos-proyecto/api/estudiantes/{lapso}/{seccion}', 'getEstudiantes')->name('grupos-proyecto.api.estudiantes');
             Route::get('/grupos-proyecto/api/trayectos/{lapso}/{programa}', 'getTrayectos')->name('grupos-proyecto.api.trayectos');
             // API endpoint para validar disponibilidad de nombre en tiempo real
-            Route::get('/grupos-proyecto/api/check-nombre/{nombre}', 'checkNombreDisponible')->name('grupos-proyecto.api.check-nombre');
+            Route::get('/grupos-proyecto/api/check-nombre', 'checkNombreDisponible')->name('grupos-proyecto.api.check-nombre');
             // AJAX endpoint para crear comunidad desde el formulario
             Route::post('/grupos-proyecto/api/crear-comunidad', 'crearComunidadAjax')->name('grupos-proyecto.api.crear-comunidad');
         });
@@ -105,7 +105,16 @@ Route::middleware(['auth', 'active.role'])->group(function () {
         Route::get('/proyectos/gestion', [\App\Http\Controllers\ProyectoController::class, 'index'])->name('proyectos.gestion');
         Route::get('/proyectos/gestion/{id}/aprobar', [\App\Http\Controllers\ProyectoController::class, 'approve'])->name('proyectos.gestion.approve');
         Route::post('/proyectos/gestion/{id}/rechazar', [\App\Http\Controllers\ProyectoController::class, 'reject'])->name('proyectos.gestion.reject');
-        Route::get('/proyectos/gestion/{id}/solvencia', [\App\Http\Controllers\ProyectoController::class, 'solvencia'])->name('proyectos.gestion.solvencia');
+        Route::get('/proyectos/gestion/{id}/solvencia/{cedula?}', [\App\Http\Controllers\ProyectoController::class, 'solvencia'])->name('proyectos.gestion.solvencia');
+    });
+
+    // Reporte Excel del Depósito de Proyectos — solo admin y coordinador
+    Route::get('/proyectos/gestion/exportar-excel', [\App\Http\Controllers\ProyectoController::class, 'exportarExcel'])
+        ->name('proyectos.gestion.exportar-excel')
+        ->middleware('auth')
+        ->middleware('role:administrador,coordinador');
+
+    Route::middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador,docente')->group(function () {
         Route::get('/proyectos/gestion/desde-grupo/{grpCodigo}', [\App\Http\Controllers\ProyectoController::class, 'registrarDesdeGrupo'])->name('proyectos.gestion.desde-grupo');
         // Involucrados AJAX
         Route::get('/proyectos/gestion/{id}/involucrados/buscar', [\App\Http\Controllers\ProyectoController::class, 'buscarInvolucrados'])->name('proyectos.gestion.involucrados.buscar');
@@ -121,6 +130,7 @@ Route::middleware(['auth', 'active.role'])->group(function () {
     Route::view('/publicaciones', 'publicaciones.index')->name('publicaciones.index')->middleware('role:gestionador');
 
     Route::view('/vinculacion', 'vinculacion.index')->name('vinculacion.index')->middleware('role:gestionador');
+    Route::get('/vinculacion/reporte-pdf', [\App\Http\Controllers\VinculacionReporteController::class, 'reportePdf'])->name('vinculacion.reporte-pdf')->middleware('auth');
 
     Route::get('/proyectos/crear', function () {
         return redirect('/proyectos/gestion?' . http_build_query(request()->query()));

@@ -118,6 +118,11 @@ class GrupoProyectoController extends Controller
             }
         }
 
+        // Si el profesor no tiene ningún grupo registrado, ir directamente al formulario
+        if ($isProfessor && $lista->isEmpty() && $tablaOk) {
+            return redirect()->route('grupos-proyecto.create');
+        }
+
         // Paginación manual
         $perPage = 10;
         $page = (int) $request->get('page', 1);
@@ -187,7 +192,7 @@ class GrupoProyectoController extends Controller
             'comunidad' => 'required|integer|min:1',
             'miembros' => 'required|string', // JSON string of members
         ], [
-            'nombre.required' => 'Indique un nombre para el equipo/grupo.',
+            'nombre.required' => 'Indique un nombre para el equipo.',
             'lapso.required' => 'Seleccione el lapso académico.',
             'seccion.required' => 'Seleccione la sección del PNF.',
             'comunidad.required' => 'Seleccione la comunidad.',
@@ -195,16 +200,10 @@ class GrupoProyectoController extends Controller
         ]);
 
         $lapCodigo = (int) $request->input('lapso');
-        $nombre = trim($request->input('nombre'));
         $secCodigo = (int) $request->input('seccion');
         $proCodigo = $request->input('programa') ? (int) $request->input('programa') : null;
         $comCodigo = (int) $request->input('comunidad');
-
-        // Validar unicidad global del nombre
-        if (! $this->grupos->nombreDisponibleEnLapso($nombre)) {
-            return redirect()->back()->withInput()
-                ->withErrors(['nombre' => 'Este nombre de grupo ya está en uso.']);
-        }
+        $nombre = trim($request->input('nombre'));
 
         // Parsear miembros desde JSON
         $miembros = json_decode($request->input('miembros'), true);
@@ -503,11 +502,11 @@ class GrupoProyectoController extends Controller
     /**
      * Check if a group name is available globally (for real-time validation).
      */
-    public function checkNombreDisponible($nombre)
+    public function checkNombreDisponible(Request $request)
     {
-        $nombreLimpio = $nombre;
+        $nombreLimpio = $request->get('nombre', '');
 
-        $grpCodigo = request()->get('exclude');
+        $grpCodigo = $request->get('exclude');
         $excludeId = $grpCodigo ? (int) $grpCodigo : null;
 
         $available = $this->grupos->nombreDisponibleEnLapso($nombreLimpio, null, $excludeId);

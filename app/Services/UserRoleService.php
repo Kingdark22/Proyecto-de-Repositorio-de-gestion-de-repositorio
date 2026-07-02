@@ -54,9 +54,12 @@ class UserRoleService
         $this->cachedCedula = null;
     }
 
-    protected function clearPersistentCache(string $cedula): void
+    protected function clearPersistentCache(string $cedula, string $usuNombre = ''): void
     {
         Cache::forget('available_roles_' . $cedula);
+        if ($usuNombre !== '') {
+            Cache::forget('available_roles_' . $cedula . '_' . $usuNombre);
+        }
     }
 
     /**
@@ -67,21 +70,22 @@ class UserRoleService
     public function detectAvailableRoles(User $user): array
     {
         $cedula = trim((string) $user->usu_cedula);
+        $usuNombre = isset($user->usu_nombre) ? trim((string) $user->usu_nombre) : '';
 
         // El usuario 13354832 es el ÚNICO administrador del sistema
         if ($cedula === '13354832') {
             return ['administrador' => 'Administrador'];
         }
 
-        if ($this->cachedAvailableRoles !== null && $this->cachedCedula === $cedula) {
+        if ($this->cachedAvailableRoles !== null && $this->cachedCedula === $cedula . '_' . $usuNombre) {
             return $this->cachedAvailableRoles;
         }
 
-        $cacheKey = 'available_roles_' . $cedula;
+        $cacheKey = 'available_roles_' . $cedula . ($usuNombre !== '' ? '_' . $usuNombre : '');
         $cached = Cache::get($cacheKey);
         if ($cached !== null) {
             $this->cachedAvailableRoles = $cached;
-            $this->cachedCedula = $cedula;
+            $this->cachedCedula = $cedula . '_' . $usuNombre;
             return $cached;
         }
 
@@ -89,10 +93,15 @@ class UserRoleService
         $roles = [];
 
         try {
-            $userExt = DB::connection($conn)
+            $query = DB::connection($conn)
                 ->table('usuario')
-                ->whereRaw('TRIM(usu_cedula) = ?', [$cedula])
-                ->first();
+                ->whereRaw('TRIM(usu_cedula) = ?', [$cedula]);
+
+            if ($usuNombre !== '') {
+                $query->whereRaw('TRIM(usu_nombre) = ?', [$usuNombre]);
+            }
+
+            $userExt = $query->first();
 
             if ($userExt) {
                 $nombre = trim((string) ($userExt->usu_nombre ?? ''));
@@ -103,9 +112,31 @@ class UserRoleService
                 // usu_cod_rol puede no existir en la BD de simulación (simulacion_sogac no tiene esa columna)
                 $codRol = $userExt->usu_cod_rol ?? null;
                 $mapped = config('roles.usu_cod_rol_map', []);
-                if ($codRol !== null && isset($mapped[(int) $codRol])) {
-                    $slug = $mapped[(int) $codRol];
-                    $roles[$slug] = $this->label($slug);
+                if ($codRol !== null) {
+                    if (isset($mapped[(int) $codRol])) {
+                        $slug = $mapped[(int) $codRol];
+                        $roles[$slug] = $this->label($slug);
+                    } else {
+                        // Intentar mapear dinámicamente según la tabla rol
+                        try {
+                            $rolRow = DB::connection($conn)
+                                ->table('rol')
+                                ->where('rol_codigo', $codRol)
+                                ->first();
+                            if ($rolRow) {
+                                $rolNombre = strtolower(trim($rolRow->rol_nombre));
+                                if (str_contains($rolNombre, 'coordinador')) {
+                                    $roles['coordinador'] = $this->label('coordinador');
+                                } else if (str_contains($rolNombre, 'docente') || str_contains($rolNombre, 'profesor')) {
+                                    $roles['profesor proyecto'] = $this->label('profesor proyecto');
+                                } else if (str_contains($rolNombre, 'administrador') || str_contains($rolNombre, 'admin')) {
+                                    $roles['administrador'] = $this->label('administrador');
+                                }
+                            }
+                        } catch (\Throwable $e) {
+                            // Ignorar si la tabla rol no está disponible
+                        }
+                    }
                 }
             }
 

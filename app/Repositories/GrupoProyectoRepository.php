@@ -5,7 +5,6 @@ namespace App\Repositories;
 use App\Models\GrupoProyectoModulo;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class GrupoProyectoRepository
@@ -39,6 +38,11 @@ class GrupoProyectoRepository
 
     public function find(int $id): ?GrupoProyectoModulo
     {
+        return GrupoProyectoModulo::where('estado_logico', true)->find($id);
+    }
+
+    public function findInactivo(int $id): ?GrupoProyectoModulo
+    {
         return GrupoProyectoModulo::find($id);
     }
 
@@ -48,13 +52,14 @@ class GrupoProyectoRepository
     public function all(): Collection
     {
         return GrupoProyectoModulo::query()
-            ->select(['grp_codigo', 'grp_nombre', 'grp_contexto', 'grp_com_codigo', 'grp_creador_cedula', 'grp_miembros'])
+            ->select(['grp_codigo', 'grp_nombre', 'grp_identificador', 'grp_contexto', 'grp_com_codigo', 'grp_creador_cedula', 'grp_miembros'])
+            ->where('estado_logico', true)
             ->orderByDesc($this->columnaId())
             ->get();
     }
 
     /**
-     * @param  array{lapso?: int|null, programa?: int|null, seccion?: int|array|null, trayecto?: string|null, equipo?: string|null, busqueda?: string|null, creador?: string|null}  $filtros
+     * @param  array{lapso?: int|null, programa?: int|null, seccion?: int|array|null, trayecto?: string|null, equipo?: string|null, busqueda?: string|null, creador?: string|null, inactivos?: bool}  $filtros
      * @return Collection<int, GrupoProyectoModulo>
      */
     public function listar(array $filtros = []): Collection
@@ -64,7 +69,11 @@ class GrupoProyectoRepository
 
         return Cache::remember($cacheKey, now()->addMinutes(2), function () use ($filtros) {
             $query = GrupoProyectoModulo::query()
-                ->select(['grp_codigo', 'grp_nombre', 'grp_contexto', 'grp_com_codigo', 'grp_creador_cedula', 'grp_miembros']);
+                ->select(['grp_codigo', 'grp_nombre', 'grp_identificador', 'grp_contexto', 'grp_com_codigo', 'grp_creador_cedula', 'grp_miembros']);
+
+            if (empty($filtros['inactivos'])) {
+                $query->where('estado_logico', true);
+            }
 
             if (!empty($filtros['lapso'])) {
                 $query->whereRaw('CAST(grp_contexto AS jsonb)->>\'lap_codigo\' = ?', [(string) $filtros['lapso']]);
@@ -110,7 +119,7 @@ class GrupoProyectoRepository
             return GrupoProyectoModulo::whereRaw(
                 "CAST(grp_miembros AS jsonb) @> ?",
                 ['[{"cedula":"' . $cedula . '"}]']
-            )->get();
+            )->where('estado_logico', true)->get();
         } catch (\Throwable) {
             return collect();
         }
@@ -125,7 +134,7 @@ class GrupoProyectoRepository
             return GrupoProyectoModulo::whereRaw(
                 "CAST(grp_miembros AS jsonb) @> ?",
                 ['[{"cedula":"' . $cedula . '","rol_id":1}]']
-            )->get(['grp_codigo']);
+            )->where('estado_logico', true)->get(['grp_codigo']);
         } catch (\Throwable) {
             return collect();
         }
@@ -149,10 +158,8 @@ class GrupoProyectoRepository
 
     public function delete(int $id): void
     {
-        DB::connection($this->conexionRepositorio())
-            ->table('grupo_proyecto_modulo')
-            ->where($this->columnaId(), $id)
-            ->delete();
+        GrupoProyectoModulo::where($this->columnaId(), $id)
+            ->update(['estado_logico' => false]);
     }
 
     /**
@@ -179,7 +186,7 @@ class GrupoProyectoRepository
         return GrupoProyectoModulo::whereRaw(
             "CAST(grp_contexto AS jsonb)->>'lap_codigo' = ? AND CAST(grp_contexto AS jsonb)->>'sec_codigo' = ?",
             [(string) $lapCodigo, (string) $secCodigo]
-        )->get();
+        )->where('estado_logico', true)->get();
     }
 
     /**
@@ -192,7 +199,7 @@ class GrupoProyectoRepository
         $query = GrupoProyectoModulo::whereRaw(
             'LOWER(grp_nombre) = ?',
             [mb_strtolower(trim($nombre))]
-        );
+        )->where('estado_logico', true);
 
         if ($lapCodigo !== null) {
             $query->whereRaw(
@@ -217,7 +224,7 @@ class GrupoProyectoRepository
         $query = GrupoProyectoModulo::whereRaw(
             'CAST(grp_miembros AS jsonb) @> ? AND CAST(grp_contexto AS jsonb)->>\'lap_codigo\' = ?',
             [json_encode([['cedula' => trim($cedula)]]), (string) $lapCodigo]
-        );
+        )->where('estado_logico', true);
 
         if ($excludeGrpCodigo !== null) {
             $query->where('grp_codigo', '!=', $excludeGrpCodigo);

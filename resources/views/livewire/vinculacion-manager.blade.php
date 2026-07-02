@@ -7,99 +7,31 @@
         .cm-btn-success { background: #198754; border-color: #166f43; color: #fff; }
         .cm-btn-sm { padding: 0.35rem 0.75rem; font-size: 0.85rem; }
         .cm-tag { display: inline-block; background: #0d6efd; color: #fff; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+        .ckb-wrap { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border: 2px solid #8b0000; border-radius: 4px; background: #fff; cursor: pointer; transition: all 0.15s; position: relative; }
+        .ckb-wrap:hover { border-color: #b30000; background: #fff5f5; }
+        .ckb-wrap.checked { background: #8b0000; border-color: #8b0000; }
+        .ckb-wrap.checked::after { content: '\2713'; color: #fff; font-size: 14px; font-weight: bold; line-height: 1; }
+        .ckb-wrap input { position: absolute; opacity: 0; width: 0; height: 0; }
+        tr.selected { background-color: #fce4e4 !important; }
     </style>
 
-
-
-    @if($selectedProyecto)
+    @if($mostrarFormulario)
         <fieldset style="border: 2px solid #8b0000; border-radius: 8px; padding: 16px;">
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 10px; font-size:15px;">
-                Vincular: {{ $selectedProyecto->titulo ?? 'Proyecto' }}
+                Vincular {{ count($selectedProjects) }} proyecto(s)
             </legend>
 
-            <div style="margin-bottom: 16px; display:flex; align-items:center; gap:10px;">
+            <div style="margin-bottom: 16px;">
                 <button type="button" wire:click="cerrar" class="cm-btn cm-btn-secondary" style="font-size:13px;">&larr; Volver al listado</button>
-                @if($vinculacionExistente)
-                    <span class="cm-tag" style="background: #198754; font-size:12px; padding:3px 12px;">Ya vinculado</span>
-                @endif
             </div>
 
-            {{-- Datos del proyecto --}}
-            <fieldset style="border: 1px solid #CCC; padding: 16px; margin-bottom: 16px; background:#fafafa;">
-                <legend style="font-weight: bold; font-size: 14px; color:#333; padding: 0 8px;">Datos del proyecto vinculado</legend>
-                <table width="100%" cellpadding="6" cellspacing="0" style="font-size: 14px; border-collapse: separate; border-spacing: 0 6px;">
-                    <tr>
-                        <td width="130" style="font-weight:bold; vertical-align:top; color:#555; white-space:nowrap;">T&iacute;tulo:</td>
-                        <td style="color:#222;">{{ $selectedProyecto->titulo ?? '(sin t&iacute;tulo)' }}</td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight:bold; vertical-align:top; color:#555; white-space:nowrap;">Resumen:</td>
-                        <td style="text-align:justify; color:#444; line-height:1.5;">{{ $selectedProyecto->resumen ?? '(sin resumen)' }}</td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight:bold; vertical-align:top; color:#555; white-space:nowrap;">Comunidad:</td>
-                        <td>{{ $selectedProyecto->comunidad?->nombre ?? '-' }}</td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight:bold; vertical-align:top; color:#555; white-space:nowrap;">Equipo:</td>
-                        <td>
-                            @php $integrantes = $integrantesProyecto ?? collect(); @endphp
-                            @if($integrantes->isNotEmpty())
-                                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
-                                    @foreach($integrantes as $i)
-                                        <div style="display:inline-flex;align-items:center;background:#e8e8e8;border-radius:14px;padding:2px 10px 2px 4px;gap:5px;font-size:11px;">
-                                            <span style="width:20px;height:20px;border-radius:50%;background:#8b0000;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:bold;flex-shrink:0;">
-                                                {{ strtoupper(substr($i->nombre, 0, 1)) }}{{ strtoupper(substr($i->apellido, 0, 1)) }}
-                                            </span>
-                                            <span style="font-weight:500;color:#333;">{{ $i->nombre }} {{ $i->apellido }}</span>
-                                            @if($i->rol)
-                                                <span style="background:#8b0000;color:#fff;border-radius:10px;padding:1px 7px;font-size:9px;font-weight:600;">{{ $i->rol }}</span>
-                                            @endif
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @else
-                                <span style="color:#999;font-style:italic;">{{ $selectedProyecto->equipo_resumen }}</span>
-                            @endif
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="font-weight:bold; vertical-align:top; color:#555; white-space:nowrap;">Clasificaci&oacute;n:</td>
-                        <td>
-                            <div style="display:flex;flex-wrap:wrap;gap:4px;">
-                                @if($selectedProyecto->linea_investigacion)<span style="background:#e8f0fe;padding:3px 8px;border-radius:4px;font-size:12px;border:1px solid #c4d7f5;">L&iacute;nea: {{ $selectedProyecto->linea_investigacion->nombre_investigacion }}</span>@endif
-                                @if($selectedProyecto->metodologia) <span style="background:#e8f0fe;padding:3px 8px;border-radius:4px;font-size:12px;border:1px solid #c4d7f5;">Metodolog&iacute;a: {{ $selectedProyecto->metodologia->nombre }}</span>@endif
-                                @if($selectedProyecto->tipo_publicacion) <span style="background:#e8f0fe;padding:3px 8px;border-radius:4px;font-size:12px;border:1px solid #c4d7f5;">T. Publicaci&oacute;n: {{ $selectedProyecto->tipo_publicacion->nombre }}</span>@endif
-                                @if($selectedProyecto->tipo_investigacion) <span style="background:#e8f0fe;padding:3px 8px;border-radius:4px;font-size:12px;border:1px solid #c4d7f5;">T. Investigaci&oacute;n: {{ $selectedProyecto->tipo_investigacion->nombre }}</span>@endif
-                            </div>
-                        </td>
-                    </tr>
-                </table>
-
-                {{-- Documentos del proyecto --}}
-                @php $docs = $selectedProyecto->documentos ?? collect(); @endphp
-                @if($docs->isNotEmpty())
-                    <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #ddd;">
-                        <b style="font-size:13px; color:#333;">Documentos del proyecto:</b>
-                        <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">
-                            @foreach($docs as $doc)
-                                <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank"
-                                    style="display:inline-flex;align-items:center;gap:4px; background:#f0f7ff; border:1px solid #b3d4fc; border-radius:5px; padding:5px 12px; font-size:12px; color:#004080; text-decoration:none;">
-                                    <span style="font-size:14px;">&#128196;</span> {{ $doc->componente?->nombre ?? 'Documento' }}
-                                </a>
-                            @endforeach
-                        </div>
-                    </div>
-                @else
-                    <div style="margin-top:12px; padding-top:12px; border-top:1px dashed #ddd; font-size:13px; color:#999;">
-                        <i>Este proyecto no tiene documentos asociados.</i>
-                    </div>
-                @endif
+            <fieldset style="border: 1px solid #CCC; padding: 12px; margin-bottom: 12px; background:#fafafa;">
+                <legend style="font-weight: bold; font-size: 13px; color:#333; padding: 0 8px;">Proyectos seleccionados</legend>
+                <b>{{ count($selectedProjects) }}</b> proyecto(s) seleccionado(s)
             </fieldset>
 
-            <hr style="border:none; border-top:1px solid #ccc; margin:15px 0;">
+            <hr style="border:none; border-top:1px solid #ccc; margin:12px 0;">
 
-            {{-- Formulario de vinculación --}}
             <fieldset style="border: 1px solid #CCC; padding: 16px; margin-bottom: 12px; background:#fafafa;">
                 <legend style="font-weight: bold; font-size: 14px; color:#333; padding: 0 8px;">Datos de la vinculaci&oacute;n</legend>
                 <table width="100%" cellpadding="6" cellspacing="0" style="font-size: 14px; border-collapse: separate; border-spacing: 0 8px;">
@@ -122,14 +54,6 @@
                                             <div style="font-weight:bold;font-size:14px;">{{ $comunidadSeleccionada->nombre }}</div>
                                             @if($comunidadSeleccionada->rif)
                                                 <div style="font-size:12px;color:#555;">RIF: {{ $comunidadSeleccionada->rif }}</div>
-                                            @endif
-                                            @php $dir = $comunidadSeleccionada->direccion; @endphp
-                                            @if($dir && $dir->municipio)
-                                                <div style="font-size:12px;color:#555;">
-                                                    Direcci&oacute;n: {{ $dir->dir_calle ?? '' }},
-                                                    {{ $dir->municipio->mun_nombre ?? '' }},
-                                                    {{ $dir->municipio?->estado?->est_nombre ?? '' }}
-                                                </div>
                                             @endif
                                         </div>
                                         <button type="button" wire:click="quitarComunidad" class="cm-btn cm-btn-secondary" style="font-size:12px;padding:6px 14px;">Cambiar</button>
@@ -154,7 +78,7 @@
             <div style="text-align: right; margin-top: 16px; display:flex; gap:10px; justify-content:flex-end;">
                 <button type="button" wire:click="cerrar" class="cm-btn cm-btn-secondary" style="font-size:14px; padding:8px 20px;">Cancelar</button>
                 <button type="button" wire:click="guardarVinculacion" class="cm-btn cm-btn-success" style="font-size:14px; padding:8px 24px;">
-                    {{ $vinculacionExistente ? 'Actualizar' : 'Guardar' }} Vinculaci&oacute;n
+                    Guardar Vinculaci&oacute;n
                 </button>
             </div>
         </fieldset>
@@ -163,10 +87,24 @@
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 10px; font-size:15px;">Vinculaci&oacute;n de Proyectos</legend>
 
             <div style="margin-bottom: 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Buscar por t&iacute;tulo..." style="padding:6px 10px; border:1px solid #ccc; border-radius:5px; font-size:13px; min-width:250px; flex:1;">
+                <input wire:model.live.debounce.50ms="search" type="text" placeholder="Buscar..." style="padding:6px 10px; border:1px solid #ccc; border-radius:5px; font-size:13px; min-width:250px; flex:1;">
                 <span style="font-size: 13px; color: #555;">
                     <b>{{ $proyectos->total() }}</b> proyecto(s)
                 </span>
+                @if(count($selectedProjects) > 0)
+                    <button type="button" wire:click="vincularSeleccionados" class="cm-btn cm-btn-success" style="font-size:13px;">
+                        Vincular {{ count($selectedProjects) }} seleccionado(s)
+                    </button>
+                @endif
+            </div>
+
+            <div style="margin-bottom: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px 14px;">
+                <span style="font-weight:bold; font-size:13px; color:#555; white-space:nowrap;">Reporte PDF:</span>
+                <input wire:model.live.debounce.300ms="filtroTitulo" type="text" placeholder="Filtrar por t&iacute;tulo (ej: CIA-2026)..." style="padding:6px 10px; border:1px solid #ccc; border-radius:5px; font-size:13px; min-width:220px; flex:1;">
+                <button type="button" wire:click="reportarPDF" class="cm-btn cm-btn-primary" style="font-size:12px;white-space:nowrap;">&darr; PDF por T&iacute;tulo</button>
+                @if(count($selectedProjects) > 0)
+                    <button type="button" wire:click="reportarSeleccionados" class="cm-btn" style="font-size:12px;white-space:nowrap;background:#6f42c1;border-color:#5a32a3;color:#fff;">&darr; PDF Seleccionados</button>
+                @endif
             </div>
 
             @if($proyectos->isEmpty())
@@ -176,11 +114,16 @@
                     style="border-collapse: collapse; border-color: #ccc; font-size: 12px;">
                     <thead>
                         <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
+                            <th width="3%" style="padding:8px 4px; text-align:center;">
+                                <label class="ckb-wrap {{ $selectAll ? 'checked' : '' }}" style="margin:0 auto;" title="Seleccionar todos">
+                                    <input type="checkbox" wire:model.live="selectAll">
+                                </label>
+                            </th>
                             <th width="5%" style="padding:8px 4px;">N&deg;</th>
                             <th width="35%" style="padding:8px 4px;">T&iacute;tulo</th>
-                            <th width="20%" style="padding:8px 4px;">Comunidad</th>
-                            <th width="20%" style="padding:8px 4px;">Vinculaci&oacute;n</th>
-                            <th width="20%" style="padding:8px 4px;">Acci&oacute;n</th>
+                            <th width="18%" style="padding:8px 4px;">Comunidad</th>
+                            <th width="22%" style="padding:8px 4px;">Vinculaci&oacute;n</th>
+                            <th width="17%" style="padding:8px 4px;">Acci&oacute;n</th>
                         </tr>
                     </thead>
                     <tbody class="Texto">
@@ -189,24 +132,32 @@
                                 $vin = $vinculaciones[$proy->id] ?? null;
                                 $rowNum = ($proyectos->currentPage() - 1) * $proyectos->perPage() + $loop->iteration;
                             @endphp
-                            <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }};" valign="top">
+                            <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }};{{ in_array($proy->id, $selectedProjects) ? 'background-color:#fce4e4 !important;' : '' }}" valign="top">
+                                <td align="center" style="padding:6px 4px;">
+                                    <label class="ckb-wrap {{ in_array($proy->id, $selectedProjects) ? 'checked' : '' }}" style="margin:0 auto;">
+                                        <input type="checkbox" wire:model.live="selectedProjects" value="{{ $proy->id }}">
+                                    </label>
+                                </td>
                                 <td align="center" style="padding:6px 4px;">{{ $rowNum }}</td>
                                 <td style="font-weight:bold; padding:6px 4px;">{{ $proy->titulo ?? 'N/A' }}</td>
                                 <td style="padding:6px 4px;">{{ $proy->comunidad->nombre ?? '-' }}</td>
                                 <td align="center" style="padding:6px 4px;">
                                     @if($vin)
                                         <span class="cm-tag" style="background: #198754; font-size:11px;">Vinculado</span>
+                                        <div style="font-size:10px;color:#333;margin-top:2px;font-weight:bold;">{{ $vin->vin_titulo }}</div>
                                         @if($vin->comunidad)
-                                            <div style="font-size:11px;color:#555;margin-top:3px;">{{ $vin->comunidad->nombre }}</div>
+                                            <div style="font-size:10px;color:#555;">{{ $vin->comunidad->nombre }}</div>
                                         @endif
                                     @else
                                         <span style="color:#999;">-</span>
                                     @endif
                                 </td>
-                                <td align="center" style="padding:6px 4px;">
-                                    <button type="button" wire:click="vincular({{ $proy->id }})" class="cm-btn cm-btn-primary cm-btn-sm" style="font-size:12px;">
-                                        {{ $vin ? 'Editar' : 'Vincular' }}
-                                    </button>
+                                <td align="center" style="padding:6px 4px; font-size:11px; color:#888;">
+                                    @if($vin)
+                                        <span style="color:#198754;">&#10003; Vinculado</span>
+                                    @else
+                                        <span>Seleccione &rarr;</span>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
@@ -296,4 +247,10 @@
             </div>
         </div>
     @endif
+
+    <script>
+        window.addEventListener('descargar-pdf', event => {
+            window.open(event.detail.url, '_blank');
+        });
+    </script>
 </div>

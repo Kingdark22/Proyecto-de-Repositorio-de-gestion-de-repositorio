@@ -116,11 +116,11 @@ class NotificacionService
             );
 
             foreach ($proyectosNuevos as $p) {
-                if ($this->esLiderDelProyecto($p, $cedula, $gruposSvc, $gruposCache)) {
+                if ($this->esMiembroDelProyecto($p, $cedula, $gruposSvc, $gruposCache)) {
                     $notificaciones[] = [
                         'type' => 'warning',
                         'title' => 'Subir documentos',
-                        'mensaje' => 'Has sido seleccionado como líder del proyecto. Sube los documentos: ' . $p->titulo,
+                        'mensaje' => 'Eres miembro del equipo. Sube los documentos del proyecto: ' . $p->titulo,
                         'url' => route('proyectos.gestion', ['edit' => $p->id]),
                         'proyecto_id' => $p->id,
                     ];
@@ -128,12 +128,27 @@ class NotificacionService
             }
 
             foreach ($proyectosRechazados as $p) {
-                if ($this->esLiderDelProyecto($p, $cedula, $gruposSvc, $gruposCache)) {
+                if ($this->esMiembroDelProyecto($p, $cedula, $gruposSvc, $gruposCache)) {
                     $notificaciones[] = [
                         'type' => 'warning',
                         'title' => 'Proyecto rechazado',
                         'mensaje' => 'Revisión requerida para "' . $p->titulo . '". Motivo: ' . ($p->motivo_rechazo ?: 'Revisar detalles.'),
                         'url' => route('proyectos.gestion', ['edit' => $p->id]),
+                        'proyecto_id' => $p->id,
+                    ];
+                }
+            }
+
+            // 3. Proyectos aprobados con solvencia disponible
+            $proyectosAprobados = Proyecto::where('estado_validacion', 'aprobado')->where('estado_logico', true)->get();
+            $gruposCacheAprob = $this->precargarGruposProyecto($proyectosAprobados, $gruposSvc);
+            foreach ($proyectosAprobados as $p) {
+                if ($this->esMiembroDelProyecto($p, $cedula, $gruposSvc, $gruposCacheAprob)) {
+                    $notificaciones[] = [
+                        'type' => 'success',
+                        'title' => 'Solvencia disponible',
+                        'mensaje' => 'Tu proyecto "' . $p->titulo . '" ha sido aprobado. Ya puedes descargar la solvencia.',
+                        'url' => route('proyectos.gestion.solvencia', $p->id),
                         'proyecto_id' => $p->id,
                     ];
                 }
@@ -157,23 +172,40 @@ class NotificacionService
         $gruposCache = [];
         $codigos = [];
 
+        $identificadores = [];
+        $codigos = [];
         foreach ($proyectos as $p) {
             $clave = $p->equipo_ref;
             if ($clave === '') {
                 continue;
             }
-            $partes = $gruposSvc->parsearClave($clave);
-            if ($partes && ($partes['tipo'] ?? '') === GrupoProyectoService::PREFIJO) {
-                $codigos[] = (int) ($partes['grp_codigo'] ?? 0);
+            if (str_starts_with($clave, 'EQSEC:')) {
+                $partes = $gruposSvc->parsearClave($clave);
+                if ($partes && ($partes['tipo'] ?? '') === 'EQSEC') {
+                    $codigos[] = (int) ($partes['sec_codigo'] ?? 0);
+                }
+            } elseif (str_starts_with($clave, 'EQGRP:')) {
+                $partes = $gruposSvc->parsearClave($clave);
+                if ($partes && ($partes['tipo'] ?? '') === GrupoProyectoService::PREFIJO) {
+                    $codigos[] = (int) ($partes['grp_codigo'] ?? 0);
+                }
+            } else {
+                $identificadores[] = $clave;
             }
         }
 
         $codigos = array_unique(array_filter($codigos));
-        if ($codigos === []) {
-            return [];
+        $grupos = collect();
+        if ($codigos) {
+            $grupos = GrupoProyectoModulo::whereIn('grp_codigo', $codigos)->get()->keyBy('grp_codigo');
         }
-
-        $grupos = GrupoProyectoModulo::whereIn('grp_codigo', $codigos)->get()->keyBy('grp_codigo');
+        if ($identificadores) {
+            $gruposPorIdent = GrupoProyectoModulo::whereIn('grp_identificador', $identificadores)->get()->keyBy('grp_identificador');
+            foreach ($gruposPorIdent as $g) {
+                $codigos[] = $g->grp_codigo;
+                $grupos[$g->grp_codigo] = $g;
+            }
+        }
 
         foreach ($codigos as $cod) {
             $gruposCache[$cod] = $grupos->get($cod);
@@ -185,32 +217,38 @@ class NotificacionService
     /**
      * @param  array<int, GrupoProyectoModulo|null>  $gruposCache
      */
-    protected function esLiderDelProyecto(Proyecto $p, string $cedula, GrupoProyectoService $gruposSvc, array $gruposCache = []): bool
+    protected function esMiembroDelProyecto(Proyecto $p, string $cedula, GrupoProyectoService $gruposSvc, array $gruposCache = []): bool
     {
         $clave = $p->equipo_ref;
         if ($clave === '') {
             return false;
         }
 
-        $partes = $gruposSvc->parsearClave($clave);
-        if (!$partes || ($partes['tipo'] ?? '') !== GrupoProyectoService::PREFIJO) {
-            return false;
+        $grupo = null;
+
+        // Try as identificador first
+        if (!str_starts_with($clave, 'EQGRP:') && !str_starts_with($clave, 'EQSEC:')) {
+            $grupo = GrupoProyectoModulo::where('grp_identificador', $clave)->first();
         }
 
-        $codigo = (int) ($partes['grp_codigo'] ?? 0);
-        $grupo = $gruposCache[$codigo] ?? null;
         if (!$grupo) {
-            $grupo = GrupoProyectoModulo::find($codigo);
-            if (!$grupo) {
-                return false;
+            $partes = $gruposSvc->parsearClave($clave);
+            if ($partes && ($partes['tipo'] ?? '') === GrupoProyectoService::PREFIJO) {
+                $codigo = (int) ($partes['grp_codigo'] ?? 0);
+                $grupo = $gruposCache[$codigo] ?? null;
+                if (!$grupo) {
+                    $grupo = GrupoProyectoModulo::find($codigo);
+                }
             }
+        }
+
+        if (!$grupo) {
+            return false;
         }
 
         $miembros = $grupo->grp_miembros ?? [];
         foreach ($miembros as $m) {
-            if (trim($m['cedula'] ?? '') === $cedula
-                && (int) ($m['rol_id'] ?? 0) === IntranetEquipoSeccionService::ROL_LIDER
-            ) {
+            if (trim($m['cedula'] ?? '') === $cedula) {
                 return true;
             }
         }

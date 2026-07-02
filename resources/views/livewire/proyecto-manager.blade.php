@@ -123,11 +123,13 @@
                                     @endif
                                 </td>
                                 <td align="center" style="padding: 5px;">
-                                    @if ($g->tiene_proyecto)
+                                    @if ($g->tiene_proyecto && $g->proyecto_estado_validacion !== 'aprobado')
                                         <button type="button" wire:click="edit({{ $g->proyecto_id }})"
                                             class="pgm-btn-action pgm-btn-action--edit">
                                             Actualizar
                                         </button>
+                                    @elseif($g->tiene_proyecto && $g->proyecto_estado_validacion === 'aprobado')
+                                        <span style="color:#198754;font-weight:bold;font-size:10px;">Aprobado</span>
                                     @else
                                         <button type="button" wire:click="registrarProyectoGrupo({{ $g->grp_codigo }})"
                                             class="pgm-btn-action pgm-btn-action--approve">
@@ -140,6 +142,11 @@
                     </tbody>
                 </table>
             </fieldset>
+        @elseif($esProfesor)
+            <fieldset style="border: 2px solid #2e7d32; border-radius: 6px; padding: 15px; margin-bottom: 15px;">
+                <legend style="color: #2e7d32; font-weight: bold; font-style: italic; padding: 0 5px;">Equipos disponibles</legend>
+                <p style="font-size:12px; color:#666; margin:5px 0;">No tiene equipos asignados actualmente. Contacte al coordinador para que le asigne equipos.</p>
+            </fieldset>
         @endif
             @if($esEstudianteLider)
             <fieldset style="border: 2px solid #2e7d32; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
@@ -149,10 +156,10 @@
                     style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px;">
                     <thead>
                         <tr style="background-color: #a5d6a7; color: #000; text-align: center; font-weight: bold;">
-                            <th width="30%">Proyecto</th>
-                            <th width="20%">Comunidad</th>
+                            <th width="30%">Título</th>
+                            <th width="25%">Comunidad / equipo</th>
                             <th width="20%">Validación</th>
-                            <th width="30%">Acción</th>
+                            <th width="25%">Acción</th>
                         </tr>
                     </thead>
                     <tbody class="Texto">
@@ -173,7 +180,12 @@
                                     @endif
                                 </td>
                                 <td style="padding: 5px;">
-                                    <span style="font-size: 10px;">{{ $p->comunidad->nombre ?? 'N/A' }}</span>
+                                    @if ($p->equipo_resumen !== '—')
+                                        <span style="font-size: 11px; font-weight: bold; color: #8b0000;">Equipo: {{ $p->equipo_resumen }}</span><br>
+                                    @endif
+                                    @if (($p->comunidad->nombre ?? '') !== '' && $p->comunidad->nombre !== 'N/A')
+                                        <span style="font-size: 10px;">Comunidad: {{ $p->comunidad->nombre }}</span>
+                                    @endif
                                 </td>
                                 <td align="center" style="padding: 5px;">
                                     @if ($p->estado_validacion === 'pendiente')
@@ -188,10 +200,18 @@
                                     @endif
                                 </td>
                                 <td align="center" style="padding: 5px;">
+                                    @if ($p->estado_validacion !== 'aprobado')
                                     <button type="button" wire:click="edit({{ $p->id }})"
                                         class="cm-btn cm-btn-success cm-btn-sm">
                                         Actualizar
                                     </button>
+                                    @endif
+                                    @if ($p->estado_validacion === 'aprobado')
+                                    <a href="{{ route('proyectos.gestion.solvencia', $p->id) }}"
+                                        class="cm-btn cm-btn-success cm-btn-sm" style="text-decoration:none;">
+                                        Solvencia
+                                    </a>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
@@ -297,15 +317,11 @@
                                                 Ficha
                                             </button>
                                         @endif
-                                        <button type="button" wire:click="edit({{ $p->id }})"
-                                            class="pgm-btn-action pgm-btn-action--edit">
-                                            Actualizar
-                                        </button>
-                                        @if ($p->estado_validacion === 'aprobado')
-                                            <a href="{{ route('proyectos.gestion.solvencia', $p->id) }}"
-                                                class="pgm-btn-action pgm-btn-action--approve">
-                                                Solvencia
-                                            </a>
+                                        @if ($p->estado_validacion !== 'aprobado')
+                                            <button type="button" wire:click="edit({{ $p->id }})"
+                                                class="pgm-btn-action pgm-btn-action--edit">
+                                                Actualizar
+                                            </button>
                                         @endif
                                     </div>
                                 </td>

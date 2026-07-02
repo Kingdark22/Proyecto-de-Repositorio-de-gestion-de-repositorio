@@ -235,7 +235,7 @@
 
             {{-- Modal: Insertar involucrado --}}
             <div id="modal-involucrado" onclick="if(event.target===this)cerrarModalInvolucrado()" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;">
-                <div style="background:#fff;border-radius:6px;padding:16px;width:420px;max-width:90%;box-shadow:0 4px 20px rgba(0,0,0,0.2);">
+                <div style="background:#fff;border-radius:6px;padding:16px;width:440px;max-width:90%;box-shadow:0 4px 20px rgba(0,0,0,0.2);">
                     <h3 style="margin:0 0 12px;font-size:14px;color:#333;">Insertar involucrado</h3>
                     <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size:12px;">
                         <tr>
@@ -252,6 +252,27 @@
                             <td width="23%"><input type="text" id="inv-apellido" style="width:95%;padding:5px 6px;border:1px solid #ccc;border-radius:3px;font-size:12px;" placeholder="Se auto-completa"></td>
                         </tr>
                     </table>
+
+                    {{-- Selector de roles --}}
+                    <hr style="border:none;border-top:1px solid #ddd;margin:8px 0;">
+                    <div style="font-weight:bold;font-size:12px;color:#8b0000;margin-bottom:6px;">Roles del involucrado <span style="color:red;">*</span></div>
+                    <div id="inv-roles-msg" style="font-size:10px;color:#c62828;margin-bottom:4px;display:none;">Debe seleccionar al menos un rol.</div>
+
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <input type="text" id="inv-buscar-rol" onkeyup="buscarRolesModal()" style="flex:1;padding:5px 6px;border:1px solid #ccc;border-radius:3px;font-size:12px;" placeholder="Buscar rol..." autocomplete="off">
+                        <button type="button" onclick="toggleFormNuevoRolModal()" style="background:none;border:1px dashed #198754;color:#198754;border-radius:3px;font-size:11px;cursor:pointer;padding:4px 10px;white-space:nowrap;">+ Nuevo</button>
+                    </div>
+                    <div id="inv-resultados-roles" style="margin-top:3px;border:1px solid #e0e0e0;border-radius:3px;max-height:120px;overflow-y:auto;background:#fff;display:none;"></div>
+
+                    <div id="inv-form-nuevo-rol" style="display:none;margin-top:6px;padding:8px;background:#f9fff9;border:1px solid #c3e6cb;border-radius:3px;">
+                        <div style="display:flex;gap:6px;">
+                            <input type="text" id="inv-nuevo-rol-nombre" style="flex:1;padding:5px 6px;border:1px solid #ccc;border-radius:3px;font-size:12px;" placeholder="Nombre del nuevo rol">
+                            <button type="button" onclick="crearRolModal()" style="background:#198754;color:#fff;border:none;border-radius:3px;padding:5px 12px;font-size:11px;cursor:pointer;">Crear</button>
+                        </div>
+                    </div>
+
+                    <div id="inv-roles-seleccionados" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;min-height:24px;"></div>
+
                     <div style="margin-top:10px;text-align:right;display:flex;gap:6px;justify-content:flex-end;">
                         <span id="inv-source" style="font-size:10px;color:#999;margin-right:auto;align-self:center;"></span>
                         <button type="button" onclick="cerrarModalInvolucrado()" style="background:#6c757d;color:#fff;border:none;border-radius:3px;padding:5px 14px;font-size:12px;cursor:pointer;">Cancelar</button>
@@ -472,10 +493,17 @@ function abrirModalInvolucrado() {
     document.getElementById('inv-apellido').value = '';
     document.getElementById('inv-cedula-msg').textContent = '';
     document.getElementById('inv-source').textContent = '';
+    document.getElementById('inv-buscar-rol').value = '';
+    document.getElementById('inv-resultados-roles').style.display = 'none';
+    document.getElementById('inv-roles-msg').style.display = 'none';
+    document.getElementById('inv-form-nuevo-rol').style.display = 'none';
+    invRolesPendientes = {};
+    renderizarRolesSeleccionados();
     document.getElementById('modal-involucrado').style.display = 'flex';
     document.getElementById('inv-cedula').focus();
 }
 function cerrarModalInvolucrado() {
+    invRolesPendientes = {};
     document.getElementById('modal-involucrado').style.display = 'none';
 }
 
@@ -548,6 +576,89 @@ function buscarPersonaPorCedula() {
     }, 400);
 }
 
+// ─── Roles pendientes (global para el modal involucrado) ──────────
+let invRolesPendientes = {};
+
+function renderizarRolesSeleccionados() {
+    const container = document.getElementById('inv-roles-seleccionados');
+    const ids = Object.keys(invRolesPendientes);
+    if (ids.length === 0) {
+        container.innerHTML = '<span style="color:#999;font-size:11px;">Ning&uacute;n rol seleccionado</span>';
+        return;
+    }
+    container.innerHTML = ids.map(id =>
+        '<span style="display:inline-flex;align-items:center;background:#8b0000;color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;">' +
+            invRolesPendientes[id] +
+            '<button type="button" onclick="quitarRolSeleccionado(' + id + ')" style="background:none;border:none;color:#ffcccc;cursor:pointer;font-size:12px;padding:0 0 0 3px;line-height:1;">&times;</button>' +
+        '</span>'
+    ).join('');
+}
+
+function quitarRolSeleccionado(rolId) {
+    delete invRolesPendientes[rolId];
+    renderizarRolesSeleccionados();
+}
+
+function buscarRolesModal() {
+    clearTimeout(rolesTimer);
+    const q = document.getElementById('inv-buscar-rol').value.trim();
+    const container = document.getElementById('inv-resultados-roles');
+    if (q.length < 1) {
+        container.style.display = 'none';
+        return;
+    }
+    const proyectoId = {{ $proyectoId }};
+    rolesTimer = setTimeout(() => {
+        fetch('{{ route("proyectos.gestion.involucrados.roles", "PLACEHOLDER") }}'.replace('PLACEHOLDER', proyectoId) + '?q=' + encodeURIComponent(q))
+            .then(r => r.json())
+            .then(data => {
+                if (data.length === 0) {
+                    container.innerHTML = '<div style="padding:6px 8px;font-size:10px;color:#999;">No se encontraron roles</div>';
+                } else {
+                    container.innerHTML = data.map(rol => {
+                        if (invRolesPendientes[rol.id]) return '';
+                        return '<div onclick="seleccionarRolModal(' + rol.id + ',\'' + rol.nombre.replace(/'/g, "\\'") + '\')" style="padding:6px 8px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:11px;" onmouseover="this.style.background=\'#f5f0f0\'" onmouseout="this.style.background=\'\'">' +
+                            '<b>' + rol.nombre + '</b>' +
+                        '</div>';
+                    }).filter(Boolean).join('') || '<div style="padding:6px 8px;font-size:10px;color:#999;">Ya seleccion&oacute; todos los roles disponibles</div>';
+                }
+                container.style.display = 'block';
+            });
+    }, 300);
+}
+
+function seleccionarRolModal(rolId, rolNombre) {
+    invRolesPendientes[rolId] = rolNombre;
+    renderizarRolesSeleccionados();
+    document.getElementById('inv-buscar-rol').value = '';
+    document.getElementById('inv-resultados-roles').style.display = 'none';
+    document.getElementById('inv-roles-msg').style.display = 'none';
+}
+
+function toggleFormNuevoRolModal() {
+    const f = document.getElementById('inv-form-nuevo-rol');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    if (f.style.display === 'block') document.getElementById('inv-nuevo-rol-nombre').focus();
+}
+
+function crearRolModal() {
+    const nombre = document.getElementById('inv-nuevo-rol-nombre').value.trim();
+    if (!nombre) { alert('Escriba un nombre para el rol'); return; }
+    fetch('{{ route("proyectos.gestion.involucrados.roles.crear") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'},
+        body: JSON.stringify({ nombre })
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            invRolesPendientes[data.id] = nombre;
+            renderizarRolesSeleccionados();
+            document.getElementById('inv-nuevo-rol-nombre').value = '';
+            document.getElementById('inv-form-nuevo-rol').style.display = 'none';
+            document.getElementById('inv-roles-msg').style.display = 'none';
+        }
+    });
+}
+
 // ─── Agregar involucrado al proyecto (buscaOCrear + agrega) ───────
 function agregarInvolucradoAlProyecto(proyectoId) {
     const cedula = document.getElementById('inv-cedula').value.trim();
@@ -559,6 +670,13 @@ function agregarInvolucradoAlProyecto(proyectoId) {
         return;
     }
 
+    const roles = Object.keys(invRolesPendientes).map(Number);
+    if (roles.length === 0) {
+        document.getElementById('inv-roles-msg').style.display = 'block';
+        return;
+    }
+    document.getElementById('inv-roles-msg').style.display = 'none';
+
     const btn = document.getElementById('btn-agregar-inv');
     btn.disabled = true;
     btn.textContent = 'Agregando...';
@@ -566,7 +684,7 @@ function agregarInvolucradoAlProyecto(proyectoId) {
     fetch('{{ route("proyectos.gestion.involucrados.crear", "PLACEHOLDER") }}'.replace('PLACEHOLDER', proyectoId), {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'},
-        body: JSON.stringify({ nombre, apellido, cedula, roles: [] })
+        body: JSON.stringify({ nombre, apellido, cedula, roles })
     }).then(r => r.json()).then(() => {
         location.reload();
     }).catch(() => {

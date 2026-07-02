@@ -499,7 +499,7 @@ class IntranetEquipoSeccionService
     public function etiquetasContexto(int $lapCodigo, int $secCodigo, ?int $proCodigo = null): array
     {
         if ($lapCodigo <= 0 || $secCodigo <= 0) {
-            return ['lap_nombre' => '', 'sec_nombre' => '', 'pro_siglas' => '', 'pro_nombre' => '', 'tra_codigo' => null, 'trayecto_nombre' => ''];
+            return ['lap_nombre' => '', 'sec_nombre' => '', 'pro_siglas' => '', 'pro_nombre' => '', 'tra_codigo' => null, 'trayecto_nombre' => '', 'sed_siglas' => '', 'sem_codigo' => null, 'semestre_nombre' => ''];
         }
 
         $cacheKey = 'eq_ctx_' . $lapCodigo . '_' . $secCodigo . '_' . ($proCodigo ?? '0') . '_' . $this->academicConnection();
@@ -510,6 +510,7 @@ class IntranetEquipoSeccionService
             $query = DB::connection($conn)
                 ->table('seccion as sec')
                 ->join('lapso_academico as lap', 'lap.lap_codigo', '=', 'sec.sec_cod_lapso_academico')
+                ->leftJoin('sede as sed', 'sed.sed_codigo', '=', 'sec.sec_cod_sede')
                 ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
                 ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
                 ->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
@@ -520,6 +521,8 @@ class IntranetEquipoSeccionService
                     'lap.lap_nombre', 'sec.sec_nombre',
                     'pro.pro_siglas', 'pro.pro_nombre',
                     'tra.tra_codigo', 'tra.tra_nombre as trayecto_nombre',
+                    'sem.sem_codigo', 'sem.sem_nombre as semestre_nombre',
+                    'sed.sed_siglas',
                 ]);
 
             if ($proCodigo) {
@@ -532,6 +535,7 @@ class IntranetEquipoSeccionService
                 $row = DB::connection($conn)
                     ->table('seccion as sec')
                     ->join('lapso_academico as lap', 'lap.lap_codigo', '=', 'sec.sec_cod_lapso_academico')
+                    ->leftJoin('sede as sed', 'sed.sed_codigo', '=', 'sec.sec_cod_sede')
                     ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
                     ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
                     ->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
@@ -542,12 +546,14 @@ class IntranetEquipoSeccionService
                         'lap.lap_nombre', 'sec.sec_nombre',
                         'pro.pro_siglas', 'pro.pro_nombre',
                         'tra.tra_codigo', 'tra.tra_nombre as trayecto_nombre',
+                        'sem.sem_codigo', 'sem.sem_nombre as semestre_nombre',
+                        'sed.sed_siglas',
                     ])
                     ->first();
             }
 
             if (! $row) {
-                return ['lap_nombre' => '', 'sec_nombre' => '', 'pro_siglas' => '', 'pro_nombre' => '', 'tra_codigo' => null, 'trayecto_nombre' => ''];
+                return ['lap_nombre' => '', 'sec_nombre' => '', 'pro_siglas' => '', 'pro_nombre' => '', 'tra_codigo' => null, 'trayecto_nombre' => '', 'sed_siglas' => '', 'sem_codigo' => null, 'semestre_nombre' => ''];
             }
 
             return [
@@ -557,9 +563,12 @@ class IntranetEquipoSeccionService
                 'pro_nombre' => trim((string) ($row->pro_nombre ?? '')),
                 'tra_codigo' => $row->tra_codigo ?? null,
                 'trayecto_nombre' => trim((string) ($row->trayecto_nombre ?? '')),
+                'sed_siglas' => trim((string) ($row->sed_siglas ?? '')),
+                'sem_codigo' => $row->sem_codigo ?? null,
+                'semestre_nombre' => trim((string) ($row->semestre_nombre ?? '')),
             ];
         } catch (\Throwable) {
-            return ['lap_nombre' => '', 'sec_nombre' => '', 'pro_siglas' => '', 'pro_nombre' => '', 'tra_codigo' => null, 'trayecto_nombre' => ''];
+            return ['lap_nombre' => '', 'sec_nombre' => '', 'pro_siglas' => '', 'pro_nombre' => '', 'tra_codigo' => null, 'trayecto_nombre' => '', 'sed_siglas' => '', 'sem_codigo' => null, 'semestre_nombre' => ''];
         }
         });
     }

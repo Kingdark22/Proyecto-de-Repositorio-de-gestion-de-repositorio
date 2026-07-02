@@ -109,10 +109,8 @@
                     <select wire:model.live="seccionFilter" style="width: 95%;" @disabled(!$lapsoFilter || !$intranetDisponible)>
                         <option value="">- Todas -</option>
                         @foreach ($secciones as $sec)
-                            <option value="{{ $sec->sec_codigo }}">{{ trim($sec->sec_nombre) }}@if ($sec->pro_siglas)
-                                    ({{ trim($sec->pro_siglas) }})
-                                @endif
-                            </option>
+                    @php $secLabel = trim($sec->sec_nombre) . ($sec->pro_siglas ? ' (' . trim($sec->pro_siglas) . ')' : ''); @endphp
+                            <option value="{{ $sec->sec_codigo }}">{{ $secLabel }}</option>
                         @endforeach
                     </select>
                 </td>
@@ -184,15 +182,18 @@
             style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px; min-height: 160px;">
             <thead>
                 <tr style="background-color: #8bb2b7; color: #000; text-align: center; font-weight: bold;">
-                    <th width="50%">Título / equipo / comunidad</th>
-                    <th width="25%">Resumen</th>
-                    <th width="25%">Acciones</th>
+                    <th width="4%">N&deg;</th>
+                    <th width="48%">Título / equipo / comunidad</th>
+                    <th width="24%">Resumen</th>
+                    <th width="24%">Acciones</th>
                 </tr>
             </thead>
             <tbody class="Texto">
                 @foreach ($proyectos as $p)
+                    @php $rowNum = ($proyectos->currentPage() - 1) * $proyectos->perPage() + $loop->iteration; @endphp
                     <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }};"
                         valign="top">
+                        <td align="center" style="padding: 5px; font-weight: bold; font-size: 11px;">{{ $rowNum }}</td>
                         <td style="padding: 5px;">
                             <div style="font-weight: bold; font-size: 12px; color: #8b0000;">{{ $p->titulo }}</div>
                             <div style="font-size: 10px; color: #333;">
@@ -223,7 +224,7 @@
                 @endforeach
                 @if ($proyectos->isEmpty())
                     <tr>
-                        <td colspan="3" align="center" style="padding: 20px; font-weight: bold;">
+                        <td colspan="4" align="center" style="padding: 20px; font-weight: bold;">
                             No se encontraron proyectos con los criterios seleccionados
                         </td>
                     </tr>

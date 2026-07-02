@@ -17,14 +17,13 @@ class VinculacionManager extends Component
     use WithPagination;
     use WithSafeNotify;
 
-
     public string $search = '';
+    public string $filtroTitulo = '';
 
-    public $selectedProyecto = null;
-    public $integrantesProyecto;
-    public $vinculacionTitulo = '';
-    public $vinculacionExistente = null;
-
+    public array $selectedProjects = [];
+    public bool $selectAll = false;
+    public bool $mostrarFormulario = false;
+    public string $vinculacionTitulo = '';
     public string $vinculacionComunidadId = '';
 
     public bool $mostrarModalComunidad = false;
@@ -180,48 +179,43 @@ class VinculacionManager extends Component
         $this->vinculacionComunidadId = '';
     }
 
+    public function updatedSelectAll(): void
+    {
+        $this->selectedProjects = $this->selectAll
+            ? Proyecto::where('estado_validacion', 'aprobado')
+                ->where('estado_logico', true)
+                ->pluck('id')
+                ->toArray()
+            : [];
+    }
+
     public function updatingSearch(): void
     {
         $this->resetPage();
     }
 
-    public function vincular($proyectoId): void
+    public function vincularSeleccionados(): void
     {
-        $proyecto = Proyecto::with(['comunidad', 'documentos.componente',
-            'linea_investigacion', 'metodologia', 'tipo_publicacion', 'tipo_investigacion'])
-            ->find($proyectoId);
-        if (!$proyecto) {
-            $this->safeDispatch('error', 'Proyecto no encontrado.');
+        if (empty($this->selectedProjects)) {
+            $this->safeDispatch('warning', 'Seleccione al menos un proyecto.');
             return;
         }
-
-        Proyecto::precargarTitulos(collect([$proyecto]));
-        $this->selectedProyecto = $proyecto;
-        $this->integrantesProyecto = app(\App\Services\IntranetEquipoSeccionService::class)
-            ->integrantes($proyecto->equipo_ref ?? '');
-        $this->vinculacionExistente = Vinculacion::with('comunidad')->where('proyecto_id', $proyectoId)->first();
-
-        if ($this->vinculacionExistente) {
-            $this->vinculacionTitulo = $this->vinculacionExistente->titulo;
-            $this->vinculacionComunidadId = (string) ($this->vinculacionExistente->com_codigo ?? '');
-        } else {
-            $this->vinculacionTitulo = '';
-            $this->vinculacionComunidadId = '';
-        }
+        $this->mostrarFormulario = true;
     }
 
     public function cerrar(): void
     {
-        $this->selectedProyecto = null;
-        $this->integrantesProyecto = null;
-        $this->vinculacionExistente = null;
+        $this->mostrarFormulario = false;
         $this->vinculacionTitulo = '';
         $this->vinculacionComunidadId = '';
+        $this->selectedProjects = [];
+        $this->selectAll = false;
     }
 
     public function guardarVinculacion(): void
     {
-        if (!$this->selectedProyecto) {
+        if (empty($this->selectedProjects)) {
+            $this->safeDispatch('error', 'No hay proyectos seleccionados.');
             return;
         }
 
@@ -231,70 +225,103 @@ class VinculacionManager extends Component
             return;
         }
 
-        $data = [
-            'proyecto_id' => $this->selectedProyecto->id,
-            'vin_titulo' => $titulo,
-            'com_codigo' => $this->vinculacionComunidadId !== '' ? (int) $this->vinculacionComunidadId : null,
-            'tipo' => 'Vinculación',
-        ];
+        $comCodigo = $this->vinculacionComunidadId !== '' ? (int) $this->vinculacionComunidadId : null;
+        $creadas = 0;
 
-        if ($this->vinculacionExistente) {
-            $this->vinculacionExistente->update($data);
-            $this->safeDispatch('success', "Vinculación «{$titulo}» actualizada.");
-        } else {
-            $this->vinculacionExistente = Vinculacion::create($data);
-            $this->safeDispatch('success', "Vinculación «{$titulo}» creada.");
+        foreach ($this->selectedProjects as $pid) {
+            $existe = Vinculacion::where('proyecto_id', $pid)->exists();
+            if ($existe) {
+                continue;
+            }
+            Vinculacion::create([
+                'proyecto_id' => $pid,
+                'vin_titulo' => $titulo,
+                'com_codigo' => $comCodigo,
+                'tipo' => 'Vinculación',
+            ]);
+            $creadas++;
         }
+
+        $this->safeDispatch('success', "{$creadas} vinculación(es) creada(s) para «{$titulo}».");
+        $this->cerrar();
+    }
+
+    public function reportarPDF(): void
+    {
+        $titulo = trim($this->filtroTitulo);
+        $params = $titulo !== '' ? ['filtro_titulo' => $titulo] : [];
+        $url = route('vinculacion.reporte-pdf', $params);
+        $this->dispatch('descargar-pdf', url: $url);
+    }
+
+    public function reportarSeleccionados(): void
+    {
+        if (empty($this->selectedProjects)) {
+            $this->safeDispatch('warning', 'Seleccione al menos un proyecto.');
+            return;
+        }
+        $params = ['proyectos' => $this->selectedProjects];
+        $url = route('vinculacion.reporte-pdf', $params);
+        $this->dispatch('descargar-pdf', url: $url);
     }
 
     public function render()
     {
-        $query = Proyecto::with('comunidad')
-            ->where('estado_validacion', 'aprobado')
-            ->where('estado_logico', true);
+        try {
+            $query = Proyecto::with('comunidad')
+                ->where('estado_validacion', 'aprobado')
+                ->where('estado_logico', true);
 
-        if ($this->search !== '') {
-            $search = trim($this->search);
-            $term = '%' . $search . '%';
-            $query->where(function ($q) use ($search, $term) {
-                $q->whereRaw('pry_resumen ILIKE ?', [$term])
-                  ->orWhereRaw('pry_direccion_logica ILIKE ?', [$term])
-                  ->orWhereRaw('pry_motivo_rechazo ILIKE ?', [$term])
-                  ->orWhereRaw('pry_creador_cedula ILIKE ?', [$term])
-                  ->orWhereHas('comunidad', fn($cq) => $cq->whereRaw('com_nombre ILIKE ?', [$term]))
-                  ->orWhereHas('linea_investigacion', fn($cq) => $cq->whereRaw('lin_nombre_investigacion ILIKE ?', [$term]))
-                  ->orWhereHas('metodologia', fn($cq) => $cq->whereRaw('mei_nombre ILIKE ?', [$term]))
-                  ->orWhereHas('tipo_publicacion', fn($cq) => $cq->whereRaw('tpu_nombre ILIKE ?', [$term]))
-                  ->orWhereHas('tipo_investigacion', fn($cq) => $cq->whereRaw('tin_nombre ILIKE ?', [$term]))
-                  ->orWhereHas('objetivo_investigacion', fn($cq) => $cq->whereRaw('obi_nombre ILIKE ?', [$term]));
-            });
+            if ($this->search !== '') {
+                $search = trim($this->search);
+                $term = '%' . $search . '%';
+                $query->where(function ($q) use ($search, $term) {
+                    $q->whereRaw('pry_resumen ILIKE ?', [$term])
+                      ->orWhereRaw('pry_direccion_logica ILIKE ?', [$term])
+                      ->orWhereRaw('pry_motivo_rechazo ILIKE ?', [$term])
+                      ->orWhereRaw('pry_creador_cedula ILIKE ?', [$term])
+                      ->orWhereHas('comunidad', fn($cq) => $cq->whereRaw('com_nombre ILIKE ?', [$term]))
+                      ->orWhereHas('linea_investigacion', fn($cq) => $cq->whereRaw('lin_nombre_investigacion ILIKE ?', [$term]))
+                      ->orWhereHas('metodologia', fn($cq) => $cq->whereRaw('mei_nombre ILIKE ?', [$term]))
+                      ->orWhereHas('tipo_publicacion', fn($cq) => $cq->whereRaw('tpu_nombre ILIKE ?', [$term]))
+                      ->orWhereHas('tipo_investigacion', fn($cq) => $cq->whereRaw('tin_nombre ILIKE ?', [$term]))
+                      ->orWhereHas('objetivo_investigacion', fn($cq) => $cq->whereRaw('obi_nombre::text ILIKE ?', [$term]));
+                });
+            }
+
+            $proyectos = $query->orderBy('id', 'desc')->paginate(10);
+
+            Proyecto::precargarTitulos(collect($proyectos->items()));
+
+            $proyectosCollection = collect($proyectos->items());
+            $ids = $proyectosCollection->pluck('id');
+
+            $vinculaciones = Vinculacion::with('comunidad')
+                ->whereIn('proyecto_id', $ids)
+                ->get()
+                ->keyBy('proyecto_id');
+
+            $comunidadSeleccionada = null;
+            if ($this->vinculacionComunidadId !== '') {
+                $comunidadSeleccionada = Comunidad::with('direccion.municipio.estado')
+                    ->find((int) $this->vinculacionComunidadId);
+            }
+
+            $comunidades = Comunidad::orderBy('com_nombre')->get();
+
+            return view('livewire.vinculacion-manager', [
+                'proyectos' => $proyectos,
+                'vinculaciones' => $vinculaciones,
+                'comunidadSeleccionada' => $comunidadSeleccionada,
+                'comunidades' => $comunidades,
+            ]);
+        } catch (\Throwable $e) {
+            return view('livewire.vinculacion-manager', [
+                'proyectos' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10),
+                'vinculaciones' => collect(),
+                'comunidadSeleccionada' => null,
+                'comunidades' => collect(),
+            ]);
         }
-
-        $proyectos = $query->orderBy('id', 'desc')->paginate(10);
-
-        Proyecto::precargarTitulos(collect($proyectos->items()));
-
-        $proyectosCollection = collect($proyectos->items());
-        $ids = $proyectosCollection->pluck('id');
-
-        $vinculaciones = Vinculacion::with('comunidad')
-            ->whereIn('proyecto_id', $ids)
-            ->get()
-            ->keyBy('proyecto_id');
-
-        $comunidadSeleccionada = null;
-        if ($this->vinculacionComunidadId !== '') {
-            $comunidadSeleccionada = Comunidad::with('direccion.municipio.estado')
-                ->find((int) $this->vinculacionComunidadId);
-        }
-
-        $comunidades = Comunidad::orderBy('com_nombre')->get();
-
-        return view('livewire.vinculacion-manager', [
-            'proyectos' => $proyectos,
-            'vinculaciones' => $vinculaciones,
-            'comunidadSeleccionada' => $comunidadSeleccionada,
-            'comunidades' => $comunidades,
-        ]);
     }
 }

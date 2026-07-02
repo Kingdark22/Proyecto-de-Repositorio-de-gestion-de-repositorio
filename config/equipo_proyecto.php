@@ -17,7 +17,7 @@ return [
     */
     'prefijos_clave' => [
         'seccion' => 'EQSEC',
-        'grupo_modulo' => 'EQGRP',  // grupo registrado en repositorio (integrantes elegidos)
+        'grupo_modulo' => 'identificador',  // grupo registrado con código auto-generado (PNFI-ACA...)
     ],
 
     'roles_grupo' => [

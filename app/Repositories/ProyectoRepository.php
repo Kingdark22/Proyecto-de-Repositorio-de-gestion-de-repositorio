@@ -115,6 +115,8 @@ class ProyectoRepository
     public function paginate(array $filtros, int $page): LengthAwarePaginator
     {
         return Proyecto::with($this->relaciones)
+            ->whereNotNull('pry_direccion_logica')
+            ->where('pry_direccion_logica', '!=', '')
             ->when(($filtros['search'] ?? '') !== '', function ($q) use ($filtros) {
                 $s = $filtros['search'];
                 try {

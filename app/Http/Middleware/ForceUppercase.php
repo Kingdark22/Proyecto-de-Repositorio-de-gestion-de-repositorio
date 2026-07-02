@@ -15,7 +15,7 @@ class ForceUppercase
             if (is_string($value)) {
                 $lowerKey = mb_strtolower($key);
                 if (
-                    !in_array($lowerKey, ['password', 'password_confirmation', '_token', '_method', 'email', 'correo'], true)
+                    !in_array($lowerKey, ['password', 'password_confirmation', '_token', '_method', 'email', 'correo', 'payload', 'token', 'miembros'], true)
                     && !str_contains($lowerKey, 'correo')
                     && !str_contains($lowerKey, 'email')
                 ) {

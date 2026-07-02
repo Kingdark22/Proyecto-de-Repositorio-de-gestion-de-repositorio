@@ -22,6 +22,7 @@ return [
             'fecha_actualizacion_estudiante' => 'pry_fecha_actualizacion_estudiante',
             'creador_cedula' => 'pry_creador_cedula',
             'objetivo_id' => 'obj_codigo',
+            'objetivo_investigacion_id' => 'obj_codigo',
             'comunidad_id' => 'com_codigo',
             'equipo_ref' => 'pry_direccion_logica',
         ],

@@ -10,7 +10,7 @@ use App\Models\GrupoProyectoModulo;
 /**
  * Grupo de proyecto en repositorio (solo MySQL módulo).
  * Contexto académico (lapso/sección/PNF) en grp_contexto JSON; lectura intranet solo en PHP vía otros servicios.
- * Clave EQGRP:{id}. Sin FK ni columnas hacia intranet.
+ * Clave identificador auto-generado (ej. PNFI-ACA11-131-1/7). Sin FK ni columnas hacia intranet.
  */
 class GrupoProyectoService
 {
@@ -24,6 +24,36 @@ class GrupoProyectoService
     public function tablaDisponible(): bool
     {
         return $this->repo->tablaDisponible();
+    }
+
+    /**
+     * Genera el código de equipo según el formato:
+     * {pro_siglas}-{sed_siglas}{tra_codigo}{sem_codigo}-{sec_nombre}-{nroEquipo}/{totalEquipos}
+     * Ejemplo: PNFI-ACA11-131-1/7
+     */
+    public function generarCodigoGrupo(int $lapCodigo, int $secCodigo, ?int $proCodigo = null): string
+    {
+        $ctx = $this->equipos->etiquetasContexto($lapCodigo, $secCodigo, $proCodigo);
+
+        $proSiglas = $ctx['pro_siglas'] ?: 'PNF';
+        $sedSiglas = $ctx['sed_siglas'] ?: 'SED';
+        $traCodigo = $ctx['tra_codigo'] ?? '1';
+        $semCodigo = $ctx['sem_codigo'] ?? '1';
+        $secNombre = $ctx['sec_nombre'] ?: (string) $secCodigo;
+
+        $existentes = $this->repo->findByContextoSeccion($lapCodigo, $secCodigo);
+        $totalEquipos = $existentes->count() + 1;
+
+        return sprintf(
+            '%s-%s%s%s-%s-%d/%d',
+            strtoupper($proSiglas),
+            strtoupper($sedSiglas),
+            $traCodigo,
+            $semCodigo,
+            $secNombre,
+            $totalEquipos,
+            $totalEquipos
+        );
     }
 
     public function conexionRepositorio(): string
@@ -91,6 +121,8 @@ class GrupoProyectoService
             return null;
         }
 
+        $nombre = trim($nombre) ?: 'Equipo';
+
         $contexto = array_filter(array_merge([
             'lap_codigo' => $lapCodigo,
             'sec_codigo' => $secCodigo,
@@ -99,10 +131,13 @@ class GrupoProyectoService
             'sec_nombre' => trim((string) ($etiquetasAcademicas['sec_nombre'] ?? '')),
             'pro_siglas' => trim((string) ($etiquetasAcademicas['pro_siglas'] ?? '')),
             'pro_nombre' => trim((string) ($etiquetasAcademicas['pro_nombre'] ?? '')),
+            'sed_siglas' => trim((string) ($etiquetasAcademicas['sed_siglas'] ?? '')),
+            'tra_codigo' => $etiquetasAcademicas['tra_codigo'] ?? null,
+            'sem_codigo' => $etiquetasAcademicas['sem_codigo'] ?? null,
         ], $etiquetasAcademicas ?? []), fn ($v) => $v !== null && $v !== '' && $v !== 0);
 
         $payload = [
-            'grp_nombre' => trim($nombre),
+            'grp_nombre' => $nombre,
             'grp_contexto' => json_encode($contexto, JSON_UNESCAPED_UNICODE),
             'grp_com_codigo' => $comCodigo,
             'grp_creador_cedula' => trim($creadorCedula),
@@ -113,11 +148,14 @@ class GrupoProyectoService
         $this->repo->invalidarCache();
 
         if ($grpCodigo) {
+            // Update: preserve existing identificador
             $this->repo->update($grpCodigo, $payload);
 
             return $this->construirClave($grpCodigo);
         }
 
+        // Create: generate identificador
+        $payload['grp_identificador'] = $this->generarCodigoGrupo($lapCodigo, $secCodigo, $proCodigo);
         $payload['created_at'] = now();
         $id = $this->repo->create($payload);
 
@@ -126,12 +164,19 @@ class GrupoProyectoService
 
     public function obtenerPorClave(string $clave): ?object
     {
-        $partes = $this->parsearClave($clave);
-        if (($partes['tipo'] ?? '') !== self::PREFIJO || empty($partes['grp_codigo'])) {
-            return null;
+        // Try by identificador first
+        $row = $clave !== '' ? GrupoProyectoModulo::where('grp_identificador', $clave)->first() : null;
+        if ($row) {
+            return $this->enriquecerEtiquetasAcademicas($this->mapearFila($row));
         }
 
-        return $this->obtener((int) $partes['grp_codigo']);
+        // Fallback: parse as EQGRP:{id}
+        $partes = $this->parsearClave($clave);
+        if (($partes['tipo'] ?? '') === self::PREFIJO && !empty($partes['grp_codigo'])) {
+            return $this->obtener((int) $partes['grp_codigo']);
+        }
+
+        return null;
     }
 
     public function obtener(int $grpCodigo): ?object
@@ -180,6 +225,20 @@ class GrupoProyectoService
             return;
         }
 
+        // Desactivar el proyecto asociado a este grupo antes de eliminar el grupo
+        $grupo = $this->obtener($grpCodigo);
+        $identificador = $grupo ? ($grupo->identificador ?: $this->construirClave($grpCodigo)) : $this->construirClave($grpCodigo);
+        try {
+            $proyecto = \App\Models\Proyecto::where('equipo_ref', $identificador)->first();
+            if ($proyecto) {
+                $proyecto->update([
+                    'estado_logico' => false,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Error desactivando proyecto asociado al grupo ' . $grpCodigo . ': ' . $e->getMessage());
+        }
+
         $this->repo->invalidarCache();
         $this->repo->delete($grpCodigo);
     }
@@ -209,8 +268,15 @@ class GrupoProyectoService
      */
     public function integrantes(string $claveEquipo): Collection
     {
-        if (str_starts_with($claveEquipo, self::PREFIJO.':')) {
-            return $this->integrantesDesdeClave($claveEquipo);
+        if (str_starts_with($claveEquipo, self::PREFIJO.':') || !str_starts_with($claveEquipo, 'EQSEC:')) {
+            $integrantes = $this->integrantesDesdeClave($claveEquipo);
+            if ($integrantes->isNotEmpty()) {
+                return $integrantes;
+            }
+        }
+
+        if (str_starts_with($claveEquipo, 'EQSEC:')) {
+            return $this->equipos->integrantes($claveEquipo);
         }
 
         return $this->equipos->integrantes($claveEquipo);
@@ -218,18 +284,29 @@ class GrupoProyectoService
 
     public function resumen(string $claveEquipo): string
     {
-        if (str_starts_with($claveEquipo, self::PREFIJO.':')) {
-            $g = $this->obtenerPorClave($claveEquipo);
-
-            return $g ? 'Grupo '.$g->nombre.' ('.$g->integrantes.' integrantes)' : '—';
+        $g = $this->obtenerPorClave($claveEquipo);
+        if ($g) {
+            return 'Grupo '.$g->nombre.' ('.$g->integrantes.' integrantes)';
         }
 
-        return $this->equipos->resumenEquipo($claveEquipo);
+        if (str_starts_with($claveEquipo, 'EQSEC:')) {
+            return $this->equipos->resumenEquipo($claveEquipo);
+        }
+
+        return '—';
     }
 
     public function estudianteEnGrupo(string $cedula, string $clave, ?int $rolRequerido = null): bool
     {
-        if (! str_starts_with($clave, self::PREFIJO.':')) {
+        if (! str_starts_with($clave, self::PREFIJO.':') && ! str_starts_with($clave, 'EQSEC:')) {
+            // Try lookup by identificador
+            $grupo = $this->obtenerPorClave($clave);
+            if ($grupo) {
+                return $this->verificarMiembroEnGrupo($grupo, $cedula, $rolRequerido);
+            }
+        }
+
+        if (str_starts_with($clave, 'EQSEC:')) {
             return $this->equipos->estudiantePerteneceEquipo($cedula, $clave, $rolRequerido);
         }
 
@@ -238,15 +315,18 @@ class GrupoProyectoService
             return false;
         }
 
+        return $this->verificarMiembroEnGrupo($grupo, $cedula, $rolRequerido);
+    }
+
+    protected function verificarMiembroEnGrupo(object $grupo, string $cedula, ?int $rolRequerido = null): bool
+    {
         $cedula = trim($cedula);
         foreach ($grupo->miembros as $m) {
             if (trim((string) ($m['cedula'] ?? '')) !== $cedula) {
                 continue;
             }
-
             return $rolRequerido === null || (int) ($m['rol_id'] ?? 0) === $rolRequerido;
         }
-
         return false;
     }
 
@@ -279,28 +359,39 @@ class GrupoProyectoService
         ]);
     }
 
+    public function obtenerPorIdentificador(string $identificador): ?object
+    {
+        if ($identificador === '') {
+            return null;
+        }
+        $row = GrupoProyectoModulo::where('grp_identificador', $identificador)->first();
+        return $row ? $this->enriquecerEtiquetasAcademicas($this->mapearFila($row)) : null;
+    }
+
     /**
      * @return object|null
      */
     public function encapsular(string $claveEquipo): ?object
     {
-        if (str_starts_with($claveEquipo, self::PREFIJO.':')) {
+        if (str_starts_with($claveEquipo, self::PREFIJO.':') || !str_starts_with($claveEquipo, 'EQSEC:')) {
             $g = $this->obtenerPorClave($claveEquipo);
-            if (! $g) {
+            if ($g) {
+                return (object) [
+                    'id' => $g->clave,
+                    'clave' => $g->clave,
+                    'nombre' => $g->nombre,
+                    'resumen' => $this->resumen($claveEquipo),
+                    'lap_codigo' => $g->lap_codigo,
+                    'sec_codigo' => $g->sec_codigo,
+                    'integrantes' => $g->integrantes,
+                    'miembros' => $this->integrantesDesdeClave($claveEquipo),
+                    'origen' => 'grupo_proyecto_modulo',
+                ];
+            }
+            // If it doesn't look like EQSEC: and not found, return null
+            if (!str_starts_with($claveEquipo, 'EQSEC:')) {
                 return null;
             }
-
-            return (object) [
-                'id' => $g->clave,
-                'clave' => $g->clave,
-                'nombre' => $g->nombre,
-                'resumen' => $this->resumen($claveEquipo),
-                'lap_codigo' => $g->lap_codigo,
-                'sec_codigo' => $g->sec_codigo,
-                'integrantes' => $g->integrantes,
-                'miembros' => $this->integrantesDesdeClave($claveEquipo),
-                'origen' => 'grupo_proyecto_modulo',
-            ];
         }
 
         $partes = $this->equipos->parsearClave($claveEquipo);
@@ -541,13 +632,15 @@ class GrupoProyectoService
 
         $ctx = $this->decodificarContexto($row);
         $codigo = (int) ($row->grp_codigo ?? $row->gpb_codigo ?? 0);
-        $clave = $this->construirClave($codigo);
+        $identificador = trim((string) ($row->grp_identificador ?? ''));
+        $clave = $identificador ?: $this->construirClave($codigo);
 
         return (object) [
             'grp_codigo' => $codigo,
             'clave' => $clave,
             'id' => $clave,
             'nombre' => trim((string) ($row->grp_nombre ?? $row->gpb_nombre ?? '')),
+            'identificador' => $identificador,
             'lap_codigo' => $ctx['lap_codigo'],
             'sec_codigo' => $ctx['sec_codigo'],
             'pro_codigo' => $ctx['pro_codigo'],
@@ -590,12 +683,13 @@ class GrupoProyectoService
     }
 
     /**
-     * Actualiza los roles de los miembros de un grupo EQGRP.
+     * Actualiza los roles de los miembros de un grupo.
      * @param  list<string>  $leaders  Cédulas que serán líderes
      */
     public function asignarLideres(string $clave, array $leaders): void
     {
-        if (!str_starts_with($clave, self::PREFIJO.':')) {
+        $g = $this->obtenerPorClave($clave);
+        if (!$g) {
             return;
         }
 
