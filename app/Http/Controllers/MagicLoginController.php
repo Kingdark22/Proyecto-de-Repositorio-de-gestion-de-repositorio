@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 use App\Models\User;
-use App\Services\IntranetSimulationMirrorService;
 use App\Services\UserRoleService;
 
 class MagicLoginController extends Controller
@@ -146,8 +145,6 @@ class MagicLoginController extends Controller
             Auth::login($user);
             $request->session()->regenerate();
             Log::info('User authenticated: ' . (Auth::check() ? 'true' : 'false') . ' as ' . trim($user->usu_nombre ?? ''));
-
-            app(IntranetSimulationMirrorService::class)->mirrorUserContext($cedula);
 
             $roleService = app(UserRoleService::class);
 

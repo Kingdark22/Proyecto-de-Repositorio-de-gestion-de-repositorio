@@ -10,7 +10,7 @@ use RuntimeException;
 
 /**
  * Relaciona datos entre intranet (solo lectura) y repositorio (escritura del módulo)
- * sin claves foráneas entre bases: se unen en PHP por cédula, lapso, sección, claves EQGRP, etc.
+ * sin claves foráneas entre bases: se unen en PHP por cédula, lapso, sección, identificador de grupo, etc.
  */
 class ConexionDualService
 {

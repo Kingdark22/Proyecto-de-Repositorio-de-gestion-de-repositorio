@@ -86,7 +86,7 @@
 
     <p style="font-size: 11px; color: #444; margin-bottom: 12px;">
         Registre el <strong>grupo de proyecto</strong> eligiendo estudiantes de la <strong>secci&oacute;n del PNF</strong>.
-        Queda identificado con la clave <code>EQGRP:&hellip;</code> para usarlo al registrar el expediente.
+        Queda identificado con un c&oacute;digo &uacute;nico auto-generado.
     </p>
 
     <div id="flashContainer">
@@ -145,6 +145,7 @@
                 <thead>
                     <tr style="background: #8bb2b7;">
                         <th>Nombre</th>
+                        <th>C&oacute;digo</th>
                         <th>PNF</th>
                         <th>Secci&oacute;n</th>
                         <th>Lapso</th>
@@ -169,6 +170,7 @@
                                    style="cursor:pointer; font-weight:bold; color:#333;"
                                    data-grp-codigo="{{ $g->grp_codigo }}"
                                    data-grp-nombre="{{ $g->nombre }}"
+                                   data-grp-identificador="{{ $g->identificador ?? '' }}"
                                    data-grp-clave="{{ $g->clave }}"
                                    data-grp-lapso="{{ $g->lap_nombre ?: 'Lapso #'.$g->lap_codigo }}"
                                    data-grp-pnf="{{ $g->pro_siglas ?: ($g->pro_nombre ?: '—') }}"
@@ -179,6 +181,7 @@
                                    onclick="abrirInfoGrupo(this)"
                                    title="Ver información del grupo">{{ $g->nombre }}</a>
                             </td>
+                            <td><code style="font-size:9px;color:#8b0000;">{{ $g->identificador ?? '—' }}</code></td>
                             <td>{{ $g->pro_siglas ?: ($g->pro_nombre ?: '—') }}</td>
                             <td>{{ $g->sec_nombre ?: 'Sec. ' . $g->sec_codigo }}</td>
                             <td>{{ $g->lap_nombre ?: '—' }}</td>
@@ -193,9 +196,11 @@
                             </td>
                             <td align="center" nowrap>
                                 {{-- Actualizar va al formulario de registro del proyecto --}}
+                                @if(!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado')
                                 <button type="button" class="cm-btn cm-btn-success cm-btn-sm"
                                     onclick="window.location='{{ $tieneProyecto ? route('proyectos.gestion.edit', $proyecto->id) : route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}'"
                                     title="Ir al formulario de proyecto">Actualizar</button>
+                                @endif
                                 @if (!$isProfessor)
                                     <a href="{{ route('grupos-proyecto.edit', $g->grp_codigo) }}" class="cm-btn cm-btn-secondary cm-btn-sm" title="Editar grupo">Editar</a>
                                 @endif
@@ -209,7 +214,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" align="center">No hay grupos registrados. Cree uno con integrantes de la secci&oacute;n.</td>
+                            <td colspan="9" align="center">No hay grupos registrados. Cree uno con integrantes de la secci&oacute;n.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -241,6 +246,7 @@
             </div>
             <table width="100%" style="font-size:12px;border-collapse:collapse;">
                 <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;width:35%;">Nombre:</td><td id="infoNombre" style="padding:6px 8px;"></td></tr>
+                <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">C&oacute;digo:</td><td id="infoIdentificador" style="padding:6px 8px;"></td></tr>
                 <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Clave:</td><td id="infoClave" style="padding:6px 8px;"></td></tr>
                 <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Lapso:</td><td id="infoLapso" style="padding:6px 8px;"></td></tr>
                 <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">PNF:</td><td id="infoPnf" style="padding:6px 8px;"></td></tr>
@@ -264,6 +270,7 @@
 <script>
 function abrirInfoGrupo(el) {
     var nombre = el.getAttribute('data-grp-nombre');
+    var identificador = el.getAttribute('data-grp-identificador');
     var clave = el.getAttribute('data-grp-clave');
     var lapso = el.getAttribute('data-grp-lapso');
     var pnf = el.getAttribute('data-grp-pnf');
@@ -273,6 +280,7 @@ function abrirInfoGrupo(el) {
     var proyEstado = el.getAttribute('data-grp-proyecto-estado');
 
     document.getElementById('infoNombre').textContent = nombre;
+    document.getElementById('infoIdentificador').innerHTML = identificador ? '<code style="color:#8b0000;">' + identificador + '</code>' : '—';
     document.getElementById('infoClave').innerHTML = '<code>' + clave + '</code>';
     document.getElementById('infoLapso').textContent = lapso;
     document.getElementById('infoPnf').textContent = pnf;

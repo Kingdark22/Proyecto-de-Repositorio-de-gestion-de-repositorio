@@ -183,14 +183,50 @@ class ProyectoBusquedaService
                 ->values()
                 ->all();
 
+            // Incluir también grupos registrados para este lapso/programa
+            try {
+                $grupos = app(\App\Services\GrupoProyectoService::class)->listar([
+                    'lapso' => (int) $lap,
+                    'programa' => $programa ? (int) $programa : null,
+                    'seccion' => $seccion ? (int) $seccion : null,
+                ]);
+                $clavesGrupos = $grupos
+                    ->pluck('clave')
+                    ->filter(fn ($k) => str_starts_with((string) $k, \App\Services\GrupoProyectoService::PREFIJO.':'))
+                    ->values()
+                    ->all();
+                $claves = array_unique(array_merge($claves, $clavesGrupos));
+            } catch (\Throwable) {
+                // Si falla la consulta de grupos, continuar solo con las secciones
+            }
+
             return ['tipo' => 'lista', 'valor' => $claves];
         }
 
         if ($lap) {
-            return [
-                'tipo' => 'prefijo',
-                'valor' => IntranetEquipoSeccionService::PREFIJO_REF.':'.(int) $lap.':',
-            ];
+            // Construir lista combinada: EQSEC para cada sección + EQGRP para cada grupo en este lapso
+            $secciones = $this->intranet->seccionesEnLapso((int) $lap);
+            $claves = $secciones
+                ->map(fn ($sec) => $this->equipoSeccion->construirClave((int) $lap, (int) $sec->sec_codigo))
+                ->unique()
+                ->values()
+                ->all();
+
+            try {
+                $grupos = app(\App\Services\GrupoProyectoService::class)->listar([
+                    'lapso' => (int) $lap,
+                ]);
+                $clavesGrupos = $grupos
+                    ->pluck('clave')
+                    ->filter(fn ($k) => str_starts_with((string) $k, \App\Services\GrupoProyectoService::PREFIJO.':'))
+                    ->values()
+                    ->all();
+                $claves = array_unique(array_merge($claves, $clavesGrupos));
+            } catch (\Throwable) {
+                // Si falla la consulta de grupos, continuar solo con las secciones
+            }
+
+            return ['tipo' => 'lista', 'valor' => $claves];
         }
 
         return 'todos';

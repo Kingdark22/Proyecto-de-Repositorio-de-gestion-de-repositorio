@@ -15,10 +15,12 @@ class GrupoProyectoModulo extends RepositorioModel
 
     protected $fillable = [
         'grp_nombre',
+        'grp_identificador',
         'grp_contexto',
         'grp_com_codigo',
         'grp_creador_cedula',
         'grp_miembros',
+        'estado_logico',
         'updated_at',
         'created_at',
     ];

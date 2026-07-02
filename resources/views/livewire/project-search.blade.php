@@ -109,10 +109,8 @@
                     <select wire:model.live="seccionFilter" style="width: 95%;" @disabled(!$lapsoFilter || !$intranetDisponible)>
                         <option value="">- Todas -</option>
                         @foreach ($secciones as $sec)
-                            <option value="{{ $sec->sec_codigo }}">{{ trim($sec->sec_nombre) }}@if ($sec->pro_siglas)
-                                    ({{ trim($sec->pro_siglas) }})
-                                @endif
-                            </option>
+                    @php $secLabel = trim($sec->sec_nombre) . ($sec->pro_siglas ? ' (' . trim($sec->pro_siglas) . ')' : ''); @endphp
+                            <option value="{{ $sec->sec_codigo }}">{{ $secLabel }}</option>
                         @endforeach
                     </select>
                 </td>

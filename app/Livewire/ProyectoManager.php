@@ -72,14 +72,14 @@ class ProyectoManager extends Component
 
     public string $viewMode = 'list';
 
-    /** True cuando el equipo seleccionado es un grupo de proyecto registrado (EQGRP:) */
+    /** True cuando el equipo seleccionado es un grupo de proyecto registrado */
     public bool $esGrupoRegistrado = false;
 
     /** Nombre de la comunidad vinculada al grupo (solo lectura) */
     public ?string $comunidadNombreGrupo = null;
 
-    /** True si el usuario actual es lider del proyecto que esta editando */
-    public bool $esLider = false;
+    /** True si el usuario actual es miembro del equipo del proyecto que esta editando */
+    public bool $esMiembro = false;
 
     /** True cuando un lider esta actualizando documentos (modo solo subida) */
     public bool $modoActualizacion = false;
@@ -443,10 +443,9 @@ class ProyectoManager extends Component
             return;
         }
 
-        // Si se selecciona un grupo de proyecto registrado (EQGRP:)
-        if (str_starts_with($clave, GrupoProyectoService::PREFIJO . ':')) {
-            $grupo = $grupos->obtenerPorClave($clave);
-            if ($grupo) {
+        // Si se selecciona un grupo de proyecto registrado
+        $grupo = !str_starts_with($clave, 'EQSEC:') ? $grupos->obtenerPorClave($clave) : null;
+        if ($grupo) {
                 $this->esGrupoRegistrado = true;
                 $this->titulo = $grupo->nombre ?? '';
                 if (!empty($grupo->com_codigo)) {
@@ -831,11 +830,11 @@ class ProyectoManager extends Component
         $this->fill($gestion->cargarParaEdicion($id));
         $this->viewMode = 'form';
 
-        // Detectar si el usuario actual es lider del proyecto
+        // Detectar si el usuario actual es miembro del equipo del proyecto
         $user = auth()->user();
         $proyecto = Proyecto::find($id);
-        $this->esLider = $proyecto ? $gestion->usuarioEsLiderDelProyecto($user, $proyecto) : false;
-        $this->modoActualizacion = $this->esLider && !$gestion->usuarioEsAdminEnSistema($user);
+        $this->esMiembro = $proyecto ? $gestion->usuarioEsMiembroDelProyecto($user, $proyecto) : false;
+        $this->modoActualizacion = $this->esMiembro && !$gestion->usuarioEsAdminEnSistema($user);
 
         // Cargar involucrados existentes del proyecto
         $this->cargarInvolucradosProyecto($gestion);
@@ -1148,7 +1147,7 @@ class ProyectoManager extends Component
             }
         }
 
-        // Validar vigencia del estudiante líder (solo si está en modo actualización)
+        // Validar vigencia del estudiante miembro del equipo (solo si está en modo actualización)
         if ($this->modoActualizacion && $this->editingId) {
             $userRoleService = app(\App\Services\UserRoleService::class);
             $activeRole = $userRoleService->getActiveRole($user);
@@ -1158,7 +1157,7 @@ class ProyectoManager extends Component
             // Solo validar vigencia si NO es admin/coordinador
             if (!$esAdminOCoordinador) {
                 $proyecto = \App\Models\Proyecto::find($this->editingId);
-                if ($proyecto && !$gestion->estudianteLiderVigente($user, $proyecto)) {
+                if ($proyecto && !$gestion->estudianteMiembroVigente($user, $proyecto)) {
                     $this->safeDispatch('error', 'No puedes subir documentos porque ya no estás inscrito vigentemente en la sección/lapso de este proyecto. Contacta al coordinador o profesor.');
                     return;
                 }

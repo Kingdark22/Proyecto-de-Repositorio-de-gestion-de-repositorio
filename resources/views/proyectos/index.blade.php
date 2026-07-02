@@ -75,9 +75,10 @@
                             </td>
                             <td align="center" style="padding:5px;">
                                 @if ($g->tiene_proyecto)
-                                    <a href="{{ route('proyectos.gestion.edit', $g->proyecto_id) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
-                                    @if (($g->proyecto_estado_validacion ?? '') === 'aprobado')
-                                        <a href="{{ route('proyectos.gestion.solvencia', $g->proyecto_id) }}" class="cm-btn cm-btn-primary cm-btn-sm">Solvencia</a>
+                                    @if ($g->proyecto_estado_validacion !== 'aprobado')
+                                        <a href="{{ route('proyectos.gestion.edit', $g->proyecto_id) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
+                                    @else
+                                        <span style="color:#008000;font-weight:bold;font-size:10px;">Aprobado</span>
                                     @endif
                                 @else
                                     <a href="{{ route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
@@ -99,10 +100,10 @@
                     style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px;">
                     <thead>
                         <tr style="background-color: #a5d6a7; color: #000; text-align: center; font-weight: bold;">
-                            <th width="30%">Proyecto</th>
-                            <th width="20%">Comunidad</th>
+                            <th width="30%">Título</th>
+                            <th width="25%">Comunidad / equipo</th>
                             <th width="20%">Validación</th>
-                            <th width="30%">Acción</th>
+                            <th width="25%">Acción</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -111,7 +112,14 @@
                                 <td style="padding:5px;font-weight:bold;">
                                     {{ $p->titulo }}
                                 </td>
-                                <td style="padding:5px;font-size:10px;">{{ $p->comunidad->nombre ?? 'N/A' }}</td>
+                                <td style="padding:5px;font-size:10px;">
+                                    @if ($p->equipo_resumen !== '—')
+                                        <b>Equipo:</b> {{ $p->equipo_resumen }}<br>
+                                    @endif
+                                    @if (($p->comunidad->nombre ?? '') !== '' && $p->comunidad->nombre !== 'N/A')
+                                        <b>Comunidad:</b> {{ $p->comunidad->nombre }}
+                                    @endif
+                                </td>
                                 <td align="center" style="padding:5px;">
                                     @if ($p->estado_validacion === 'completado')
                                         <span style="color: #2e7d32; font-weight: bold;">Completado</span>
@@ -124,7 +132,9 @@
                                     @endif
                                 </td>
                                 <td align="center" style="padding:5px;">
-                                    <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
+                                    @if ($p->estado_validacion !== 'aprobado')
+                                        <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
+                                    @endif
                                     @if ($p->estado_validacion === 'aprobado')
                                         <a href="{{ route('proyectos.gestion.solvencia', $p->id) }}" class="cm-btn cm-btn-primary cm-btn-sm">Solvencia</a>
                                     @endif
@@ -149,14 +159,40 @@
                 $activeRoleExport = app(\App\Services\UserRoleService::class)->getActiveRole(auth()->user());
             @endphp
             @if(in_array($activeRoleExport, ['administrador', 'coordinador']))
-            <div style="margin-bottom:8px; text-align:right;">
-                <a href="{{ route('proyectos.gestion.exportar-excel', array_filter(['estado' => $filterEstado, 'comunidad' => $filterComunidad])) }}"
+            <div style="margin-bottom:8px; display:flex; align-items:center; gap:8px; justify-content:flex-end;">
+                <select id="exportLapsoFilter" style="height:30px; padding:3px 6px; font-size:11px; border:1px solid #ccc; border-radius:4px; min-width:160px;">
+                    <option value="">Todos los lapsos</option>
+                    @foreach($lapsosFiltro as $l)
+                        <option value="{{ $l->lap_codigo }}">{{ $l->lap_nombre }}</option>
+                    @endforeach
+                </select>
+                <a href="#" id="exportExcelBtn"
                    class="cm-btn cm-btn-success"
                    style="background:#155724; border-color:#0d3d19; font-size:0.8rem; padding:0.4rem 0.9rem;"
-                   title="Descarga el reporte Excel del depósito de proyectos con los filtros actuales">
+                   title="Descargar reporte Excel del depósito de proyectos">
                     &#8595; Exportar a Excel
                 </a>
             </div>
+            <script>
+            document.getElementById('exportLapsoFilter').addEventListener('change', function() {
+                var lapso = this.value;
+                var baseUrl = '{{ route("proyectos.gestion.exportar-excel") }}';
+                var params = new URLSearchParams();
+                @if($filterEstado !== '')
+                    params.set('estado', '{{ $filterEstado }}');
+                @endif
+                @if($filterComunidad !== '')
+                    params.set('comunidad', '{{ $filterComunidad }}');
+                @endif
+                if (lapso !== '') {
+                    params.set('lapso', lapso);
+                }
+                var qs = params.toString();
+                document.getElementById('exportExcelBtn').href = baseUrl + (qs ? '?' + qs : '');
+            });
+            // Trigger on load to set initial href
+            document.getElementById('exportLapsoFilter').dispatchEvent(new Event('change'));
+            </script>
             @endif
 
             <form method="GET" action="{{ route('proyectos.gestion') }}" style="margin-bottom:8px;">
@@ -234,9 +270,8 @@
                                         <a href="{{ route('proyectos.gestion.approve', $p->id) }}" class="cm-btn cm-btn-success cm-btn-sm" onclick="return confirm('¿Aprueba este proyecto?')">Aprobar</a>
                                         <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" onclick="abrirRechazar({{ $p->id }})">Rechazar</button>
                                     @endif
-                                    <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-primary cm-btn-sm">Actualizar</a>
-                                    @if ($p->estado_validacion === 'aprobado')
-                                        <a href="{{ route('proyectos.gestion.solvencia', $p->id) }}" class="cm-btn cm-btn-primary cm-btn-sm">Solvencia</a>
+                                    @if ($p->estado_validacion !== 'aprobado')
+                                        <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-primary cm-btn-sm">Actualizar</a>
                                     @endif
                                 </div>
                             </td>

@@ -136,14 +136,22 @@
             <table width="100%" style="font-size:11px;">
                 <tr>
                     <td width="50%">
-                        <b>Nombre del proyecto:</b><br>
+                        <b>Nombre del equipo:</b> <span style="color:#c82333;">*</span><br>
                         <input type="text" name="nombre" id="nombreInput"
                             value="{{ old('nombre', $grupo->nombre ?? '') }}"
-                            class="grp-filter-input @error('nombre') is-invalid @enderror" style="width:90%;"
-                            placeholder="Ej: Grupo A1" required maxlength="120">
+                            class="grp-filter-input" style="width:90%;" maxlength="120" required
+                            placeholder="Ej: Equipo Alpha, Proyecto Web"
+                            data-check-url="{{ route('grupos-proyecto.api.check-nombre') }}"
+                            data-exclude="{{ $grupo->grp_codigo ?? '' }}"
+                            oninput="validarNombreDisponible(this)">
                         <span id="nombreStatus" class="status-indicator"></span>
-                        @error('nombre')<br><span style="color:#dc3545;font-size:10px;">{{ $message }}</span>@enderror
                     </td>
+                    @if (isset($grupo) && ($grupo->identificador ?? ''))
+                    <td>
+                        <b>Código del equipo:</b><br>
+                        <span style="font-size:13px;font-weight:bold;color:#8b0000;">{{ $grupo->identificador }}</span>
+                    </td>
+                    @endif
                     <td>
                         <b>Comunidad:</b><br>
                         <div style="display:flex;gap:4px;align-items:center;">
@@ -218,7 +226,7 @@
                         </div>
                     </div>
                     <select id="rolSelect" class="grp-filter-select" style="width:130px;">
-                        <option value="1">Autor-L&iacute;der</option>
+                        <option value="1">L&iacute;der</option>
                         <option value="2">Autor</option>
                     </select>
                     <button type="button" class="cm-btn cm-btn-success cm-btn-sm" id="agregarBtn" disabled
@@ -249,7 +257,7 @@
                 </button>
                 <a href="{{ route('grupos-proyecto.index') }}" class="cm-btn cm-btn-danger">Cancelar</a>
             </div>
-            <p style="font-size:10px;color:#555;margin-top:8px;">Nota: Para registrar el proyecto debe asignar un nombre al grupo, seleccionar la comunidad, el contexto acad&eacute;mico y agregar al menos un Autor-L&iacute;der.</p>
+            <p style="font-size:10px;color:#555;margin-top:8px;">Nota: El c&oacute;digo del equipo se genera autom&aacute;ticamente. Seleccione un nombre, comunidad, contexto acad&eacute;mico y agregue al menos un L&iacute;der.</p>
         </form>
     </fieldset>
 
@@ -371,7 +379,6 @@ const lapsoSelect = document.getElementById('lapsoSelect');
 const programaSelect = document.getElementById('programaSelect');
 const seccionSelect = document.getElementById('seccionSelect');
 const nombreInput = document.getElementById('nombreInput');
-const nombreStatus = document.getElementById('nombreStatus');
 const estudianteSearch = document.getElementById('estudianteSearch');
 const estudianteDropdown = document.getElementById('estudianteDropdown');
 const agregarBtn = document.getElementById('agregarBtn');
@@ -392,7 +399,6 @@ function estudiantesDisponibles() {
 
 // ========== Lapso → Programas ==========
 lapsoSelect.addEventListener('change', function() {
-    console.log('lapso change:', this.value);
     const lapso = this.value;
     programaSelect.disabled = !lapso;
     programaSelect.innerHTML = '<option value="">— Seleccione PNF —</option>';
@@ -405,22 +411,14 @@ lapsoSelect.addEventListener('change', function() {
         miembros = [];
         renderMiembros();
     }
-    // Re-verificar nombre al cambiar lapso
-    if (nombreInput.value.trim().length >= 2) {
-        recheckNombreDisponible(nombreInput.value.trim());
-    } else {
-        nombreStatus.textContent = '';
-    }
 
     if (!lapso) return;
 
     fetch('/grupos-proyecto/api/programas/' + lapso)
         .then(function(r) {
-            console.log('programas fetch status:', r.status);
             return r.json();
         })
         .then(function(data) {
-            console.log('programas recibidos:', data.length, JSON.stringify(data.slice(0,3)));
             data.forEach(function(p) {
                 var opt = document.createElement('option');
                 opt.value = p.pro_codigo;
@@ -441,7 +439,6 @@ lapsoSelect.addEventListener('change', function() {
                 }
                 if (data.length === 0) {
                     programaSelect.style.borderColor = '#dc3545';
-                    console.error('programas: datos vacíos del servidor');
                 }
             @endif
         })
@@ -454,7 +451,6 @@ lapsoSelect.addEventListener('change', function() {
 
 // ========== Programa → Secciones ==========
 programaSelect.addEventListener('change', function() {
-    console.log('programa change:', this.value);
     const lapso = lapsoSelect.value;
     const programa = this.value;
     seccionSelect.disabled = !lapso || !programa;
@@ -471,11 +467,9 @@ programaSelect.addEventListener('change', function() {
 
     fetch('/grupos-proyecto/api/secciones/' + lapso + '/' + programa)
         .then(function(r) {
-            console.log('secciones fetch status:', r.status);
             return r.json();
         })
         .then(function(data) {
-            console.log('secciones recibidos:', data.length, JSON.stringify(data.slice(0,3)));
             data.forEach(function(s) {
                 var opt = document.createElement('option');
                 opt.value = s.sec_codigo;
@@ -492,11 +486,9 @@ programaSelect.addEventListener('change', function() {
             }
             if (data.length > 1) {
                 seccionSelect.style.borderColor = '#f0b606';
-            }
-            if (data.length === 0) {
-                seccionSelect.style.borderColor = '#dc3545';
-                console.error('secciones: datos vacíos del servidor');
-            }
+            }                if (data.length === 0) {
+                    seccionSelect.style.borderColor = '#dc3545';
+                }
         })
         .catch(function(err) {
             console.error('Error cargando secciones:', err);
@@ -551,7 +543,7 @@ seccionSelect.addEventListener('change', function() {
                             nombre: m.nombre || '',
                             apellido: m.apellido || '',
                             rol_id: parseInt(m.rol_id || 2),
-                            rol_name: parseInt(m.rol_id || 2) === 1 ? 'Autor-Líder' : 'Autor'
+                            rol_name: parseInt(m.rol_id || 2) === 1 ? 'Líder' : 'Autor'
                         });
                     }
                 });
@@ -573,9 +565,7 @@ seccionSelect.addEventListener('change', function() {
         })
         .catch(function() {
             statusEl.textContent = 'Error al cargar estudiantes';
-            estudianteSearch.placeholder = 'Error de carga';
-            console.error('Error cargando estudiantes');
-        });
+            estudianteSearch.placeholder = 'Error de carga';        });
 });
 
 // ========== Student search (excluye miembros ya seleccionados) ==========
@@ -650,7 +640,7 @@ function agregarIntegrante() {
         nombre: agregarBtn.dataset.nombre || '',
         apellido: agregarBtn.dataset.apellido || '',
         rol_id: rolId,
-        rol_name: rolId === 1 ? 'Autor-Líder' : 'Autor'
+        rol_name: rolId === 1 ? 'Líder' : 'Autor'
     });
 
     renderMiembros();
@@ -686,57 +676,43 @@ function renderMiembros() {
     });
 }
 
-// ========== Real-time nombre availability (via AJAX) ==========
+// ========== Nombre disponible (unicidad) ==========
 var nombreTimeout = null;
-
-function recheckNombreDisponible(nombre) {
-    @if (isset($grupo))
-    var exclude = {{ $grupo->grp_codigo }};
-    @else
-    var exclude = 0;
-    @endif
-
-    var url = '/grupos-proyecto/api/check-nombre/' + encodeURIComponent(nombre);
-    if (exclude) { url += '?exclude=' + exclude; }
-
-    return fetch(url)
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data.available) {
-                nombreStatus.textContent = 'Disponible';
-                nombreStatus.className = 'status-indicator status-ok';
-                nombreInput.dataset.nombreDisponible = 'true';
-            } else {
-                nombreStatus.textContent = 'No disponible';
-                nombreStatus.className = 'status-indicator status-err';
-                nombreInput.dataset.nombreDisponible = 'false';
-            }
-            return data.available;
-        })
-        .catch(function() {
-            nombreStatus.textContent = '';
-            nombreInput.dataset.nombreDisponible = '';
-            return false;
-        });
-}
-
-nombreInput.addEventListener('input', function() {
-    var nombre = this.value.trim();
-
+function validarNombreDisponible(input) {
+    clearTimeout(nombreTimeout);
+    var statusEl = document.getElementById('nombreStatus');
+    var nombre = input.value.trim();
     if (nombre.length < 2) {
-        nombreStatus.textContent = '';
+        statusEl.textContent = '';
+        statusEl.className = 'status-indicator';
         return;
     }
-
-    clearTimeout(nombreTimeout);
-    nombreStatus.textContent = 'Verificando...';
-    nombreStatus.className = 'status-indicator';
-    nombreInput.dataset.nombreDisponible = 'checking';
-
+    var baseUrl = input.getAttribute('data-check-url');
+    var exclude = input.getAttribute('data-exclude');
+    var url = baseUrl + '?nombre=' + encodeURIComponent(nombre);
+    if (exclude) {
+        url += '&exclude=' + encodeURIComponent(exclude);
+    }
     nombreTimeout = setTimeout(function() {
-        recheckNombreDisponible(nombre);
+        statusEl.textContent = 'Verificando...';
+        statusEl.className = 'status-indicator';
+        fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.available) {
+                    statusEl.textContent = '✓ Disponible';
+                    statusEl.className = 'status-indicator status-ok';
+                } else {
+                    statusEl.textContent = '✗ Nombre no disponible';
+                    statusEl.className = 'status-indicator status-err';
+                }
+            })
+            .catch(function() {
+                statusEl.textContent = '';
+                statusEl.className = 'status-indicator';
+            });
     }, 400);
-});
+}
 
 // ========== Community search ==========
 comunidadSearch.addEventListener('input', function() {
@@ -951,7 +927,7 @@ document.getElementById('grupoForm').addEventListener('submit', function(e) {
     var tieneLider = miembros.some(function(m) { return m.rol_id === 1; });
     if (!tieneLider) {
         e.preventDefault();
-        alert('Debe haber al menos un integrante con rol de Autor-Líder.');
+        alert('Debe haber al menos un integrante con rol de Líder.');
         return;
     }
 
@@ -961,34 +937,6 @@ document.getElementById('grupoForm').addEventListener('submit', function(e) {
         return;
     }
 
-    // Verificar disponibilidad del nombre
-    var nombre = nombreInput.value.trim();
-    var estadoNombre = nombreInput.dataset.nombreDisponible;
-
-    if (nombre.length >= 2) {
-        if (estadoNombre === 'false' || estadoNombre === 'checking') {
-            e.preventDefault();
-            if (estadoNombre === 'false') {
-                alert('El nombre del grupo no está disponible. Cámbielo antes de guardar.');
-            } else {
-                alert('Verificando disponibilidad del nombre... Espere un momento y vuelva a intentar.');
-            }
-            return;
-        }
-        if (estadoNombre !== 'true') {
-            e.preventDefault();
-            nombreStatus.textContent = 'Verificando...';
-            nombreStatus.className = 'status-indicator';
-            recheckNombreDisponible(nombre).then(function(available) {
-                if (!available) {
-                    alert('El nombre del grupo no está disponible. Cámbielo antes de guardar.');
-                } else {
-                    document.getElementById('grupoForm').submit();
-                }
-            });
-            return;
-        }
-    }
 });
 
 // ========== Utility ==========
@@ -1001,7 +949,6 @@ function escapeHtml(str) {
 
 // ========== Init on page load ==========
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOMContentLoaded, lapsoPreseleccionado={{ $lapsoPreseleccionado ?? '' }}, editingMode=' + editingMode);
     @if (isset($grupo))
         if (lapsoSelect.value) {
             lapsoSelect.dispatchEvent(new Event('change'));
@@ -1032,7 +979,6 @@ document.addEventListener('DOMContentLoaded', function() {
     @else
         // Sin lapso preseleccionado: si el select ya tiene valor por selected, disparar igual
         if (lapsoSelect.value) {
-            console.log('auto-trigger cascade from selected option:', lapsoSelect.value);
             lapsoSelect.dispatchEvent(new Event('change'));
         }
     @endif

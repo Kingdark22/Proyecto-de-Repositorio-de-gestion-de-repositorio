@@ -33,14 +33,21 @@ class Proyecto extends RepositorioModel
         if (!$this->equipo_ref) {
             return '(sin título)';
         }
-        $partes = app(\App\Services\GrupoProyectoService::class)->parsearClave($this->equipo_ref);
+        // Try as identificador first
+        $grupo = \App\Models\GrupoProyectoModulo::where('grp_identificador', $this->equipo_ref)->first();
+        if ($grupo) {
+            return $grupo->grp_nombre;
+        }
+        // Fallback: parse as EQGRP:{id}
+        $service = app(\App\Services\GrupoProyectoService::class);
+        $partes = $service->parsearClave($this->equipo_ref);
         if ($partes && ($partes['tipo'] ?? '') === \App\Services\GrupoProyectoService::PREFIJO && !empty($partes['grp_codigo'])) {
             $codigo = $partes['grp_codigo'];
             if ($this->relationLoaded('grupoProyecto') && $this->grupoProyecto) {
                 return $this->grupoProyecto->grp_nombre;
             }
-            $grupo = \App\Models\GrupoProyectoModulo::find($codigo);
-            return $grupo ? $grupo->grp_nombre : $this->equipo_ref;
+            $g = \App\Models\GrupoProyectoModulo::find($codigo);
+            return $g ? $g->grp_nombre : $this->equipo_ref;
         }
         return $this->equipo_ref;
     }
@@ -141,24 +148,50 @@ class Proyecto extends RepositorioModel
 
     public static function precargarTitulos($proyectos): void
     {
+        $identificadores = [];
         $codigos = [];
         $service = app(\App\Services\GrupoProyectoService::class);
+
         foreach ($proyectos as $p) {
-            $partes = $service->parsearClave($p->equipo_ref);
-            if ($partes && ($partes['tipo'] ?? '') === \App\Services\GrupoProyectoService::PREFIJO && !empty($partes['grp_codigo'])) {
-                $codigos[$partes['grp_codigo']] = true;
+            $ref = $p->equipo_ref;
+            if (!$ref) continue;
+
+            // Try as identificador
+            if (!str_starts_with($ref, 'EQGRP:') && !str_starts_with($ref, 'EQSEC:')) {
+                $identificadores[] = $ref;
+            } else {
+                $partes = $service->parsearClave($ref);
+                if ($partes && ($partes['tipo'] ?? '') === \App\Services\GrupoProyectoService::PREFIJO && !empty($partes['grp_codigo'])) {
+                    $codigos[$partes['grp_codigo']] = true;
+                }
             }
         }
-        if (!$codigos) {
-            return;
+
+        $gruposPorId = [];
+        if ($codigos) {
+            $gruposPorId = \App\Models\GrupoProyectoModulo::whereIn('grp_codigo', array_keys($codigos))->get()->keyBy('grp_codigo');
         }
-        $grupos = \App\Models\GrupoProyectoModulo::whereIn('grp_codigo', array_keys($codigos))->get()->keyBy('grp_codigo');
+
+        $gruposPorIdent = [];
+        if ($identificadores) {
+            $gruposPorIdent = \App\Models\GrupoProyectoModulo::whereIn('grp_identificador', $identificadores)->get()->keyBy('grp_identificador');
+        }
+
         foreach ($proyectos as $p) {
-            $partes = $service->parsearClave($p->equipo_ref);
-            if ($partes && !empty($partes['grp_codigo'])) {
-                $codigo = $partes['grp_codigo'];
-                if (isset($grupos[$codigo])) {
-                    $p->setRelation('grupoProyecto', $grupos[$codigo]);
+            $ref = $p->equipo_ref;
+            if (!$ref) continue;
+
+            if (!str_starts_with($ref, 'EQGRP:') && !str_starts_with($ref, 'EQSEC:')) {
+                if (isset($gruposPorIdent[$ref])) {
+                    $p->setRelation('grupoProyecto', $gruposPorIdent[$ref]);
+                }
+            } else {
+                $partes = $service->parsearClave($ref);
+                if ($partes && !empty($partes['grp_codigo'])) {
+                    $codigo = $partes['grp_codigo'];
+                    if (isset($gruposPorId[$codigo])) {
+                        $p->setRelation('grupoProyecto', $gruposPorId[$codigo]);
+                    }
                 }
             }
         }

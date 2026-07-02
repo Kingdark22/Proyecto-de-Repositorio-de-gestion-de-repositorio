@@ -335,6 +335,8 @@ class ProyectoGestionService
 
     public function eliminar(int $id): void
     {
+        \App\Models\Vinculacion::where('proyecto_id', $id)->delete();
+        \App\Models\ProyectoDocumento::where('pry_codigo', $id)->delete();
         $this->proyectoRepo->delete($id);
     }
 
@@ -406,9 +408,9 @@ class ProyectoGestionService
             return null;
         }
 
-        $clave = $gruposSvc->construirClave($grpCodigo);
+        $identificador = $grupo->identificador ?: $gruposSvc->construirClave($grpCodigo);
 
-        $existing = $this->proyectoRepo->findFirstByEquipoRef($clave);
+        $existing = $this->proyectoRepo->findFirstByEquipoRef($identificador);
         if ($existing) {
             return $existing;
         }
@@ -416,7 +418,7 @@ class ProyectoGestionService
         $proyecto = $this->proyectoRepo->create([
             'resumen' => '',
             'comunidad_id' => $grupo->com_codigo,
-            'equipo_ref' => $clave,
+            'equipo_ref' => $identificador,
             'estado_validacion' => 'pendiente',
             'estado_logico' => false,
             'creador_cedula' => trim((string) $user->usu_cedula),
@@ -427,7 +429,7 @@ class ProyectoGestionService
         return $proyecto->fresh();
     }
 
-    public function estudianteLiderVigente(User $user, Proyecto $proyecto): bool
+    public function estudianteMiembroVigente(User $user, Proyecto $proyecto): bool
     {
         $cedula = trim((string) $user->usu_cedula);
         if ($cedula === '') {
@@ -440,21 +442,31 @@ class ProyectoGestionService
         }
 
         $gruposSvc = app(GrupoProyectoService::class);
-        if (!$gruposSvc->estudianteEnGrupo($cedula, $clave, IntranetEquipoSeccionService::ROL_LIDER)) {
+        // Verificar si el estudiante pertenece al grupo (cualquier rol)
+        if (!$gruposSvc->estudianteEnGrupo($cedula, $clave)) {
             return false;
         }
 
-        $partes = $gruposSvc->parsearClave($clave);
-        if (!$partes || ($partes['tipo'] ?? '') !== GrupoProyectoService::PREFIJO) {
-            $partesEq = $this->equipoSeccion->parsearClave($clave);
-            if (!$partesEq) {
-                return false;
-            }
-            return $this->equipoSeccion->estudiantePerteneceEquipo($cedula, $clave);
+        // Get grupo by identificador or EQGRP-clave
+        $grupo = null;
+        if (!str_starts_with($clave, 'EQGRP:') && !str_starts_with($clave, 'EQSEC:')) {
+            $grupo = $this->grupoRepo->find(
+                optional(GrupoProyectoModulo::where('grp_identificador', $clave)->first())->grp_codigo ?? 0
+            );
         }
 
-        $grupo = $this->grupoRepo->find($partes['grp_codigo'] ?? 0);
         if (!$grupo) {
+            $partes = $gruposSvc->parsearClave($clave);
+            if ($partes && ($partes['tipo'] ?? '') === GrupoProyectoService::PREFIJO) {
+                $grupo = $this->grupoRepo->find($partes['grp_codigo'] ?? 0);
+            }
+        }
+
+        if (!$grupo) {
+            $partesEq = $this->equipoSeccion->parsearClave($clave);
+            if ($partesEq) {
+                return $this->equipoSeccion->estudiantePerteneceEquipo($cedula, $clave);
+            }
             return false;
         }
 
@@ -471,6 +483,43 @@ class ProyectoGestionService
 
         $claveSec = $this->equipoSeccion->construirClave($lapCodigo, $secCodigo);
         return $this->equipoSeccion->estudiantePerteneceEquipo($cedula, $claveSec);
+    }
+
+    /**
+     * Verifica si el usuario es cualquier miembro (no necesariamente líder) del equipo del proyecto.
+     */
+    public function usuarioEsMiembroDelProyecto(?User $user, Proyecto $proyecto): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+        $cedula = trim((string) $user->usu_cedula);
+        $clave = $proyecto->equipo_ref ?? '';
+
+        if ($clave === '') {
+            return false;
+        }
+
+        $gruposSvc = app(GrupoProyectoService::class);
+        $partes = $gruposSvc->parsearClave($clave);
+        if (!$partes || ($partes['tipo'] ?? '') !== GrupoProyectoService::PREFIJO) {
+            return false;
+        }
+
+        $grupo = $this->grupoRepo->find($partes['grp_codigo'] ?? 0);
+        if (!$grupo) {
+            return false;
+        }
+
+        $miembros = $grupo->grp_miembros ?? [];
+        foreach ($miembros as $m) {
+            $mCedula = trim((string) ($m['cedula'] ?? ''));
+            if ($mCedula === $cedula) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function reglasValidacion(array $estado, User $user, bool $esEdicion = false): array
@@ -762,7 +811,7 @@ class ProyectoGestionService
         try {
             $grupos = $this->grupoRepo->findByMiembroCedula($cedula);
 
-            $claves = $grupos->map(fn ($g) => 'EQGRP:' . $g->grp_codigo)->toArray();
+            $claves = $grupos->map(fn ($g) => $g->grp_identificador ?: ('EQGRP:' . $g->grp_codigo))->toArray();
             if (empty($claves)) {
                 return static::$roleCache[$key] = [];
             }
@@ -1080,9 +1129,14 @@ class ProyectoGestionService
 
     /**
      * Agrega un involucrado a un proyecto con sus roles.
+     *
+     * @throws \InvalidArgumentException si no se proporciona al menos un rol
      */
     public function agregarInvolucradoAProyecto(int $proyectoId, int $involucradoId, array $roleIds): int
     {
+        if (empty($roleIds)) {
+            throw new \InvalidArgumentException('Debe asignar al menos un rol al involucrado.');
+        }
         $connection = (string) config('dual_database.repositorio_connection', 'pgsql');
 
         // Verificar si ya existe la relación
@@ -1166,9 +1220,13 @@ class ProyectoGestionService
 
     /**
      * Retorna los datos necesarios para generar una solvencia de proyecto.
+     * Si se proporciona $cedula, filtra para retornar solo los datos de ese integrante;
+     * y además verifica que la cédula pertenezca efectivamente al grupo.
+     *
      * @return array<string, mixed>
+     * @throws \RuntimeException si la cédula no pertenece al grupo
      */
-    public function datosSolvencia(int $proyectoId): array
+    public function datosSolvencia(int $proyectoId, ?string $cedula = null): array
     {
         $proyecto = $this->proyectoRepo->findOrFail($proyectoId);
 
@@ -1180,18 +1238,35 @@ class ProyectoGestionService
         $gruposSvc = app(GrupoProyectoService::class);
         $integrantes = $gruposSvc->integrantes($clave);
 
-        $lider = $integrantes->first(fn($m) => ($m->rol_id ?? 0) === IntranetEquipoSeccionService::ROL_LIDER);
-        $estudiante = $lider ?: $integrantes->first();
+        // Construir lista completa de integrantes con nombre completo, cédula y rol
+        $listaIntegrantes = $integrantes->map(fn($m) => [
+            'nombre_completo' => trim(($m->nombre ?? '') . ' ' . ($m->apellido ?? '')),
+            'cedula' => trim($m->cedula ?? ''),
+            'rol' => $m->rol ?? '',
+            'rol_id' => (int) ($m->rol_id ?? 0),
+        ])->values()->toArray();
 
-        $estudianteNombre = $estudiante
-            ? trim(($estudiante->nombre ?? '') . ' ' . ($estudiante->apellido ?? ''))
-            : 'N/A';
-        $estudianteCedula = $estudiante ? trim($estudiante->cedula ?? '') : 'N/A';
+        // Si se especificó cédula, filtrar a ese integrante y validar que exista
+        if ($cedula !== null) {
+            $cedula = trim($cedula);
+            $integranteEncontrado = null;
+            foreach ($listaIntegrantes as $i) {
+                if ($i['cedula'] === $cedula) {
+                    $integranteEncontrado = $i;
+                    break;
+                }
+            }
+            if ($integranteEncontrado === null) {
+                throw new \RuntimeException('La cédula proporcionada no pertenece a los integrantes de este proyecto.');
+            }
+            $listaIntegrantes = [$integranteEncontrado];
+        }
 
         $partes = $this->equipoSeccion->parsearClave($clave);
         $lapNombre = '';
         $secNombre = '';
         $proSiglas = '';
+        $proNombre = '';
         $traNombre = '';
 
         if ($partes) {
@@ -1204,6 +1279,7 @@ class ProyectoGestionService
                             $lapNombre = $grupo->grp_contexto['lap_nombre'] ?? '';
                             $secNombre = $grupo->grp_contexto['sec_nombre'] ?? '';
                             $proSiglas = $grupo->grp_contexto['pro_siglas'] ?? '';
+                            $proNombre = $grupo->grp_contexto['pro_nombre'] ?? '';
                             $traNombre = $grupo->grp_contexto['tra_nombre'] ?? '';
                         }
                     } catch (\Throwable) {
@@ -1219,6 +1295,7 @@ class ProyectoGestionService
                     $lapNombre = $etiquetas['lap_nombre'] ?? $lapNombre;
                     $secNombre = $etiquetas['sec_nombre'] ?? $secNombre;
                     $proSiglas = $etiquetas['pro_siglas'] ?? $proSiglas;
+                    $proNombre = $etiquetas['pro_nombre'] ?? $proNombre;
                     $traNombre = $etiquetas['trayecto_nombre'] ?? $traNombre;
                 } catch (\Throwable) {
                 }
@@ -1226,10 +1303,11 @@ class ProyectoGestionService
         }
 
         return [
-            'estudiante_nombre' => $estudianteNombre,
-            'estudiante_cedula' => $estudianteCedula,
+            'integrantes' => $listaIntegrantes,
             'titulo_proyecto' => $proyecto->titulo,
+            'comunidad' => $proyecto->comunidad?->com_nombre ?? '',
             'pnf' => $proSiglas,
+            'pnf_nombre' => $proNombre,
             'trayecto' => $traNombre,
             'seccion' => $secNombre,
             'lapso' => $lapNombre,

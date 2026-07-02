@@ -199,6 +199,8 @@ class GrupoProyectoManager extends Component
 
     public string $nombreGrupo = '';
 
+    public string $codigoEquipo = '';
+
     public ?string $nombreGrupoStatus = null;
 
     public function updatedNombreGrupo(): void
@@ -363,6 +365,7 @@ class GrupoProyectoManager extends Component
 
         $this->editingGrpCodigo = $grpCodigo;
         $this->nombreGrupo = $g->nombre;
+        $this->codigoEquipo = $g->identificador ?? '';
         $this->filterLapso = (string) $g->lap_codigo;
         $this->loadProgramas();
         $this->filterPrograma = $g->pro_codigo ? (string) $g->pro_codigo : '';
@@ -381,7 +384,7 @@ class GrupoProyectoManager extends Component
                 'apellido' => $m['apellido'] ?? '',
                 'rol_id' => (int) ($m['rol_id'] ?? 2),
                 'rol_name' => match ((int) ($m['rol_id'] ?? 2)) {
-                    1 => 'Autor-Líder',
+                    1 => 'Líder',
                     2 => 'Autor',
                     default => 'Integrante',
                 },
@@ -463,7 +466,7 @@ class GrupoProyectoManager extends Component
             'nombre' => $est->nombre,
             'apellido' => $est->apellido,
             'rol_id' => $rolId,
-            'rol_name' => $rolId === 1 ? 'Autor-Líder' : 'Autor',
+            'rol_name' => $rolId === 1 ? 'Líder' : 'Autor',
         ];
         $this->selectedCedula = '';
         $this->buscarEstudiante = '';
@@ -501,33 +504,18 @@ class GrupoProyectoManager extends Component
 
         $this->validate(
             [
-                'nombreGrupo' => 'required|min:2|max:120',
+                'nombreGrupo' => 'required|string|max:120',
                 'comunidadId' => 'required',
                 'filterLapso' => 'required',
                 'filterSeccion' => 'required',
             ],
             [
-                'nombreGrupo.required' => 'Indique un nombre para el equipo/grupo.',
+                'nombreGrupo.required' => 'Indique un nombre para el equipo.',
                 'comunidadId.required' => 'Seleccione la comunidad.',
                 'filterLapso.required' => 'Seleccione el lapso.',
                 'filterSeccion.required' => 'Seleccione la sección del PNF.',
             ],
         );
-
-        if ($this->nombreGrupoStatus === 'no_disponible') {
-            session()->flash('message_error', 'Este nombre de grupo ya está en uso.');
-            return;
-        }
-
-        // Validación server-side: verificar que el nombre sea único globalmente
-        if (! app(GrupoProyectoService::class)->nombreDisponibleEnLapso(
-            $this->nombreGrupo,
-            null,
-            $this->editingGrpCodigo,
-        )) {
-            session()->flash('message_error', 'Este nombre de grupo ya está en uso.');
-            return;
-        }
 
         if (!$grupos->tablaDisponible()) {
             session()->flash('message_error', 'Ejecute la migración grupo_proyecto_modulo en repositorio (solo módulo).');
@@ -544,12 +532,16 @@ class GrupoProyectoManager extends Component
             }
         }
 
+        $lapCodigo = (int) $this->filterLapso;
+        $secCodigo = (int) $this->filterSeccion;
+        $proCodigo = $this->filterPrograma !== '' ? (int) $this->filterPrograma : null;
+
         $user = auth()->user();
         $clave = $grupos->registrar(
-            $this->nombreGrupo,
-            (int) $this->filterLapso,
-            (int) $this->filterSeccion,
-            $this->filterPrograma !== '' ? (int) $this->filterPrograma : null,
+            trim($this->nombreGrupo),
+            $lapCodigo,
+            $secCodigo,
+            $proCodigo,
             $this->comunidadId !== '' ? (int) $this->comunidadId : null,
             $this->miembrosSeleccionados,
             trim((string) $user->usu_cedula),
@@ -590,6 +582,7 @@ class GrupoProyectoManager extends Component
     {
         $this->editingGrpCodigo = null;
         $this->nombreGrupo = '';
+        $this->codigoEquipo = '';
         $this->nombreGrupoStatus = null;
         $this->comunidadId = '';
         $this->searchComunidad = '';

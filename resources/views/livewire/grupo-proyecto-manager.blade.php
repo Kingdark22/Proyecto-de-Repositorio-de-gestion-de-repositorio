@@ -149,7 +149,7 @@
 
     <p style="font-size: 11px; color: #444; margin-bottom: 12px;">
         Registre el <strong>grupo de proyecto</strong> eligiendo estudiantes de la <strong>secci&oacute;n del PNF</strong>.
-        Queda identificado con la clave <code>EQGRP:&hellip;</code> para usarlo al registrar el expediente.
+        Queda identificado con un c&oacute;digo &uacute;nico auto-generado.
     </p>
 
 
@@ -187,12 +187,13 @@
                 grupo</button>
         </div>
 
-        <fieldset style="border: 2px solid #8b0000; padding: 8px;">
+            <fieldset style="border: 2px solid #8b0000; padding: 8px;">
             <legend style="font-weight: bold;">Grupos de proyecto registrados</legend>
             <table width="100%" border="1" cellpadding="4" style="font-size: 11px; border-collapse: collapse;">
                 <thead>
                     <tr style="background: #8bb2b7;">
                         <th>Nombre</th>
+                        <th>C&oacute;digo</th>
                         <th>PNF</th>
                         <th>Secci&oacute;n</th>
                         <th>Lapso</th>
@@ -212,6 +213,7 @@
                             <td>
                                 <b style="cursor: pointer;" wire:click="$set('selectedGroupId', {{ $g->grp_codigo }})" title="Ver información del grupo">{{ $g->nombre }}</b>
                             </td>
+                            <td><code style="font-size:9px;color:#8b0000;">{{ $g->identificador ?? '—' }}</code></td>
                             <td>{{ $g->pro_siglas ?: ($g->pro_nombre ?: '—') }}</td>
                             <td>{{ $g->sec_nombre ?: 'Sec. ' . $g->sec_codigo }}</td>
                             <td>{{ $g->lap_nombre ?: '—' }}</td>
@@ -230,9 +232,11 @@
                                 @endif
                             </td>
                             <td align="center" nowrap>
+                                @if(!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado')
                                 <button type="button" class="cm-btn cm-btn-success cm-btn-sm"
                                     onclick="window.location='{{ $tieneProyecto ? route('proyectos.gestion.edit', $proyecto->id) : route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}'"
                                     title="Ir al formulario de proyecto">Actualizar</button>
+                                @endif
                                 <button type="button" class="cm-btn cm-btn-secondary cm-btn-sm"
                                     wire:click="editarGrupo({{ $g->grp_codigo }})">Editar</button>
                                 <button type="button" class="cm-btn cm-btn-danger cm-btn-sm"
@@ -242,7 +246,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" align="center">No hay grupos registrados. Cree uno con integrantes de la
+                            <td colspan="9" align="center">No hay grupos registrados. Cree uno con integrantes de la
                                 secci&oacute;n.</td>
                         </tr>
                     @endforelse
@@ -256,14 +260,23 @@
             </legend>
             <table width="100%" style="font-size: 11px;">
                 <tr>
-                    <td width="50%"><b>Nombre del proyecto:</b><br><input wire:model.live.debounce.500ms="nombreGrupo" type="text"
-                            class="grp-filter-input" style="width:90%;">
-                            @if($nombreGrupoStatus === 'disponible')
-                                <br><span style="color: #28a745; font-size: 11px;">✓ Nombre disponible</span>
-                            @elseif($nombreGrupoStatus === 'no_disponible')
-                                <br><span style="color: #dc3545; font-size: 11px;">✗ Este nombre ya está en uso</span>
-                            @endif
+                    <td width="50%"><b>Nombre del equipo:</b> <span style="color:#c82333;">*</span><br>
+                        <input type="text" wire:model.live.debounce.300ms="nombreGrupo" 
+                            class="grp-filter-input" style="width:90%;" maxlength="120"
+                            placeholder="Ej: Equipo Alpha, Proyecto Web" @error('nombreGrupo') style="border-color:#dc3545;" @enderror>
+                        @if($nombreGrupoStatus === 'disponible')
+                            <span style="color:#198754;font-size:10px;">✓ Disponible</span>
+                        @elseif($nombreGrupoStatus === 'no_disponible')
+                            <span style="color:#dc3545;font-size:10px;">✗ Nombre no disponible</span>
+                        @endif
+                        @error('nombreGrupo') <span style="color:#dc3545;font-size:10px;">{{ $message }}</span> @enderror
                     </td>
+                    @if($editingGrpCodigo && $codigoEquipo)
+                    <td>
+                        <b>Código del equipo:</b><br>
+                        <span style="font-size:13px;font-weight:bold;color:#8b0000;">{{ $codigoEquipo }}</span>
+                    </td>
+                    @endif
                      <td><b>Comunidad:</b><br>
                          <div style="display: flex; gap: 4px; align-items: center;">
                              @if($comunidadId !== '')
@@ -458,7 +471,7 @@
                     grupo</button>
                 <button type="button" class="cm-btn cm-btn-danger" wire:click="volver">Cancelar</button>
             </div>
-            <p style="font-size: 10px; color: #555; margin-top: 8px;">El registro del expediente del proyecto es un
+            <p style="font-size: 10px; color: #555; margin-top: 8px;">El c&oacute;digo del equipo se genera autom&aacute;ticamente. El registro del expediente del proyecto es un
                 paso aparte; luego elija este grupo al crear el expediente.</p>
 
             @if ($mostrarModalComunidad)
@@ -579,6 +592,7 @@
                 </div>
                 <table width="100%" style="font-size:12px;border-collapse:collapse;">
                     <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;width:35%;">Nombre:</td><td style="padding:6px 8px;">{{ $info->grupo->nombre }}</td></tr>
+                    <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">C&oacute;digo:</td><td style="padding:6px 8px;"><code style="color:#8b0000;">{{ $info->grupo->identificador ?? '—' }}</code></td></tr>
                     <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Clave:</td><td style="padding:6px 8px;"><code>{{ $info->grupo->clave }}</code></td></tr>
                     <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Lapso:</td><td style="padding:6px 8px;">{{ $info->grupo->lap_nombre ?: 'Lapso #'.$info->grupo->lap_codigo }}</td></tr>
                     <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">PNF:</td><td style="padding:6px 8px;">{{ $info->grupo->pro_siglas ?: ($info->grupo->pro_nombre ?: '—') }}</td></tr>

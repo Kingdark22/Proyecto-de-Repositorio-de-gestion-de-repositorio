@@ -18,6 +18,7 @@ class VinculacionManager extends Component
     use WithSafeNotify;
 
     public string $search = '';
+    public string $filtroTitulo = '';
 
     public array $selectedProjects = [];
     public bool $selectAll = false;
@@ -243,6 +244,25 @@ class VinculacionManager extends Component
 
         $this->safeDispatch('success', "{$creadas} vinculación(es) creada(s) para «{$titulo}».");
         $this->cerrar();
+    }
+
+    public function reportarPDF(): void
+    {
+        $titulo = trim($this->filtroTitulo);
+        $params = $titulo !== '' ? ['filtro_titulo' => $titulo] : [];
+        $url = route('vinculacion.reporte-pdf', $params);
+        $this->dispatch('descargar-pdf', url: $url);
+    }
+
+    public function reportarSeleccionados(): void
+    {
+        if (empty($this->selectedProjects)) {
+            $this->safeDispatch('warning', 'Seleccione al menos un proyecto.');
+            return;
+        }
+        $params = ['proyectos' => $this->selectedProjects];
+        $url = route('vinculacion.reporte-pdf', $params);
+        $this->dispatch('descargar-pdf', url: $url);
     }
 
     public function render()

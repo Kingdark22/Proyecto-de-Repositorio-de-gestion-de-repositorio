@@ -87,7 +87,7 @@
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 10px; font-size:15px;">Vinculaci&oacute;n de Proyectos</legend>
 
             <div style="margin-bottom: 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                <input wire:model.live.debounce.50ms="search" type="text" placeholder="Buscar por t&iacute;tulo..." style="padding:6px 10px; border:1px solid #ccc; border-radius:5px; font-size:13px; min-width:250px; flex:1;">
+                <input wire:model.live.debounce.50ms="search" type="text" placeholder="Buscar..." style="padding:6px 10px; border:1px solid #ccc; border-radius:5px; font-size:13px; min-width:250px; flex:1;">
                 <span style="font-size: 13px; color: #555;">
                     <b>{{ $proyectos->total() }}</b> proyecto(s)
                 </span>
@@ -95,6 +95,15 @@
                     <button type="button" wire:click="vincularSeleccionados" class="cm-btn cm-btn-success" style="font-size:13px;">
                         Vincular {{ count($selectedProjects) }} seleccionado(s)
                     </button>
+                @endif
+            </div>
+
+            <div style="margin-bottom: 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 6px; padding: 10px 14px;">
+                <span style="font-weight:bold; font-size:13px; color:#555; white-space:nowrap;">Reporte PDF:</span>
+                <input wire:model.live.debounce.300ms="filtroTitulo" type="text" placeholder="Filtrar por t&iacute;tulo (ej: CIA-2026)..." style="padding:6px 10px; border:1px solid #ccc; border-radius:5px; font-size:13px; min-width:220px; flex:1;">
+                <button type="button" wire:click="reportarPDF" class="cm-btn cm-btn-primary" style="font-size:12px;white-space:nowrap;">&darr; PDF por T&iacute;tulo</button>
+                @if(count($selectedProjects) > 0)
+                    <button type="button" wire:click="reportarSeleccionados" class="cm-btn" style="font-size:12px;white-space:nowrap;background:#6f42c1;border-color:#5a32a3;color:#fff;">&darr; PDF Seleccionados</button>
                 @endif
             </div>
 
@@ -238,4 +247,10 @@
             </div>
         </div>
     @endif
+
+    <script>
+        window.addEventListener('descargar-pdf', event => {
+            window.open(event.detail.url, '_blank');
+        });
+    </script>
 </div>

@@ -156,10 +156,10 @@
                     style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px;">
                     <thead>
                         <tr style="background-color: #a5d6a7; color: #000; text-align: center; font-weight: bold;">
-                            <th width="30%">Proyecto</th>
-                            <th width="20%">Comunidad</th>
+                            <th width="30%">Título</th>
+                            <th width="25%">Comunidad / equipo</th>
                             <th width="20%">Validación</th>
-                            <th width="30%">Acción</th>
+                            <th width="25%">Acción</th>
                         </tr>
                     </thead>
                     <tbody class="Texto">
@@ -180,7 +180,12 @@
                                     @endif
                                 </td>
                                 <td style="padding: 5px;">
-                                    <span style="font-size: 10px;">{{ $p->comunidad->nombre ?? 'N/A' }}</span>
+                                    @if ($p->equipo_resumen !== '—')
+                                        <span style="font-size: 11px; font-weight: bold; color: #8b0000;">Equipo: {{ $p->equipo_resumen }}</span><br>
+                                    @endif
+                                    @if (($p->comunidad->nombre ?? '') !== '' && $p->comunidad->nombre !== 'N/A')
+                                        <span style="font-size: 10px;">Comunidad: {{ $p->comunidad->nombre }}</span>
+                                    @endif
                                 </td>
                                 <td align="center" style="padding: 5px;">
                                     @if ($p->estado_validacion === 'pendiente')
@@ -317,12 +322,6 @@
                                                 class="pgm-btn-action pgm-btn-action--edit">
                                                 Actualizar
                                             </button>
-                                        @endif
-                                        @if ($p->estado_validacion === 'aprobado')
-                                            <a href="{{ route('proyectos.gestion.solvencia', $p->id) }}"
-                                                class="pgm-btn-action pgm-btn-action--approve">
-                                                Solvencia
-                                            </a>
                                         @endif
                                     </div>
                                 </td>
