@@ -630,7 +630,7 @@ function agregarIntegrante() {
 
     var exists = miembros.some(function(m) { return m.cedula === cedula; });
     if (exists) {
-        alert('Ese estudiante ya está en el grupo.');
+        showNotifyToast('warning', 'Ese estudiante ya est\u00e1 en el grupo.');
         return;
     }
 
@@ -920,20 +920,20 @@ document.getElementById('grupoForm').addEventListener('submit', function(e) {
 
     if (miembros.length === 0) {
         e.preventDefault();
-        alert('Debe agregar al menos un integrante al grupo.');
+        showNotifyToast('warning', 'Debe agregar al menos un integrante al grupo.');
         return;
     }
 
     var tieneLider = miembros.some(function(m) { return m.rol_id === 1; });
     if (!tieneLider) {
         e.preventDefault();
-        alert('Debe haber al menos un integrante con rol de Líder.');
+        showNotifyToast('warning', 'Debe haber al menos un integrante con rol de L\u00edder.');
         return;
     }
 
     if (!comunidadId.value) {
         e.preventDefault();
-        alert('Debe seleccionar una comunidad.');
+        showNotifyToast('warning', 'Debe seleccionar una comunidad.');
         return;
     }
 

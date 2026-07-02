@@ -304,7 +304,7 @@
                                     <div class="pgm-actions">
                                         @if (!empty($canValidate) && in_array($p->estado_validacion, ['pendiente', 'completado']))
                                             <button type="button" wire:click="approve({{ $p->id }})"
-                                                onclick="return confirm('¿Aprueba este proyecto?')"
+                                                wire:confirm="&iquest;Aprueba este proyecto?"
                                                 class="pgm-btn-action pgm-btn-action--approve">
                                                 Aprobar
                                             </button>
@@ -381,8 +381,8 @@
             @endif
             <div style="text-align: center; margin-top: 20px; border-top: 1px solid #CCC; padding-top: 15px;">
                 @if ($selectedProject->estado_validacion === 'En proceso')
-                    <button type="button" wire:click="approveFromDetails({{ $selectedProject->id }})"
-                        onclick="return confirm('¿Aprueba este proyecto?')"
+                    <button type="button" x-data="{}"
+                        @click="let w=$wire; mostrarModalAccion({icon:'\u2705',title:'Aprobar proyecto',message:'\u00bfAprueba este proyecto?',confirmText:'S\u00ed, aprobar',confirmClass:'cm-btn-success',onConfirm:function(){ w.approveFromDetails({{ $selectedProject->id }}) }})"
                         class="pgm-btn-action pgm-btn-action--approve">
                         Aprobar
                     </button>
@@ -714,7 +714,8 @@
                                                 <span style="display:inline-flex; align-items:center; background:#8b0000; color:#fff; padding:1px 4px 1px 8px; border-radius:10px; font-size:9px; margin:1px;">
                                                     {{ $rol['nombre'] }}
                                                     @if(!$editandoEste)
-                                                    <button type="button" wire:click="quitarRolDeInvolucrado({{ $pivotId }}, {{ $rol['id'] }})" onclick="return confirm('¿Quitar este rol del involucrado?')"
+                                                    <button type="button" x-data="{}"
+                                                        @click="let w=$wire; mostrarModalAccion({icon:'\u26A0\uFE0F',title:'Quitar rol',message:'\u00bfQuitar este rol del involucrado?',confirmText:'S\u00ed, quitar',confirmClass:'cm-btn-danger',onConfirm:function(){ w.quitarRolDeInvolucrado({{ $pivotId }}, {{ $rol['id'] }}) }})"
                                                         style="background:none; border:none; color:#ffcccc; cursor:pointer; font-size:11px; padding:0 2px; margin-left:3px; line-height:1;"
                                                         title="Quitar rol">&times;</button>
                                                     @endif
@@ -733,7 +734,8 @@
                                                 style="background:#8b0000; color:#fff; border:none; border-radius:3px; padding:2px 8px; font-size:9px; cursor:pointer;">
                                                 + Roles
                                             </button>
-                                            <button type="button" wire:click="quitarInvolucrado({{ $inv['id'] }})" onclick="return confirm('¿Eliminar este involucrado del proyecto?')"
+                                            <button type="button" x-data="{}"
+                                                @click="let w=$wire; mostrarModalAccion({icon:'\u26A0\uFE0F',title:'Eliminar involucrado',message:'\u00bfEliminar este involucrado del proyecto?',confirmText:'S\u00ed, eliminar',confirmClass:'cm-btn-danger',onConfirm:function(){ w.quitarInvolucrado({{ $inv['id'] }}) }})"
                                                 style="background:#dc3545; color:#fff; border:none; border-radius:3px; padding:2px 8px; font-size:9px; cursor:pointer;">
                                                 Quitar
                                             </button>

@@ -449,7 +449,7 @@
                 @endif
                 <button type="submit" class="pgm-btn-save">{{ $modoActualizacion ? 'Subir documentos' : 'Guardar cambios' }}</button>
                 @if (!empty($canValidate) && $proyecto->estado_validacion === 'completado')
-                    <button type="button" class="cm-btn cm-btn-success cm-btn-sm" style="margin-left:10px;" onclick="if(confirm('¿Aprueba este proyecto?'))window.location='{{ route('proyectos.gestion.approve', $proyecto->id) }}'">Aprobar</button>
+                    <button type="button" class="cm-btn cm-btn-success cm-btn-sm" style="margin-left:10px;" onclick="mostrarModalAccion({icon:'\u2705',title:'Aprobar proyecto',message:'\u00bfAprueba este proyecto?',confirmText:'S\u00ed, aprobar',confirmClass:'cm-btn-success',onConfirm:function(){window.location='{{ route('proyectos.gestion.approve', $proyecto->id) }}'}})">Aprobar</button>
                     <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" style="margin-left:5px;" onclick="abrirRechazar({{ $proyecto->id }})">Rechazar</button>
                 @endif
             </div>
@@ -643,7 +643,7 @@ function toggleFormNuevoRolModal() {
 
 function crearRolModal() {
     const nombre = document.getElementById('inv-nuevo-rol-nombre').value.trim();
-    if (!nombre) { alert('Escriba un nombre para el rol'); return; }
+    if (!nombre) { showNotifyToast('warning', 'Escriba un nombre para el rol'); return; }
     fetch('{{ route("proyectos.gestion.involucrados.roles.crear") }}', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'},
@@ -666,7 +666,7 @@ function agregarInvolucradoAlProyecto(proyectoId) {
     const apellido = document.getElementById('inv-apellido').value.trim();
 
     if (!cedula || cedula.length < 3) {
-        alert('Ingrese una c&eacute;dula v&aacute;lida');
+        showNotifyToast('warning', 'Ingrese una c\u00e9dula v\u00e1lida');
         return;
     }
 
@@ -688,7 +688,7 @@ function agregarInvolucradoAlProyecto(proyectoId) {
     }).then(r => r.json()).then(() => {
         location.reload();
     }).catch(() => {
-        alert('Error al agregar el involucrado');
+        showNotifyToast('error', 'Error al agregar el involucrado');
         btn.disabled = false;
         btn.textContent = 'Agregar';
     });
@@ -696,11 +696,18 @@ function agregarInvolucradoAlProyecto(proyectoId) {
 
 // ─── Quitar involucrado ──────────────────────────────────────────
 function quitarInvolucrado(proyectoId, invId) {
-    if (!confirm('¿Eliminar este involucrado del proyecto?')) return;
-    fetch('{{ route("proyectos.gestion.involucrados.quitar", ["PLACEHOLDER_PROY", "PLACEHOLDER_INV"]) }}'.replace('PLACEHOLDER_PROY', proyectoId).replace('PLACEHOLDER_INV', invId), {
-        method: 'DELETE',
-        headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'}
-    }).then(r => r.json()).then(() => location.reload());
+    mostrarModalAccion({
+        icon:'\u26A0\uFE0F',title:'Eliminar involucrado',
+        message:'\u00bfEliminar este involucrado del proyecto?',
+        confirmText:'S\u00ed, eliminar',
+        confirmClass:'cm-btn-danger',
+        onConfirm:function(){
+            fetch('{{ route("proyectos.gestion.involucrados.quitar", ["PLACEHOLDER_PROY", "PLACEHOLDER_INV"]) }}'.replace('PLACEHOLDER_PROY', proyectoId).replace('PLACEHOLDER_INV', invId), {
+                method: 'DELETE',
+                headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'}
+            }).then(r => r.json()).then(() => location.reload());
+        }
+    });
 }
 
 // ─── Modal roles ─────────────────────────────────────────────────
@@ -766,26 +773,33 @@ function asignarRolConNombre(proyectoId, invId, rolId, rolNombre) {
             document.getElementById('rol-asignado-msg').style.color = '#198754';
         }
     }).catch(() => {
-        alert('Error al asignar rol');
+        showNotifyToast('error', 'Error al asignar rol');
     });
 }
 
 function quitarRol(proyectoId, pivotId, rolId, invId) {
-    if (!confirm('Quitar este rol del involucrado?')) return;
-    fetch('{{ route("proyectos.gestion.involucrados.roles.quitar", ["PLACEHOLDER_PROY", "PLACEHOLDER_PIVOT", "PLACEHOLDER_ROL"]) }}'.replace('PLACEHOLDER_PROY', proyectoId).replace('PLACEHOLDER_PIVOT', pivotId).replace('PLACEHOLDER_ROL', rolId), {
-        method: 'DELETE',
-        headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'}
-    }).then(r => r.json()).then(data => {
-        if (data.success) {
-            var badge = document.getElementById('rol-badge-' + invId + '-' + rolId);
-            if (badge) badge.remove();
-            var container = document.querySelector('#inv-roles-' + invId + ' .inv-roles');
-            if (container && container.children.length === 0) {
-                container.innerHTML = '<span id="inv-no-roles-' + invId + '" style="color:#999;font-size:11px;">Sin roles</span>';
-            }
+    mostrarModalAccion({
+        icon:'\u26A0\uFE0F',title:'Quitar rol',
+        message:'\u00bfQuitar este rol del involucrado?',
+        confirmText:'S\u00ed, quitar',
+        confirmClass:'cm-btn-danger',
+        onConfirm:function(){
+            fetch('{{ route("proyectos.gestion.involucrados.roles.quitar", ["PLACEHOLDER_PROY", "PLACEHOLDER_PIVOT", "PLACEHOLDER_ROL"]) }}'.replace('PLACEHOLDER_PROY', proyectoId).replace('PLACEHOLDER_PIVOT', pivotId).replace('PLACEHOLDER_ROL', rolId), {
+                method: 'DELETE',
+                headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'}
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    var badge = document.getElementById('rol-badge-' + invId + '-' + rolId);
+                    if (badge) badge.remove();
+                    var container = document.querySelector('#inv-roles-' + invId + ' .inv-roles');
+                    if (container && container.children.length === 0) {
+                        container.innerHTML = '<span id="inv-no-roles-' + invId + '" style="color:#999;font-size:11px;">Sin roles</span>';
+                    }
+                }
+            }).catch(() => {
+                showNotifyToast('error', 'Error al quitar rol');
+            });
         }
-    }).catch(() => {
-        alert('Error al quitar rol');
     });
 }
 
@@ -910,7 +924,7 @@ function toggleFormNuevoRol() {
 
 function crearRol() {
     const nombre = document.getElementById('nuevo-rol-nombre').value.trim();
-    if (!nombre) { alert('Escriba un nombre para el rol'); return; }
+    if (!nombre) { showNotifyToast('warning', 'Escriba un nombre para el rol'); return; }
     fetch('{{ route("proyectos.gestion.involucrados.roles.crear") }}', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'},
