@@ -711,7 +711,7 @@
                                     <td style="padding: 4px 8px;">
                                         @if(!empty($inv['roles']))
                                             @foreach($inv['roles'] as $rol)
-                                                <span style="display:inline-flex; align-items:center; background:#8b0000; color:#fff; padding:1px 4px 1px 8px; border-radius:10px; font-size:9px; margin:1px;">
+                                                <span style="background:#8b0000; color:#fff; padding:1px 6px; font-size:10px; margin:1px; white-space:nowrap;">
                                                     {{ $rol['nombre'] }}
                                                     @if(!$editandoEste)
                                                     <button type="button" x-data="{}"

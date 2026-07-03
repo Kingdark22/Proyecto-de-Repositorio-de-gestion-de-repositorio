@@ -554,12 +554,7 @@ class GrupoProyectoManager extends Component
             return;
         }
 
-        $nombresMiembros = collect($this->miembrosSeleccionados)
-            ->map(fn($m) => trim($m['nombre'] . ' ' . $m['apellido']))
-            ->filter()
-            ->implode(', ');
-
-        session()->flash('message', 'Grupo registrado. Clave: ' . $clave . '. Los integrantes (' . $nombresMiembros . ') recibirán notificación al recargar su pantalla.');
+        session()->flash('message', 'Grupo registrado correctamente. Los integrantes recibirán notificación al recargar su pantalla.');
         $this->viewMode = 'list';
         $this->resetFormulario();
         $this->restablecerFiltros();

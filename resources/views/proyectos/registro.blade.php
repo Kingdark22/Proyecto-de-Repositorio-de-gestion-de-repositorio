@@ -204,7 +204,7 @@
                                     <div class="inv-roles" style="display:flex;flex-wrap:wrap;gap:3px;">
                                         @if(!empty($inv['roles']))
                                             @foreach($inv['roles'] as $rol)
-                                                <span id="rol-badge-{{ $inv['id'] }}-{{ $rol['id'] }}" style="display:inline-flex;align-items:center;background:#8b0000;color:#fff;padding:1px 8px;border-radius:10px;font-size:10px;">
+                                                <span id="rol-badge-{{ $inv['id'] }}-{{ $rol['id'] }}" style="background:#8b0000;color:#fff;padding:1px 6px;font-size:10px;white-space:nowrap;">
                                                     {{ $rol['nombre'] }}
                                                     <button type="button" onclick="quitarRol({{ $proyectoId }}, {{ $inv['pivot_id'] }}, {{ $rol['id'] }}, {{ $inv['id'] }})" style="background:none;border:none;color:#ffcccc;cursor:pointer;font-size:12px;padding:0 0 0 3px;line-height:1;">&times;</button>
                                                 </span>
@@ -587,7 +587,7 @@ function renderizarRolesSeleccionados() {
         return;
     }
     container.innerHTML = ids.map(id =>
-        '<span style="display:inline-flex;align-items:center;background:#8b0000;color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;">' +
+        '<span style="background:#8b0000;color:#fff;padding:1px 6px;font-size:10px;white-space:nowrap;">' +
             invRolesPendientes[id] +
             '<button type="button" onclick="quitarRolSeleccionado(' + id + ')" style="background:none;border:none;color:#ffcccc;cursor:pointer;font-size:12px;padding:0 0 0 3px;line-height:1;">&times;</button>' +
         '</span>'
@@ -765,7 +765,7 @@ function asignarRolConNombre(proyectoId, invId, rolId, rolNombre) {
             var container = document.querySelector('#inv-roles-' + invId + ' .inv-roles');
             var badge = document.createElement('span');
             badge.id = 'rol-badge-' + invId + '-' + rolId;
-            badge.style.cssText = 'display:inline-flex;align-items:center;background:#8b0000;color:#fff;padding:1px 8px;border-radius:10px;font-size:10px;';
+            badge.style.cssText = 'background:#8b0000;color:#fff;padding:1px 6px;font-size:10px;white-space:nowrap;';
             badge.innerHTML = rolNombre +
                 '<button type="button" onclick="quitarRol(' + proyectoId + ',' + data.pivot_id + ',' + rolId + ',' + invId + ')" style="background:none;border:none;color:#ffcccc;cursor:pointer;font-size:12px;padding:0 0 0 3px;line-height:1;">&times;</button>';
             container.appendChild(badge);
