@@ -488,8 +488,11 @@
                                         @foreach ($equipos_disp ?? [] as $eq)
                                             <option value="{{ $eq->identificador ?: $eq->id }}">
                                                 {{ $eq->nombre }}
-                                                @if (!empty($eq->lapso_nombre))
-                                                    - {{ $eq->lapso_nombre }}
+                                                @if (!empty($eq->pro_siglas))
+                                                    [{{ $eq->pro_siglas }}]
+                                                @endif
+                                                @if (!empty($eq->lap_nombre))
+                                                    - {{ $eq->lap_nombre }}
                                                 @endif
                                                 ({{ $eq->integrantes ?? '?' }} int.)
                                             </option>

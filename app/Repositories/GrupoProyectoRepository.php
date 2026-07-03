@@ -189,6 +189,18 @@ class GrupoProyectoRepository
         )->where('estado_logico', true)->get();
     }
 
+    public function contarPorCreadorEnLapso(string $creadorCedula, int $lapCodigo): int
+    {
+        $cedula = trim($creadorCedula);
+        if ($cedula === '') {
+            return 0;
+        }
+        return GrupoProyectoModulo::where('grp_creador_cedula', $cedula)
+            ->whereRaw("CAST(grp_contexto AS jsonb)->>'lap_codigo' = ?", [(string) $lapCodigo])
+            ->where('estado_logico', true)
+            ->count();
+    }
+
     /**
      * Verifica si un nombre de grupo está disponible. Si se proporciona $lapCodigo,
      * verifica dentro de ese lapso; si es null, verifica globalmente.
