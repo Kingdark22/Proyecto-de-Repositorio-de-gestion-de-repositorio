@@ -78,9 +78,7 @@ class NotificacionService
                 $gruposEstudiante = $this->grupoRepo->findByMiembroCedula($cedula);
 
                 if ($gruposEstudiante->isNotEmpty()) {
-                    $clavesGrupos = $gruposEstudiante->pluck('grp_codigo')
-                        ->map(fn($id) => GrupoProyectoService::PREFIJO . ':' . $id)
-                        ->toArray();
+                    $clavesGrupos = $gruposEstudiante->map(fn($g) => $g->grp_identificador ?: (GrupoProyectoService::PREFIJO . ':' . $g->grp_codigo))->toArray();
 
                     $proyectosExistentes = $this->proyectoRepo->conEquipoRefNotNull()
                         ->whereIn('pry_direccion_logica', $clavesGrupos)
@@ -88,7 +86,7 @@ class NotificacionService
                         ->toArray();
 
                     foreach ($gruposEstudiante as $g) {
-                        $clave = GrupoProyectoService::PREFIJO . ':' . $g->grp_codigo;
+                        $clave = $g->grp_identificador ?: (GrupoProyectoService::PREFIJO . ':' . $g->grp_codigo);
                         if (!in_array($clave, $proyectosExistentes, true)) {
                             $notificaciones[] = [
                                 'type' => 'info',

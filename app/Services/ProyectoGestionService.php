@@ -279,7 +279,7 @@ class ProyectoGestionService
 
     protected function asignarLideresGrupo(string $clave, array $leaders): void
     {
-        if (!str_starts_with($clave, GrupoProyectoService::PREFIJO . ':')) {
+        if ($clave === '') {
             return;
         }
         try {
@@ -1270,20 +1270,18 @@ class ProyectoGestionService
         $traNombre = '';
 
         if ($partes) {
-            if (str_starts_with($clave, GrupoProyectoService::PREFIJO.':')) {
-                $partesGrp = $gruposSvc->parsearClave($clave);
-                if (!empty($partesGrp['grp_codigo'])) {
-                    try {
-                        $grupo = \App\Models\GrupoProyectoModulo::find((int) $partesGrp['grp_codigo']);
-                        if ($grupo && $grupo->grp_contexto) {
-                            $lapNombre = $grupo->grp_contexto['lap_nombre'] ?? '';
-                            $secNombre = $grupo->grp_contexto['sec_nombre'] ?? '';
-                            $proSiglas = $grupo->grp_contexto['pro_siglas'] ?? '';
-                            $proNombre = $grupo->grp_contexto['pro_nombre'] ?? '';
-                            $traNombre = $grupo->grp_contexto['tra_nombre'] ?? '';
-                        }
-                    } catch (\Throwable) {
+            $grupo = $clave !== '' ? $gruposSvc->obtenerPorClave($clave) : null;
+            if ($grupo && !empty($grupo->grp_codigo)) {
+                try {
+                    $modelo = \App\Models\GrupoProyectoModulo::find($grupo->grp_codigo);
+                    if ($modelo && $modelo->grp_contexto) {
+                        $lapNombre = $modelo->grp_contexto['lap_nombre'] ?? '';
+                        $secNombre = $modelo->grp_contexto['sec_nombre'] ?? '';
+                        $proSiglas = $modelo->grp_contexto['pro_siglas'] ?? '';
+                        $proNombre = $modelo->grp_contexto['pro_nombre'] ?? '';
+                        $traNombre = $modelo->grp_contexto['tra_nombre'] ?? '';
                     }
+                } catch (\Throwable) {
                 }
             }
             if (!$proSiglas) {

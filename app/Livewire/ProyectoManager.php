@@ -841,7 +841,7 @@ class ProyectoManager extends Component
 
         // Reconstruir estado de grupo si el equipo seleccionado es un grupo de proyecto
         $clave = $this->equipo_seccion_clave ?? '';
-        if (str_starts_with($clave, GrupoProyectoService::PREFIJO . ':')) {
+        if ($clave !== '') {
             $grupo = $grupos->obtenerPorClave($clave);
             if ($grupo) {
                 $this->esGrupoRegistrado = true;

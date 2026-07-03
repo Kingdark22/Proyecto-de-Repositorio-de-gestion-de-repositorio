@@ -150,7 +150,6 @@
                         <th>Secci&oacute;n</th>
                         <th>Lapso</th>
                         <th>Integrantes</th>
-                        <th>Clave</th>
                         <th>Proyecto</th>
                         <th>Acciones</th>
                     </tr>
@@ -170,9 +169,8 @@
                                    style="cursor:pointer; font-weight:bold; color:#333;"
                                    data-grp-codigo="{{ $g->grp_codigo }}"
                                    data-grp-nombre="{{ $g->nombre }}"
-                                   data-grp-identificador="{{ $g->identificador ?? '' }}"
-                                   data-grp-clave="{{ $g->clave }}"
-                                   data-grp-lapso="{{ $g->lap_nombre ?: 'Lapso #'.$g->lap_codigo }}"
+                                    data-grp-identificador="{{ $g->identificador ?? '' }}"
+                                    data-grp-lapso="{{ $g->lap_nombre ?: 'Lapso #'.$g->lap_codigo }}"
                                    data-grp-pnf="{{ $g->pro_siglas ?: ($g->pro_nombre ?: '—') }}"
                                    data-grp-seccion="{{ $g->sec_nombre ?: 'Sec. '.$g->sec_codigo }}"
                                    data-grp-miembros='{{ json_encode($g->miembros ?? []) }}'
@@ -186,7 +184,6 @@
                             <td>{{ $g->sec_nombre ?: 'Sec. ' . $g->sec_codigo }}</td>
                             <td>{{ $g->lap_nombre ?: '—' }}</td>
                             <td align="center">{{ $g->integrantes }}</td>
-                            <td><code style="font-size:9px;">{{ $g->clave }}</code></td>
                             <td align="center">
                                 @if($tieneProyecto)
                                     <span style="color: {{ $colorMap[$estadoVal] ?? '#d4a017' }}; font-weight: bold; font-size: 10px;">{{ $labelMap[$estadoVal] ?? 'En proceso' }}</span>
@@ -247,7 +244,6 @@
             <table width="100%" style="font-size:12px;border-collapse:collapse;">
                 <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;width:35%;">Nombre:</td><td id="infoNombre" style="padding:6px 8px;"></td></tr>
                 <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">C&oacute;digo:</td><td id="infoIdentificador" style="padding:6px 8px;"></td></tr>
-                <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Clave:</td><td id="infoClave" style="padding:6px 8px;"></td></tr>
                 <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Lapso:</td><td id="infoLapso" style="padding:6px 8px;"></td></tr>
                 <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">PNF:</td><td id="infoPnf" style="padding:6px 8px;"></td></tr>
                 <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Secci&oacute;n:</td><td id="infoSeccion" style="padding:6px 8px;"></td></tr>
@@ -271,7 +267,6 @@
 function abrirInfoGrupo(el) {
     var nombre = el.getAttribute('data-grp-nombre');
     var identificador = el.getAttribute('data-grp-identificador');
-    var clave = el.getAttribute('data-grp-clave');
     var lapso = el.getAttribute('data-grp-lapso');
     var pnf = el.getAttribute('data-grp-pnf');
     var seccion = el.getAttribute('data-grp-seccion');
@@ -281,7 +276,6 @@ function abrirInfoGrupo(el) {
 
     document.getElementById('infoNombre').textContent = nombre;
     document.getElementById('infoIdentificador').innerHTML = identificador ? '<code style="color:#8b0000;">' + identificador + '</code>' : '—';
-    document.getElementById('infoClave').innerHTML = '<code>' + clave + '</code>';
     document.getElementById('infoLapso').textContent = lapso;
     document.getElementById('infoPnf').textContent = pnf;
     document.getElementById('infoSeccion').textContent = seccion;

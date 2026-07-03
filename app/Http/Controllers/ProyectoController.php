@@ -125,7 +125,7 @@ class ProyectoController extends Controller
         // Miembros del grupo
         $miembrosGrupo = [];
         $clave = $datosForm['equipo_seccion_clave'] ?? '';
-        if (str_starts_with($clave, 'EQGRP:') || !str_starts_with($clave, 'EQSEC:')) {
+        if ($clave !== '') {
             $this->cargarMiembrosGrupo($clave, $miembrosGrupo);
         }
 

@@ -92,6 +92,14 @@ class GrupoProyectoService
             ];
         }
 
+        // Try as group identifier
+        $row = GrupoProyectoModulo::where('grp_identificador', $clave)
+            ->where('estado_logico', true)
+            ->first(['grp_codigo']);
+        if ($row) {
+            return ['tipo' => self::PREFIJO, 'grp_codigo' => (int) $row->grp_codigo];
+        }
+
         return null;
     }
 

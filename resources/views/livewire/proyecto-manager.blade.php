@@ -486,8 +486,8 @@
                                     <select wire:model.live="equipo_seccion_clave" style="width: 100%;">
                                         <option value="">Seleccione grupo de proyecto…</option>
                                         @foreach ($equipos_disp ?? [] as $eq)
-                                            <option value="{{ $eq->clave }}">
-                                                {{ $eq->nombre ?? $eq->clave }}
+                                            <option value="{{ $eq->identificador ?: $eq->id }}">
+                                                {{ $eq->nombre }}
                                                 @if (!empty($eq->lapso_nombre))
                                                     - {{ $eq->lapso_nombre }}
                                                 @endif
