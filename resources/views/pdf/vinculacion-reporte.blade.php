@@ -14,9 +14,19 @@
         tr:nth-child(even) td { background: #f9f9f9; }
         .comunidad { font-size: 8pt; color: #555; }
         .footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 7pt; color: #aaa; padding: 8px; border-top: 1px solid #ddd; }
+        .watermark {
+            position: fixed;
+            top: 40%;
+            left: 20%;
+            width: 60%;
+            opacity: 0.1;
+            z-index: -1;
+            transform: rotate(-30deg);
+        }
     </style>
 </head>
 <body>
+    <img src="{{ public_path('imagenes/uptp-logo.png') }}" class="watermark">
     <h1>REPÚBLICA BOLIVARIANA DE VENEZUELA</h1>
     <h2>Reporte de Vinculación: {{ $titulo }}</h2>
     <div class="fecha">Generado: {{ $fecha }}</div>

@@ -14,6 +14,8 @@ class ProyectoDocumento extends RepositorioModel
         'comp_codigo',
         'pd_archivo_path',
         'pd_orden',
+        'pd_estado',
+        'pd_observacion',
     ];
 
     public function proyecto(): BelongsTo

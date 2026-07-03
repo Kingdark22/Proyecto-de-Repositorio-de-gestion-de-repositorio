@@ -106,6 +106,11 @@ class NotificacionService
 
             // 2. Proyectos rechazados que necesitan correcciones
             $proyectosRechazados = $this->proyectoRepo->rechazados();
+            
+            // 2.5 Documentos rechazados que necesitan correcciones
+            $documentosRechazados = \App\Models\ProyectoDocumento::where('pd_estado', 2)
+                ->whereNotNull('pd_observacion')
+                ->get();
 
             // Precargar todos los grupos en UNA consulta para evitar N+1
             $gruposCache = $this->precargarGruposProyecto(
@@ -131,6 +136,19 @@ class NotificacionService
                         'type' => 'warning',
                         'title' => 'Proyecto rechazado',
                         'mensaje' => 'Revisión requerida para "' . $p->titulo . '". Motivo: ' . ($p->motivo_rechazo ?: 'Revisar detalles.'),
+                        'url' => route('proyectos.gestion', ['edit' => $p->id]),
+                        'proyecto_id' => $p->id,
+                    ];
+                }
+            }
+
+            foreach ($documentosRechazados as $doc) {
+                $p = $doc->proyecto;
+                if ($p && $this->esMiembroDelProyecto($p, $cedula, $gruposSvc, $gruposCache)) {
+                    $notificaciones[] = [
+                        'type' => 'danger',
+                        'title' => 'Documento rechazado',
+                        'mensaje' => 'El documento "' . ($doc->componente->nombre ?? 'Desconocido') . '" del proyecto "' . $p->titulo . '" fue rechazado. Motivo: ' . $doc->pd_observacion,
                         'url' => route('proyectos.gestion', ['edit' => $p->id]),
                         'proyecto_id' => $p->id,
                     ];

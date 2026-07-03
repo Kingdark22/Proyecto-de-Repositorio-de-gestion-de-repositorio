@@ -318,7 +318,7 @@
             {{-- == DOCUMENTOS POR COMPONENTE == --}}
             @php
                 $componentesDisp = $catalogosForm['componentes_disp'] ?? collect();
-                $docsExistentes = $datosForm['documentos'] ?? [];
+                $docsExistentes = $datosForm['archivos_actuales'] ?? [];
                 $tieneDocumentosSubidos = !empty($docsExistentes);
             @endphp
 
@@ -356,15 +356,37 @@
                                 @else
                                     {{-- Para profesor: mostrar mensaje según si hay documento o no --}}
                                     @if($docActual)
-                                        <span style="font-size:11px;color:#666;">Documento subido por el estudiante</span>
+                                        @php
+                                            $estado = $docActual['estado'] ?? 0;
+                                            $obs = $docActual['observacion'] ?? '';
+                                        @endphp
+                                        <div style="font-size:11px;">
+                                            @if($estado == 1)
+                                                <span style="color: #28a745; font-weight: bold;">✓ Aceptado</span>
+                                            @elseif($estado == 2)
+                                                <span style="color: #dc3545; font-weight: bold;">✗ Rechazado</span>
+                                                @if($obs)
+                                                    <div style="font-size:10px; color:#666; margin-top:2px;"><i>Motivo:</i> {{ $obs }}</div>
+                                                @endif
+                                            @else
+                                                <span style="color: #666;">Pendiente de revisión</span>
+                                            @endif
+                                        </div>
                                     @else
-                                        <span style="font-size:11px;color:#999;">Pendiente de carga por el estudiante</span>
+                                        <span style="font-size:11px;color:#999;">Pendiente de carga</span>
                                     @endif
                                 @endif
                             </td>
                             <td width="30%">
                                 @if($docActual)
-                                    <a href="{{ route('documentos.serve', ['path' => $docActual['path']]) }}" target="_blank" style="color:#0000EE;font-size:11px;font-weight:bold;">[VER {{ $comp->nombre }}]</a>
+                                    <a href="{{ route('documentos.serve', ['path' => $docActual['path']]) }}" target="_blank" class="simple-link">Ver {{ $comp->nombre }}</a>
+                                    
+                                    @if($esProfesor && ($docActual['estado'] ?? 0) == 0)
+                                        <div style="margin-top:5px;display:flex;gap:5px;">
+                                            <button type="button" onclick="actualizarDoc({{ $docActual['id'] ?? 0 }}, 1)" class="cm-btn cm-btn-success cm-btn-sm" style="padding:2px 6px;">Aceptar</button>
+                                            <button type="button" onclick="abrirModalRechazo({{ $docActual['id'] ?? 0 }})" class="cm-btn cm-btn-danger cm-btn-sm" style="padding:2px 6px;">Rechazar</button>
+                                        </div>
+                                    @endif
                                 @else
                                     <span style="color:#999;font-size:10px;">Sin documento</span>
                                 @endif
@@ -383,6 +405,25 @@
             @endif
 
 
+
+            {{-- MODAL RECHAZO DOCUMENTO --}}
+            <div id="modal-rechazo-doc" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarModalRechazo()">
+                <div style="background:#fff;border-radius:10px;padding:24px;max-width:480px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #dc3545;">
+                        <h3 style="margin:0;font-size:16px;font-weight:bold;color:#333;">Rechazar Documento</h3>
+                    </div>
+                    <input type="hidden" id="modal-rechazo-doc-id" value="">
+                    <div style="margin-bottom:12px;">
+                        <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Motivo del rechazo: <span style="color:red;">*</span></label>
+                        <textarea id="modal-rechazo-doc-obs" rows="4" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:13px;" placeholder="Explique por qué el documento no es aceptable..."></textarea>
+                    </div>
+                    <div id="modal-rechazo-doc-error" style="color:#dc3545;font-size:11px;margin-bottom:8px;display:none;"></div>
+                    <div style="margin-top:20px;text-align:center;display:flex;gap:10px;justify-content:center;">
+                        <button type="button" onclick="confirmarRechazoDoc()" class="cm-btn cm-btn-danger" style="padding:8px 20px;font-size:13px;">Confirmar Rechazo</button>
+                        <button type="button" onclick="cerrarModalRechazo()" class="cm-btn cm-btn-secondary" style="padding:8px 20px;font-size:13px;">Cancelar</button>
+                    </div>
+                </div>
+            </div>
 
             {{-- MODAL CREAR CATÁLOGO --}}
             <div id="modal-catalogo" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarModalCatalogo()">
@@ -404,6 +445,12 @@
                     <div style="margin-bottom:12px;">
                         <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Descripci&oacute;n:</label>
                         <textarea id="modal-catalogo-descripcion" rows="2" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></textarea>
+                    </div>
+
+                    <div id="modal-catalogo-mencion" style="display:none;margin-bottom:12px;">
+                        <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">
+                            <input type="checkbox" id="modal-catalogo-mencion-check" style="margin-right:6px;"> Mención Honorífica
+                        </label>
                     </div>
 
                     <div id="modal-catalogo-error" style="color:#dc3545;font-size:11px;margin-bottom:8px;display:none;"></div>
@@ -479,7 +526,39 @@
     function cerrarRechazar() {
         document.getElementById('rejectModal').style.display = 'none';
     }
-    </script>
+function actualizarDoc(id, estado, observacion = '') {
+    fetch('/proyectos/documentos/' + id + '/estado', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        body: JSON.stringify({ estado, observacion })
+    }).then(r => r.json()).then(data => {
+        if (data.success) location.reload();
+        else alert(data.message);
+    });
+}
+
+function abrirModalRechazo(id) {
+    document.getElementById('modal-rechazo-doc-id').value = id;
+    document.getElementById('modal-rechazo-doc-obs').value = '';
+    document.getElementById('modal-rechazo-doc-error').style.display = 'none';
+    document.getElementById('modal-rechazo-doc').style.display = 'flex';
+}
+
+function cerrarModalRechazo() {
+    document.getElementById('modal-rechazo-doc').style.display = 'none';
+}
+
+function confirmarRechazoDoc() {
+    const id = document.getElementById('modal-rechazo-doc-id').value;
+    const obs = document.getElementById('modal-rechazo-doc-obs').value.trim();
+    if (!obs) {
+        document.getElementById('modal-rechazo-doc-error').textContent = 'El motivo es obligatorio.';
+        document.getElementById('modal-rechazo-doc-error').style.display = 'block';
+        return;
+    }
+    actualizarDoc(id, 2, obs);
+}
+</script>
 @push('scripts')
 <script>
 // ─── Variables globales ───────────────────────────────────────────
@@ -846,8 +925,10 @@ function abrirModalCatalogo(tipo) {
     input.dataset.checkUrl = cfg.checkRuta;
     input.dataset.nombreOk = '';
     document.getElementById('modal-catalogo-descripcion').value = '';
-    document.getElementById('modal-catalogo-mencion').style.display = cfg.mostrarMencion ? 'block' : 'none';
-    document.getElementById('modal-catalogo-mencion-check').checked = false;
+    const menc = document.getElementById('modal-catalogo-mencion');
+    if (menc) menc.style.display = cfg.mostrarMencion ? 'block' : 'none';
+    const mencChk = document.getElementById('modal-catalogo-mencion-check');
+    if (mencChk) mencChk.checked = false;
     document.getElementById('modal-catalogo-error').style.display = 'none';
     document.getElementById('nombreStatus').style.display = 'none';
     document.getElementById('modal-catalogo').style.display = 'flex';
@@ -891,8 +972,16 @@ function guardarCatalogo() {
     data[cfg.campoNombre] = nombre;
     const desc = document.getElementById('modal-catalogo-descripcion').value.trim();
     if (desc) data.descripcion = desc;
+
+    // Línea requiere area_de_investigacion y programa_id
+    if (tipo === 'linea') {
+        data.area_de_investigacion = nombre.length > 100 ? nombre.substring(0, 100) : nombre;
+        const progInput = document.querySelector('[name="programa_id_derived"]');
+        if (progInput && progInput.value) data.programa_id = progInput.value;
+    }
     if (cfg.mostrarMencion) {
-        data.mencion_honorifica = document.getElementById('modal-catalogo-mencion-check').checked ? '1' : '0';
+        const mencChk = document.getElementById('modal-catalogo-mencion-check');
+        data.mencion_honorifica = (mencChk && mencChk.checked) ? '1' : '0';
     }
 
     const btn = document.querySelector('#modal-catalogo .cm-btn-success');

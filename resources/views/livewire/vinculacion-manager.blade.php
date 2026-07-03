@@ -39,8 +39,17 @@
                         <td width="160" style="font-weight:bold; vertical-align:middle; color:#555; white-space:nowrap;">T&iacute;tulo de Vinculaci&oacute;n:
                             <span style="color:red;">*</span></td>
                         <td>
-                            <input type="text" wire:model="vinculacionTitulo" style="width: 100%; padding: 8px 10px; border: 1px solid #bbb; border-radius: 5px; font-size: 14px; box-sizing:border-box;" placeholder="Ej: Proyecto de desarrollo comunitario...">
-                            @error('vinculacionTitulo') <div style="font-size:12px;color:#c62828;margin-top:3px;">{{ $message }}</div> @enderror
+                            <select wire:model.live="vinculacionTituloSeleccionado" style="width: 100%; padding: 8px 10px; border: 1px solid #bbb; border-radius: 5px; font-size: 14px; box-sizing:border-box;">
+                                <option value="">Seleccione título...</option>
+                                @foreach($titulosVinculacion as $titulo)
+                                    <option value="{{ $titulo }}">{{ $titulo }}</option>
+                                @endforeach
+                                <option value="nuevo">[ + Crear nuevo título... ]</option>
+                            </select>
+                            @if($vinculacionTituloSeleccionado === 'nuevo')
+                                <input type="text" wire:model="nuevoVinculacionTitulo" style="width: 100%; padding: 8px 10px; border: 1px solid #bbb; border-radius: 5px; font-size: 14px; box-sizing:border-box; margin-top: 8px;" placeholder="Escriba el nuevo título...">
+                            @endif
+                            @error('vinculacionTituloSeleccionado') <div style="font-size:12px;color:#c62828;margin-top:3px;">{{ $message }}</div> @enderror
                         </td>
                     </tr>
                     <tr>

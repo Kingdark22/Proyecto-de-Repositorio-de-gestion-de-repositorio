@@ -202,8 +202,10 @@ class ProyectoGestionService
         $docsExistentes = [];
         foreach ($item->documentos as $doc) {
             $docsExistentes[$doc->comp_codigo] = [
-                'id' => $doc->id,
+                'id' => $doc->pd_codigo,
                 'path' => $doc->pd_archivo_path,
+                'estado' => $doc->pd_estado,
+                'observacion' => $doc->pd_observacion,
             ];
         }
 
@@ -307,6 +309,8 @@ class ProyectoGestionService
                 $this->proyectoRepo->actualizarDocumento($docViejo->pd_codigo, [
                     'pd_archivo_path' => $path,
                     'pd_orden' => 0,
+                    'pd_estado' => 0, // Reset to Pending
+                    'pd_observacion' => null, // Clear old rejection reason
                 ]);
             } else {
                 $this->proyectoRepo->crearDocumento($proyecto->id, $compCodigo, $path);
@@ -1309,6 +1313,7 @@ class ProyectoGestionService
             'trayecto' => $traNombre,
             'seccion' => $secNombre,
             'lapso' => $lapNombre,
+            'creador_cedula' => $proyecto->creador_cedula,
         ];
     }
 
