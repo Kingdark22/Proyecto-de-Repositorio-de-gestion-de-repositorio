@@ -204,7 +204,7 @@
                                     <div class="inv-roles" style="display:flex;flex-wrap:wrap;gap:3px;">
                                         @if(!empty($inv['roles']))
                                             @foreach($inv['roles'] as $rol)
-                                                <span id="rol-badge-{{ $inv['id'] }}-{{ $rol['id'] }}" style="display:inline-flex;align-items:center;background:#8b0000;color:#fff;padding:1px 8px;border-radius:10px;font-size:10px;">
+                                                <span id="rol-badge-{{ $inv['id'] }}-{{ $rol['id'] }}" style="background:#8b0000;color:#fff;padding:1px 6px;font-size:10px;white-space:nowrap;">
                                                     {{ $rol['nombre'] }}
                                                     <button type="button" onclick="quitarRol({{ $proyectoId }}, {{ $inv['pivot_id'] }}, {{ $rol['id'] }}, {{ $inv['id'] }})" style="background:none;border:none;color:#ffcccc;cursor:pointer;font-size:12px;padding:0 0 0 3px;line-height:1;">&times;</button>
                                                 </span>
@@ -318,7 +318,7 @@
             {{-- == DOCUMENTOS POR COMPONENTE == --}}
             @php
                 $componentesDisp = $catalogosForm['componentes_disp'] ?? collect();
-                $docsExistentes = $datosForm['documentos'] ?? [];
+                $docsExistentes = $datosForm['archivos_actuales'] ?? [];
                 $tieneDocumentosSubidos = !empty($docsExistentes);
             @endphp
 
@@ -356,15 +356,37 @@
                                 @else
                                     {{-- Para profesor: mostrar mensaje según si hay documento o no --}}
                                     @if($docActual)
-                                        <span style="font-size:11px;color:#666;">Documento subido por el estudiante</span>
+                                        @php
+                                            $estado = $docActual['estado'] ?? 0;
+                                            $obs = $docActual['observacion'] ?? '';
+                                        @endphp
+                                        <div style="font-size:11px;">
+                                            @if($estado == 1)
+                                                <span style="color: #28a745; font-weight: bold;">✓ Aceptado</span>
+                                            @elseif($estado == 2)
+                                                <span style="color: #dc3545; font-weight: bold;">✗ Rechazado</span>
+                                                @if($obs)
+                                                    <div style="font-size:10px; color:#666; margin-top:2px;"><i>Motivo:</i> {{ $obs }}</div>
+                                                @endif
+                                            @else
+                                                <span style="color: #666;">Pendiente de revisión</span>
+                                            @endif
+                                        </div>
                                     @else
-                                        <span style="font-size:11px;color:#999;">Pendiente de carga por el estudiante</span>
+                                        <span style="font-size:11px;color:#999;">Pendiente de carga</span>
                                     @endif
                                 @endif
                             </td>
                             <td width="30%">
                                 @if($docActual)
-                                    <a href="{{ route('documentos.serve', ['path' => $docActual['path']]) }}" target="_blank" style="color:#0000EE;font-size:11px;font-weight:bold;">[VER {{ $comp->nombre }}]</a>
+                                    <a href="{{ route('documentos.serve', ['path' => $docActual['path']]) }}" target="_blank" class="simple-link">Ver {{ $comp->nombre }}</a>
+                                    
+                                    @if($esProfesor && ($docActual['estado'] ?? 0) == 0)
+                                        <div style="margin-top:5px;display:flex;gap:5px;">
+                                            <button type="button" onclick="actualizarDoc({{ $docActual['id'] ?? 0 }}, 1)" class="cm-btn cm-btn-success cm-btn-sm" style="padding:2px 6px;">Aceptar</button>
+                                            <button type="button" onclick="abrirModalRechazo({{ $docActual['id'] ?? 0 }})" class="cm-btn cm-btn-danger cm-btn-sm" style="padding:2px 6px;">Rechazar</button>
+                                        </div>
+                                    @endif
                                 @else
                                     <span style="color:#999;font-size:10px;">Sin documento</span>
                                 @endif
@@ -383,6 +405,25 @@
             @endif
 
 
+
+            {{-- MODAL RECHAZO DOCUMENTO --}}
+            <div id="modal-rechazo-doc" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarModalRechazo()">
+                <div style="background:#fff;border-radius:10px;padding:24px;max-width:480px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #dc3545;">
+                        <h3 style="margin:0;font-size:16px;font-weight:bold;color:#333;">Rechazar Documento</h3>
+                    </div>
+                    <input type="hidden" id="modal-rechazo-doc-id" value="">
+                    <div style="margin-bottom:12px;">
+                        <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Motivo del rechazo: <span style="color:red;">*</span></label>
+                        <textarea id="modal-rechazo-doc-obs" rows="4" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:13px;" placeholder="Explique por qué el documento no es aceptable..."></textarea>
+                    </div>
+                    <div id="modal-rechazo-doc-error" style="color:#dc3545;font-size:11px;margin-bottom:8px;display:none;"></div>
+                    <div style="margin-top:20px;text-align:center;display:flex;gap:10px;justify-content:center;">
+                        <button type="button" onclick="confirmarRechazoDoc()" class="cm-btn cm-btn-danger" style="padding:8px 20px;font-size:13px;">Confirmar Rechazo</button>
+                        <button type="button" onclick="cerrarModalRechazo()" class="cm-btn cm-btn-secondary" style="padding:8px 20px;font-size:13px;">Cancelar</button>
+                    </div>
+                </div>
+            </div>
 
             {{-- MODAL CREAR CATÁLOGO --}}
             <div id="modal-catalogo" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarModalCatalogo()">
@@ -404,6 +445,12 @@
                     <div style="margin-bottom:12px;">
                         <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Descripci&oacute;n:</label>
                         <textarea id="modal-catalogo-descripcion" rows="2" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></textarea>
+                    </div>
+
+                    <div id="modal-catalogo-mencion" style="display:none;margin-bottom:12px;">
+                        <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">
+                            <input type="checkbox" id="modal-catalogo-mencion-check" style="margin-right:6px;"> Mención Honorífica
+                        </label>
                     </div>
 
                     <div id="modal-catalogo-error" style="color:#dc3545;font-size:11px;margin-bottom:8px;display:none;"></div>
@@ -449,7 +496,7 @@
                 @endif
                 <button type="submit" class="pgm-btn-save">{{ $modoActualizacion ? 'Subir documentos' : 'Guardar cambios' }}</button>
                 @if (!empty($canValidate) && $proyecto->estado_validacion === 'completado')
-                    <button type="button" class="cm-btn cm-btn-success cm-btn-sm" style="margin-left:10px;" onclick="if(confirm('¿Aprueba este proyecto?'))window.location='{{ route('proyectos.gestion.approve', $proyecto->id) }}'">Aprobar</button>
+                    <button type="button" class="cm-btn cm-btn-success cm-btn-sm" style="margin-left:10px;" onclick="mostrarModalAccion({icon:'\u2705',title:'Aprobar proyecto',message:'\u00bfAprueba este proyecto?',confirmText:'S\u00ed, aprobar',confirmClass:'cm-btn-success',onConfirm:function(){window.location='{{ route('proyectos.gestion.approve', $proyecto->id) }}'}})">Aprobar</button>
                     <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" style="margin-left:5px;" onclick="abrirRechazar({{ $proyecto->id }})">Rechazar</button>
                 @endif
             </div>
@@ -479,7 +526,39 @@
     function cerrarRechazar() {
         document.getElementById('rejectModal').style.display = 'none';
     }
-    </script>
+function actualizarDoc(id, estado, observacion = '') {
+    fetch('/proyectos/documentos/' + id + '/estado', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+        body: JSON.stringify({ estado, observacion })
+    }).then(r => r.json()).then(data => {
+        if (data.success) location.reload();
+        else alert(data.message);
+    });
+}
+
+function abrirModalRechazo(id) {
+    document.getElementById('modal-rechazo-doc-id').value = id;
+    document.getElementById('modal-rechazo-doc-obs').value = '';
+    document.getElementById('modal-rechazo-doc-error').style.display = 'none';
+    document.getElementById('modal-rechazo-doc').style.display = 'flex';
+}
+
+function cerrarModalRechazo() {
+    document.getElementById('modal-rechazo-doc').style.display = 'none';
+}
+
+function confirmarRechazoDoc() {
+    const id = document.getElementById('modal-rechazo-doc-id').value;
+    const obs = document.getElementById('modal-rechazo-doc-obs').value.trim();
+    if (!obs) {
+        document.getElementById('modal-rechazo-doc-error').textContent = 'El motivo es obligatorio.';
+        document.getElementById('modal-rechazo-doc-error').style.display = 'block';
+        return;
+    }
+    actualizarDoc(id, 2, obs);
+}
+</script>
 @push('scripts')
 <script>
 // ─── Variables globales ───────────────────────────────────────────
@@ -587,7 +666,7 @@ function renderizarRolesSeleccionados() {
         return;
     }
     container.innerHTML = ids.map(id =>
-        '<span style="display:inline-flex;align-items:center;background:#8b0000;color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;">' +
+        '<span style="background:#8b0000;color:#fff;padding:1px 6px;font-size:10px;white-space:nowrap;">' +
             invRolesPendientes[id] +
             '<button type="button" onclick="quitarRolSeleccionado(' + id + ')" style="background:none;border:none;color:#ffcccc;cursor:pointer;font-size:12px;padding:0 0 0 3px;line-height:1;">&times;</button>' +
         '</span>'
@@ -643,7 +722,7 @@ function toggleFormNuevoRolModal() {
 
 function crearRolModal() {
     const nombre = document.getElementById('inv-nuevo-rol-nombre').value.trim();
-    if (!nombre) { alert('Escriba un nombre para el rol'); return; }
+    if (!nombre) { showNotifyToast('warning', 'Escriba un nombre para el rol'); return; }
     fetch('{{ route("proyectos.gestion.involucrados.roles.crear") }}', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'},
@@ -666,7 +745,7 @@ function agregarInvolucradoAlProyecto(proyectoId) {
     const apellido = document.getElementById('inv-apellido').value.trim();
 
     if (!cedula || cedula.length < 3) {
-        alert('Ingrese una c&eacute;dula v&aacute;lida');
+        showNotifyToast('warning', 'Ingrese una c\u00e9dula v\u00e1lida');
         return;
     }
 
@@ -688,7 +767,7 @@ function agregarInvolucradoAlProyecto(proyectoId) {
     }).then(r => r.json()).then(() => {
         location.reload();
     }).catch(() => {
-        alert('Error al agregar el involucrado');
+        showNotifyToast('error', 'Error al agregar el involucrado');
         btn.disabled = false;
         btn.textContent = 'Agregar';
     });
@@ -696,11 +775,18 @@ function agregarInvolucradoAlProyecto(proyectoId) {
 
 // ─── Quitar involucrado ──────────────────────────────────────────
 function quitarInvolucrado(proyectoId, invId) {
-    if (!confirm('¿Eliminar este involucrado del proyecto?')) return;
-    fetch('{{ route("proyectos.gestion.involucrados.quitar", ["PLACEHOLDER_PROY", "PLACEHOLDER_INV"]) }}'.replace('PLACEHOLDER_PROY', proyectoId).replace('PLACEHOLDER_INV', invId), {
-        method: 'DELETE',
-        headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'}
-    }).then(r => r.json()).then(() => location.reload());
+    mostrarModalAccion({
+        icon:'\u26A0\uFE0F',title:'Eliminar involucrado',
+        message:'\u00bfEliminar este involucrado del proyecto?',
+        confirmText:'S\u00ed, eliminar',
+        confirmClass:'cm-btn-danger',
+        onConfirm:function(){
+            fetch('{{ route("proyectos.gestion.involucrados.quitar", ["PLACEHOLDER_PROY", "PLACEHOLDER_INV"]) }}'.replace('PLACEHOLDER_PROY', proyectoId).replace('PLACEHOLDER_INV', invId), {
+                method: 'DELETE',
+                headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'}
+            }).then(r => r.json()).then(() => location.reload());
+        }
+    });
 }
 
 // ─── Modal roles ─────────────────────────────────────────────────
@@ -758,7 +844,7 @@ function asignarRolConNombre(proyectoId, invId, rolId, rolNombre) {
             var container = document.querySelector('#inv-roles-' + invId + ' .inv-roles');
             var badge = document.createElement('span');
             badge.id = 'rol-badge-' + invId + '-' + rolId;
-            badge.style.cssText = 'display:inline-flex;align-items:center;background:#8b0000;color:#fff;padding:1px 8px;border-radius:10px;font-size:10px;';
+            badge.style.cssText = 'background:#8b0000;color:#fff;padding:1px 6px;font-size:10px;white-space:nowrap;';
             badge.innerHTML = rolNombre +
                 '<button type="button" onclick="quitarRol(' + proyectoId + ',' + data.pivot_id + ',' + rolId + ',' + invId + ')" style="background:none;border:none;color:#ffcccc;cursor:pointer;font-size:12px;padding:0 0 0 3px;line-height:1;">&times;</button>';
             container.appendChild(badge);
@@ -766,26 +852,33 @@ function asignarRolConNombre(proyectoId, invId, rolId, rolNombre) {
             document.getElementById('rol-asignado-msg').style.color = '#198754';
         }
     }).catch(() => {
-        alert('Error al asignar rol');
+        showNotifyToast('error', 'Error al asignar rol');
     });
 }
 
 function quitarRol(proyectoId, pivotId, rolId, invId) {
-    if (!confirm('Quitar este rol del involucrado?')) return;
-    fetch('{{ route("proyectos.gestion.involucrados.roles.quitar", ["PLACEHOLDER_PROY", "PLACEHOLDER_PIVOT", "PLACEHOLDER_ROL"]) }}'.replace('PLACEHOLDER_PROY', proyectoId).replace('PLACEHOLDER_PIVOT', pivotId).replace('PLACEHOLDER_ROL', rolId), {
-        method: 'DELETE',
-        headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'}
-    }).then(r => r.json()).then(data => {
-        if (data.success) {
-            var badge = document.getElementById('rol-badge-' + invId + '-' + rolId);
-            if (badge) badge.remove();
-            var container = document.querySelector('#inv-roles-' + invId + ' .inv-roles');
-            if (container && container.children.length === 0) {
-                container.innerHTML = '<span id="inv-no-roles-' + invId + '" style="color:#999;font-size:11px;">Sin roles</span>';
-            }
+    mostrarModalAccion({
+        icon:'\u26A0\uFE0F',title:'Quitar rol',
+        message:'\u00bfQuitar este rol del involucrado?',
+        confirmText:'S\u00ed, quitar',
+        confirmClass:'cm-btn-danger',
+        onConfirm:function(){
+            fetch('{{ route("proyectos.gestion.involucrados.roles.quitar", ["PLACEHOLDER_PROY", "PLACEHOLDER_PIVOT", "PLACEHOLDER_ROL"]) }}'.replace('PLACEHOLDER_PROY', proyectoId).replace('PLACEHOLDER_PIVOT', pivotId).replace('PLACEHOLDER_ROL', rolId), {
+                method: 'DELETE',
+                headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'}
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    var badge = document.getElementById('rol-badge-' + invId + '-' + rolId);
+                    if (badge) badge.remove();
+                    var container = document.querySelector('#inv-roles-' + invId + ' .inv-roles');
+                    if (container && container.children.length === 0) {
+                        container.innerHTML = '<span id="inv-no-roles-' + invId + '" style="color:#999;font-size:11px;">Sin roles</span>';
+                    }
+                }
+            }).catch(() => {
+                showNotifyToast('error', 'Error al quitar rol');
+            });
         }
-    }).catch(() => {
-        alert('Error al quitar rol');
     });
 }
 
@@ -832,8 +925,10 @@ function abrirModalCatalogo(tipo) {
     input.dataset.checkUrl = cfg.checkRuta;
     input.dataset.nombreOk = '';
     document.getElementById('modal-catalogo-descripcion').value = '';
-    document.getElementById('modal-catalogo-mencion').style.display = cfg.mostrarMencion ? 'block' : 'none';
-    document.getElementById('modal-catalogo-mencion-check').checked = false;
+    const menc = document.getElementById('modal-catalogo-mencion');
+    if (menc) menc.style.display = cfg.mostrarMencion ? 'block' : 'none';
+    const mencChk = document.getElementById('modal-catalogo-mencion-check');
+    if (mencChk) mencChk.checked = false;
     document.getElementById('modal-catalogo-error').style.display = 'none';
     document.getElementById('nombreStatus').style.display = 'none';
     document.getElementById('modal-catalogo').style.display = 'flex';
@@ -877,8 +972,16 @@ function guardarCatalogo() {
     data[cfg.campoNombre] = nombre;
     const desc = document.getElementById('modal-catalogo-descripcion').value.trim();
     if (desc) data.descripcion = desc;
+
+    // Línea requiere area_de_investigacion y programa_id
+    if (tipo === 'linea') {
+        data.area_de_investigacion = nombre.length > 100 ? nombre.substring(0, 100) : nombre;
+        const progInput = document.querySelector('[name="programa_id_derived"]');
+        if (progInput && progInput.value) data.programa_id = progInput.value;
+    }
     if (cfg.mostrarMencion) {
-        data.mencion_honorifica = document.getElementById('modal-catalogo-mencion-check').checked ? '1' : '0';
+        const mencChk = document.getElementById('modal-catalogo-mencion-check');
+        data.mencion_honorifica = (mencChk && mencChk.checked) ? '1' : '0';
     }
 
     const btn = document.querySelector('#modal-catalogo .cm-btn-success');
@@ -910,7 +1013,7 @@ function toggleFormNuevoRol() {
 
 function crearRol() {
     const nombre = document.getElementById('nuevo-rol-nombre').value.trim();
-    if (!nombre) { alert('Escriba un nombre para el rol'); return; }
+    if (!nombre) { showNotifyToast('warning', 'Escriba un nombre para el rol'); return; }
     fetch('{{ route("proyectos.gestion.involucrados.roles.crear") }}', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'},

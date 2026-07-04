@@ -78,9 +78,7 @@ class NotificacionService
                 $gruposEstudiante = $this->grupoRepo->findByMiembroCedula($cedula);
 
                 if ($gruposEstudiante->isNotEmpty()) {
-                    $clavesGrupos = $gruposEstudiante->pluck('grp_codigo')
-                        ->map(fn($id) => GrupoProyectoService::PREFIJO . ':' . $id)
-                        ->toArray();
+                    $clavesGrupos = $gruposEstudiante->map(fn($g) => $g->grp_identificador ?: (GrupoProyectoService::PREFIJO . ':' . $g->grp_codigo))->toArray();
 
                     $proyectosExistentes = $this->proyectoRepo->conEquipoRefNotNull()
                         ->whereIn('pry_direccion_logica', $clavesGrupos)
@@ -88,7 +86,7 @@ class NotificacionService
                         ->toArray();
 
                     foreach ($gruposEstudiante as $g) {
-                        $clave = GrupoProyectoService::PREFIJO . ':' . $g->grp_codigo;
+                        $clave = $g->grp_identificador ?: (GrupoProyectoService::PREFIJO . ':' . $g->grp_codigo);
                         if (!in_array($clave, $proyectosExistentes, true)) {
                             $notificaciones[] = [
                                 'type' => 'info',
@@ -108,6 +106,11 @@ class NotificacionService
 
             // 2. Proyectos rechazados que necesitan correcciones
             $proyectosRechazados = $this->proyectoRepo->rechazados();
+            
+            // 2.5 Documentos rechazados que necesitan correcciones
+            $documentosRechazados = \App\Models\ProyectoDocumento::where('pd_estado', 2)
+                ->whereNotNull('pd_observacion')
+                ->get();
 
             // Precargar todos los grupos en UNA consulta para evitar N+1
             $gruposCache = $this->precargarGruposProyecto(
@@ -133,6 +136,19 @@ class NotificacionService
                         'type' => 'warning',
                         'title' => 'Proyecto rechazado',
                         'mensaje' => 'Revisión requerida para "' . $p->titulo . '". Motivo: ' . ($p->motivo_rechazo ?: 'Revisar detalles.'),
+                        'url' => route('proyectos.gestion', ['edit' => $p->id]),
+                        'proyecto_id' => $p->id,
+                    ];
+                }
+            }
+
+            foreach ($documentosRechazados as $doc) {
+                $p = $doc->proyecto;
+                if ($p && $this->esMiembroDelProyecto($p, $cedula, $gruposSvc, $gruposCache)) {
+                    $notificaciones[] = [
+                        'type' => 'danger',
+                        'title' => 'Documento rechazado',
+                        'mensaje' => 'El documento "' . ($doc->componente->nombre ?? 'Desconocido') . '" del proyecto "' . $p->titulo . '" fue rechazado. Motivo: ' . $doc->pd_observacion,
                         'url' => route('proyectos.gestion', ['edit' => $p->id]),
                         'proyecto_id' => $p->id,
                     ];

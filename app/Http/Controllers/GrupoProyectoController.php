@@ -260,13 +260,8 @@ class GrupoProyectoController extends Controller
                 ->with('error', 'Debe incluir al menos un integrante y un líder, o el grupo pudo no haberse creado correctamente.');
         }
 
-        $nombresMiembros = collect($miembros)
-            ->map(fn($m) => trim(($m['nombre'] ?? '') . ' ' . ($m['apellido'] ?? '')))
-            ->filter()
-            ->implode(', ');
-
         return redirect()->route('grupos-proyecto.index')
-            ->with('success', 'Grupo registrado. Clave: ' . $clave . '. Integrantes: ' . $nombresMiembros);
+            ->with('success', 'Grupo registrado correctamente.');
     }
 
     /**
@@ -395,7 +390,7 @@ class GrupoProyectoController extends Controller
         }
 
         return redirect()->route('grupos-proyecto.index')
-            ->with('success', 'Grupo actualizado correctamente. Clave: ' . $clave);
+            ->with('success', 'Grupo actualizado correctamente.');
     }
 
     public function destroy(Request $request, $id)

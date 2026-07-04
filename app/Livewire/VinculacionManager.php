@@ -24,7 +24,10 @@ class VinculacionManager extends Component
     public bool $selectAll = false;
     public bool $mostrarFormulario = false;
     public string $vinculacionTitulo = '';
+    public string $vinculacionTituloSeleccionado = '';
+    public string $nuevoVinculacionTitulo = '';
     public string $vinculacionComunidadId = '';
+    public array $titulosVinculacion = [];
 
     public bool $mostrarModalComunidad = false;
     public string $modalComunidadNombre = '';
@@ -97,6 +100,7 @@ class VinculacionManager extends Component
     public function mount(): void
     {
         $this->comunidadesEncontradas = collect();
+        $this->titulosVinculacion = Vinculacion::distinct()->whereNotNull('vin_titulo')->pluck('vin_titulo')->toArray();
     }
 
     public function updatedBuscarComunidad(): void
@@ -219,9 +223,12 @@ class VinculacionManager extends Component
             return;
         }
 
-        $titulo = trim($this->vinculacionTitulo);
+        $titulo = ($this->vinculacionTituloSeleccionado === 'nuevo') 
+            ? trim($this->nuevoVinculacionTitulo) 
+            : trim($this->vinculacionTituloSeleccionado);
+            
         if ($titulo === '') {
-            $this->safeDispatch('error', 'Debe escribir un título para la vinculación.');
+            $this->safeDispatch('error', 'Debe seleccionar o escribir un título para la vinculación.');
             return;
         }
 
@@ -244,6 +251,7 @@ class VinculacionManager extends Component
 
         $this->safeDispatch('success', "{$creadas} vinculación(es) creada(s) para «{$titulo}».");
         $this->cerrar();
+        $this->cargarTitulos();
     }
 
     public function reportarPDF(): void

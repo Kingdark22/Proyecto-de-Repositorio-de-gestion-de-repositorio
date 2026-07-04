@@ -198,7 +198,6 @@
                         <th>Secci&oacute;n</th>
                         <th>Lapso</th>
                         <th>Integrantes</th>
-                        <th>Clave</th>
                         <th>Proyecto</th>
                         <th>Acciones</th>
                     </tr>
@@ -218,7 +217,6 @@
                             <td>{{ $g->sec_nombre ?: 'Sec. ' . $g->sec_codigo }}</td>
                             <td>{{ $g->lap_nombre ?: '—' }}</td>
                             <td align="center">{{ $g->integrantes }}</td>
-                            <td><code style="font-size:9px;">{{ $g->clave }}</code></td>
                             <td align="center">
                                 @if($tieneProyecto)
                                     @php
@@ -593,7 +591,6 @@
                 <table width="100%" style="font-size:12px;border-collapse:collapse;">
                     <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;width:35%;">Nombre:</td><td style="padding:6px 8px;">{{ $info->grupo->nombre }}</td></tr>
                     <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">C&oacute;digo:</td><td style="padding:6px 8px;"><code style="color:#8b0000;">{{ $info->grupo->identificador ?? '—' }}</code></td></tr>
-                    <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Clave:</td><td style="padding:6px 8px;"><code>{{ $info->grupo->clave }}</code></td></tr>
                     <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Lapso:</td><td style="padding:6px 8px;">{{ $info->grupo->lap_nombre ?: 'Lapso #'.$info->grupo->lap_codigo }}</td></tr>
                     <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">PNF:</td><td style="padding:6px 8px;">{{ $info->grupo->pro_siglas ?: ($info->grupo->pro_nombre ?: '—') }}</td></tr>
                     <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Secci&oacute;n:</td><td style="padding:6px 8px;">{{ $info->grupo->sec_nombre ?: 'Sec. '.$info->grupo->sec_codigo }}</td></tr>

@@ -31,9 +31,9 @@ class GrupoProyectoService
      * {pro_siglas}-{sed_siglas}{tra_codigo}{sem_codigo}-{sec_nombre}-{nroEquipo}/{totalEquipos}
      * Ejemplo: PNFI-ACA11-131-1/7
      */
-    public function generarCodigoGrupo(int $lapCodigo, int $secCodigo, ?int $proCodigo = null): string
+    public function generarCodigoGrupo(int $lapCodigo, int $secCodigo, ?int $proCodigo = null, string $creadorCedula = '', ?array $etiquetas = null): string
     {
-        $ctx = $this->equipos->etiquetasContexto($lapCodigo, $secCodigo, $proCodigo);
+        $ctx = $etiquetas ?? $this->equipos->etiquetasContexto($lapCodigo, $secCodigo, $proCodigo);
 
         $proSiglas = $ctx['pro_siglas'] ?: 'PNF';
         $sedSiglas = $ctx['sed_siglas'] ?: 'SED';
@@ -41,18 +41,16 @@ class GrupoProyectoService
         $semCodigo = $ctx['sem_codigo'] ?? '1';
         $secNombre = $ctx['sec_nombre'] ?: (string) $secCodigo;
 
-        $existentes = $this->repo->findByContextoSeccion($lapCodigo, $secCodigo);
-        $totalEquipos = $existentes->count() + 1;
+        $secuencia = $this->repo->contarPorCreadorEnLapso($creadorCedula, $lapCodigo) + 1;
 
         return sprintf(
-            '%s-%s%s%s-%s-%d/%d',
+            '%s-%s%s%s-%s-%d',
             strtoupper($proSiglas),
             strtoupper($sedSiglas),
             $traCodigo,
             $semCodigo,
             $secNombre,
-            $totalEquipos,
-            $totalEquipos
+            $secuencia
         );
     }
 
@@ -90,6 +88,14 @@ class GrupoProyectoService
                 'lap_codigo' => (int) $m[1],
                 'sec_codigo' => (int) $m[2],
             ];
+        }
+
+        // Try as group identifier
+        $row = GrupoProyectoModulo::where('grp_identificador', $clave)
+            ->where('estado_logico', true)
+            ->first(['grp_codigo']);
+        if ($row) {
+            return ['tipo' => self::PREFIJO, 'grp_codigo' => (int) $row->grp_codigo];
         }
 
         return null;
@@ -155,7 +161,7 @@ class GrupoProyectoService
         }
 
         // Create: generate identificador
-        $payload['grp_identificador'] = $this->generarCodigoGrupo($lapCodigo, $secCodigo, $proCodigo);
+        $payload['grp_identificador'] = $this->generarCodigoGrupo($lapCodigo, $secCodigo, $proCodigo, $creadorCedula, $etiquetasAcademicas);
         $payload['created_at'] = now();
         $id = $this->repo->create($payload);
 

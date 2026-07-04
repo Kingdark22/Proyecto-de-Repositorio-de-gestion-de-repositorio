@@ -125,7 +125,7 @@ class ProyectoController extends Controller
         // Miembros del grupo
         $miembrosGrupo = [];
         $clave = $datosForm['equipo_seccion_clave'] ?? '';
-        if (str_starts_with($clave, 'EQGRP:') || !str_starts_with($clave, 'EQSEC:')) {
+        if ($clave !== '') {
             $this->cargarMiembrosGrupo($clave, $miembrosGrupo);
         }
 
@@ -548,6 +548,33 @@ class ProyectoController extends Controller
         return $writer->download($filename);
     }
 
+    public function actualizarEstadoDocumento(Request $request, $id)
+    {
+        $user = auth()->user();
+        $activeRole = $this->userRoleService->getActiveRole($user);
+        if (!$this->userRoleService->roleMatches('profesor proyecto', $activeRole) && 
+            !$this->userRoleService->roleMatches('administrador', $activeRole) &&
+            !$this->userRoleService->roleMatches('coordinador', $activeRole) &&
+            !$this->userRoleService->roleMatches('gestionador', $activeRole)) {
+            return response()->json(['success' => false, 'message' => 'No tiene permisos.'], 403);
+        }
+
+        $request->validate([
+            'estado' => 'required|in:1,2',
+            'observacion' => 'required_if:estado,2|nullable|string|max:500',
+        ]);
+
+        try {
+            \App\Models\ProyectoDocumento::findOrFail($id)->update([
+                'pd_estado' => $request->input('estado'),
+                'pd_observacion' => $request->input('observacion'),
+            ]);
+            return response()->json(['success' => true, 'message' => 'Estado del documento actualizado correctamente.']);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => 'Error al actualizar: ' . $e->getMessage()], 500);
+        }
+    }
+
     public function solvencia($id, $cedula = null)
     {
         try {
@@ -566,6 +593,14 @@ class ProyectoController extends Controller
             // Tomar el primer (y único) integrante filtrado
             $integrante = $datos['integrantes'][0] ?? null;
 
+            $pnfUpper = mb_strtoupper($datos['pnf_nombre'] ?? '');
+            $isInf = str_contains($pnfUpper, 'INF');
+            $tipoProyecto = $isInf ? 'Proyecto Sociotecnológico' : 'Proyecto Sociocomunitario';
+            $pnfLimpio = str_ireplace('PROGRAMA NACIONAL DE FORMACIÓN EN ', '', $pnfUpper);
+
+            $userCreator = \App\Models\User::where('usu_cedula', trim((string) $datos['creador_cedula']))->first();
+            $nombreProfesor = $userCreator ? ($userCreator->nombre . ' ' . $userCreator->apellido) : 'No disponible';
+
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.solvencia', [
                 'folio'          => $folio,
                 'integrante'     => $integrante,
@@ -573,9 +608,12 @@ class ProyectoController extends Controller
                 'comunidad'      => $datos['comunidad'],
                 'pnf'            => $datos['pnf'],
                 'pnf_nombre'     => $datos['pnf_nombre'],
+                'pnf_limpio'     => $pnfLimpio,
+                'tipoProyecto'   => $tipoProyecto,
                 'trayecto'       => $datos['trayecto'],
                 'seccion'        => $datos['seccion'],
                 'lapso'          => $datos['lapso'],
+                'profesor_responsable' => $nombreProfesor,
                 'dia'            => $now->day,
                 'mes'            => ucfirst($now->translatedFormat('F')),
                 'anio'           => $now->year,

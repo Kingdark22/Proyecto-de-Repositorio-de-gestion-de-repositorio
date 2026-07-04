@@ -266,12 +266,12 @@
     function validarFormulario() {
         var componentesSeleccionados = document.querySelectorAll('.comp-checkbox:checked');
         if (componentesSeleccionados.length === 0) {
-            alert('Debe seleccionar al menos un componente.');
+            showNotifyToast('warning', 'Debe seleccionar al menos un componente.');
             return;
         }
         var pnfActivos = document.querySelectorAll('input[name^="pnf_activo["]:checked');
         if (pnfActivos.length === 0) {
-            alert('Debe seleccionar al menos un PNF con trayectos.');
+            showNotifyToast('warning', 'Debe seleccionar al menos un PNF con trayectos.');
             return;
         }
         document.getElementById('confirmMsg').textContent =

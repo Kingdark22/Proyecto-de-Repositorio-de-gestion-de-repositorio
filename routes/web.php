@@ -105,6 +105,7 @@ Route::middleware(['auth', 'active.role'])->group(function () {
         Route::get('/proyectos/gestion', [\App\Http\Controllers\ProyectoController::class, 'index'])->name('proyectos.gestion');
         Route::get('/proyectos/gestion/{id}/aprobar', [\App\Http\Controllers\ProyectoController::class, 'approve'])->name('proyectos.gestion.approve');
         Route::post('/proyectos/gestion/{id}/rechazar', [\App\Http\Controllers\ProyectoController::class, 'reject'])->name('proyectos.gestion.reject');
+        Route::post('/proyectos/documentos/{id}/estado', [\App\Http\Controllers\ProyectoController::class, 'actualizarEstadoDocumento'])->name('proyectos.documentos.estado');
         Route::get('/proyectos/gestion/{id}/solvencia/{cedula?}', [\App\Http\Controllers\ProyectoController::class, 'solvencia'])->name('proyectos.gestion.solvencia');
     });
 
@@ -159,53 +160,63 @@ Route::middleware(['auth', 'active.role'])->group(function () {
     });
 
     // === Rutas MVC Tipo Publicación ===
-    Route::middleware('role:administrador,coordinador,gestionador')->controller(TipoPublicacionController::class)->group(function () {
-        Route::get('/tipos-publicacion/crear', 'create')->name('tipos-publicacion.create');
-        Route::post('/tipos-publicacion', 'store')->name('tipos-publicacion.store');
-        Route::get('/tipos-publicacion/{id}/editar', 'edit')->name('tipos-publicacion.edit');
-        Route::put('/tipos-publicacion/{id}', 'update')->name('tipos-publicacion.update');
-        Route::get('/tipos-publicacion/{id}/toggle', 'toggleStatus')->name('tipos-publicacion.toggle');
-        Route::delete('/tipos-publicacion/{id}', 'destroy')->name('tipos-publicacion.destroy');
+    Route::controller(TipoPublicacionController::class)->group(function () {
+        Route::post('/tipos-publicacion', 'store')->name('tipos-publicacion.store')->middleware('role:administrador,coordinador,gestionador,profesor proyecto,estudiante,docente');
+        Route::middleware('role:administrador,coordinador,gestionador')->group(function () {
+            Route::get('/tipos-publicacion/crear', 'create')->name('tipos-publicacion.create');
+            Route::get('/tipos-publicacion/{id}/editar', 'edit')->name('tipos-publicacion.edit');
+            Route::put('/tipos-publicacion/{id}', 'update')->name('tipos-publicacion.update');
+            Route::get('/tipos-publicacion/{id}/toggle', 'toggleStatus')->name('tipos-publicacion.toggle');
+            Route::delete('/tipos-publicacion/{id}', 'destroy')->name('tipos-publicacion.destroy');
+        });
     });
 
     // === Rutas MVC Tipo Investigación ===
-    Route::middleware('role:administrador,coordinador,gestionador')->controller(TipoInvestigacionController::class)->group(function () {
-        Route::get('/tipos-investigacion/crear', 'create')->name('tipos-investigacion.create');
-        Route::post('/tipos-investigacion', 'store')->name('tipos-investigacion.store');
-        Route::get('/tipos-investigacion/{id}/editar', 'edit')->name('tipos-investigacion.edit');
-        Route::put('/tipos-investigacion/{id}', 'update')->name('tipos-investigacion.update');
-        Route::get('/tipos-investigacion/{id}/toggle', 'toggleStatus')->name('tipos-investigacion.toggle');
-        Route::delete('/tipos-investigacion/{id}', 'destroy')->name('tipos-investigacion.destroy');
+    Route::controller(TipoInvestigacionController::class)->group(function () {
+        Route::post('/tipos-investigacion', 'store')->name('tipos-investigacion.store')->middleware('role:administrador,coordinador,gestionador,profesor proyecto,estudiante,docente');
+        Route::middleware('role:administrador,coordinador,gestionador')->group(function () {
+            Route::get('/tipos-investigacion/crear', 'create')->name('tipos-investigacion.create');
+            Route::get('/tipos-investigacion/{id}/editar', 'edit')->name('tipos-investigacion.edit');
+            Route::put('/tipos-investigacion/{id}', 'update')->name('tipos-investigacion.update');
+            Route::get('/tipos-investigacion/{id}/toggle', 'toggleStatus')->name('tipos-investigacion.toggle');
+            Route::delete('/tipos-investigacion/{id}', 'destroy')->name('tipos-investigacion.destroy');
+        });
     });
 
     // === Rutas MVC Objetivo Investigación ===
-    Route::middleware('role:administrador,coordinador,gestionador')->controller(ObjetivoInvestigacionController::class)->group(function () {
-        Route::get('/objetivos-investigacion/crear', 'create')->name('objetivos-investigacion.create');
-        Route::post('/objetivos-investigacion', 'store')->name('objetivos-investigacion.store');
-        Route::get('/objetivos-investigacion/{id}/editar', 'edit')->name('objetivos-investigacion.edit');
-        Route::put('/objetivos-investigacion/{id}', 'update')->name('objetivos-investigacion.update');
-        Route::get('/objetivos-investigacion/{id}/toggle', 'toggleStatus')->name('objetivos-investigacion.toggle');
-        Route::delete('/objetivos-investigacion/{id}', 'destroy')->name('objetivos-investigacion.destroy');
+    Route::controller(ObjetivoInvestigacionController::class)->group(function () {
+        Route::post('/objetivos-investigacion', 'store')->name('objetivos-investigacion.store')->middleware('role:administrador,coordinador,gestionador,profesor proyecto,estudiante,docente');
+        Route::middleware('role:administrador,coordinador,gestionador')->group(function () {
+            Route::get('/objetivos-investigacion/crear', 'create')->name('objetivos-investigacion.create');
+            Route::get('/objetivos-investigacion/{id}/editar', 'edit')->name('objetivos-investigacion.edit');
+            Route::put('/objetivos-investigacion/{id}', 'update')->name('objetivos-investigacion.update');
+            Route::get('/objetivos-investigacion/{id}/toggle', 'toggleStatus')->name('objetivos-investigacion.toggle');
+            Route::delete('/objetivos-investigacion/{id}', 'destroy')->name('objetivos-investigacion.destroy');
+        });
     });
 
     // === Rutas MVC Metodología Investigación ===
-    Route::middleware('role:administrador,coordinador,gestionador')->controller(MetodologiaInvestigacionController::class)->group(function () {
-        Route::get('/metodologia-investigacion/crear', 'create')->name('metodologia-investigacion.create');
-        Route::post('/metodologia-investigacion', 'store')->name('metodologia-investigacion.store');
-        Route::get('/metodologia-investigacion/{id}/editar', 'edit')->name('metodologia-investigacion.edit');
-        Route::put('/metodologia-investigacion/{id}', 'update')->name('metodologia-investigacion.update');
-        Route::get('/metodologia-investigacion/{id}/toggle', 'toggleStatus')->name('metodologia-investigacion.toggle');
-        Route::delete('/metodologia-investigacion/{id}', 'destroy')->name('metodologia-investigacion.destroy');
+    Route::controller(MetodologiaInvestigacionController::class)->group(function () {
+        Route::post('/metodologia-investigacion', 'store')->name('metodologia-investigacion.store')->middleware('role:administrador,coordinador,gestionador,profesor proyecto,estudiante,docente');
+        Route::middleware('role:administrador,coordinador,gestionador')->group(function () {
+            Route::get('/metodologia-investigacion/crear', 'create')->name('metodologia-investigacion.create');
+            Route::get('/metodologia-investigacion/{id}/editar', 'edit')->name('metodologia-investigacion.edit');
+            Route::put('/metodologia-investigacion/{id}', 'update')->name('metodologia-investigacion.update');
+            Route::get('/metodologia-investigacion/{id}/toggle', 'toggleStatus')->name('metodologia-investigacion.toggle');
+            Route::delete('/metodologia-investigacion/{id}', 'destroy')->name('metodologia-investigacion.destroy');
+        });
     });
 
     // === Rutas MVC Líneas de Investigación ===
-    Route::middleware('role:administrador,coordinador,gestionador')->controller(LineaInvestigacionController::class)->group(function () {
-        Route::get('/lineas-investigacion/crear', 'create')->name('lineas-investigacion.create');
-        Route::post('/lineas-investigacion', 'store')->name('lineas-investigacion.store');
-        Route::get('/lineas-investigacion/{id}/editar', 'edit')->name('lineas-investigacion.edit');
-        Route::put('/lineas-investigacion/{id}', 'update')->name('lineas-investigacion.update');
-        Route::get('/lineas-investigacion/{id}/toggle', 'toggleStatus')->name('lineas-investigacion.toggle');
-        Route::delete('/lineas-investigacion/{id}', 'destroy')->name('lineas-investigacion.destroy');
+    Route::controller(LineaInvestigacionController::class)->group(function () {
+        Route::post('/lineas-investigacion', 'store')->name('lineas-investigacion.store')->middleware('role:administrador,coordinador,gestionador,profesor proyecto,estudiante,docente');
+        Route::middleware('role:administrador,coordinador,gestionador')->group(function () {
+            Route::get('/lineas-investigacion/crear', 'create')->name('lineas-investigacion.create');
+            Route::get('/lineas-investigacion/{id}/editar', 'edit')->name('lineas-investigacion.edit');
+            Route::put('/lineas-investigacion/{id}', 'update')->name('lineas-investigacion.update');
+            Route::get('/lineas-investigacion/{id}/toggle', 'toggleStatus')->name('lineas-investigacion.toggle');
+            Route::delete('/lineas-investigacion/{id}', 'destroy')->name('lineas-investigacion.destroy');
+        });
     });
 
 });

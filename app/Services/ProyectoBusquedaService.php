@@ -192,7 +192,7 @@ class ProyectoBusquedaService
                 ]);
                 $clavesGrupos = $grupos
                     ->pluck('clave')
-                    ->filter(fn ($k) => str_starts_with((string) $k, \App\Services\GrupoProyectoService::PREFIJO.':'))
+
                     ->values()
                     ->all();
                 $claves = array_unique(array_merge($claves, $clavesGrupos));
@@ -218,7 +218,7 @@ class ProyectoBusquedaService
                 ]);
                 $clavesGrupos = $grupos
                     ->pluck('clave')
-                    ->filter(fn ($k) => str_starts_with((string) $k, \App\Services\GrupoProyectoService::PREFIJO.':'))
+
                     ->values()
                     ->all();
                 $claves = array_unique(array_merge($claves, $clavesGrupos));

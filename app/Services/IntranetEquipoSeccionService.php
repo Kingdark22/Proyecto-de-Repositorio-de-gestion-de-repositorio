@@ -62,6 +62,16 @@ class IntranetEquipoSeccionService
             return ['lap_codigo' => (int) $m[1], 'sec_codigo' => (int) $m[2]];
         }
 
+        $grupo = app(GrupoProyectoService::class)->obtenerPorClave($clave);
+        if ($grupo) {
+            return [
+                'lap_codigo' => $grupo->lap_codigo,
+                'sec_codigo' => $grupo->sec_codigo,
+                'pro_codigo' => $grupo->pro_codigo,
+                'tra_codigo' => $grupo->tra_codigo,
+            ];
+        }
+
         return null;
     }
 
@@ -99,8 +109,9 @@ class IntranetEquipoSeccionService
         }
 
         $borrador = app(GrupoProyectoService::class);
-        if (str_starts_with($equipoClave, GrupoProyectoService::PREFIJO.':')) {
-            return app(GrupoProyectoService::class)->estudianteEnGrupo($cedula, $equipoClave, $rolRequerido);
+        $grupo = $borrador->obtenerPorClave($equipoClave);
+        if ($grupo) {
+            return $borrador->estudianteEnGrupo($cedula, $equipoClave, $rolRequerido);
         }
 
         $partes = $this->parsearClave($equipoClave);
@@ -292,7 +303,8 @@ class IntranetEquipoSeccionService
         $cacheKey = 'eq_int_' . md5($equipoClave . '_' . $this->academicConnection());
 
         return Cache::remember($cacheKey, 300, function () use ($equipoClave) {
-        if (str_starts_with($equipoClave, GrupoProyectoService::PREFIJO.':')) {
+        $grupo = app(GrupoProyectoService::class)->obtenerPorClave($equipoClave);
+        if ($grupo) {
             return app(GrupoProyectoService::class)->integrantesDesdeClave($equipoClave);
         }
 
@@ -361,10 +373,9 @@ class IntranetEquipoSeccionService
 
     public function resumenEquipo(?string $equipoClave): string
     {
-        if (str_starts_with((string) $equipoClave, GrupoProyectoService::PREFIJO.':')) {
-            $g = app(GrupoProyectoService::class)->obtenerPorClave($equipoClave);
-
-            return $g ? 'Grupo '.$g->nombre.' ('.$g->integrantes.' integrantes)' : '—';
+        $g = app(GrupoProyectoService::class)->obtenerPorClave($equipoClave ?? '');
+        if ($g) {
+            return 'Grupo '.$g->nombre.' ('.$g->integrantes.' integrantes)';
         }
 
         $partes = $this->parsearClave($equipoClave);
