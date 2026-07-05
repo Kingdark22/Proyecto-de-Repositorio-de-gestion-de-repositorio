@@ -79,10 +79,10 @@
                 <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 12px;">
                     {{-- TÍTULO: más grande para profesor --}}
                     <tr>
-                        <td width="20%"><b>T&iacute;tulo:</b></td>
+                        <td width="20%"><b>Título:</b></td>
                         <td colspan="3">
                             <div style="padding:4px 0;font-weight:bold;{{ $esProfesor ? 'font-size:20px;color:#000;' : 'font-size:14px;' }}">
-                                {{ $datosForm['titulo'] ?? '(seleccione un equipo para auto-llenar el t&iacute;tulo)' }}
+                                {{ $datosForm['titulo'] ?? '(seleccione un equipo para auto-llenar el título)' }}
                             </div>
                             <input type="hidden" name="titulo" value="{{ $datosForm['titulo'] ?? '' }}">
                         </td>
@@ -96,7 +96,7 @@
                             @if($comNombre)
                                 <span style="background:#f9f2f2;border:1px solid #8b0000;padding:4px 10px;border-radius:4px;font-weight:bold;color:#8b0000;">{{ $comNombre->nombre }}</span>
                             @else
-                                <span style="color:#999;">(asignada autom&aacute;ticamente del grupo)</span>
+                                <span style="color:#999;">(asignada automáticamente del grupo)</span>
                             @endif
                         </td>
                     </tr>
@@ -115,10 +115,10 @@
             {{-- == CLASIFICACIÓN == --}}
             @if(!$modoActualizacion)
             <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
-                <legend style="font-weight: bold; font-size: 12px;">Clasificaci&oacute;n del proyecto</legend>
+                <legend style="font-weight: bold; font-size: 12px;">Clasificación del proyecto</legend>
                 <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px;">
                     <tr>
-                        <td width="20%"><b>L&iacute;nea de Investigaci&oacute;n:</b></td>
+                        <td width="20%"><b>Línea de Investigación:</b></td>
                         <td width="30%">
                             <div style="display:flex;gap:4px;align-items:center;">
                                 <select name="linea_investigacion_id" style="flex:1;font-size:11px;">
@@ -130,7 +130,7 @@
                                 <button type="button" onclick="abrirModalCatalogo('linea')" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space:nowrap;padding:4px 8px;font-size:11px;" title="Nueva línea de investigación">+</button>
                             </div>
                         </td>
-                        <td width="20%"><b>Metodolog&iacute;a:</b></td>
+                        <td width="20%"><b>Metodología:</b></td>
                         <td width="30%">
                             <div style="display:flex;gap:4px;align-items:center;">
                                 <select name="metodologia_id" style="flex:1;font-size:11px;">
@@ -144,7 +144,7 @@
                         </td>
                     </tr>
                     <tr>
-                        <td><b>Tipo de Investigaci&oacute;n:</b></td>
+                        <td><b>Tipo de Investigación:</b></td>
                         <td>
                             <div style="display:flex;gap:4px;align-items:center;">
                                 <select name="tipo_investigacion_id" style="flex:1;font-size:11px;">
@@ -156,7 +156,7 @@
                                 <button type="button" onclick="abrirModalCatalogo('tipo_investigacion')" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space:nowrap;padding:4px 8px;font-size:11px;" title="Nuevo tipo de investigación">+</button>
                             </div>
                         </td>
-                        <td><b>Objetivo de Investigaci&oacute;n:</b></td>
+                        <td><b>Objetivo de Investigación:</b></td>
                         <td>
                             <div style="display:flex;gap:4px;align-items:center;">
                                 <select name="objetivo_investigacion_id" style="flex:1;font-size:11px;">
@@ -189,10 +189,10 @@
                     <table width="100%" border="0" cellpadding="0" cellspacing="0" style="font-size:12px;margin-bottom:10px;border-collapse:collapse;">
                         <thead>
                             <tr style="background:#f0f0f0;font-weight:bold;">
-                                <th style="padding:5px 8px;text-align:left;">C&eacute;dula</th>
+                                <th style="padding:5px 8px;text-align:left;">Cédula</th>
                                 <th style="padding:5px 8px;text-align:left;">Nombre</th>
                                 <th style="padding:5px 8px;text-align:left;">Roles</th>
-                                <th style="padding:5px 8px;text-align:center;">Acci&oacute;n</th>
+                                <th style="padding:5px 8px;text-align:center;">Acción</th>
                             </tr>
                         </thead>
                         <tbody id="involucrados-tbody">
@@ -239,7 +239,7 @@
                     <h3 style="margin:0 0 12px;font-size:14px;color:#333;">Insertar involucrado</h3>
                     <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size:12px;">
                         <tr>
-                            <td width="22%"><b>C&eacute;dula:</b></td>
+                            <td width="22%"><b>Cédula:</b></td>
                             <td width="78%" colspan="3">
                                 <input type="text" id="inv-cedula" onkeyup="this.value=this.value.replace(/[^0-9]/g,'');buscarPersonaPorCedula()" style="width:95%;padding:5px 6px;border:1px solid #ccc;border-radius:3px;font-size:12px;" placeholder="12345678" autocomplete="off">
                                 <div id="inv-cedula-msg" style="font-size:10px;color:#666;margin-top:2px;"></div>
@@ -290,7 +290,7 @@
                     <thead>
                         <tr style="background:#ddd;">
                             <th style="padding:4px 8px;">#</th>
-                            <th style="padding:4px 8px;">C&eacute;dula</th>
+                            <th style="padding:4px 8px;">Cédula</th>
                             <th style="padding:4px 8px;">Nombre</th>
                             <th style="padding:4px 8px;">Rol</th>
                         </tr>
@@ -303,7 +303,7 @@
                                 <td style="padding:4px 8px;">{{ $miembro['nombre'] }} {{ $miembro['apellido'] }}</td>
                                 <td style="padding:4px 8px;">
                                     @if(($miembro['rol_id'] ?? 0) == 1)
-                                        <span style="color:#8b0000;font-weight:bold;">L&iacute;der</span>
+                                        <span style="color:#8b0000;font-weight:bold;">Líder</span>
                                     @else
                                         <span style="color:#666;">Autor</span>
                                     @endif
@@ -346,7 +346,7 @@
                             <td width="25%" valign="middle">
                                 <b>{{ $comp->nombre }}</b>
                                 @if($comp->es_obligatorio)<span class="obligatorio">*</span>@endif
-                                <br><span style="font-size:9px;color:#666;">{{ strtoupper($acceptTypes) }} &middot; M&aacute;x {{ $maxMb }}MB</span>
+                                <br><span style="font-size:9px;color:#666;">{{ strtoupper($acceptTypes) }} &middot; Máx {{ $maxMb }}MB</span>
                             </td>
                             <td width="45%">
                                 @if(!$esProfesor)
@@ -443,7 +443,7 @@
 
                     {{-- Descripción (opcional) --}}
                     <div style="margin-bottom:12px;">
-                        <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Descripci&oacute;n:</label>
+                        <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Descripción:</label>
                         <textarea id="modal-catalogo-descripcion" rows="2" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></textarea>
                     </div>
 
@@ -609,7 +609,7 @@ function buscarPersonaPorCedula() {
             .then(r => r.json())
             .then(data => {
                 if (!data) {
-                    msgDiv.textContent = 'C&eacute;dula muy corta';
+                    msgDiv.textContent = 'Cédula muy corta';
                     return;
                 }
                 if (data.found) {
@@ -662,7 +662,7 @@ function renderizarRolesSeleccionados() {
     const container = document.getElementById('inv-roles-seleccionados');
     const ids = Object.keys(invRolesPendientes);
     if (ids.length === 0) {
-        container.innerHTML = '<span style="color:#999;font-size:11px;">Ning&uacute;n rol seleccionado</span>';
+        container.innerHTML = '<span style="color:#999;font-size:11px;">Ningún rol seleccionado</span>';
         return;
     }
     container.innerHTML = ids.map(id =>
@@ -699,7 +699,7 @@ function buscarRolesModal() {
                         return '<div onclick="seleccionarRolModal(' + rol.id + ',\'' + rol.nombre.replace(/'/g, "\\'") + '\')" style="padding:6px 8px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:11px;" onmouseover="this.style.background=\'#f5f0f0\'" onmouseout="this.style.background=\'\'">' +
                             '<b>' + rol.nombre + '</b>' +
                         '</div>';
-                    }).filter(Boolean).join('') || '<div style="padding:6px 8px;font-size:10px;color:#999;">Ya seleccion&oacute; todos los roles disponibles</div>';
+                    }).filter(Boolean).join('') || '<div style="padding:6px 8px;font-size:10px;color:#999;">Ya seleccionó todos los roles disponibles</div>';
                 }
                 container.style.display = 'block';
             });
@@ -885,28 +885,28 @@ function quitarRol(proyectoId, pivotId, rolId, invId) {
 // ─── Catálogos (modal genérico) ──────────────────────────────────
 const catalogoConfig = {
     linea: {
-        titulo: 'Nueva L&iacute;nea de Investigaci&oacute;n',
+        titulo: 'Nueva Línea de Investigación',
         ruta: '{{ route("lineas-investigacion.store") }}',
         checkRuta: '{{ route("lineas-investigacion.check-nombre") }}',
         campoNombre: 'nombre_investigacion',
         mostrarMencion: false
     },
     metodologia: {
-        titulo: 'Nueva Metodolog&iacute;a de Investigaci&oacute;n',
+        titulo: 'Nueva Metodología de Investigación',
         ruta: '{{ route("metodologia-investigacion.store") }}',
         checkRuta: '{{ route("metodologia-investigacion.check-nombre") }}',
         campoNombre: 'nombre',
         mostrarMencion: false
     },
     tipo_investigacion: {
-        titulo: 'Nuevo Tipo de Investigaci&oacute;n',
+        titulo: 'Nuevo Tipo de Investigación',
         ruta: '{{ route("tipos-investigacion.store") }}',
         checkRuta: '{{ route("tipos-investigacion.check-nombre") }}',
         campoNombre: 'nombre',
         mostrarMencion: false
     },
     objetivo_investigacion: {
-        titulo: 'Nuevo Objetivo de Investigaci&oacute;n',
+        titulo: 'Nuevo Objetivo de Investigación',
         ruta: '{{ route("objetivos-investigacion.store") }}',
         checkRuta: '{{ route("objetivos-investigacion.check-nombre") }}',
         campoNombre: 'nombre',

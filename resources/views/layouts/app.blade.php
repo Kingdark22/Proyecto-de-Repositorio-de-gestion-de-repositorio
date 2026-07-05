@@ -542,7 +542,7 @@
             @yield('content')
         </main>
 
-        {{-- Modal de confirmación de acciones (reutilizable: registrar, eliminar, toggle) --}}
+        {{-- Modal de confirmación de acciones (reutilizable: eliminar, toggle) --}}
         <div id="confirmModal" class="confirm-modal-overlay">
             <div class="confirm-modal-content">
                 <div class="confirm-modal-header">
@@ -660,7 +660,9 @@
             });
         })();
 
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
     </script>
     <script>
         function validarCorreo(el) {
@@ -967,7 +969,6 @@
             if (modal) {
                 modal.classList.remove('show');
                 modal._onConfirm = null;
-                modal._targetForm = null;
             }
         }
 
@@ -979,70 +980,12 @@
             var modal = document.getElementById('confirmModal');
             if (!modal || !modal.classList.contains('show')) return;
 
-            // Si tiene un callback registrado (delete/toggle), ejecutarlo
+            // Ejecutar callback registrado (delete/toggle)
             if (typeof modal._onConfirm === 'function') {
                 modal._onConfirm();
                 modal.classList.remove('show');
                 modal._onConfirm = null;
-                return;
             }
-
-            // Si tiene un formulario pendiente (registro), enviarlo
-            var form = modal._targetForm;
-            if (form) {
-                form.dataset.confirmedByModal = 'true';
-                var origBtn = form.querySelector('[data-confirm-register]');
-                if (origBtn) {
-                    origBtn.disabled = true;
-                    origBtn.textContent = 'Guardando...';
-                }
-                form.submit();
-            }
-            modal.classList.remove('show');
-            modal._targetForm = null;
-        });
-
-        // Delegación de submit para formularios con data-confirm-register
-        document.addEventListener('submit', function(e) {
-            var form = e.target;
-            if (form.tagName !== 'FORM') return;
-
-            var btn = form.querySelector('[data-confirm-register]');
-            if (!btn) return;
-
-            if (form.dataset.confirmedByModal === 'true') {
-                delete form.dataset.confirmedByModal;
-                return;
-            }
-
-            if (e.defaultPrevented) return;
-
-            e.preventDefault();
-
-            var entityType = btn.getAttribute('data-entity-type') || 'registro';
-
-            // Buscar el nombre del registro
-            var nameInput = form.querySelector('[name="nombre"], [name="nombre_investigacion"], [name="titulo"]');
-            var nameVal = '';
-            if (nameInput && nameInput.value.trim()) {
-                nameVal = nameInput.value.trim();
-            } else {
-                nameVal = '(nuevo ' + entityType.toLowerCase() + ')';
-            }
-
-            var modal = document.getElementById('confirmModal');
-            modal._targetForm = form;
-
-            mostrarModalAccion({
-                icon: '📋',
-                title: 'Guardar ' + entityType.toLowerCase(),
-                message: '¿Está seguro de registrar <strong>' + nameVal + '</strong>?',
-                hint: 'Revise los datos antes de confirmar. Una vez guardado podrá editarlo después.',
-                detailLabel: entityType,
-                detailValue: nameVal,
-                confirmText: 'Sí, guardar',
-                confirmClass: 'cm-btn-primary',
-            });
         });
 
         // Cerrar modal al hacer clic fuera del contenido
@@ -1168,17 +1111,6 @@
                 window.location.href = url;
             });
         });
-    </script>
-    <script>
-    // Convertir texto a mayúsculas en tiempo real
-    document.addEventListener('input', function(e) {
-        if (e.target.matches('input[type="text"], textarea')) {
-            var start = e.target.selectionStart;
-            var end = e.target.selectionEnd;
-            e.target.value = e.target.value.toUpperCase();
-            e.target.setSelectionRange(start, end);
-        }
-    });
     </script>
     @livewireScripts
     @stack('scripts')

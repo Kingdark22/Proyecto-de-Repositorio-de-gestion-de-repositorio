@@ -118,11 +118,6 @@ class GrupoProyectoController extends Controller
             }
         }
 
-        // Si el profesor no tiene ningún grupo registrado, ir directamente al formulario
-        if ($isProfessor && $lista->isEmpty() && $tablaOk) {
-            return redirect()->route('grupos-proyecto.create');
-        }
-
         // Paginación manual
         $perPage = 10;
         $page = (int) $request->get('page', 1);
@@ -395,14 +390,22 @@ class GrupoProyectoController extends Controller
 
     public function destroy(Request $request, $id)
     {
-        $this->grupos->eliminar((int) $id);
+        $ok = $this->grupos->eliminar((int) $id);
 
         if ($request->ajax() || $request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => 'Grupo eliminado correctamente.']);
+            if ($ok) {
+                return response()->json(['success' => true, 'message' => 'Grupo eliminado correctamente.']);
+            }
+            return response()->json(['success' => false, 'message' => 'No se pudo eliminar el grupo. Verifique la conexión con la base de datos.']);
+        }
+
+        if ($ok) {
+            return redirect()->route('grupos-proyecto.index')
+                ->with('success', 'Grupo eliminado correctamente.');
         }
 
         return redirect()->route('grupos-proyecto.index')
-            ->with('success', 'Grupo eliminado correctamente.');
+            ->with('error', 'No se pudo eliminar el grupo. Verifique la conexión con la base de datos.');
     }
 
     // ====== API JSON endpoints for cascading selects ======

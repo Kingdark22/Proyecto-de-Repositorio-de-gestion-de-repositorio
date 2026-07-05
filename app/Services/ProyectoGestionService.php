@@ -1283,7 +1283,7 @@ class ProyectoGestionService
                         $secNombre = $modelo->grp_contexto['sec_nombre'] ?? '';
                         $proSiglas = $modelo->grp_contexto['pro_siglas'] ?? '';
                         $proNombre = $modelo->grp_contexto['pro_nombre'] ?? '';
-                        $traNombre = $modelo->grp_contexto['tra_nombre'] ?? '';
+                        $traNombre = $modelo->grp_contexto['trayecto_nombre'] ?? $modelo->grp_contexto['tra_nombre'] ?? '';
                     }
                 } catch (\Throwable) {
                 }

@@ -87,7 +87,7 @@
 
             <div style="text-align: center; margin-top: 20px;">
                 <button type="button" onclick="window.location='{{ route('componentes.index') }}'" class="cm-btn cm-btn-danger" style="margin-right: 10px;">Cancelar</button>
-                <button type="submit" class="cm-btn cm-btn-primary" data-confirm-register data-entity-type="Componente">Guardar Componente</button>
+                <button type="submit" class="cm-btn cm-btn-primary" >Guardar Componente</button>
             </div>
         </form>
     </fieldset>

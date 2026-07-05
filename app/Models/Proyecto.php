@@ -146,6 +146,11 @@ class Proyecto extends RepositorioModel
         return $this->hasMany(ProyectoDocumento::class, 'pry_codigo', 'pry_codigo')->orderBy('pd_orden');
     }
 
+    public function vinculaciones()
+    {
+        return $this->hasMany(Vinculacion::class, 'proyecto_id', 'pry_codigo');
+    }
+
     public static function precargarTitulos($proyectos): void
     {
         $identificadores = [];

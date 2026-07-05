@@ -99,7 +99,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <td width="30%" valign="top"><b>Descripci&oacute;n Breve:</b></td>
+                    <td width="30%" valign="top"><b>Descripción Breve:</b></td>
                     <td width="70%">
                         <textarea name="descripcion" rows="4" style="width: 90%;">{{ old('descripcion') }}</textarea>
                         <span class="obligatorio">*</span>
@@ -117,7 +117,7 @@
             <div style="text-align: center; margin-top: 20px;">
                 <button type="button" onclick="window.location='{{ route('tipos-investigacion') }}'" class="cm-btn cm-btn-danger"
                     style="margin-right: 10px;">Cancelar</button>
-                <button type="submit" class="cm-btn cm-btn-primary" data-confirm-register data-entity-type="Tipo de Investigación">Guardar</button>
+                <button type="submit" class="cm-btn cm-btn-primary" >Guardar</button>
             </div>
         </form>
     </fieldset>

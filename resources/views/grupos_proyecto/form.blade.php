@@ -61,7 +61,7 @@
     }
     .grp-member-row:hover { background: #f9f9f9; }
     .grp-member-rol-badge {
-        display: inline-block; padding: 2px 6px; border-radius: 8px;
+        display: inline-block; padding: 2px 6px;
         font-size: 10px; font-weight: 600;
     }
     .grp-rol-lider { background: #8b0000; color: #fff; }
@@ -175,7 +175,7 @@
                 </tr>
                 <tr>
                     <td colspan="2" style="padding-top:8px;">
-                        <b>Contexto acad&eacute;mico:</b>
+                        <b>Contexto académico:</b>
                         <div style="display:flex;gap:16px;margin-top:4px;align-items:center;">
                             @if($isProfessor && !isset($grupo) && $lapsoPreseleccionado)
                                 @php $lapsoActual = $lapsos->firstWhere('lap_codigo', (int)$lapsoPreseleccionado); @endphp
@@ -198,7 +198,7 @@
                                 <option value="">PNF</option>
                             </select>
                             <select name="seccion" id="seccionSelect" class="grp-filter-select" required>
-                                <option value="">Secci&oacute;n</option>
+                                <option value="">Sección</option>
                             </select>
                         </div>
                         @error('lapso')<span style="color:#dc3545;font-size:10px;">{{ $message }}</span>@enderror
@@ -210,7 +210,7 @@
             <div style="margin-top:6px;background:#f0f7f0;border:1px solid #b8d4b8;border-radius:4px;padding:6px 10px;font-size:12px; display:none;" id="selectedSectionBadge">
                 <b>Sección seleccionada:</b> <span id="selectedSectionText"></span>
             </div>
-            <p style="font-size:11px;color:#856404;margin-top:4px;" id="selectSectionHint">Seleccione lapso, PNF y secci&oacute;n para buscar estudiantes.</p>
+            <p style="font-size:11px;color:#856404;margin-top:4px;" id="selectSectionHint">Seleccione lapso, PNF y sección para buscar estudiantes.</p>
 
             <div style="margin-top:8px;padding:8px;background:#f5f5f5;border:1px solid #ccc;display:none;" id="studentSection">
                 <b>Agregar integrante:</b>
@@ -218,15 +218,15 @@
                 <div style="display:flex;gap:16px;align-items:center;margin-top:4px;">
                     <div class="grp-search-wrapper" style="position:relative;flex:1;">
                         <input type="text" id="estudianteSearch"
-                            placeholder="🔍 Escriba nombre, apellido o c&eacute;dula para buscar..."
+                            placeholder="🔍 Escriba nombre, apellido o cédula para buscar..."
                             class="grp-filter-input" style="width:100%;padding:8px 10px;font-size:12px;height:34px;"
                             autocomplete="off" disabled>
                         <div class="grp-dropdown" id="estudianteDropdown" style="width:100%;">
-                            <div class="grp-dropdown-empty">Primero seleccione lapso, PNF y secci&oacute;n.</div>
+                            <div class="grp-dropdown-empty">Primero seleccione lapso, PNF y sección.</div>
                         </div>
                     </div>
                     <select id="rolSelect" class="grp-filter-select" style="width:130px;">
-                        <option value="1">L&iacute;der</option>
+                        <option value="1">Líder</option>
                         <option value="2">Autor</option>
                     </select>
                     <button type="button" class="cm-btn cm-btn-success cm-btn-sm" id="agregarBtn" disabled
@@ -238,7 +238,7 @@
                 style="font-size:11px;margin-top:10px;border-collapse:collapse;">
                 <thead>
                     <tr style="background:#ddd;">
-                        <th>C&eacute;dula</th>
+                        <th>Cédula</th>
                         <th>Nombre</th>
                         <th>Rol</th>
                         <th></th>
@@ -246,18 +246,18 @@
                 </thead>
                 <tbody id="miembrosTableBody">
                     <tr id="miembrosEmptyRow">
-                        <td colspan="4" align="center" style="padding:12px;color:#999;">Agregue al menos un l&iacute;der y los autores del grupo.</td>
+                        <td colspan="4" align="center" style="padding:12px;color:#999;">Agregue al menos un líder y los autores del grupo.</td>
                     </tr>
                 </tbody>
             </table>
 
             <div style="margin-top:14px;text-align:center;">
-                <button type="submit" class="cm-btn cm-btn-success" id="guardarBtn" data-confirm-register data-entity-type="Grupo de Proyecto" {{ !$tablaOk ? 'disabled' : '' }}>
+                <button type="submit" class="cm-btn cm-btn-success" id="guardarBtn"  {{ !$tablaOk ? 'disabled' : '' }}>
                     {{ isset($grupo) ? 'Actualizar Grupo' : 'Registrar Grupo' }}
                 </button>
                 <a href="{{ route('grupos-proyecto.index') }}" class="cm-btn cm-btn-danger">Cancelar</a>
             </div>
-            <p style="font-size:10px;color:#555;margin-top:8px;">Nota: El c&oacute;digo del equipo se genera autom&aacute;ticamente. Seleccione un nombre, comunidad, contexto acad&eacute;mico y agregue al menos un L&iacute;der.</p>
+            <p style="font-size:10px;color:#555;margin-top:8px;">Nota: El código del equipo se genera automáticamente. Seleccione un nombre, comunidad, contexto académico y agregue al menos un Líder.</p>
         </form>
     </fieldset>
 
@@ -304,7 +304,7 @@
                 </div>
 
                 <div class="grp-field">
-                    <label>Correo electr&oacute;nico</label>
+                    <label>Correo electrónico</label>
                     <input type="email" id="comCorreo" placeholder="comunidad@ejemplo.com"
                         style="width:100%;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;" maxlength="40"
                         data-check-url="{{ route('comunidades.check-email') }}"
@@ -314,7 +314,7 @@
                 </div>
 
                 <div class="grp-field">
-                    <label>Tel&eacute;fono</label>
+                    <label>Teléfono</label>
                     <div style="display:flex;gap:6px;">
                         <select id="comTelPrefijo" style="width:80px;height:36px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
                             <option value="0424">0424</option>
@@ -351,8 +351,8 @@
                 </div>
 
                 <div class="grp-field" style="grid-column:span 2;">
-                    <label>Direcci&oacute;n exacta <span style="color:#c82333;">*</span></label>
-                    <input type="text" id="comDireccion" placeholder="Calle, sector, n&uacute;mero..."
+                    <label>Dirección exacta <span style="color:#c82333;">*</span></label>
+                    <input type="text" id="comDireccion" placeholder="Calle, sector, número..."
                         style="width:100%;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
                 </div>
             </div>
@@ -403,7 +403,7 @@ lapsoSelect.addEventListener('change', function() {
     programaSelect.disabled = !lapso;
     programaSelect.innerHTML = '<option value="">— Seleccione PNF —</option>';
     seccionSelect.disabled = true;
-    seccionSelect.innerHTML = '<option value="">— Seleccione secci&oacute;n —</option>';
+    seccionSelect.innerHTML = '<option value="">— Seleccione sección —</option>';
     estudianteSearch.disabled = true;
     estudianteSearch.value = '';
     estudiantesCache = [];
@@ -454,7 +454,7 @@ programaSelect.addEventListener('change', function() {
     const lapso = lapsoSelect.value;
     const programa = this.value;
     seccionSelect.disabled = !lapso || !programa;
-    seccionSelect.innerHTML = '<option value="">— Seleccione secci&oacute;n —</option>';
+    seccionSelect.innerHTML = '<option value="">— Seleccione sección —</option>';
     estudianteSearch.disabled = true;
     estudianteSearch.value = '';
     estudiantesCache = [];
@@ -960,7 +960,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 fetch('/grupos-proyecto/api/secciones/' + lapso)
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
-                        seccionSelect.innerHTML = '<option value="">— Seleccione secci&oacute;n —</option>';
+                        seccionSelect.innerHTML = '<option value="">— Seleccione sección —</option>';
                         data.forEach(function(s) {
                             var opt = document.createElement('option');
                             opt.value = s.sec_codigo;

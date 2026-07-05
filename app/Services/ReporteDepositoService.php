@@ -193,7 +193,7 @@ class ReporteDepositoService
                     'sec_nombre'      => trim((string) ($ctx['sec_nombre'] ?? '')),
                     'pro_siglas'      => trim((string) ($ctx['pro_siglas'] ?? '')),
                     'pro_nombre'      => trim((string) ($ctx['pro_nombre'] ?? '')),
-                    'trayecto_nombre' => trim((string) ($ctx['tra_nombre'] ?? '')),
+                    'trayecto_nombre' => trim((string) ($ctx['trayecto_nombre'] ?? $ctx['tra_nombre'] ?? '')),
                     'sed_nombre'      => $sedNombre,
                     'sed_siglas'      => $sedSiglas,
                     'sec_codigo'      => $secCodigo > 0 ? $secCodigo : null,
@@ -211,6 +211,7 @@ class ReporteDepositoService
 
             $etiquetas = $this->equipoSeccion->etiquetasContexto($lapCodigo, $secCodigo);
             [$sedNombre, $sedSiglas] = $this->obtenerSedeDeSeccion($secCodigo);
+            \Illuminate\Support\Facades\Log::info("Contexto para sec $secCodigo: Sede=$sedNombre, Trayecto=".($etiquetas['trayecto_nombre'] ?? 'vacio'));
 
             return array_merge($defaults, [
                 'lap_nombre'      => $etiquetas['lap_nombre'] ?? '',

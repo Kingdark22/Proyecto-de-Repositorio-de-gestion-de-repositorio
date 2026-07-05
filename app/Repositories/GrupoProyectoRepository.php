@@ -16,7 +16,7 @@ class GrupoProyectoRepository
 
     public function tablaDisponible(): bool
     {
-        return Cache::remember('grp_tabla_disponible', 3600, function () {
+        return Cache::remember('grp_tabla_disponible', 60, function () {
             try {
                 return Schema::connection($this->conexionRepositorio())->hasTable('grupo_proyecto_modulo');
             } catch (\Throwable) {
@@ -176,6 +176,7 @@ class GrupoProyectoRepository
     public function invalidarCache(): void
     {
         Cache::put('grp_cache_version', time(), now()->addDays(1));
+        Cache::forget('grp_tabla_disponible');
     }
 
     /**

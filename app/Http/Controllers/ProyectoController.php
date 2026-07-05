@@ -619,7 +619,9 @@ class ProyectoController extends Controller
                 'anio'           => $now->year,
             ]);
 
-            return $pdf->download("solvencia_{$folio}.pdf");
+            $nombreArchivo = 'Solvencia_' . ($integrante ? preg_replace('/[^a-zA-Z0-9_-]/', '_', $integrante['nombre_completo']) : $folio);
+
+            return $pdf->download("{$nombreArchivo}.pdf");
         } catch (\RuntimeException $e) {
             return redirect()->route('proyectos.gestion')
                 ->with('error', $e->getMessage());

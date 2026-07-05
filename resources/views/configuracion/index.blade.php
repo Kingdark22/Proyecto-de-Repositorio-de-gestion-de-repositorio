@@ -24,11 +24,7 @@
             </tr>
         </table>
 
-        <div style="margin-top: 20px; text-align: center;">
-            <a href="{{ route('acceso-rol.index') }}" class="cm-btn cm-btn-primary" style="display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; padding: 0.55rem 0.95rem; font-size: 0.92rem; font-weight: 600; border: 1px solid transparent; cursor: pointer; text-decoration: none; background: #19692e; border-color: #154f26; color: #fff;">
-                Cambiar rol
-            </a>
-        </div>
+
     </fieldset>
 </div>
 @endsection
