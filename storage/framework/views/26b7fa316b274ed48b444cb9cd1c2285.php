@@ -1,9 +1,7 @@
-@extends('layouts.app')
+<?php $__env->startSection('title', isset($grupo) ? 'Editar Grupo de Proyecto' : 'Registrar Grupo de Proyecto'); ?>
+<?php $__env->startSection('header', isset($grupo) ? 'Editar Grupo de Proyecto' : 'Registrar Grupo de Proyecto'); ?>
 
-@section('title', isset($grupo) ? 'Editar Grupo de Proyecto' : 'Registrar Grupo de Proyecto')
-@section('header', isset($grupo) ? 'Editar Grupo de Proyecto' : 'Registrar Grupo de Proyecto')
-
-@push('styles')
+<?php $__env->startPush('styles'); ?>
 <style>
     .cm-btn {
         display: inline-flex;
@@ -103,34 +101,36 @@
     .com-row:hover { background: #e8f0fe; }
     .com-row.selected { background: #cce5ff; font-weight: 600; }
 </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@section('content')
-    @if (session('error'))
+<?php $__env->startSection('content'); ?>
+    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(session('error')): ?>
         <div style="background-color: #f8d7da; color: #721c24; padding: 12px 18px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px; font-weight: bold; text-align: center;">
-            {{ session('error') }}
-        </div>
-    @endif
+            <?php echo e(session('error')); ?>
 
-    @if (!$tablaOk)
+        </div>
+    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!$tablaOk): ?>
         <div style="background: #fff3cd; padding: 10px; font-size: 11px; margin-bottom: 12px;">
             Falta la tabla <code>grupo_proyecto_modulo</code> en MySQL repositorio.
             Ejecute: <code>php artisan migrate --path=database/migrations/2026_05_26_100000_create_grupo_proyecto_modulo_table.php</code>
         </div>
-    @endif
+    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
     <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
         <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 8px;">
-            {{ isset($grupo) ? 'Editar grupo: ' . $grupo->nombre : 'Nuevo grupo de proyecto' }}
+            <?php echo e(isset($grupo) ? 'Editar grupo: ' . $grupo->nombre : 'Nuevo grupo de proyecto'); ?>
+
         </legend>
 
-        <form method="POST" action="{{ isset($grupo) ? route('grupos-proyecto.update', $grupo->grp_codigo) : route('grupos-proyecto.store') }}" id="grupoForm">
-            @csrf
-            @if (isset($grupo))
-                @method('PUT')
-            @endif
+        <form method="POST" action="<?php echo e(isset($grupo) ? route('grupos-proyecto.update', $grupo->grp_codigo) : route('grupos-proyecto.store')); ?>" id="grupoForm">
+            <?php echo csrf_field(); ?>
+            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(isset($grupo)): ?>
+                <?php echo method_field('PUT'); ?>
+            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
-            {{-- Hidden field for members JSON --}}
+            
             <input type="hidden" name="miembros" id="miembrosInput" value="">
 
             <table width="100%" style="font-size:11px; table-layout: fixed; border-collapse: collapse;">
@@ -138,30 +138,30 @@
                     <td width="40%" style="vertical-align: top;">
                         <b>Nombre del equipo:</b> <span style="color:#c82333;">*</span><br>
                         <input type="text" name="nombre" id="nombreInput"
-                            value="{{ old('nombre', $grupo->nombre ?? '') }}"
+                            value="<?php echo e(old('nombre', $grupo->nombre ?? '')); ?>"
                             class="grp-filter-input" style="width:100%;" maxlength="120" required
                             placeholder="Ej: Equipo Alpha, Proyecto Web"
-                            data-check-url="{{ route('grupos-proyecto.api.check-nombre') }}"
-                            data-exclude="{{ $grupo->grp_codigo ?? '' }}"
+                            data-check-url="<?php echo e(route('grupos-proyecto.api.check-nombre')); ?>"
+                            data-exclude="<?php echo e($grupo->grp_codigo ?? ''); ?>"
                             oninput="validarNombreDisponible(this)">
                         <span id="nombreStatus" class="status-indicator"></span>
                     </td>
-                    @if (isset($grupo) && ($grupo->identificador ?? ''))
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(isset($grupo) && ($grupo->identificador ?? '')): ?>
                     <td width="30%" style="vertical-align: top;">
                         <b>Código del equipo:</b><br>
-                        <span style="font-size:13px;font-weight:bold;color:#8b0000;">{{ $grupo->identificador }}</span>
+                        <span style="font-size:13px;font-weight:bold;color:#8b0000;"><?php echo e($grupo->identificador); ?></span>
                     </td>
-                    @endif
-                    <td width="{{ isset($grupo) && ($grupo->identificador ?? '') ? '30%' : '50%' }}" style="vertical-align: top;">
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                    <td width="<?php echo e(isset($grupo) && ($grupo->identificador ?? '') ? '30%' : '50%'); ?>" style="vertical-align: top;">
                         <b>Comunidad:</b><br>
                         <div style="display:flex;gap:4px;align-items:center; min-width: 0;">
-                            @php $comSel = old('comunidad', $grupo->com_codigo ?? ''); @endphp
-                            <input type="hidden" name="comunidad" id="comunidadId" value="{{ $comSel }}">
-                            <div id="comunidadBadge" style="display:{{ $comSel ? 'flex' : 'none' }};align-items:center;gap:6px;background:#f0f7f0;border:1px solid #b8d4b8;border-radius:4px;padding:4px 10px;font-size:12px;flex:1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
-                                <span style="font-weight:bold; overflow: hidden; text-overflow: ellipsis;">{{ $comSel ? ($comunidades->firstWhere('com_codigo', (int)$comSel)?->com_nombre ?? '') : '' }}</span>
+                            <?php $comSel = old('comunidad', $grupo->com_codigo ?? ''); ?>
+                            <input type="hidden" name="comunidad" id="comunidadId" value="<?php echo e($comSel); ?>">
+                            <div id="comunidadBadge" style="display:<?php echo e($comSel ? 'flex' : 'none'); ?>;align-items:center;gap:6px;background:#f0f7f0;border:1px solid #b8d4b8;border-radius:4px;padding:4px 10px;font-size:12px;flex:1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                                <span style="font-weight:bold; overflow: hidden; text-overflow: ellipsis;"><?php echo e($comSel ? ($comunidades->firstWhere('com_codigo', (int)$comSel)?->com_nombre ?? '') : ''); ?></span>
                                 <button type="button" onclick="document.getElementById('comunidadId').value='';document.getElementById('comunidadBadge').style.display='none';document.getElementById('comunidadSearchWrapper').style.display='flex'" style="background:none;border:none;cursor:pointer;color:#991b19;font-size:14px;padding:0 2px; flex-shrink: 0;" title="Cambiar comunidad">✕</button>
                             </div>
-                            <div class="grp-search-wrapper" id="comunidadSearchWrapper" style="flex:1;display:{{ $comSel ? 'none' : 'block' }}; min-width: 0;">
+                            <div class="grp-search-wrapper" id="comunidadSearchWrapper" style="flex:1;display:<?php echo e($comSel ? 'none' : 'block'); ?>; min-width: 0;">
                                 <input type="text" id="comunidadSearch" placeholder="Buscar comunidad..."
                                     value="" class="grp-filter-input" style="width:100%;" autocomplete="off">
                                 <div class="grp-dropdown" id="comunidadDropdown">
@@ -170,29 +170,39 @@
                             </div>
                             <button type="button" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space:nowrap; flex-shrink: 0;" onclick="abrirModalComunidad()" title="Crear nueva comunidad">+</button>
                         </div>
-                        @error('comunidad')<span style="color:#dc3545;font-size:10px;">{{ $message }}</span>@enderror
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['comunidad'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><span style="color:#dc3545;font-size:10px;"><?php echo e($message); ?></span><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                     </td>
                 </tr>
                 <tr>
                     <td colspan="2" style="padding-top:8px;">
                         <b>Contexto académico:</b>
                         <div style="display:flex;gap:16px;margin-top:4px;align-items:center;">
-                            @if($isProfessor && !isset($grupo) && $lapsoPreseleccionado)
-                                @php $lapsoActual = $lapsos->firstWhere('lap_codigo', (int)$lapsoPreseleccionado); @endphp
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($isProfessor && !isset($grupo) && $lapsoPreseleccionado): ?>
+                                <?php $lapsoActual = $lapsos->firstWhere('lap_codigo', (int)$lapsoPreseleccionado); ?>
                                 <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;height:32px;background:#f0f7f0;border:1px solid #b8d4b8;border-radius:4px;font-size:12px;font-weight:bold;box-sizing:border-box;">
-                                    📅 {{ $lapsoActual->lap_nombre ?? 'Lapso #'.$lapsoPreseleccionado }}
+                                    📅 <?php echo e($lapsoActual->lap_nombre ?? 'Lapso #'.$lapsoPreseleccionado); ?>
+
                                 </span>
-                            @endif
+                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                             <select name="lapso" id="lapsoSelect" class="grp-filter-select" required
-                                style="{{ $isProfessor && !isset($grupo) && $lapsoPreseleccionado ? 'display:none;' : '' }}">
+                                style="<?php echo e($isProfessor && !isset($grupo) && $lapsoPreseleccionado ? 'display:none;' : ''); ?>">
                                 <option value="">Lapso</option>
-                                @foreach ($lapsos as $l)
-                                    <option value="{{ $l->lap_codigo }}"
-                                        {{ $lapsoPreseleccionado == $l->lap_codigo ? 'selected' : '' }}
-                                        {{ isset($grupo) && $grupo->lap_codigo == $l->lap_codigo ? 'selected' : '' }}>
-                                        {{ $l->lap_nombre }}
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $lapsos; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $l): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                    <option value="<?php echo e($l->lap_codigo); ?>"
+                                        <?php echo e($lapsoPreseleccionado == $l->lap_codigo ? 'selected' : ''); ?>
+
+                                        <?php echo e(isset($grupo) && $grupo->lap_codigo == $l->lap_codigo ? 'selected' : ''); ?>>
+                                        <?php echo e($l->lap_nombre); ?>
+
                                     </option>
-                                @endforeach
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
                             </select>
                             <select name="programa" id="programaSelect" class="grp-filter-select">
                                 <option value="">PNF</option>
@@ -201,8 +211,22 @@
                                 <option value="">Sección</option>
                             </select>
                         </div>
-                        @error('lapso')<span style="color:#dc3545;font-size:10px;">{{ $message }}</span>@enderror
-                        @error('seccion')<span style="color:#dc3545;font-size:10px;">{{ $message }}</span>@enderror
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['lapso'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><span style="color:#dc3545;font-size:10px;"><?php echo e($message); ?></span><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['seccion'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><span style="color:#dc3545;font-size:10px;"><?php echo e($message); ?></span><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                     </td>
                 </tr>
             </table>
@@ -252,18 +276,17 @@
             </table>
 
             <div style="margin-top:14px;text-align:center;">
-                <button type="submit" class="cm-btn cm-btn-success" id="guardarBtn"  {{ !$tablaOk ? 'disabled' : '' }}>
-                    {{ isset($grupo) ? 'Actualizar Grupo' : 'Registrar Grupo' }}
+                <button type="submit" class="cm-btn cm-btn-success" id="guardarBtn"  <?php echo e(!$tablaOk ? 'disabled' : ''); ?>>
+                    <?php echo e(isset($grupo) ? 'Actualizar Grupo' : 'Registrar Grupo'); ?>
+
                 </button>
-                <a href="{{ route('grupos-proyecto.index') }}" class="cm-btn cm-btn-danger">Cancelar</a>
+                <a href="<?php echo e(route('grupos-proyecto.index')); ?>" class="cm-btn cm-btn-danger">Cancelar</a>
             </div>
             <p style="font-size:10px;color:#555;margin-top:8px;">Nota: El código del equipo se genera automáticamente. Seleccione un nombre, comunidad, contexto académico y agregue al menos un Líder.</p>
         </form>
     </fieldset>
 
-    {{-- ============================================================
-         MODAL CREAR COMUNIDAD
-         ============================================================ --}}
+    
     <div class="modal-overlay" id="comunidadModal">
         <div class="modal-content">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #8b0000;">
@@ -292,7 +315,7 @@
                         <span style="font-size:16px;">-</span>
                         <input type="text" id="comRifNumero" placeholder="123456789" maxlength="9"
                             style="flex:1;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;"
-                            data-check-url="{{ route('comunidades.check-rif') }}"
+                            data-check-url="<?php echo e(route('comunidades.check-rif')); ?>"
                             data-status-span="comRifStatus"
                             data-digito-span="comRifDigito"
                             data-select-id="comRifLetra"
@@ -307,7 +330,7 @@
                     <label>Correo electrónico</label>
                     <input type="email" id="comCorreo" placeholder="comunidad@ejemplo.com"
                         style="width:100%;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;" maxlength="40"
-                        data-check-url="{{ route('comunidades.check-email') }}"
+                        data-check-url="<?php echo e(route('comunidades.check-email')); ?>"
                         data-status-span="comCorreoStatus"
                         oninput="validarCorreoRemoto(this)">
                     <span id="comCorreoStatus" class="status-indicator"></span>
@@ -337,9 +360,9 @@
                     <label>Estado <span style="color:#c82333;">*</span></label>
                     <select id="comEstado" style="width:100%;height:36px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
                         <option value="">— Seleccione —</option>
-                        @foreach ($estados as $e)
-                            <option value="{{ $e->est_codigo }}">{{ $e->est_nombre }}</option>
-                        @endforeach
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $estados; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $e): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                            <option value="<?php echo e($e->est_codigo); ?>"><?php echo e($e->est_nombre); ?></option>
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
                     </select>
                 </div>
 
@@ -363,16 +386,16 @@
             </div>
         </div>
     </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
 // ========== State ==========
 let miembros = [];
 let estudiantesCache = [];
-let comunidadesCache = @json($comunidades->map(fn($c) => ['id' => $c->com_codigo, 'nombre' => $c->com_nombre, 'rif' => $c->com_rif ?? '']));
-let isProfessor = {{ $isProfessor ? 'true' : 'false' }};
-let editingMode = {{ isset($grupo) ? 'true' : 'false' }};
+let comunidadesCache = <?php echo json_encode($comunidades->map(fn($c) => ['id' => $c->com_codigo, 'nombre' => $c->com_nombre, 'rif' => $c->com_rif ?? ''])) ?>;
+let isProfessor = <?php echo e($isProfessor ? 'true' : 'false'); ?>;
+let editingMode = <?php echo e(isset($grupo) ? 'true' : 'false'); ?>;
 
 // ========== DOM refs ==========
 const lapsoSelect = document.getElementById('lapsoSelect');
@@ -425,10 +448,10 @@ lapsoSelect.addEventListener('change', function() {
                 opt.textContent = p.pro_siglas;
                 programaSelect.appendChild(opt);
             });
-            @if (isset($grupo) && $grupo->pro_codigo)
-                programaSelect.value = '{{ $grupo->pro_codigo }}';
+            <?php if(isset($grupo) && $grupo->pro_codigo): ?>
+                programaSelect.value = '<?php echo e($grupo->pro_codigo); ?>';
                 programaSelect.dispatchEvent(new Event('change'));
-            @else
+            <?php else: ?>
                 // Auto-select when only 1 programa disponible (para todos los roles)
                 if (data.length === 1) {
                     programaSelect.value = data[0].pro_codigo;
@@ -440,7 +463,7 @@ lapsoSelect.addEventListener('change', function() {
                 if (data.length === 0) {
                     programaSelect.style.borderColor = '#dc3545';
                 }
-            @endif
+            <?php endif; ?>
         })
         .catch(function(err) {
             console.error('Error cargando programas:', err);
@@ -476,10 +499,10 @@ programaSelect.addEventListener('change', function() {
                 opt.textContent = s.sec_nombre + (s.tra_nombre ? ' (' + s.tra_nombre + ')' : '');
                 seccionSelect.appendChild(opt);
             });
-            @if (isset($grupo))
-                seccionSelect.value = '{{ $grupo->sec_codigo }}';
+            <?php if(isset($grupo)): ?>
+                seccionSelect.value = '<?php echo e($grupo->sec_codigo); ?>';
                 seccionSelect.dispatchEvent(new Event('change'));
-            @endif
+            <?php endif; ?>
             if (data.length === 1 && !editingMode) {
                 seccionSelect.value = data[0].sec_codigo;
                 seccionSelect.dispatchEvent(new Event('change'));
@@ -532,9 +555,9 @@ seccionSelect.addEventListener('change', function() {
         .then(function(r) { return r.json(); })
         .then(function(data) {
             estudiantesCache = data;
-            @if (isset($grupo))
+            <?php if(isset($grupo)): ?>
                 // Pre-load existing members (sin borrar los que ya estén cargados)
-                var miembrosData = @json($grupo->miembros ?? []);
+                var miembrosData = <?php echo json_encode($grupo->miembros ?? [], 15, 512) ?>;
                 miembrosData.forEach(function(m) {
                     var exists = miembros.some(function(ex) { return ex.cedula === m.cedula; });
                     if (!exists) {
@@ -548,7 +571,7 @@ seccionSelect.addEventListener('change', function() {
                     }
                 });
                 renderMiembros();
-            @endif
+            <?php endif; ?>
             // Show dropdown hint
             if (data.length > 0) {
                 var disponibles = estudiantesDisponibles();
@@ -884,9 +907,9 @@ function guardarComunidadAjax() {
     btn.disabled = true;
     btn.textContent = 'Guardando...';
 
-    fetch('{{ route('grupos-proyecto.api.crear-comunidad') }}', {
+    fetch('<?php echo e(route('grupos-proyecto.api.crear-comunidad')); ?>', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' },
         body: JSON.stringify(data)
     })
     .then(function(r) {
@@ -949,11 +972,11 @@ function escapeHtml(str) {
 
 // ========== Init on page load ==========
 document.addEventListener('DOMContentLoaded', function() {
-    @if (isset($grupo))
+    <?php if(isset($grupo)): ?>
         if (lapsoSelect.value) {
             lapsoSelect.dispatchEvent(new Event('change'));
 
-            @if (!$grupo->pro_codigo)
+            <?php if(!$grupo->pro_codigo): ?>
             setTimeout(function() {
                 var lapso = lapsoSelect.value;
                 if (!lapso) return;
@@ -967,21 +990,23 @@ document.addEventListener('DOMContentLoaded', function() {
                             opt.textContent = s.sec_nombre + (s.tra_nombre ? ' (' + s.tra_nombre + ')' : '');
                             seccionSelect.appendChild(opt);
                         });
-                        seccionSelect.value = '{{ $grupo->sec_codigo }}';
+                        seccionSelect.value = '<?php echo e($grupo->sec_codigo); ?>';
                         seccionSelect.dispatchEvent(new Event('change'));
                     });
             }, 400);
-            @endif
+            <?php endif; ?>
         }
-    @elseif ($lapsoPreseleccionado)
-        lapsoSelect.value = '{{ $lapsoPreseleccionado }}';
+    <?php elseif($lapsoPreseleccionado): ?>
+        lapsoSelect.value = '<?php echo e($lapsoPreseleccionado); ?>';
         lapsoSelect.dispatchEvent(new Event('change'));
-    @else
+    <?php else: ?>
         // Sin lapso preseleccionado: si el select ya tiene valor por selected, disparar igual
         if (lapsoSelect.value) {
             lapsoSelect.dispatchEvent(new Event('change'));
         }
-    @endif
+    <?php endif; ?>
 });
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\Emanuel\Desktop\Sistemax\Proyecto-de-Repositorio-de-gestion-de-repositorio\resources\views/grupos_proyecto/form.blade.php ENDPATH**/ ?>

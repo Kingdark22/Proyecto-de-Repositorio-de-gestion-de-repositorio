@@ -10,6 +10,17 @@ use Illuminate\Database\Eloquent\Model;
  */
 abstract class IntranetModel extends Model
 {
+    protected $uppercaseExceptions = ['correo', 'email', 'password', 'contrasena'];
+
+    public function setAttribute($key, $value)
+    {
+        if (is_string($value) && !in_array($key, $this->uppercaseExceptions)) {
+            $value = strtoupper($value);
+        }
+
+        return parent::setAttribute($key, $value);
+    }
+
     public function getConnectionName(): ?string
     {
         if ($this->connection) {

@@ -82,7 +82,6 @@
             <tbody class="Texto">
                 @foreach ($comunidades as $c)
                     <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }};" valign="top">
-                        <td align="center">{{ $loop->iteration }}</td>
                         <td>
                             <span style="font-weight: bold;">{{ $c->nombre }}</span>
                             <br><span style="font-size: 9px; color: #555;">{{ $c->direccion?->municipio?->estado?->est_nombre ?? '' }} / {{ $c->direccion?->municipio?->mun_nombre ?? '' }} - {{ $c->direccion?->dir_calle ?? '' }}</span>
@@ -109,7 +108,7 @@
                 @endforeach
                 @if ($comunidades->isEmpty())
                     <tr>
-                        <td colspan="6" align="center" style="padding: 20px;">No hay comunidades registradas.</td>
+                        <td colspan="4" align="center" style="padding: 20px;">No hay comunidades registradas.</td>
                     </tr>
                 @endif
             </tbody>
