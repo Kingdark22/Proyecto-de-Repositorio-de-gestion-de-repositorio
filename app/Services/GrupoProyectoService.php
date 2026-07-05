@@ -31,15 +31,31 @@ class GrupoProyectoService
      * {pro_siglas}-{sed_siglas}{tra_codigo}{sem_codigo}-{sec_nombre}-{nroEquipo}/{totalEquipos}
      * Ejemplo: PNFI-ACA11-131-1/7
      */
+    protected function derivarSemestreTrayecto(string $secNombre, int $traCodigoDb, int $semCodigoDb): array
+    {
+        $semestre = $semCodigoDb;
+        $trayecto = $traCodigoDb;
+
+        // Para secciones con nombre tipo "631" (semestre=6, trayecto=3)
+        if (preg_match('/^(\d)/', $secNombre, $m)) {
+            $semestre = (int) $m[1];
+            $trayecto = (int) ceil($semestre / 2);
+        }
+
+        return [$trayecto, $semestre];
+    }
+
     public function generarCodigoGrupo(int $lapCodigo, int $secCodigo, ?int $proCodigo = null, string $creadorCedula = '', ?array $etiquetas = null): string
     {
         $ctx = $etiquetas ?? $this->equipos->etiquetasContexto($lapCodigo, $secCodigo, $proCodigo);
 
         $proSiglas = $ctx['pro_siglas'] ?: 'PNF';
         $sedSiglas = $ctx['sed_siglas'] ?: 'SED';
-        $traCodigo = $ctx['tra_codigo'] ?? '1';
-        $semCodigo = $ctx['sem_codigo'] ?? '1';
+        $traCodigoDb = $ctx['tra_codigo'] ?? 1;
+        $semCodigoDb = $ctx['sem_codigo'] ?? 1;
         $secNombre = $ctx['sec_nombre'] ?: (string) $secCodigo;
+
+        [$traCodigo, $semCodigo] = $this->derivarSemestreTrayecto($secNombre, (int) $traCodigoDb, (int) $semCodigoDb);
 
         $secuencia = $this->repo->contarPorCreadorEnLapso($creadorCedula, $lapCodigo) + 1;
 
@@ -136,10 +152,10 @@ class GrupoProyectoService
             'lap_nombre' => trim((string) ($etiquetasAcademicas['lap_nombre'] ?? '')),
             'sec_nombre' => trim((string) ($etiquetasAcademicas['sec_nombre'] ?? '')),
             'pro_siglas' => trim((string) ($etiquetasAcademicas['pro_siglas'] ?? '')),
-            'pro_nombre' => trim((string) ($etiquetasAcademicas['pro_nombre'] ?? '')),
-            'sed_siglas' => trim((string) ($etiquetasAcademicas['sed_siglas'] ?? '')),
-            'tra_codigo' => $etiquetasAcademicas['tra_codigo'] ?? null,
-            'sem_codigo' => $etiquetasAcademicas['sem_codigo'] ?? null,
+            'pro_nombre' => trim((string) ($etiquetasAcademicas['pro_nombre'] ?? '')),                'sed_siglas' => trim((string) ($etiquetasAcademicas['sed_siglas'] ?? '')),
+                'tra_codigo' => $etiquetasAcademicas['tra_codigo'] ?? null,
+                'trayecto_nombre' => trim((string) ($etiquetasAcademicas['trayecto_nombre'] ?? '')),
+                'sem_codigo' => $etiquetasAcademicas['sem_codigo'] ?? null,
         ], $etiquetasAcademicas ?? []), fn ($v) => $v !== null && $v !== '' && $v !== 0);
 
         $payload = [
@@ -162,6 +178,7 @@ class GrupoProyectoService
 
         // Create: generate identificador
         $payload['grp_identificador'] = $this->generarCodigoGrupo($lapCodigo, $secCodigo, $proCodigo, $creadorCedula, $etiquetasAcademicas);
+        $payload['estado_logico'] = true;
         $payload['created_at'] = now();
         $id = $this->repo->create($payload);
 
@@ -225,13 +242,16 @@ class GrupoProyectoService
         return $this->listar($filtros);
     }
 
-    public function eliminar(int $grpCodigo): void
+    public function eliminar(int $grpCodigo): bool
     {
         if (! $this->tablaDisponible()) {
-            return;
+            \Illuminate\Support\Facades\Log::warning('eliminar: tabla grupo_proyecto_modulo no disponible (posible cache obsoleto), forzando refresh');
+            Cache::forget('grp_tabla_disponible');
+            if (! $this->tablaDisponible()) {
+                return false;
+            }
         }
 
-        // Desactivar el proyecto asociado a este grupo antes de eliminar el grupo
         $grupo = $this->obtener($grpCodigo);
         $identificador = $grupo ? ($grupo->identificador ?: $this->construirClave($grpCodigo)) : $this->construirClave($grpCodigo);
         try {
@@ -247,6 +267,7 @@ class GrupoProyectoService
 
         $this->repo->invalidarCache();
         $this->repo->delete($grpCodigo);
+        return true;
     }
 
     /**

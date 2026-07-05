@@ -36,22 +36,8 @@ class Login extends Component
             $extUser = null;
             $fromIntranet = false;
 
-            // 1. Buscar en SIMULACIÓN primero (rápido, sin red)
-            try {
-                $extUser = \Illuminate\Support\Facades\DB::connection('simulacion')
-                    ->table('usuario')
-                    ->where(function ($q) use ($inputTrim) {
-                        $q->whereRaw('TRIM(usu_nombre) = ?', [$inputTrim])
-                          ->orWhereRaw('TRIM(usu_cedula) = ?', [$inputTrim]);
-                    })
-                    ->select(['usu_cedula', 'usu_nombre', 'usu_clave'])
-                    ->first();
-            } catch (\Throwable $simError) {
-                Log::warning('Error consultando simulación para login: ' . $simError->getMessage());
-            }
-
-            // 2. Si no está en simulación e intranet disponible, buscar en intranet
-            if (! $extUser && DbHelper::intranetAvailable()) {
+            // 1. Buscar en INTRANET primero (origen de datos real)
+            if (DbHelper::intranetAvailable()) {
                 try {
                     $extUser = \Illuminate\Support\Facades\DB::connection('intranet')
                         ->table('usuario')
@@ -61,9 +47,25 @@ class Login extends Component
                         })
                         ->select(['usu_cedula', 'usu_nombre', 'usu_clave'])
                         ->first();
-                    $fromIntranet = true;
+                    $fromIntranet = (bool) $extUser;
                 } catch (\Throwable $intError) {
                     Log::warning('Error consultando intranet para login: ' . $intError->getMessage());
+                }
+            }
+
+            // 2. Si no está en intranet, buscar en simulación como respaldo
+            if (! $extUser) {
+                try {
+                    $extUser = \Illuminate\Support\Facades\DB::connection('simulacion')
+                        ->table('usuario')
+                        ->where(function ($q) use ($inputTrim) {
+                            $q->whereRaw('TRIM(usu_nombre) = ?', [$inputTrim])
+                              ->orWhereRaw('TRIM(usu_cedula) = ?', [$inputTrim]);
+                        })
+                        ->select(['usu_cedula', 'usu_nombre', 'usu_clave'])
+                        ->first();
+                } catch (\Throwable $simError) {
+                    Log::warning('Error consultando simulación para login: ' . $simError->getMessage());
                 }
             }
 

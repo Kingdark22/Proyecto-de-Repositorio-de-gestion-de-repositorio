@@ -75,7 +75,7 @@
                 <h4 style="margin:0 0 10px 0;">Comentarios</h4>
 
                 @if($comentarios->isEmpty())
-                    <p style="color:#777; font-size:12px; font-style:italic;">No hay comentarios todav&iacute;a.</p>
+                    <p style="color:#777; font-size:12px; font-style:italic;">No hay comentarios todavía.</p>
                 @else
                     @foreach($comentarios as $c)
                         <div style="background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; padding: 8px; margin-bottom: 6px;">
@@ -105,7 +105,7 @@
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Listado de Proyectos Aprobados</legend>
 
             <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Buscar por t&iacute;tulo o resumen..." style="padding:4px 8px; border:1px solid #ccc; border-radius:4px; font-size:12px; min-width:200px; flex:1;">
+                <input wire:model.live.debounce.300ms="search" type="text" placeholder="Buscar por título o resumen..." style="padding:4px 8px; border:1px solid #ccc; border-radius:4px; font-size:12px; min-width:200px; flex:1;">
                 <select wire:model.live="filterComunidadId" style="padding:4px 8px; border:1px solid #ccc; border-radius:4px; font-size:12px; min-width:160px;">
                     <option value="">Todas las comunidades</option>
                     @foreach($comunidades as $c)
@@ -123,10 +123,10 @@
                         <thead>
                         <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
                             <th width="4%">N&deg;</th>
-                            <th width="33%">T&iacute;tulo / Equipo</th>
+                            <th width="33%">Título / Equipo</th>
                             <th width="20%">Resumen</th>
                             <th width="17%">Comunidad</th>
-                            <th width="26%">Acci&oacute;n</th>
+                            <th width="26%">Acción</th>
                         </tr>
                     </thead>
                     <tbody class="Texto">

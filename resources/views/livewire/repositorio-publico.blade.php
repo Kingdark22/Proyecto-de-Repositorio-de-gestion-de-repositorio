@@ -1,7 +1,7 @@
 <div>
     <h2 class="titulo" style="margin-bottom: 20px; font-weight: bolder; margin-top: 10px; text-align: center;">Acervo Institucional de Proyectos (UPTP)</h2>
     <p style="text-align: center; color: #555; font-size: 11px; margin-bottom: 20px;">
-        Consulta la producci&oacute;n intelectual validada y bajo custodia de la Universidad Polit&eacute;cnica Territorial Juan de Jes&uacute;s Montilla.
+        Consulta la producción intelectual validada y bajo custodia de la Universidad Politécnica Territorial Juan de Jesús Montilla.
     </p>
 
     <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
@@ -9,7 +9,7 @@
         <table width="100%" border="0" cellpadding="8" cellspacing="0" style="font-size: 11px;">
             <tr>
                 <td width="50%">
-                    <b>B&uacute;squeda global (T&iacute;tulo, resumen):</b><br>
+                    <b>Búsqueda global (Título, resumen):</b><br>
                     <input wire:model.live="search" type="text" style="width: 95%;" placeholder="Título o palabra clave...">
                 </td>
                 <td width="25%">
@@ -20,7 +20,7 @@
                     </select>
                 </td>
                 <td width="25%">
-                    <b>Lapso Acad&eacute;mico:</b><br>
+                    <b>Lapso Académico:</b><br>
                     <select wire:model.live="filterLapso" style="width: 95%;">
                         <option value="">Cualquier Lapso...</option>
                         @foreach($lapsos as $l)
@@ -33,14 +33,14 @@
     </fieldset>
 
     <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
-        <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Resultados de B&uacute;squeda</legend>
+        <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Resultados de Búsqueda</legend>
 
         <table width="100%" border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px;">
             <thead style="background-color: #8bb2b7; color: #000; font-weight: bold;">
                 <tr>
-                    <th width="35%" align="center">Informaci&oacute;n del Proyecto</th>
+                    <th width="35%" align="center">Información del Proyecto</th>
                     <th width="40%" align="center">Resumen Abstracto</th>
-                    <th width="15%" align="center">Clasificaci&oacute;n</th>
+                    <th width="15%" align="center">Clasificación</th>
                     <th width="10%" align="center">Descarga</th>
                 </tr>
             </thead>

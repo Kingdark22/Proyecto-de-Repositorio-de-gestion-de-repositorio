@@ -203,14 +203,23 @@ return [
     'vinculaciones' => [
         'primary_key' => 'vin_codigo',
         'columns' => [
-            'id'              => 'vin_codigo',
-            'proyecto_id'     => 'pry_codigo',
-            'comunidad_id'    => 'com_codigo',
-            'vin_titulo'      => 'vin_titulo',
-            'vin_descripcion' => 'vin_descripcion',
-            'tipo'            => 'vin_tipo',
-            'observaciones'   => 'vin_observaciones',
-            'estado_logico'   => 'vin_estado_logico',
+            'id'                   => 'vin_codigo',
+            'proyecto_id'          => 'pry_codigo',
+            'comunidad_id'         => 'com_codigo',
+            'titulo_vinculacion_id' => 'tiv_codigo',
+            'vin_descripcion'      => 'vin_descripcion',
+            'tipo'                 => 'vin_tipo',
+            'observaciones'        => 'vin_observaciones',
+            'estado_logico'        => 'vin_estado_logico',
+        ],
+    ],
+
+    'titulos_vinculacion' => [
+        'primary_key' => 'tiv_codigo',
+        'columns' => [
+            'id'            => 'tiv_codigo',
+            'tiv_titulo'    => 'tiv_titulo',
+            'estado_logico' => 'tiv_estado_logico',
         ],
     ],
 

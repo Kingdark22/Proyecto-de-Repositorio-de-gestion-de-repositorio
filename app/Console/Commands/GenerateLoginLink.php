@@ -51,7 +51,8 @@ class GenerateLoginLink extends Command
         $usuarios = [];
         $vistos = [];
 
-        foreach (['simulacion', 'intranet'] as $conn) {
+        // Priorizar intranet sobre simulación
+        foreach (['intranet', 'simulacion'] as $conn) {
             if ($conn === 'intranet' && !config('database.connections.intranet.enabled', true)) {
                 continue;
             }
@@ -74,6 +75,11 @@ class GenerateLoginLink extends Command
                         'nombre_completo' => trim($r->per_nombres ?? '') . ' ' . trim($r->per_apellidos ?? ''),
                         'fuente' => $conn,
                     ];
+                }
+
+                // Si encontramos usuarios en intranet, no buscamos en simulación
+                if (!empty($rows)) {
+                    break;
                 }
             } catch (\Throwable $e) {
                 if ($conn === 'intranet') {
@@ -111,8 +117,8 @@ class GenerateLoginLink extends Command
             if (is_numeric($input)) {
                 $usuarios = $this->buscarUsuarios($input);
             } else {
-                // Buscar por nombre de usuario — obtener la cédula primero
-                foreach (['simulacion', 'intranet'] as $conn) {
+                // Buscar por nombre de usuario — obtener la cédula primero (priorizar intranet)
+                foreach (['intranet', 'simulacion'] as $conn) {
                     if ($conn === 'intranet' && !config('database.connections.intranet.enabled', true)) continue;
                     try {
                         $u = DB::connection($conn)->table('usuario')

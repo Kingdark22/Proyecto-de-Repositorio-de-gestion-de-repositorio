@@ -4,67 +4,209 @@
     <meta charset="utf-8">
     <title>Reporte de Vinculación - {{ $titulo }}</title>
     <style>
-        body { font-family: 'DejaVu Sans', sans-serif; font-size: 10pt; color: #222; margin: 30px; }
-        h1 { font-size: 16pt; color: #8b0000; text-align: center; margin-bottom: 4px; }
-        h2 { font-size: 11pt; color: #555; text-align: center; font-weight: normal; margin-top: 0; margin-bottom: 20px; }
-        .fecha { text-align: right; font-size: 8pt; color: #888; margin-bottom: 16px; }
-        table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
-        th { background: #8b0000; color: #fff; padding: 6px 4px; text-align: left; font-weight: bold; }
-        td { padding: 5px 4px; border-bottom: 1px solid #ddd; vertical-align: top; }
-        tr:nth-child(even) td { background: #f9f9f9; }
-        .comunidad { font-size: 8pt; color: #555; }
+        .header-box {
+            text-align: center;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 3px double #8b0000;
+        }
+        .header-box .institucion {
+            font-size: 13pt;
+            font-weight: bold;
+            color: #8b0000;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .header-box .sub {
+            font-size: 8pt;
+            color: #555;
+            margin-top: 2px;
+        }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 9pt; color: #222; margin: 30px; }
+        h1 { font-size: 14pt; color: #8b0000; text-align: center; margin-bottom: 2px; }
+        h2 { font-size: 10pt; color: #333; text-align: center; font-weight: bold; margin-top: 4px; margin-bottom: 4px; }
+        .fecha { text-align: right; font-size: 7pt; color: #888; margin-bottom: 16px; }
         .footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 7pt; color: #aaa; padding: 8px; border-top: 1px solid #ddd; }
         .watermark {
             position: fixed;
-            top: 40%;
-            left: 20%;
-            width: 60%;
-            opacity: 0.1;
+            top: 42%;
+            left: 10%;
+            right: 10%;
+            text-align: center;
+            font-size: 36pt;
+            color: #ddd;
             z-index: -1;
             transform: rotate(-30deg);
+            font-weight: bold;
+            letter-spacing: 4px;
+        }
+        .card {
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 12px 14px;
+            margin-bottom: 14px;
+            page-break-inside: avoid;
+        }
+        .card-header {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #8b0000;
+            border-bottom: 2px solid #8b0000;
+            padding-bottom: 4px;
+            margin-bottom: 8px;
+        }
+        .field-label {
+            font-size: 7.5pt;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 6px;
+            margin-bottom: 1px;
+        }
+        .field-value {
+            font-size: 9pt;
+            color: #222;
+            margin-bottom: 2px;
+        }
+        .two-col {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px;
+        }
+        .two-col td {
+            width: 50%;
+            padding: 2px 8px 2px 0;
+            vertical-align: top;
+            border: none;
+        }
+        .tag {
+            display: inline-block;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 1px 6px;
+            font-size: 7.5pt;
+            color: #555;
+            margin-right: 3px;
+        }
+        .comunidad-block {
+            background: #fafafa;
+            border-left: 3px solid #8b0000;
+            padding: 6px 10px;
+            margin-top: 6px;
+            font-size: 8.5pt;
+        }
+        .resumen-text {
+            font-size: 8.5pt;
+            color: #444;
+            line-height: 1.4;
+            margin-top: 4px;
+            text-align: justify;
+        }
+        .empty-state {
+            text-align: center;
+            color: #999;
+            margin-top: 60px;
+            font-style: italic;
         }
     </style>
 </head>
 <body>
-    <img src="{{ public_path('imagenes/uptp-logo.png') }}" class="watermark">
-    <h1>REPÚBLICA BOLIVARIANA DE VENEZUELA</h1>
-    <h2>Reporte de Vinculación: {{ $titulo }}</h2>
+    <div class="watermark">UPT-PNFI</div>
+
+    <div class="header-box">
+        <div class="institucion">República Bolivariana de Venezuela</div>
+        <div class="sub">Universidad Politécnica Territorial &laquo;Juan de Jesús Montilla&raquo;</div>
+        <div class="sub">Programa Nacional de Formación en Informática</div>
+    </div>
+
+    <h1>Reporte de los Proyectos seleccionados</h1>
+    <h2>{{ $titulo }}</h2>
     <div class="fecha">Generado: {{ $fecha }}</div>
 
     @if($vinculaciones->isEmpty())
-        <p style="text-align:center;color:#999;margin-top:40px;">No se encontraron proyectos vinculados.</p>
+        <p class="empty-state">No se encontraron proyectos vinculados.</p>
     @else
-        <table>
-            <thead>
-                <tr>
-                    <th width="5%">N°</th>
-                    <th width="35%">Título del Proyecto</th>
-                    <th width="25%">Título Vinculación</th>
-                    <th width="35%">Comunidad</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($vinculaciones as $idx => $v)
+        @foreach($vinculaciones as $idx => $v)
+            @php $p = $v->proyecto; @endphp
+            <div class="card">
+                <div class="card-header">
+                    {{ $idx + 1 }}. {{ $p?->titulo ?? 'N/A' }}
+                </div>
+
+                <table class="two-col">
                     <tr>
-                        <td>{{ $idx + 1 }}</td>
-                        <td>{{ $v->proyecto->titulo ?? 'N/A' }}</td>
-                        <td><strong>{{ $v->vin_titulo }}</strong></td>
                         <td>
-                            @if($v->comunidad)
-                                <strong>{{ $v->comunidad->nombre }}</strong>
-                                @if($v->comunidad->rif)
-                                    <br><span class="comunidad">RIF: {{ $v->comunidad->rif }}</span>
+                            @if($p && $p->resumen)
+                                <div class="field-label">Resumen</div>
+                                <div class="resumen-text">{{ Str::limit(strip_tags($p->resumen), 300) }}</div>
+                            @endif
+
+                            <div class="field-label">Título de la vinculación</div>
+                            <div class="field-value">{{ $v->titulo }}</div>
+
+                            @if(isset($v->lapso) && $v->lapso && isset($lapsosNombres[$v->lapso]))
+                                <div class="field-label">Lapso académico</div>
+                                <div class="field-value">{{ $lapsosNombres[$v->lapso] }}</div>
+                            @endif
+                        </td>
+                        <td>
+                            @if($p)
+                                @if($p->equipo_ref)
+                                    <div class="field-label">Equipo / Grupo</div>
+                                    <div class="field-value">{{ $p->equipo_resumen }}</div>
                                 @endif
-                            @else
-                                <span style="color:#999;">—</span>
+                                @if($p->creador_cedula)
+                                    <div class="field-label">Creador (Cédula)</div>
+                                    <div class="field-value">{{ $p->creador_cedula }}</div>
+                                @endif
                             @endif
                         </td>
                     </tr>
-                @endforeach
-            </tbody>
-        </table>
+                </table>
+
+                @if($p)
+                    <div class="field-label" style="margin-top:8px;">Clasificación</div>
+                    <div>
+                        @if($p->linea_investigacion)
+                            <span class="tag">{{ $p->linea_investigacion->nombre ?? $p->linea_investigacion->lin_nombre_investigacion }}</span>
+                        @endif
+                        @if($p->tipo_investigacion)
+                            <span class="tag">{{ $p->tipo_investigacion->tin_nombre ?? '' }}</span>
+                        @endif
+                        @if($p->metodologia)
+                            <span class="tag">{{ $p->metodologia->mei_nombre ?? '' }}</span>
+                        @endif
+                        @if($p->tipo_publicacion)
+                            <span class="tag">{{ $p->tipo_publicacion->tpu_nombre ?? '' }}</span>
+                        @endif
+                        @if(!$p->linea_investigacion && !$p->tipo_investigacion && !$p->metodologia && !$p->tipo_publicacion)
+                            <span style="color:#bbb;">Sin clasificación</span>
+                        @endif
+                    </div>
+                @endif
+
+                @if(isset($v->integrantes) && $v->integrantes->isNotEmpty())
+                    <div class="field-label" style="margin-top:8px;">Integrantes del equipo</div>
+                    <div class="field-value" style="font-size:8.5pt;">
+                        @foreach($v->integrantes as $i => $integrante)
+                            <span>{{ $integrante->nombre }} {{ $integrante->apellido }} ({{ $integrante->cedula }}){{ ($integrante->rol ?? '') === 'Líder' ? ' — Líder' : '' }}</span>{{ !$loop->last ? ',' : '' }}
+                        @endforeach
+                    </div>
+                @endif
+
+                @if($v->comunidad)
+                    <div class="comunidad-block">
+                        <strong>Comunidad:</strong> {{ $v->comunidad->nombre }}
+                        @if($v->comunidad->rif)
+                            <br><span style="font-size:7.5pt;color:#888;">RIF: {{ $v->comunidad->rif }}</span>
+                        @endif
+                    </div>
+                @endif
+            </div>
+        @endforeach
     @endif
 
-    <div class="footer">Sistema de Gestión de Proyectos Socio-Tecnológicos — PNFI</div>
+    <div class="footer">Sistema de Gestión de Proyectos Socio-Tecnológicos — PNFI | Total: {{ $vinculaciones->count() }} proyecto(s)</div>
 </body>
 </html>

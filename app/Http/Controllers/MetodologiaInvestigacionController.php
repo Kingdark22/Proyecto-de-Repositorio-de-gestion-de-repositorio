@@ -29,12 +29,11 @@ class MetodologiaInvestigacionController extends Controller
     {
         $validated = $request->validate([
             'nombre' => 'required|min:3|max:100',
-            'descripcion' => 'required|min:3|max:500',
+            'descripcion' => 'nullable|min:3|max:500',
         ], [
             'nombre.required' => 'El nombre de la metodología es obligatorio.',
             'nombre.min' => 'El nombre debe tener al menos 3 caracteres.',
             'nombre.max' => 'El nombre no puede exceder 100 caracteres.',
-            'descripcion.required' => 'La descripción es obligatoria.',
             'descripcion.min' => 'La descripción debe tener al menos 3 caracteres.',
             'descripcion.max' => 'La descripción no puede exceder 500 caracteres.',
         ]);
@@ -72,12 +71,11 @@ class MetodologiaInvestigacionController extends Controller
     {
         $validated = $request->validate([
             'nombre' => 'required|min:3|max:100',
-            'descripcion' => 'required|min:3|max:500',
+            'descripcion' => 'nullable|min:3|max:500',
         ], [
             'nombre.required' => 'El nombre de la metodología es obligatorio.',
             'nombre.min' => 'El nombre debe tener al menos 3 caracteres.',
             'nombre.max' => 'El nombre no puede exceder 100 caracteres.',
-            'descripcion.required' => 'La descripción es obligatoria.',
             'descripcion.min' => 'La descripción debe tener al menos 3 caracteres.',
             'descripcion.max' => 'La descripción no puede exceder 500 caracteres.',
         ]);

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Vinculación de Componentes')
-@section('header', 'Vinculaci&oacute;n de Componentes')
+@section('header', 'Vinculación de Componentes')
 
 @push('styles')
 <style>
@@ -78,7 +78,7 @@
             </legend>
 
             <div style="font-size:12px;color:#666;margin-bottom:10px;">
-                Seleccione uno o m&aacute;s componentes para vincularlos a los PNF y trayectos que elija abajo.
+                Seleccione uno o más componentes para vincularlos a los PNF y trayectos que elija abajo.
             </div>
 
             @if($componentes->isEmpty())
@@ -192,7 +192,7 @@
         <div style="text-align: center; margin-top: 20px;">
             <button type="button" class="cm-btn cm-btn-success" style="margin-right: 10px;"
                 onclick="validarFormulario()">
-                Guardar Vinculaci&oacute;n
+                Guardar Vinculación
             </button>
             <a href="{{ route('componentes.index') }}" class="cm-btn cm-btn-danger">
                 Cancelar

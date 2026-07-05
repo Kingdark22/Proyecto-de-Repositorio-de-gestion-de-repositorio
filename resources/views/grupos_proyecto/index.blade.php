@@ -85,8 +85,8 @@
     <h2 class="titulo" style="margin-bottom: 10px; font-weight: bolder;">Equipos de proyecto</h2>
 
     <p style="font-size: 11px; color: #444; margin-bottom: 12px;">
-        Registre el <strong>grupo de proyecto</strong> eligiendo estudiantes de la <strong>secci&oacute;n del PNF</strong>.
-        Queda identificado con un c&oacute;digo &uacute;nico auto-generado.
+        Registre el <strong>grupo de proyecto</strong> eligiendo estudiantes de la <strong>sección del PNF</strong>.
+        Queda identificado con un código único auto-generado.
     </p>
 
     <div id="flashContainer">
@@ -104,7 +104,7 @@
 
     @if (!$tablaOk)
         <div style="background: #fff3cd; padding: 10px; font-size: 11px; margin-bottom: 12px;">
-            Falta la tabla <code>grupo_proyecto_modulo</code> en MySQL repositorio (solo del m&oacute;dulo, no es intranet).
+            Falta la tabla <code>grupo_proyecto_modulo</code> en MySQL repositorio (solo del módulo, no es intranet).
             Ejecute:
             <code>php artisan migrate --path=database/migrations/2026_05_26_100000_create_grupo_proyecto_modulo_table.php</code>
         </div>
@@ -126,7 +126,7 @@
                 @endforeach
             </select>
             <select name="seccion" class="grp-filter-select" onchange="this.form.submit()" {{ (!$filterLapso || (!$filterPrograma && !$isProfessor)) ? 'disabled' : '' }}>
-                <option value="">Secci&oacute;n</option>
+                <option value="">Sección</option>
                 @foreach ($secciones as $s)
                     <option value="{{ $s->sec_codigo }}" {{ $filterSeccion == $s->sec_codigo ? 'selected' : '' }}>{{ $s->sec_nombre }}</option>
                 @endforeach
@@ -145,9 +145,9 @@
                 <thead>
                     <tr style="background: #8bb2b7;">
                         <th>Nombre</th>
-                        <th>C&oacute;digo</th>
+                        <th>Código</th>
                         <th>PNF</th>
-                        <th>Secci&oacute;n</th>
+                        <th>Sección</th>
                         <th>Lapso</th>
                         <th>Integrantes</th>
                         <th>Proyecto</th>
@@ -211,7 +211,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" align="center">No hay grupos registrados. Cree uno con integrantes de la secci&oacute;n.</td>
+                            <td colspan="9" align="center">No hay grupos registrados. Cree uno con integrantes de la sección.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -238,15 +238,15 @@
     <div id="infoGrupoModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)cerrarInfoGrupo()">
         <div class="modal-content">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:15px;padding-bottom:10px;border-bottom:2px solid #8b0000;">
-                <h3 style="margin:0;font-size:16px;font-weight:bold;color:#333;">Informaci&oacute;n del grupo</h3>
+                <h3 style="margin:0;font-size:16px;font-weight:bold;color:#333;">Información del grupo</h3>
                 <button type="button" onclick="cerrarInfoGrupo()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#999;padding:0 4px;">&times;</button>
             </div>
             <table width="100%" style="font-size:12px;border-collapse:collapse;">
                 <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;width:35%;">Nombre:</td><td id="infoNombre" style="padding:6px 8px;"></td></tr>
-                <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">C&oacute;digo:</td><td id="infoIdentificador" style="padding:6px 8px;"></td></tr>
+                <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Código:</td><td id="infoIdentificador" style="padding:6px 8px;"></td></tr>
                 <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Lapso:</td><td id="infoLapso" style="padding:6px 8px;"></td></tr>
                 <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">PNF:</td><td id="infoPnf" style="padding:6px 8px;"></td></tr>
-                <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Secci&oacute;n:</td><td id="infoSeccion" style="padding:6px 8px;"></td></tr>
+                <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;">Sección:</td><td id="infoSeccion" style="padding:6px 8px;"></td></tr>
                 <tr><td style="padding:6px 8px;font-weight:bold;background:#f5f5f5;vertical-align:top;">Integrantes:</td>
                     <td id="infoIntegrantes" style="padding:6px 8px;"></td>
                 </tr>
@@ -282,9 +282,9 @@ function abrirInfoGrupo(el) {
 
     // Integrantes
     var html = '<table width="100%" style="font-size:11px;border-collapse:collapse;">' +
-        '<tr style="background:#ddd;"><th style="padding:3px 6px;">C&eacute;dula</th><th style="padding:3px 6px;">Nombre</th><th style="padding:3px 6px;">Rol</th></tr>';
+        '<tr style="background:#ddd;"><th style="padding:3px 6px;">Cédula</th><th style="padding:3px 6px;">Nombre</th><th style="padding:3px 6px;">Rol</th></tr>';
     miembros.forEach(function(m) {
-        var rol = (m.rol_id == 1) ? '<span style="color:#8b0000;font-weight:bold;">L&iacute;der</span>' : '<span style="color:#666;">Autor</span>';
+        var rol = (m.rol_id == 1) ? '<span style="color:#8b0000;font-weight:bold;">Líder</span>' : '<span style="color:#666;">Autor</span>';
         html += '<tr style="border-bottom:1px solid #eee;">' +
             '<td style="padding:3px 6px;">' + (m.cedula || '') + '</td>' +
             '<td style="padding:3px 6px;">' + (m.apellido || '') + ', ' + (m.nombre || '') + '</td>' +

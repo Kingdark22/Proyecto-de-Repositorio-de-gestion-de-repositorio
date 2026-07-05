@@ -100,7 +100,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <td width="30%" valign="top"><b>Descripci&oacute;n Breve:</b></td>
+                    <td width="30%" valign="top"><b>Descripción Breve:</b></td>
                     <td width="70%">
                         <textarea name="descripcion" rows="4" required style="width: 90%;">{{ old('descripcion', $item->descripcion) }}</textarea>
                         <span class="obligatorio">*</span>

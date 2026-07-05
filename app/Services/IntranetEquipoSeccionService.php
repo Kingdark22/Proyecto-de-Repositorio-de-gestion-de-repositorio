@@ -507,6 +507,31 @@ class IntranetEquipoSeccionService
      *
      * @return array{lap_nombre: string, sec_nombre: string, pro_siglas: string, pro_nombre: string, tra_codigo: int|null, trayecto_nombre: string}
      */
+    protected function resolverSedSiglas(int $secCodigo, string $conn): string
+    {
+        // Intranet no tiene permisos sobre la tabla sede, consultamos desde simulacion
+        if ($conn === 'intranet') {
+            try {
+                $sedeCodigo = DB::connection($conn)->table('seccion')
+                    ->where('sec_codigo', $secCodigo)
+                    ->value('sec_cod_sede');
+                if ($sedeCodigo) {
+                    $siglas = DB::connection('simulacion')->table('sede')
+                        ->where('sed_codigo', $sedeCodigo)
+                        ->value('sed_siglas');
+                    if ($siglas) {
+                        return trim((string) $siglas);
+                    }
+                }
+            } catch (\Throwable) {
+            }
+            return '';
+        }
+
+        // Simulacion tiene la tabla sede, se obtiene via LEFT JOIN normal
+        return '';
+    }
+
     public function etiquetasContexto(int $lapCodigo, int $secCodigo, ?int $proCodigo = null): array
     {
         if ($lapCodigo <= 0 || $secCodigo <= 0) {
@@ -521,7 +546,6 @@ class IntranetEquipoSeccionService
             $query = DB::connection($conn)
                 ->table('seccion as sec')
                 ->join('lapso_academico as lap', 'lap.lap_codigo', '=', 'sec.sec_cod_lapso_academico')
-                ->leftJoin('sede as sed', 'sed.sed_codigo', '=', 'sec.sec_cod_sede')
                 ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
                 ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
                 ->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
@@ -533,7 +557,6 @@ class IntranetEquipoSeccionService
                     'pro.pro_siglas', 'pro.pro_nombre',
                     'tra.tra_codigo', 'tra.tra_nombre as trayecto_nombre',
                     'sem.sem_codigo', 'sem.sem_nombre as semestre_nombre',
-                    'sed.sed_siglas',
                 ]);
 
             if ($proCodigo) {
@@ -546,7 +569,6 @@ class IntranetEquipoSeccionService
                 $row = DB::connection($conn)
                     ->table('seccion as sec')
                     ->join('lapso_academico as lap', 'lap.lap_codigo', '=', 'sec.sec_cod_lapso_academico')
-                    ->leftJoin('sede as sed', 'sed.sed_codigo', '=', 'sec.sec_cod_sede')
                     ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
                     ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
                     ->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
@@ -558,7 +580,6 @@ class IntranetEquipoSeccionService
                         'pro.pro_siglas', 'pro.pro_nombre',
                         'tra.tra_codigo', 'tra.tra_nombre as trayecto_nombre',
                         'sem.sem_codigo', 'sem.sem_nombre as semestre_nombre',
-                        'sed.sed_siglas',
                     ])
                     ->first();
             }
@@ -574,7 +595,7 @@ class IntranetEquipoSeccionService
                 'pro_nombre' => trim((string) ($row->pro_nombre ?? '')),
                 'tra_codigo' => $row->tra_codigo ?? null,
                 'trayecto_nombre' => trim((string) ($row->trayecto_nombre ?? '')),
-                'sed_siglas' => trim((string) ($row->sed_siglas ?? '')),
+                'sed_siglas' => $this->resolverSedSiglas($secCodigo, $conn),
                 'sem_codigo' => $row->sem_codigo ?? null,
                 'semestre_nombre' => trim((string) ($row->semestre_nombre ?? '')),
             ];

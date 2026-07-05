@@ -33,7 +33,7 @@ class LineaInvestigacionController extends Controller
             'nombre_investigacion' => 'required|min:3|max:100',
             'area_de_investigacion' => 'required|min:3|max:100',
             'programa_id' => 'required|integer',
-            'descripcion' => 'required|min:3|max:500',
+            'descripcion' => 'nullable|min:3|max:500',
         ], [
             'nombre_investigacion.required' => 'El nombre de la línea es obligatorio.',
             'nombre_investigacion.min' => 'El nombre debe tener al menos 3 caracteres.',
@@ -86,7 +86,7 @@ class LineaInvestigacionController extends Controller
             'nombre_investigacion' => 'required|min:3|max:100',
             'area_de_investigacion' => 'required|min:3|max:100',
             'programa_id' => 'required|integer',
-            'descripcion' => 'required|min:3|max:500',
+            'descripcion' => 'nullable|min:3|max:500',
         ], [
             'nombre_investigacion.required' => 'El nombre de la línea es obligatorio.',
             'nombre_investigacion.min' => 'El nombre debe tener al menos 3 caracteres.',

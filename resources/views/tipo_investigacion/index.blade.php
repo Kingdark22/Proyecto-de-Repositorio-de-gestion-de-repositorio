@@ -89,14 +89,14 @@
     <div id="searchResults">
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Listado de Tipos de
-                Investigaci&oacute;n</legend>
+                Investigación</legend>
 
             <table width="100%" border="1" cellpadding="4" cellspacing="0"
                 style="border-collapse: collapse; border-color: #bbbbbb; font-size: 12px; margin-top: 5px;">
                 <thead>
                     <tr style="background-color: #8bb2b7; color: #000; text-align: center; font-weight: bold;">
-                        <th style="padding: 5px;" width="25%">Tipo de Investigaci&oacute;n</th>
-                        <th style="padding: 5px;" width="45%">Descripci&oacute;n</th>
+                        <th style="padding: 5px;" width="25%">Tipo de Investigación</th>
+                        <th style="padding: 5px;" width="45%">Descripción</th>
                         <th style="padding: 5px;" width="10%">Estado</th>
                         <th style="padding: 5px;" width="20%">Acciones</th>
                     </tr>
@@ -109,7 +109,7 @@
                                 {{ $item->nombre }}
                             </td>
                             <td align="left" style="padding: 5px; font-size: 11px;">
-                                {{ $item->descripcion ?: 'Sin descripci&oacute;n' }}
+                                {{ $item->descripcion ?: 'Sin descripción' }}
                             </td>
                             <td align="center">
                                 @if ($item->estado_logico)

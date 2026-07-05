@@ -66,7 +66,7 @@
                         <th width="20%">Nombre del Componente</th>
                         <th width="22%">Asignaciones (PNF &rarr; Trayecto)</th>
                         <th width="10%">Tipo Archivo</th>
-                        <th width="8%">Tama&ntilde;o</th>
+                        <th width="8%">Tamaño</th>
                         <th width="8%">Obligatorio</th>
                         <th width="8%">Estatus</th>
                         <th width="14%">Configurar</th>
