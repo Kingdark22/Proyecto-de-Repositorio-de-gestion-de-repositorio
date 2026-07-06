@@ -467,9 +467,12 @@ class ProyectoController extends Controller
             ->select(['pry_codigo', 'pry_direccion_logica'])
             ->get();
         foreach ($filas as $idx => &$fila) {
-            if ($fila['sede'] === '' || $fila['sede'] === '—') {
-                $proy = $proyectosEquipo[$idx] ?? null;
-                if ($proy && $proy->equipo_ref && preg_match('/^[A-Z]+-([A-Z]{2,4})\d+-\d+/', strtoupper($proy->equipo_ref), $m)) {
+            $proy = $proyectosEquipo[$idx] ?? null;
+            $equipoRef = $proy ? ($proy->equipo_ref ?? '') : '';
+
+            // Sede fallback desde equipo_ref
+            if (($fila['sede'] === '' || $fila['sede'] === '—') && $equipoRef !== '') {
+                if (preg_match('/^[A-Z]+-([A-Z]{2,4})\d+-\d+/', strtoupper($equipoRef), $m)) {
                     $sedSiglas = $m[1];
                     try {
                         $academicConn = $this->equipoSeccion->academicConnection();
@@ -483,6 +486,27 @@ class ProyectoController extends Controller
                     }
                 }
             }
+
+            // Docente de proyecto desde SUD
+            $docente = '';
+            if ($equipoRef !== '') {
+                try {
+                    $partes = $this->equipoSeccion->parsearClave($equipoRef);
+                    if ($partes && ($partes['sec_codigo'] ?? null)) {
+                        $conn = DB::connection($this->equipoSeccion->academicConnection());
+                        $sud = $conn->table('seccion_unidad_docente')
+                            ->where('sud_cod_seccion', $partes['sec_codigo'])
+                            ->first();
+                        if ($sud) {
+                            $prof = $conn->table('persona')
+                                ->where('per_cedula', $sud->sud_ced_docente)
+                                ->first();
+                            $docente = $prof ? strtoupper(trim(($prof->per_nombres ?? '') . ' ' . ($prof->per_apellidos ?? ''))) : '';
+                        }
+                    }
+                } catch (\Throwable) {}
+            }
+            $fila['docente'] = $docente;
         }
         unset($fila);
 
@@ -490,7 +514,7 @@ class ProyectoController extends Controller
         $writer->setTitle('Proyectos Sociotecnologicos');
 
         // ── Calcular número total de columnas ──────────────────────────────
-        $colsFijas       = 9;
+        $colsFijas       = 10;
         $colsIntegrantes = $maxInt * 2;
         $colsFinales     = 3;
         $totalCols       = $colsFijas + $colsIntegrantes + $colsFinales;
@@ -513,6 +537,7 @@ class ProyectoController extends Controller
             200,  // Título
             100,  // Comunidad
             100,  // Equipo
+            120,  // Docente
         ];
         for ($i = 0; $i < $maxInt; $i++) {
             $widths[] = 130; // Nombre
@@ -526,6 +551,7 @@ class ProyectoController extends Controller
         $headers = [
             'N°', 'Sede', 'Programa Nacional de Formación', 'Trayecto', 'Sección',
             'Lapso Académico', 'Título del Proyecto', 'Comunidad', 'Nombre del Equipo',
+            'Docente de Proyecto',
         ];
         for ($i = 1; $i <= $maxInt; $i++) {
             $headers[] = "Integrante {$i} – Nombre Completo";
@@ -549,6 +575,7 @@ class ProyectoController extends Controller
                 $fila['titulo'],
                 $fila['comunidad'],
                 $fila['equipo'],
+                $fila['docente'] ?? '',
             ];
 
             $integrantes = $fila['integrantes'];
