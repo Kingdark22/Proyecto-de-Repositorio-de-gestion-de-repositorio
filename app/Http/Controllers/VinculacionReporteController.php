@@ -165,13 +165,21 @@ class VinculacionReporteController extends Controller
             if (!$p) continue;
 
             $partes = $equipoSeccion->parsearClave($p->equipo_ref ?? '');
+            $ctx = [];
+            if ($partes) {
+                $ctx = $equipoSeccion->etiquetasContexto(
+                    $partes['lap_codigo'], 
+                    $partes['sec_codigo'], 
+                    $p->linea_investigacion_id ?? null
+                );
+            }
             
             // Integrantes (Nombre + CI)
             $integrantes = $equipoSeccion->integrantes($p->equipo_ref ?? '');
             $miembros = [];
             for ($i = 0; $i < 6; $i++) {
                 $m = $integrantes->get($i);
-                $miembros[] = $m ? strtoupper($m->nombre_completo) . ' C.I ' . ($m->cedula ?? '') : '';
+                $miembros[] = $m ? strtoupper($m->nombre . ' ' . $m->apellido) . ' C.I ' . ($m->cedula ?? '') : '';
             }
 
             // Localidad Geográfica
@@ -186,10 +194,10 @@ class VinculacionReporteController extends Controller
             }
 
             $writer->addRow([
-                $p->sede ?? '',
-                strtoupper($p->pnf ?? ''),
-                $partes['trayecto'] ?? '',
-                $partes['semestre'] ?? '',
+                strtoupper($ctx['sed_siglas'] ?? ''),
+                strtoupper($ctx['pro_siglas'] ?? 'PNF'),
+                $ctx['tra_codigo'] ?? '',
+                $ctx['sem_codigo'] ?? '',
                 $v->titulo,
                 $p->pry_resumen ?? '',
                 $p->linea_investigacion?->nombre ?? '',
@@ -199,7 +207,7 @@ class VinculacionReporteController extends Controller
                 ...$miembros,
                 $loc,
                 $p->comunidad?->nombre ?? '',
-                $v->estado_socializacion ?? 'APROBADO', // Valor por defecto según imagen
+                $v->estado_socializacion ?? 'APROBADO',
             ], wrap: true);
         }
 
