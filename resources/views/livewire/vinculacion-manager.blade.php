@@ -40,6 +40,9 @@
             <button type="button" wire:click="abrirWizard" class="cm-btn cm-btn-success" style="font-size:13px;">
                 + Vincular Proyectos
             </button>
+            <button type="button" wire:click="abrirModalExcel" class="cm-btn cm-btn-primary" style="font-size:13px;">
+                &darr; Exportar Excel
+            </button>
             <button type="button" wire:click="abrirModalReporte" class="cm-btn cm-btn-primary" style="font-size:13px;">
                 &darr; Reporte de Proyectos
             </button>
@@ -427,7 +430,6 @@
 
                 <div style="margin-top:20px;text-align:right;display:flex;gap:10px;justify-content:flex-end;">
                     <button type="button" class="cm-btn cm-btn-secondary" wire:click="cerrarModalReporte" style="padding:10px 24px;font-size:13px;border-radius:6px;">Cancelar</button>
-                    <button type="button" class="cm-btn cm-btn-success" wire:click="generarReporteExcel" style="padding:10px 24px;font-size:13px;border-radius:6px;">Generar Excel</button>
                     <button type="button" class="cm-btn cm-btn-primary" wire:click="generarReporte" style="padding:10px 24px;font-size:13px;border-radius:6px;">Generar PDF</button>
                 </div>
             </div>
@@ -761,6 +763,36 @@
 
                 <div style="margin-top:18px;text-align:right;">
                     <button type="button" class="cm-btn cm-btn-secondary" wire:click="cerrarDetalle" style="padding:8px 24px;font-size:13px;">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- ─── MODAL EXPORTAR EXCEL ─── --}}
+    @if ($mostrarModalExcel)
+        <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;">
+            <div style="background:#fff;border-radius:10px;padding:24px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #8b0000;">
+                    <div style="width:36px;height:36px;border-radius:50%;background:#8b0000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:bold;">X</div>
+                    <h3 style="margin:0;font-size:16px;font-weight:bold;color:#333;">Exportar Excel de Vinculaciones</h3>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <b style="font-size:13px;color:#555;display:block;margin-bottom:8px;">Seleccione el lapso académico:</b>
+                    <select wire:model="excelLapsoId" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:13px;background:#fff;cursor:pointer;outline:none;font-family:inherit;color:#222;">
+                        <option value="">— Seleccione lapso —</option>
+                        @foreach($lapsosReporte as $lid => $lnombre)
+                            <option value="{{ $lid }}">{{ $lnombre }}</option>
+                        @endforeach
+                    </select>
+                    @if(empty($lapsosReporte))
+                        <div style="margin-top:6px;font-size:12px;color:#888;font-style:italic;">No hay lapsos disponibles con vinculaciones registradas.</div>
+                    @endif
+                </div>
+
+                <div style="margin-top:20px;text-align:right;display:flex;gap:10px;justify-content:flex-end;">
+                    <button type="button" class="cm-btn cm-btn-secondary" wire:click="cerrarModalExcel" style="padding:10px 24px;font-size:13px;border-radius:6px;">Cancelar</button>
+                    <button type="button" class="cm-btn cm-btn-success" wire:click="generarExcelPorLapso" style="padding:10px 24px;font-size:13px;border-radius:6px;">Descargar Excel</button>
                 </div>
             </div>
         </div>

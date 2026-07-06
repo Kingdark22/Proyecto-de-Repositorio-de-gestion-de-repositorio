@@ -509,27 +509,21 @@ class IntranetEquipoSeccionService
      */
     protected function resolverSedSiglas(int $secCodigo, string $conn): string
     {
-        // Intranet no tiene permisos sobre la tabla sede, consultamos desde simulacion
-        if ($conn === 'intranet') {
-            try {
-                $sedeCodigo = DB::connection($conn)->table('seccion')
-                    ->where('sec_codigo', $secCodigo)
-                    ->value('sec_cod_sede');
-                if ($sedeCodigo) {
-                    $siglas = DB::connection('simulacion')->table('sede')
-                        ->where('sed_codigo', $sedeCodigo)
-                        ->value('sed_siglas');
-                    if ($siglas) {
-                        return trim((string) $siglas);
-                    }
-                }
-            } catch (\Throwable) {
-            }
+        try {
+            $sedeCodigo = DB::connection($conn)->table('seccion')
+                ->where('sec_codigo', $secCodigo)
+                ->value('sec_cod_sede');
+            if (!$sedeCodigo) return '';
+
+            // Intranet no tiene permisos sobre la tabla sede, consultamos desde simulacion
+            $sedeConn = $conn === 'intranet' ? 'simulacion' : $conn;
+            $siglas = DB::connection($sedeConn)->table('sede')
+                ->where('sed_codigo', $sedeCodigo)
+                ->value('sed_siglas');
+            return $siglas ? trim((string) $siglas) : '';
+        } catch (\Throwable) {
             return '';
         }
-
-        // Simulacion tiene la tabla sede, se obtiene via LEFT JOIN normal
-        return '';
     }
 
     public function etiquetasContexto(int $lapCodigo, int $secCodigo, ?int $proCodigo = null): array

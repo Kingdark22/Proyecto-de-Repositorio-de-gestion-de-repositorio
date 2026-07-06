@@ -192,12 +192,13 @@ class VinculacionReporteController extends Controller
                 );
             }
             
-            // Sede completa en lugar de siglas
+            // Sede completa
             $sedeNombre = '';
             if ($ctx && !empty($ctx['sed_siglas'])) {
                 try {
-                    $conn = DB::connection($equipoSvc->academicConnection());
-                    $sedeNombre = $conn->table('sede')
+                    $academicConn = $equipoSvc->academicConnection();
+                    $sedeConn = $academicConn === 'intranet' ? 'simulacion' : $academicConn;
+                    $sedeNombre = DB::connection($sedeConn)->table('sede')
                         ->where('sed_siglas', $ctx['sed_siglas'])
                         ->value('sed_nombre') ?? $ctx['sed_siglas'];
                 } catch (\Throwable $e) {

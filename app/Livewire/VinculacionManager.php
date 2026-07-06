@@ -37,6 +37,10 @@ class VinculacionManager extends Component
     public array $lapsosReporte = [];
     public array $titulosReporte = [];
 
+    // Excel modal (independiente)
+    public bool $mostrarModalExcel = false;
+    public string $excelLapsoId = '';
+
     // Título seleccionado
     public string $tituloSeleccionado = '';
     public string $nuevoTitulo = '';
@@ -557,6 +561,31 @@ class VinculacionManager extends Component
         $this->mostrarModalReporte = false;
     }
 
+    // ─── Excel modal ────────────────────────────────────────────
+
+    public function abrirModalExcel(): void
+    {
+        $this->mostrarModalExcel = true;
+        $this->excelLapsoId = '';
+        $this->cargarLapsosReporte();
+    }
+
+    public function cerrarModalExcel(): void
+    {
+        $this->mostrarModalExcel = false;
+    }
+
+    public function generarExcelPorLapso(): void
+    {
+        if (empty($this->excelLapsoId)) {
+            $this->safeDispatch('error', 'Seleccione un lapso académico.');
+            return;
+        }
+        $url = route('vinculacion.reporte-excel', ['filtro_lapso' => $this->excelLapsoId]);
+        $this->dispatch('descargar-excel', url: $url);
+        $this->cerrarModalExcel();
+    }
+
     public function generarReporte(): void
     {
         if ($this->tipoReporte === 'titulo') {
@@ -582,34 +611,6 @@ class VinculacionManager extends Component
 
         $url = route('vinculacion.reporte-pdf', $params);
         $this->dispatch('descargar-pdf', url: $url);
-        $this->cerrarModalReporte();
-    }
-
-    public function generarReporteExcel(): void
-    {
-        if ($this->tipoReporte === 'titulo') {
-            if (empty($this->reporteTituloId)) {
-                $this->safeDispatch('error', 'Seleccione un título.');
-                return;
-            }
-            $titulo = TituloVinculacion::find((int) $this->reporteTituloId);
-            $params = ['filtro_titulo' => $titulo?->titulo ?? ''];
-        } elseif ($this->tipoReporte === 'wizard') {
-            if (empty($this->selectedProjects)) {
-                $this->safeDispatch('error', 'No hay proyectos seleccionados en el wizard.');
-                return;
-            }
-            $params = ['proyectos' => $this->selectedProjects];
-        } else {
-            if (empty($this->reporteLapsoId)) {
-                $this->safeDispatch('error', 'Seleccione un lapso académico.');
-                return;
-            }
-            $params = ['filtro_lapso' => $this->reporteLapsoId];
-        }
-
-        $url = route('vinculacion.reporte-excel', $params);
-        $this->dispatch('descargar-excel', url: $url);
         $this->cerrarModalReporte();
     }
 
