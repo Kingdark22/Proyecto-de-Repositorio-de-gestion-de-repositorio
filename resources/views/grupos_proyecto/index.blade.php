@@ -89,18 +89,7 @@
         Queda identificado con un código único auto-generado.
     </p>
 
-    <div id="flashContainer">
-    @if (session('success'))
-        <div data-flash-msg style="background-color: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border: 1px solid #c3e6cb; border-radius: 4px; font-weight: bold; text-align: center;">
-            {{ session('success') }}
-        </div>
-    @endif
-    @if (session('error'))
-        <div data-flash-msg style="background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px; font-weight: bold; text-align: center;">
-            {{ session('error') }}
-        </div>
-    @endif
-    </div>
+    {{-- Flash messages se muestran como toast flotante (app.blade.php) --}}
 
     @if (!$tablaOk)
         <div style="background: #fff3cd; padding: 10px; font-size: 11px; margin-bottom: 12px;">

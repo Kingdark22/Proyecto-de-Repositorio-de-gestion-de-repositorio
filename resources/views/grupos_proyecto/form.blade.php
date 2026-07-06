@@ -106,11 +106,7 @@
 @endpush
 
 @section('content')
-    @if (session('error'))
-        <div style="background-color: #f8d7da; color: #721c24; padding: 12px 18px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px; font-weight: bold; text-align: center;">
-            {{ session('error') }}
-        </div>
-    @endif
+    {{-- Flash error se muestra como toast flotante (app.blade.php) --}}
 
     @if (!$tablaOk)
         <div style="background: #fff3cd; padding: 10px; font-size: 11px; margin-bottom: 12px;">
