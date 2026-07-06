@@ -255,15 +255,19 @@ class GrupoProyectoRepository
 
         // 2. Fallback: approved projects via JOIN (cubre casos donde estado_logico
         //    o la igualdad JSONB no coincidan por datos inconsistentes)
-        return GrupoProyectoModulo::query()
-            ->from('grupo_proyecto_modulo as gp')
-            ->join('proyectos as p', 'p.pry_direccion_logica', '=', 'gp.grp_identificador')
-            ->whereRaw("CAST(gp.grp_miembros AS jsonb) @> ?", [json_encode([['cedula' => $cedula]])])
-            ->where('p.pry_estado_validacion', 'aprobado')
-            ->where('p.pry_estado_logico', true)
-            ->whereRaw("CAST(gp.grp_contexto AS jsonb)->>'lap_codigo' = ?", [(string) $lapCodigo])
-            ->when($excludeGrpCodigo !== null, fn ($q) => $q->where('gp.grp_codigo', '!=', $excludeGrpCodigo))
-            ->exists();
+        try {
+            return GrupoProyectoModulo::query()
+                ->from('grupo_proyecto_modulo as gp')
+                ->join('proyectos as p', 'p.pry_direccion_logica', '=', 'gp.grp_identificador')
+                ->whereRaw("CAST(gp.grp_miembros AS jsonb) @> ?", [json_encode([['cedula' => $cedula]])])
+                ->where('p.pry_estado_validacion', 'aprobado')
+                ->where('p.pry_estado_logico', true)
+                ->whereRaw("CAST(gp.grp_contexto AS jsonb)->>'lap_codigo' = ?", [(string) $lapCodigo])
+                ->when($excludeGrpCodigo !== null, fn ($q) => $q->where('gp.grp_codigo', '!=', $excludeGrpCodigo))
+                ->exists();
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**
@@ -285,7 +289,12 @@ class GrupoProyectoRepository
         $cedulas = [];
         foreach ($groups as $group) {
             $miembros = $group->grp_miembros;
-            $miembros = $miembros instanceof Collection ? $miembros->toArray() : (array) $miembros;
+            if ($miembros instanceof Collection) {
+                $miembros = $miembros->toArray();
+            }
+            if (empty($miembros)) {
+                continue;
+            }
             foreach ($miembros as $m) {
                 $cedula = trim($m['cedula'] ?? '');
                 if ($cedula !== '') {
