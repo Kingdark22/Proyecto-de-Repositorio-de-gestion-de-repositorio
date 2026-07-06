@@ -487,25 +487,14 @@ class ProyectoController extends Controller
                 }
             }
 
-            // Docente de proyecto desde SUD
+            // Docente de proyecto = quien registró el proyecto (creador_cedula)
             $docente = '';
-            if ($equipoRef !== '') {
-                try {
-                    $partes = $this->equipoSeccion->parsearClave($equipoRef);
-                    if ($partes && ($partes['sec_codigo'] ?? null)) {
-                        $conn = DB::connection($this->equipoSeccion->academicConnection());
-                        $sud = $conn->table('seccion_unidad_docente')
-                            ->where('sud_cod_seccion', $partes['sec_codigo'])
-                            ->first();
-                        if ($sud) {
-                            $prof = $conn->table('persona')
-                                ->where('per_cedula', $sud->sud_ced_docente)
-                                ->first();
-                            $docente = $prof ? strtoupper(trim(($prof->per_nombres ?? '') . ' ' . ($prof->per_apellidos ?? ''))) : '';
-                        }
-                    }
-                } catch (\Throwable) {}
-            }
+            try {
+                $creador = \App\Models\User::where('usu_cedula', trim((string) ($proy->creador_cedula ?? '')))->first();
+                if ($creador) {
+                    $docente = strtoupper(trim(($creador->nombre ?? '') . ' ' . ($creador->apellido ?? '')));
+                }
+            } catch (\Throwable) {}
             $fila['docente'] = $docente;
         }
         unset($fila);

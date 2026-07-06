@@ -198,15 +198,17 @@
                                     onclick="window.location='{{ $tieneProyecto ? route('proyectos.gestion.edit', $proyecto->id) : route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}'"
                                     title="Ir al formulario de proyecto">Actualizar</button>
                                 @endif
-                                @if (!$isProfessor)
+                                @if (!$isProfessor && (!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado'))
                                     <a href="{{ route('grupos-proyecto.edit', $g->grp_codigo) }}" class="cm-btn cm-btn-secondary cm-btn-sm" title="Editar grupo">Editar</a>
                                 @endif
+                                @if (!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado')
                                 <form method="POST" action="{{ route('grupos-proyecto.destroy', $g->grp_codigo) }}" style="display:inline;"
                                     >
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="cm-btn cm-btn-danger cm-btn-sm" title="Eliminar grupo" data-ajax-delete data-delete-name="{{ $g->nombre }}">Eliminar</button>
                                 </form>
+                                @endif
                             </td>
                         </tr>
                     @empty

@@ -277,6 +277,13 @@ class GrupoProyectoController extends Controller
                 ->with('error', 'Grupo no encontrado.');
         }
 
+        // Bloquear si el proyecto asociado ya está aprobado
+        $proyecto = $this->proyectoRepo->findFirstByEquipoRef($grupo->clave);
+        if ($proyecto && $proyecto->estado_validacion === 'aprobado') {
+            return redirect()->route('grupos-proyecto.index')
+                ->with('error', 'No se puede editar el grupo porque el proyecto asociado ya está aprobado.');
+        }
+
         // Comunidades
         $comunidades = Cache::remember('grupos_comunidades_form', 3600, fn () =>
             Comunidad::query()->orderBy('nombre')->get(['com_codigo', 'com_nombre', 'com_rif'])
@@ -303,6 +310,13 @@ class GrupoProyectoController extends Controller
         if (! $grupo) {
             return redirect()->route('grupos-proyecto.index')
                 ->with('error', 'Grupo no encontrado.');
+        }
+
+        // Bloquear si el proyecto asociado ya está aprobado
+        $proyecto = $this->proyectoRepo->findFirstByEquipoRef($grupo->clave);
+        if ($proyecto && $proyecto->estado_validacion === 'aprobado') {
+            return redirect()->route('grupos-proyecto.index')
+                ->with('error', 'No se puede actualizar el grupo porque el proyecto asociado ya está aprobado.');
         }
 
         $validated = $request->validate([
@@ -390,7 +404,20 @@ class GrupoProyectoController extends Controller
 
     public function destroy(Request $request, $id)
     {
-        $ok = $this->grupos->eliminar((int) $id);
+        $grpCodigo = (int) $id;
+        $grupo = $this->grupos->obtener($grpCodigo);
+        if ($grupo) {
+            $proyecto = $this->proyectoRepo->findFirstByEquipoRef($grupo->clave);
+            if ($proyecto && $proyecto->estado_validacion === 'aprobado') {
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => 'No se puede eliminar el grupo porque el proyecto asociado ya está aprobado.']);
+                }
+                return redirect()->route('grupos-proyecto.index')
+                    ->with('error', 'No se puede eliminar el grupo porque el proyecto asociado ya está aprobado.');
+            }
+        }
+
+        $ok = $this->grupos->eliminar($grpCodigo);
 
         if ($request->ajax() || $request->wantsJson()) {
             if ($ok) {
