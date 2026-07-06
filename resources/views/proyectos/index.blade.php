@@ -154,45 +154,19 @@
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Listado de proyectos institucionales</legend>
 
-            {{-- Botón Exportar Excel (solo coordinador y administrador) --}}
+            {{-- Botón Exportar Excel (solo administrador y coordinador) --}}
             @php
                 $activeRoleExport = app(\App\Services\UserRoleService::class)->getActiveRole(auth()->user());
             @endphp
             @if(in_array($activeRoleExport, ['administrador', 'coordinador']))
-            <div style="margin-bottom:8px; display:flex; align-items:center; gap:8px; justify-content:flex-end;">
-                <select id="exportLapsoFilter" style="height:30px; padding:3px 6px; font-size:11px; border:1px solid #ccc; border-radius:4px; min-width:160px;">
-                    <option value="">Todos los lapsos</option>
-                    @foreach($lapsosFiltro as $l)
-                        <option value="{{ $l->lap_codigo }}">{{ $l->lap_nombre }}</option>
-                    @endforeach
-                </select>
-                <a href="#" id="exportExcelBtn"
+            <div style="margin-bottom:8px; display:flex; align-items:center; justify-content:flex-end;">
+                <a href="{{ route('proyectos.gestion.exportar-excel') }}"
                    class="cm-btn cm-btn-success"
                    style="background:#155724; border-color:#0d3d19; font-size:0.8rem; padding:0.4rem 0.9rem;"
                    title="Descargar reporte Excel del depósito de proyectos">
                     &#8595; Exportar a Excel
                 </a>
             </div>
-            <script>
-            document.getElementById('exportLapsoFilter').addEventListener('change', function() {
-                var lapso = this.value;
-                var baseUrl = '{{ route("proyectos.gestion.exportar-excel") }}';
-                var params = new URLSearchParams();
-                @if($filterEstado !== '')
-                    params.set('estado', '{{ $filterEstado }}');
-                @endif
-                @if($filterComunidad !== '')
-                    params.set('comunidad', '{{ $filterComunidad }}');
-                @endif
-                if (lapso !== '') {
-                    params.set('lapso', lapso);
-                }
-                var qs = params.toString();
-                document.getElementById('exportExcelBtn').href = baseUrl + (qs ? '?' + qs : '');
-            });
-            // Trigger on load to set initial href
-            document.getElementById('exportLapsoFilter').dispatchEvent(new Event('change'));
-            </script>
             @endif
 
             <form method="GET" action="{{ route('proyectos.gestion') }}" style="margin-bottom:8px;">
