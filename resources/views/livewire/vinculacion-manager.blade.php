@@ -108,9 +108,11 @@
                     <div style="margin-bottom:12px;">
                         <select wire:model.live="tituloSeleccionado" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:15px;box-sizing:border-box;">
                             <option value="">Seleccione un título...</option>
-                            @foreach($titulosDisponibles as $tid => $ttitulo)
+                            @forelse($titulosDisponibles as $tid => $ttitulo)
                                 <option value="{{ $tid }}">{{ $ttitulo }}</option>
-                            @endforeach
+                            @empty
+                                <option value="" disabled>— No hay títulos disponibles —</option>
+                            @endforelse
                             <option value="nuevo">[ + Crear nuevo título ]</option>
                         </select>
                     </div>
@@ -124,6 +126,22 @@
                 {{-- PASO 2: COMUNIDAD --}}
                 @if($pasoActual === 2)
                     <h4 style="margin:0 0 16px 0;font-size:15px;color:#333;">Paso 2: Seleccionar Comunidad</h4>
+
+                    {{-- Título seleccionado (summary) --}}
+                    @if($tituloSeleccionado)
+                        <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:13px;">
+                            <span style="font-weight:bold;color:#e65100;">Título seleccionado:</span>
+                            <span style="color:#333;">
+                                @if($tituloSeleccionado === 'nuevo')
+                                    {{ $nuevoTitulo }}
+                                @else
+                                    {{ $titulosDisponibles[(int)$tituloSeleccionado] ?? 'N/A' }}
+                                @endif
+                            </span>
+                            <button type="button" wire:click="pasoEspecifico(1)" style="background:none;border:none;color:#8b0000;text-decoration:underline;cursor:pointer;font-size:12px;margin-left:8px;">Cambiar</button>
+                        </div>
+                    @endif
+
                     @if($comunidadSeleccionada)
                         <div style="background:#e8f5e9;border:2px solid #198754;border-radius:8px;padding:16px;margin-bottom:12px;">
                             <div style="display:flex;align-items:center;gap:12px;">
@@ -155,6 +173,30 @@
                 {{-- PASO 3: PROYECTOS --}}
                 @if($pasoActual === 3)
                     <h4 style="margin:0 0 16px 0;font-size:15px;color:#333;">Paso 3: Seleccionar Proyectos</h4>
+
+                    {{-- Título y Comunidad seleccionados (summary) --}}
+                    @if($tituloSeleccionado)
+                        <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:13px;">
+                            <div style="display:flex;align-items:center;gap:4px;">
+                                <span style="font-weight:bold;color:#e65100;">Título:</span>
+                                <span style="color:#333;">
+                                    @if($tituloSeleccionado === 'nuevo')
+                                        {{ $nuevoTitulo }}
+                                    @else
+                                        {{ $titulosDisponibles[(int)$tituloSeleccionado] ?? 'N/A' }}
+                                    @endif
+                                </span>
+                                <button type="button" wire:click="pasoEspecifico(1)" style="background:none;border:none;color:#8b0000;text-decoration:underline;cursor:pointer;font-size:12px;margin-left:4px;">Cambiar</button>
+                            </div>
+                            @if($comunidadSeleccionada)
+                                <div style="display:flex;align-items:center;gap:4px;margin-top:2px;">
+                                    <span style="font-weight:bold;color:#198754;">Comunidad:</span>
+                                    <span style="color:#333;">{{ $comunidadSeleccionada->nombre }}</span>
+                                    <button type="button" wire:click="pasoEspecifico(2)" style="background:none;border:none;color:#8b0000;text-decoration:underline;cursor:pointer;font-size:12px;margin-left:4px;">Cambiar</button>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
 
                     {{-- Proyectos ya vinculados --}}
                     @php

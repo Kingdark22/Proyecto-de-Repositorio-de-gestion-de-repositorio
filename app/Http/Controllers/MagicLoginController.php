@@ -105,8 +105,7 @@ class MagicLoginController extends Controller
 
             // Si viene usu_nombre en el payload, buscar por cédula + nombre de usuario
             $queryFn = function ($q) use ($cedula, $usuNombre) {
-                $q->whereRaw('TRIM(usu_cedula) = ?', [$cedula])
-                  ->where('usu_estatus', 'A');
+                $q->whereRaw('TRIM(usu_cedula) = ?', [$cedula]);
                 if ($usuNombre) {
                     $q->whereRaw('TRIM(usu_nombre) = ?', [$usuNombre]);
                 }

@@ -318,9 +318,6 @@ class IntranetSimulationMirrorService
             'malla',
             'unidad_curricular',
             'lapso_academico',
-            'estado',
-            'municipio',
-            'parroquia',
             'rol'
         ];
 

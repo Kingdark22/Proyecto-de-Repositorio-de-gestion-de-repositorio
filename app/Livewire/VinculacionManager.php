@@ -135,6 +135,13 @@ class VinculacionManager extends Component
         }
     }
 
+    public function pasoEspecifico(int $paso): void
+    {
+        if ($paso >= 1 && $paso <= 4) {
+            $this->pasoActual = $paso;
+        }
+    }
+
     // ─── Modal Comunidad ──────────────────────────────────────
 
     public function updatedBuscarComunidad(): void

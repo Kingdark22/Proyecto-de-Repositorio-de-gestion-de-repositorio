@@ -8,25 +8,25 @@
             text-align: center;
             margin-bottom: 18px;
             padding-bottom: 12px;
-            border-bottom: 3px double #8b0000;
+            border-bottom: 3px double #000;
         }
         .header-box .institucion {
             font-size: 13pt;
             font-weight: bold;
-            color: #8b0000;
+            color: #000;
             letter-spacing: 1px;
             text-transform: uppercase;
         }
         .header-box .sub {
             font-size: 8pt;
-            color: #555;
+            color: #333;
             margin-top: 2px;
         }
-        body { font-family: 'DejaVu Sans', sans-serif; font-size: 9pt; color: #222; margin: 30px; }
-        h1 { font-size: 14pt; color: #8b0000; text-align: center; margin-bottom: 2px; }
-        h2 { font-size: 10pt; color: #333; text-align: center; font-weight: bold; margin-top: 4px; margin-bottom: 4px; }
-        .fecha { text-align: right; font-size: 7pt; color: #888; margin-bottom: 16px; }
-        .footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 7pt; color: #aaa; padding: 8px; border-top: 1px solid #ddd; }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 9pt; color: #000; margin: 30px; }
+        h1 { font-size: 14pt; color: #000; text-align: center; margin-bottom: 2px; }
+        h2 { font-size: 10pt; color: #000; text-align: center; font-weight: bold; margin-top: 4px; margin-bottom: 4px; }
+        .fecha { text-align: right; font-size: 7pt; color: #555; margin-bottom: 16px; }
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; font-size: 7pt; color: #666; padding: 8px; border-top: 1px solid #000; }
         .watermark {
             position: fixed;
             top: 42%;
@@ -34,15 +34,15 @@
             right: 10%;
             text-align: center;
             font-size: 36pt;
-            color: #ddd;
+            color: #eee;
             z-index: -1;
             transform: rotate(-30deg);
             font-weight: bold;
             letter-spacing: 4px;
         }
         .card {
-            border: 1px solid #ccc;
-            border-radius: 6px;
+            border: 1px solid #999;
+            border-radius: 4px;
             padding: 12px 14px;
             margin-bottom: 14px;
             page-break-inside: avoid;
@@ -50,14 +50,14 @@
         .card-header {
             font-size: 11pt;
             font-weight: bold;
-            color: #8b0000;
-            border-bottom: 2px solid #8b0000;
+            color: #000;
+            border-bottom: 2px solid #000;
             padding-bottom: 4px;
             margin-bottom: 8px;
         }
         .field-label {
             font-size: 7.5pt;
-            color: #888;
+            color: #555;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-top: 6px;
@@ -65,7 +65,7 @@
         }
         .field-value {
             font-size: 9pt;
-            color: #222;
+            color: #000;
             margin-bottom: 2px;
         }
         .two-col {
@@ -81,24 +81,24 @@
         }
         .tag {
             display: inline-block;
-            background: #f0f0f0;
-            border: 1px solid #ddd;
-            border-radius: 3px;
+            background: #f5f5f5;
+            border: 1px solid #ccc;
+            border-radius: 2px;
             padding: 1px 6px;
             font-size: 7.5pt;
-            color: #555;
+            color: #000;
             margin-right: 3px;
         }
         .comunidad-block {
-            background: #fafafa;
-            border-left: 3px solid #8b0000;
+            background: #f5f5f5;
+            border-left: 3px solid #000;
             padding: 6px 10px;
             margin-top: 6px;
             font-size: 8.5pt;
         }
         .resumen-text {
             font-size: 8.5pt;
-            color: #444;
+            color: #222;
             line-height: 1.4;
             margin-top: 4px;
             text-align: justify;
@@ -114,6 +114,9 @@
 <body>
     <div class="watermark">UPT-PNFI</div>
 
+    <div style="text-align:center;margin-bottom:12px;">
+        <img src="{{ public_path('imagenes/barras.jpeg') }}" alt="Encabezado UPTP" style="width:100%;max-width:650px;">
+    </div>
     <div class="header-box">
         <div class="institucion">República Bolivariana de Venezuela</div>
         <div class="sub">Universidad Politécnica Territorial &laquo;Juan de Jesús Montilla&raquo;</div>
@@ -181,7 +184,7 @@
                             <span class="tag">{{ $p->tipo_publicacion->tpu_nombre ?? '' }}</span>
                         @endif
                         @if(!$p->linea_investigacion && !$p->tipo_investigacion && !$p->metodologia && !$p->tipo_publicacion)
-                            <span style="color:#bbb;">Sin clasificación</span>
+                            <span style="color:#999;">Sin clasificación</span>
                         @endif
                     </div>
                 @endif
@@ -199,7 +202,7 @@
                     <div class="comunidad-block">
                         <strong>Comunidad:</strong> {{ $v->comunidad->nombre }}
                         @if($v->comunidad->rif)
-                            <br><span style="font-size:7.5pt;color:#888;">RIF: {{ $v->comunidad->rif }}</span>
+                            <br><span style="font-size:7.5pt;color:#555;">RIF: {{ $v->comunidad->rif }}</span>
                         @endif
                     </div>
                 @endif

@@ -33,9 +33,6 @@ return [
         'inscripcion' => 'ins_codigo',
         'semestre' => 'sem_codigo',
         'rol' => 'rol_codigo',
-        'estado' => 'est_codigo',
-        'municipio' => 'mun_codigo',
-        'parroquia' => 'par_codigo',
     ],
 
 ];
