@@ -123,7 +123,7 @@ class VinculacionReporteController extends Controller
         $proyectos = $vinculaciones->pluck('proyecto')->filter();
         Proyecto::precargarTitulos($proyectos);
 
-        $equipoSeccion = app(IntranetEquipoSeccionService::class);
+        $equipoSvc = app(IntranetEquipoSeccionService::class);
         
         $writer = new SpreadsheetMlWriter();
         $writer->setTitle('Vinculaciones')
@@ -140,7 +140,7 @@ class VinculacionReporteController extends Controller
             'INTEGRANTE Nº 3; CÉDULA DE IDENTIDAD', 'INTEGRANTE Nº 4; CÉDULA DE IDENTIDAD', 
             'INTEGRANTE Nº 5; CÉDULA DE IDENTIDAD', 'INTEGRANTE Nº 6; CÉDULA DE IDENTIDAD', 
             'LOCALIDAD GEOGRÁFICA DONDE SE DESARROLLÓ EL PROYECTO (PARROQUIA, URBANIZACIÓN, BARRIO, ENTRE OTROS)', 
-            'COMUNIDAD BENEFICIADA', 'RESULTADO DE LA SOCIALIZACIÓN'
+            'COMUNIDAD BENEFICIADA', 'RESULTADO de la SOCIALIZACIÓN'
         ];
 
         $widths = [
@@ -149,7 +149,20 @@ class VinculacionReporteController extends Controller
         ];
 
         $totalCols = count($headers);
-        $tituloReporte = $filtroTitulo ?: ($filtroLapso ? 'Vinculaciones - Lapso' : 'Todas las vinculaciones');
+        
+        if ($filtroTitulo !== '') {
+            $tituloReporte = 'Vinculaciones - ' . $filtroTitulo;
+            $nombreArchivo = "vinculacion_titulo_" . strtolower(str_replace(' ', '_', $filtroTitulo));
+        } elseif ($filtroLapso !== '') {
+            $lapsoObj = \App\Models\LapsoAcademico::find((int) $filtroLapso);
+            $nombreLapso = $lapsoObj?->nombre ?? $filtroLapso;
+            $tituloReporte = 'Vinculaciones - ' . $nombreLapso;
+            $nombreArchivo = "vinculacion_lapso_" . $filtroLapso;
+        } else {
+            $tituloReporte = 'Todas las Vinculaciones';
+            $nombreArchivo = 'vinculacion_general';
+        }
+
         $writer->addMergedTitleRow(
             'UPTP JUAN DE JESUS MONTILLA – VINCULACIONES — ' . strtoupper($tituloReporte),
             $totalCols,
@@ -164,22 +177,28 @@ class VinculacionReporteController extends Controller
             $p = $v->proyecto;
             if (!$p) continue;
 
-            $partes = $equipoSeccion->parsearClave($p->equipo_ref ?? '');
+            $partes = $equipoSvc->parsearClave($p->equipo_ref ?? '');
             $ctx = [];
             if ($partes) {
-                $ctx = $equipoSeccion->etiquetasContexto(
+                $ctx = $equipoSvc->etiquetasContexto(
                     $partes['lap_codigo'], 
                     $partes['sec_codigo'], 
                     $p->linea_investigacion_id ?? null
                 );
             }
             
-            // Integrantes (Nombre + CI)
-            $integrantes = $equipoSeccion->integrantes($p->equipo_ref ?? '');
+            // Integrantes (Exacto: NOMBRE APELLIDO C.I V-XXXX)
+            $integrantes = $equipoSvc->integrantes($p->equipo_ref ?? '');
             $miembros = [];
             for ($i = 0; $i < 6; $i++) {
                 $m = $integrantes->get($i);
-                $miembros[] = $m ? strtoupper($m->nombre . ' ' . $m->apellido) . ' C.I ' . ($m->cedula ?? '') : '';
+                if ($m) {
+                    $nombreCompleto = strtoupper(trim($m->nombre . ' ' . $m->apellido));
+                    $cedula = $m->cedula ?? '';
+                    $miembros[] = $nombreCompleto . ' C.I ' . $cedula;
+                } else {
+                    $miembros[] = '';
+                }
             }
 
             // Localidad Geográfica
@@ -211,8 +230,7 @@ class VinculacionReporteController extends Controller
             ], wrap: true);
         }
 
-        $sanitized = preg_replace('/[^a-zA-Z0-9_-]/', '_', $tituloReporte);
-        return $writer->download("vinculacion_{$sanitized}.xls");
+        return $writer->download($nombreArchivo . '.xls');
     }
 
     protected function proyectosEnLapso(int $lapCodigo): array
