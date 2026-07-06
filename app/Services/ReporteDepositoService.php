@@ -79,10 +79,13 @@ class ReporteDepositoService
                 $pnfConteo[$pnfSigla] = ($pnfConteo[$pnfSigla] ?? 0) + 1;
             }
 
+            $proNombre = $contexto['pro_nombre'] ?? '';
+            $proSiglas = $contexto['pro_siglas'] ?? '';
+
             $filas[] = [
                 'numero'            => count($filas) + 1,
                 'sede'              => $sede,
-                'pnf'               => $contexto['pro_siglas'] ?? '',
+                'pnf'               => $proNombre !== '' ? $proNombre : $proSiglas,
                 'trayecto'          => $contexto['trayecto_nombre'] ?? '',
                 'seccion'           => $contexto['sec_nombre'] ?? '',
                 'lapso'             => $contexto['lap_nombre'] ?? '',

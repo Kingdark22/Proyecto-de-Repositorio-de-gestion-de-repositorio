@@ -524,7 +524,7 @@ class ProyectoController extends Controller
 
         // ── Encabezados ───────────────────────────────────────────────────
         $headers = [
-            'N°', 'Sede', 'PNF', 'Trayecto', 'Sección',
+            'N°', 'Sede', 'Programa Nacional de Formación', 'Trayecto', 'Sección',
             'Lapso Académico', 'Título del Proyecto', 'Comunidad', 'Nombre del Equipo',
         ];
         for ($i = 1; $i <= $maxInt; $i++) {
