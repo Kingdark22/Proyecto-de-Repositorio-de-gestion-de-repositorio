@@ -192,20 +192,51 @@ class VinculacionReporteController extends Controller
                 );
             }
             
-            // Obtener Docente, Tutor y Representante desde Involucrados
-            $docente = ''; $tutor = ''; $representante = '';
+            // Sede completa en lugar de siglas
+            $sedeNombre = '';
+            if ($ctx && !empty($ctx['sed_siglas'])) {
+                try {
+                    $conn = DB::connection($equipoSvc->academicConnection());
+                    $sedeNombre = $conn->table('sede')
+                        ->where('sed_siglas', $ctx['sed_siglas'])
+                        ->value('sed_nombre') ?? $ctx['sed_siglas'];
+                } catch (\Throwable $e) {
+                    $sedeNombre = $ctx['sed_siglas'];
+                }
+            }
+
+            // Docente desde SUD Intranet
+            $docente = '';
+            if ($partes) {
+                try {
+                    $conn = DB::connection($equipoSvc->academicConnection());
+                    $sud = $conn->table('seccion_unidad_docente')
+                        ->where('sud_cod_seccion', $partes['sec_codigo'])
+                        ->first();
+                    if ($sud) {
+                        $prof = $conn->table('persona')
+                            ->where('per_cedula', $sud->sud_ced_docente)
+                            ->first();
+                        $docente = $prof ? strtoupper($prof->per_nombres . ' ' . $prof->per_apellidos) : '';
+                    }
+                } catch (\Throwable $e) {
+                    Log::error('Error obteniendo docente SUD: ' . $e->getMessage());
+                }
+            }
+
+            // Tutor y Representante desde Involucrados
+            $tutor = ''; $representante = '';
             try {
                 $involucrados = $gestionSvc->involucradosDelProyecto($p->pry_codigo);
                 foreach ($involucrados as $inv) {
                     foreach ($inv['roles'] as $rol) {
                         $rolNombre = strtoupper($rol['nombre']);
-                        if (str_contains($rolNombre, 'DOCENTE')) $docente = strtoupper($inv['nombre'] . ' ' . $inv['apellido']);
                         if (str_contains($rolNombre, 'TUTOR')) $tutor = strtoupper($inv['nombre'] . ' ' . $inv['apellido']);
                         if (str_contains($rolNombre, 'REPRESENTANTE')) $representante = strtoupper($inv['nombre'] . ' ' . $inv['apellido']);
                     }
                 }
             } catch (\Throwable $e) {
-                Log::error('Error obteniendo involucrados para Excel: ' . $e->getMessage());
+                Log::error('Error obteniendo involucrados: ' . $e->getMessage());
             }
 
             // Integrantes (Exacto: NOMBRE APELLIDO C.I V-XXXX)
@@ -234,7 +265,7 @@ class VinculacionReporteController extends Controller
             }
 
             $writer->addRow([
-                strtoupper($ctx['sed_siglas'] ?? ''),
+                strtoupper($sedeNombre),
                 strtoupper($ctx['pro_siglas'] ?? 'PNF'),
                 $ctx['tra_codigo'] ?? '',
                 $ctx['sem_codigo'] ?? '',

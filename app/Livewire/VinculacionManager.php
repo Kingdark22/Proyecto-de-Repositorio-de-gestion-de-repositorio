@@ -31,9 +31,11 @@ class VinculacionManager extends Component
 
     // Reporte modal
     public bool $mostrarModalReporte = false;
+    public bool $mostrarModalExcel = false;
     public string $tipoReporte = 'titulo';
     public string $reporteTituloId = '';
     public string $reporteLapsoId = '';
+    public string $excelLapsoId = '';
     public array $lapsosReporte = [];
     public array $titulosReporte = [];
 
@@ -550,6 +552,28 @@ class VinculacionManager extends Component
     public function cerrarModalReporte(): void
     {
         $this->mostrarModalReporte = false;
+    }
+
+    public function abrirModalExcel(): void
+    {
+        $this->mostrarModalExcel = true;
+        $this->excelLapsoId = '';
+    }
+
+    public function cerrarModalExcel(): void
+    {
+        $this->mostrarModalExcel = false;
+    }
+
+    public function generarReporteExcelPorLapso(): void
+    {
+        if (empty($this->excelLapsoId)) {
+            $this->safeDispatch('error', 'Seleccione un lapso académico.');
+            return;
+        }
+        $url = route('vinculacion.reporte-excel', ['filtro_lapso' => $this->excelLapsoId]);
+        $this->dispatch('descargar-excel', url: $url);
+        $this->cerrarModalExcel();
     }
 
     public function generarReporte(): void

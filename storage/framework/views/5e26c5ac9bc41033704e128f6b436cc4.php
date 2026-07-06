@@ -110,7 +110,7 @@
 
                     </div>
                     <div style="margin-bottom:12px;">
-                        <select wire:model.live="tituloSeleccionado" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:15px;box-sizing:border-box;">
+                        <select wire:model="tituloSeleccionado" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:15px;box-sizing:border-box;">
                             <option value="">Seleccione un título...</option>
                             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__empty_1 = true; $__currentLoopData = $titulosDisponibles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $tid => $ttitulo): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
                                 <option value="<?php echo e($tid); ?>"><?php echo e($ttitulo); ?></option>
@@ -435,7 +435,8 @@
 
                 <div style="margin-top:20px;text-align:right;display:flex;gap:10px;justify-content:flex-end;">
                     <button type="button" class="cm-btn cm-btn-secondary" wire:click="cerrarModalReporte" style="padding:10px 24px;font-size:13px;border-radius:6px;">Cancelar</button>
-                    <button type="button" class="cm-btn cm-btn-success" wire:click="generarReporte" style="padding:10px 24px;font-size:13px;border-radius:6px;">Generar PDF</button>
+                    <button type="button" class="cm-btn cm-btn-success" wire:click="generarReporteExcel" style="padding:10px 24px;font-size:13px;border-radius:6px;">Generar Excel</button>
+                    <button type="button" class="cm-btn cm-btn-primary" wire:click="generarReporte" style="padding:10px 24px;font-size:13px;border-radius:6px;">Generar PDF</button>
                 </div>
             </div>
         </div>
@@ -815,6 +816,9 @@ unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendB
 
     <script>
         window.addEventListener('descargar-pdf', event => {
+            window.open(event.detail.url, '_blank');
+        });
+        window.addEventListener('descargar-excel', event => {
             window.open(event.detail.url, '_blank');
         });
     </script>
