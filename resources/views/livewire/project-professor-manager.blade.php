@@ -2,7 +2,7 @@
     <h2 class="titulo" style="margin-bottom: 20px; font-weight: bolder; margin-top: 10px;">Listado de Profesores de Proyecto</h2>
 
     {{-- Mensaje de aviso solo si no hay datos en absoluto --}}
-    @if(! $intranetDisponible && $docentes->isEmpty() && $search === '' && ! $programaFilter)
+    @if(! $intranetDisponible && $docentes->isEmpty() && $search === '')
         <div style="background-color: #fff3cd; color: #856404; padding: 10px; border: 1px solid #ffeeba; border-radius: 4px; margin-bottom: 15px; font-size: 13px; text-align: center;">
             El sistema está operando con la base de datos de respaldo.
         </div>
