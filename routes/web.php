@@ -132,6 +132,7 @@ Route::middleware(['auth', 'active.role'])->group(function () {
 
     Route::view('/vinculacion', 'vinculacion.index')->name('vinculacion.index')->middleware('role:gestionador');
     Route::get('/vinculacion/reporte-pdf', [\App\Http\Controllers\VinculacionReporteController::class, 'reportePdf'])->name('vinculacion.reporte-pdf')->middleware('auth');
+    Route::get('/vinculacion/reporte-excel', [\App\Http\Controllers\VinculacionReporteController::class, 'exportarExcel'])->name('vinculacion.reporte-excel')->middleware('auth');
 
     Route::get('/proyectos/crear', function () {
         return redirect('/proyectos/gestion?' . http_build_query(request()->query()));

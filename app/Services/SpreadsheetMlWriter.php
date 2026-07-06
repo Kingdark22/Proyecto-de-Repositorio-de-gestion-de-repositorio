@@ -25,9 +25,36 @@ class SpreadsheetMlWriter
     /** @var list<int|null> */
     protected array $colWidths = [];
 
+    // Colores personalizables
+    protected string $headerBg     = '#4F6228';
+    protected string $headerColor  = '#FFFFFF';
+    protected string $titleBg      = '#1F3864';
+    protected string $titleColor   = '#FFFFFF';
+    protected string $altRowBg     = '#EAF1DD';
+
     public function setTitle(string $title): static
     {
         $this->title = $title;
+        return $this;
+    }
+
+    public function setHeaderStyle(string $bg, string $color): static
+    {
+        $this->headerBg = $bg;
+        $this->headerColor = $color;
+        return $this;
+    }
+
+    public function setTitleStyle(string $bg, string $color): static
+    {
+        $this->titleBg = $bg;
+        $this->titleColor = $color;
+        return $this;
+    }
+
+    public function setAltRowStyle(string $bg): static
+    {
+        $this->altRowBg = $bg;
         return $this;
     }
 
@@ -52,8 +79,8 @@ class SpreadsheetMlWriter
                 'value' => $value,
                 'type'  => $type,
                 'bold'  => $isHeader,
-                'bg'    => $bgColor ?? ($isHeader ? '#4F6228' : ''),
-                'color' => $isHeader ? '#FFFFFF' : '#000000',
+                'bg'    => $bgColor ?? ($isHeader ? $this->headerBg : ''),
+                'color' => $isHeader ? $this->headerColor : '#000000',
                 'wrap'  => $wrap,
             ];
 
@@ -120,37 +147,37 @@ class SpreadsheetMlWriter
    <Font ss:FontName="Calibri" ss:Size="10"/>
    <Alignment ss:WrapText="1" ss:Vertical="Top"/>
   </Style>
-  <Style ss:ID="sHeader">
-   <Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>
-   <Interior ss:Color="#4F6228" ss:Pattern="Solid"/>
-   <Alignment ss:WrapText="1" ss:Vertical="Center" ss:Horizontal="Center"/>
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#FFFFFF"/>
-    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#FFFFFF"/>
-   </Borders>
-  </Style>
-  <Style ss:ID="sTitle">
-   <Font ss:FontName="Calibri" ss:Size="12" ss:Bold="1" ss:Color="#FFFFFF"/>
-   <Interior ss:Color="#1F3864" ss:Pattern="Solid"/>
-   <Alignment ss:WrapText="0" ss:Vertical="Center" ss:Horizontal="Center"/>
-  </Style>
-  <Style ss:ID="sData">
-   <Font ss:FontName="Calibri" ss:Size="10"/>
-   <Alignment ss:WrapText="1" ss:Vertical="Top"/>
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-   </Borders>
-  </Style>
-  <Style ss:ID="sDataAlt">
-   <Font ss:FontName="Calibri" ss:Size="10"/>
-   <Interior ss:Color="#EAF1DD" ss:Pattern="Solid"/>
-   <Alignment ss:WrapText="1" ss:Vertical="Top"/>
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-   </Borders>
-  </Style>
+   <Style ss:ID="sHeader">
+    <Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="{$this->headerColor}"/>
+    <Interior ss:Color="{$this->headerBg}" ss:Pattern="Solid"/>
+    <Alignment ss:WrapText="1" ss:Vertical="Center" ss:Horizontal="Center"/>
+    <Borders>
+     <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="{$this->headerColor}"/>
+     <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="{$this->headerColor}"/>
+    </Borders>
+   </Style>
+   <Style ss:ID="sTitle">
+    <Font ss:FontName="Calibri" ss:Size="12" ss:Bold="1" ss:Color="{$this->titleColor}"/>
+    <Interior ss:Color="{$this->titleBg}" ss:Pattern="Solid"/>
+    <Alignment ss:WrapText="0" ss:Vertical="Center" ss:Horizontal="Center"/>
+   </Style>
+   <Style ss:ID="sData">
+    <Font ss:FontName="Calibri" ss:Size="10"/>
+    <Alignment ss:WrapText="1" ss:Vertical="Top"/>
+    <Borders>
+     <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
+     <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
+    </Borders>
+   </Style>
+   <Style ss:ID="sDataAlt">
+    <Font ss:FontName="Calibri" ss:Size="10"/>
+    <Interior ss:Color="{$this->altRowBg}" ss:Pattern="Solid"/>
+    <Alignment ss:WrapText="1" ss:Vertical="Top"/>
+    <Borders>
+     <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
+     <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
+    </Borders>
+   </Style>
  </Styles>
  <Worksheet ss:Name="{$title}">
   <Table>

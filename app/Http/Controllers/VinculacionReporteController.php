@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Proyecto;
 use App\Models\Vinculacion;
 use App\Services\IntranetEquipoSeccionService;
+use App\Services\SpreadsheetMlWriter;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -85,6 +86,97 @@ class VinculacionReporteController extends Controller
 
         $sanitized = preg_replace('/[^a-zA-Z0-9_-]/', '_', $titulo);
         return $pdf->download("vinculacion_{$sanitized}.pdf");
+    }
+
+    public function exportarExcel(Request $request)
+    {
+        $filtroTitulo = trim($request->get('filtro_titulo', ''));
+        $filtroLapso = $request->get('filtro_lapso', '');
+        $proyectoIds = $request->get('proyectos', []);
+
+        $query = Vinculacion::with([
+            'proyecto',
+            'comunidad',
+            'tituloVinculacion',
+        ]);
+
+        if ($filtroTitulo !== '') {
+            $term = '%' . $filtroTitulo . '%';
+            $query->whereHas('tituloVinculacion', fn($q) => $q->where('tiv_titulo', 'ILIKE', $term));
+        }
+
+        if ($filtroLapso !== '') {
+            $ids = $this->proyectosEnLapso((int) $filtroLapso);
+            if (!empty($ids)) {
+                $query->whereIn('proyecto_id', $ids);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        if (!empty($proyectoIds)) {
+            $query->whereIn('proyecto_id', $proyectoIds);
+        }
+
+        $vinculaciones = $query->get()->sortBy('titulo');
+
+        $proyectos = $vinculaciones->pluck('proyecto')->filter();
+        Proyecto::precargarTitulos($proyectos);
+
+        $equipoSeccion = app(IntranetEquipoSeccionService::class);
+        foreach ($vinculaciones as $v) {
+            $p = $v->proyecto;
+            if ($p && $p->equipo_ref) {
+                $integrantes = $equipoSeccion->integrantes($p->equipo_ref);
+                $v->integrantesLista = $integrantes->pluck('nombre_completo')->implode(', ');
+                $partes = $equipoSeccion->parsearClave($p->equipo_ref);
+                $v->lapso = $partes ? ($partes['lap_codigo'] ?? null) : null;
+            } else {
+                $v->integrantesLista = '';
+                $v->lapso = null;
+            }
+        }
+
+        $writer = new SpreadsheetMlWriter();
+        $writer->setTitle('Vinculaciones')
+            ->setHeaderStyle('#8b0000', '#FFFFFF')
+            ->setTitleStyle('#8b0000', '#FFFFFF')
+            ->setAltRowStyle('#f5ebeb');
+
+        $headers = ['N°', 'Título Vinculación', 'Proyecto', 'Comunidad', 'Equipo / Sección', 'Lapso'];
+        $widths  = [6, 40, 60, 40, 25, 15];
+
+        $totalCols = count($headers);
+
+        $tituloReporte = $filtroTitulo ?: ($filtroLapso ? 'Vinculaciones - Lapso' : 'Todas las vinculaciones');
+        $writer->addMergedTitleRow(
+            'UPTP JUAN DE JESUS MONTILLA – VINCULACIONES — ' . strtoupper($tituloReporte),
+            $totalCols,
+            '#8b0000'
+        );
+
+        $writer->addRow($headers, isHeader: true, height: 35, widths: $widths);
+
+        $idx = 0;
+        foreach ($vinculaciones as $v) {
+            $idx++;
+            $lapsoNombre = '';
+            if ($v->lapso) {
+                $lapso = \App\Models\LapsoAcademico::find((int) $v->lapso);
+                $lapsoNombre = $lapso?->nombre ?? '';
+            }
+            $writer->addRow([
+                $idx,
+                $v->titulo,
+                $v->proyecto?->titulo ?? '',
+                $v->comunidad?->nombre ?? '',
+                $v->proyecto?->equipo_ref ?? '',
+                $lapsoNombre,
+            ], wrap: true);
+        }
+
+        $sanitized = preg_replace('/[^a-zA-Z0-9_-]/', '_', $tituloReporte);
+        return $writer->download("vinculacion_{$sanitized}.xls");
     }
 
     protected function proyectosEnLapso(int $lapCodigo): array

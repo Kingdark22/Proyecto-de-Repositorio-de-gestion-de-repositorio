@@ -427,7 +427,8 @@
 
                 <div style="margin-top:20px;text-align:right;display:flex;gap:10px;justify-content:flex-end;">
                     <button type="button" class="cm-btn cm-btn-secondary" wire:click="cerrarModalReporte" style="padding:10px 24px;font-size:13px;border-radius:6px;">Cancelar</button>
-                    <button type="button" class="cm-btn cm-btn-success" wire:click="generarReporte" style="padding:10px 24px;font-size:13px;border-radius:6px;">Generar PDF</button>
+                    <button type="button" class="cm-btn cm-btn-success" wire:click="generarReporteExcel" style="padding:10px 24px;font-size:13px;border-radius:6px;">Generar Excel</button>
+                    <button type="button" class="cm-btn cm-btn-primary" wire:click="generarReporte" style="padding:10px 24px;font-size:13px;border-radius:6px;">Generar PDF</button>
                 </div>
             </div>
         </div>
@@ -767,6 +768,9 @@
 
     <script>
         window.addEventListener('descargar-pdf', event => {
+            window.open(event.detail.url, '_blank');
+        });
+        window.addEventListener('descargar-excel', event => {
             window.open(event.detail.url, '_blank');
         });
     </script>

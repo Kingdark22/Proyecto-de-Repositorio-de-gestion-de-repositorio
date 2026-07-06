@@ -192,12 +192,31 @@
 
                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(isset($v->integrantes) && $v->integrantes->isNotEmpty()): ?>
                     <div class="field-label" style="margin-top:8px;">Integrantes del equipo</div>
-                    <div class="field-value" style="font-size:8.5pt;">
-                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $v->integrantes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $integrante): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
-                            <span><?php echo e($integrante->nombre); ?> <?php echo e($integrante->apellido); ?> (<?php echo e($integrante->cedula); ?>)<?php echo e(($integrante->rol ?? '') === 'Líder' ? ' — Líder' : ''); ?></span><?php echo e(!$loop->last ? ',' : ''); ?>
-
-                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
-                    </div>
+                    <table style="width:100%;border-collapse:collapse;font-size:8pt;margin-top:4px;">
+                        <thead>
+                            <tr style="background:#f0f0f0;">
+                                <th style="border:1px solid #ccc;padding:4px 6px;text-align:center;width:20px;font-weight:bold;">N°</th>
+                                <th style="border:1px solid #ccc;padding:4px 6px;text-align:left;font-weight:bold;">Apellidos y Nombres</th>
+                                <th style="border:1px solid #ccc;padding:4px 6px;text-align:center;font-weight:bold;width:90px;">Cédula</th>
+                                <th style="border:1px solid #ccc;padding:4px 6px;text-align:center;font-weight:bold;width:70px;">Rol</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $v->integrantes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $i => $integrante): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                <?php
+                                    $fullName = trim(($integrante->apellido ?? '') . ', ' . ($integrante->nombre ?? ''));
+                                    if (trim($fullName) === ', ') $fullName = trim(($integrante->nombre ?? '') . ' ' . ($integrante->apellido ?? ''));
+                                    $rol = ($integrante->rol ?? '') === 'Líder' ? 'Líder' : 'Integrante';
+                                ?>
+                                <tr style="background:<?php echo e($loop->iteration % 2 == 0 ? '#fafafa' : '#fff'); ?>;">
+                                    <td style="border:1px solid #ddd;padding:3px 6px;text-align:center;"><?php echo e($loop->iteration); ?></td>
+                                    <td style="border:1px solid #ddd;padding:3px 6px;"><?php echo e($fullName); ?></td>
+                                    <td style="border:1px solid #ddd;padding:3px 6px;text-align:center;"><?php echo e($integrante->cedula); ?></td>
+                                    <td style="border:1px solid #ddd;padding:3px 6px;text-align:center;font-weight:<?php echo e($rol === 'Líder' ? 'bold' : 'normal'); ?>;color:<?php echo e($rol === 'Líder' ? '#000' : '#555'); ?>;"><?php echo e($rol); ?></td>
+                                </tr>
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                        </tbody>
+                    </table>
                 <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($v->comunidad): ?>

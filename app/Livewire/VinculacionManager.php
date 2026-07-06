@@ -561,6 +561,12 @@ class VinculacionManager extends Component
             }
             $titulo = TituloVinculacion::find((int) $this->reporteTituloId);
             $params = ['filtro_titulo' => $titulo?->titulo ?? ''];
+        } elseif ($this->tipoReporte === 'wizard') {
+            if (empty($this->selectedProjects)) {
+                $this->safeDispatch('error', 'No hay proyectos seleccionados en el wizard.');
+                return;
+            }
+            $params = ['proyectos' => $this->selectedProjects];
         } else {
             if (empty($this->reporteLapsoId)) {
                 $this->safeDispatch('error', 'Seleccione un lapso académico.');
@@ -571,6 +577,34 @@ class VinculacionManager extends Component
 
         $url = route('vinculacion.reporte-pdf', $params);
         $this->dispatch('descargar-pdf', url: $url);
+        $this->cerrarModalReporte();
+    }
+
+    public function generarReporteExcel(): void
+    {
+        if ($this->tipoReporte === 'titulo') {
+            if (empty($this->reporteTituloId)) {
+                $this->safeDispatch('error', 'Seleccione un título.');
+                return;
+            }
+            $titulo = TituloVinculacion::find((int) $this->reporteTituloId);
+            $params = ['filtro_titulo' => $titulo?->titulo ?? ''];
+        } elseif ($this->tipoReporte === 'wizard') {
+            if (empty($this->selectedProjects)) {
+                $this->safeDispatch('error', 'No hay proyectos seleccionados en el wizard.');
+                return;
+            }
+            $params = ['proyectos' => $this->selectedProjects];
+        } else {
+            if (empty($this->reporteLapsoId)) {
+                $this->safeDispatch('error', 'Seleccione un lapso académico.');
+                return;
+            }
+            $params = ['filtro_lapso' => $this->reporteLapsoId];
+        }
+
+        $url = route('vinculacion.reporte-excel', $params);
+        $this->dispatch('descargar-excel', url: $url);
         $this->cerrarModalReporte();
     }
 
