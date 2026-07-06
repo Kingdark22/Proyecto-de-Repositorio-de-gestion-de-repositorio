@@ -487,12 +487,15 @@ class ProyectoController extends Controller
                 }
             }
 
-            // Docente de proyecto = quien registró el proyecto (creador_cedula)
+            // Docente de proyecto = quien creó el grupo de proyecto (grp_creador_cedula)
             $docente = '';
             try {
-                $creador = \App\Models\User::where('usu_cedula', trim((string) ($proy->creador_cedula ?? '')))->first();
-                if ($creador) {
-                    $docente = strtoupper(trim(($creador->nombre ?? '') . ' ' . ($creador->apellido ?? '')));
+                $grupoCreador = \App\Models\GrupoProyectoModulo::where('grp_identificador', $equipoRef)->value('grp_creador_cedula');
+                if ($grupoCreador) {
+                    $creador = \App\Models\User::where('usu_cedula', trim((string) $grupoCreador))->first();
+                    if ($creador) {
+                        $docente = strtoupper(trim(($creador->nombre ?? '') . ' ' . ($creador->apellido ?? '')));
+                    }
                 }
             } catch (\Throwable) {}
             $fila['docente'] = $docente;
