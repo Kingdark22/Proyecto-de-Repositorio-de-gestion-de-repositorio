@@ -168,9 +168,79 @@ class ProyectoController extends Controller
         ];
 
         if ($modoActualizacion) {
+            // Validación base
             $request->validate([
                 'documentos' => 'nullable|array',
             ]);
+
+            // Validación dinámica por componente (tipo, tamaño, obligatorios)
+            $programaId = $estadoForm['programa_id'] ?? null;
+            $trayectoCodigo = $estadoForm['trayecto_codigo'] ?? null;
+
+            if ($programaId) {
+                $componentes = $this->catalogoRepo->componentesPorProgramaYTrayecto($programaId, $trayectoCodigo);
+                $existingDocs = $proyecto->documentos->keyBy('comp_codigo');
+
+                $docRules = [];
+                $docMessages = [];
+
+                foreach ($componentes as $comp) {
+                    $field = 'documentos.' . $comp->id;
+                    $label = $comp->nombre;
+                    $rules = [];
+
+                    // OBLIGATORIO si el componente lo exige y no hay documento previo
+                    if ($comp->es_obligatorio && !$existingDocs->has($comp->id)) {
+                        $rules[] = 'required';
+                    } else {
+                        $rules[] = 'nullable';
+                    }
+
+                    $rules[] = 'file';
+
+                    // VALIDAR TIPO DE ARCHIVO desde el componente
+                    if ($comp->tipo_archivo) {
+                        $mimeMap = [
+                            'pdf' => 'pdf',
+                            'zip' => 'zip',
+                            'rar' => 'rar',
+                            'doc' => 'doc,docx',
+                            'docx' => 'doc,docx',
+                            'xls' => 'xls,xlsx',
+                            'xlsx' => 'xls,xlsx',
+                            'img' => 'jpg,jpeg,png,gif',
+                        ];
+                        $tipos = explode(',', $comp->tipo_archivo);
+                        $mimes = [];
+                        foreach ($tipos as $t) {
+                            $t = trim($t);
+                            if (isset($mimeMap[$t])) {
+                                $mimes[] = $mimeMap[$t];
+                            }
+                        }
+                        if ($mimes) {
+                            $rules[] = 'mimes:' . implode(',', $mimes);
+                            $docMessages[$field . '.mimes'] = "El componente {$label} debe ser un archivo de tipo: " . implode(', ', $mimes) . '.';
+                        }
+                    }
+
+                    // VALIDAR TAMAÑO MÁXIMO desde el componente
+                    if ($comp->tamano_maximo_mb) {
+                        $rules[] = 'max:' . ($comp->tamano_maximo_mb * 1024);
+                        $docMessages[$field . '.max'] = "El componente {$label} no debe superar los {$comp->tamano_maximo_mb}MB.";
+                    }
+
+                    if ($comp->es_obligatorio && !$existingDocs->has($comp->id)) {
+                        $docMessages[$field . '.required'] = "El componente {$label} es obligatorio.";
+                    }
+
+                    $docRules[$field] = $rules;
+                }
+
+                if ($docRules) {
+                    $request->validate($docRules, $docMessages);
+                }
+            }
         } else {
             $rules = $this->gestion->reglasValidacion($estadoForm, $user, true);
             $request->validate($rules, [

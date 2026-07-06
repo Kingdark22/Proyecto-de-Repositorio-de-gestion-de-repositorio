@@ -129,7 +129,7 @@ class GrupoProyectoController extends Controller
             'lapsos', 'programas', 'secciones',
             'filterLapso', 'filterPrograma', 'filterSeccion', 'search',
             'tablaOk', 'isProfessor', 'proyectoPorClave',
-        ));
+        ))->with('userCedula', trim((string) $user->usu_cedula));
     }
 
     /**
@@ -277,6 +277,12 @@ class GrupoProyectoController extends Controller
                 ->with('error', 'Grupo no encontrado.');
         }
 
+        // Solo el creador puede editar
+        if (trim((string) $grupo->creador_cedula) !== trim((string) $user->usu_cedula)) {
+            return redirect()->route('grupos-proyecto.index')
+                ->with('error', 'No tienes permiso para editar este grupo.');
+        }
+
         // Bloquear si el proyecto asociado ya está aprobado
         $proyecto = $this->proyectoRepo->findFirstByEquipoRef($grupo->clave);
         if ($proyecto && $proyecto->estado_validacion === 'aprobado') {
@@ -305,11 +311,18 @@ class GrupoProyectoController extends Controller
      */
     public function update(Request $request, $id)
     {
+        $user = auth()->user();
         $grpCodigo = (int) $id;
         $grupo = $this->grupos->obtener($grpCodigo);
         if (! $grupo) {
             return redirect()->route('grupos-proyecto.index')
                 ->with('error', 'Grupo no encontrado.');
+        }
+
+        // Solo el creador puede actualizar
+        if (trim((string) $grupo->creador_cedula) !== trim((string) $user->usu_cedula)) {
+            return redirect()->route('grupos-proyecto.index')
+                ->with('error', 'No tienes permiso para actualizar este grupo.');
         }
 
         // Bloquear si el proyecto asociado ya está aprobado
@@ -404,17 +417,34 @@ class GrupoProyectoController extends Controller
 
     public function destroy(Request $request, $id)
     {
+        $user = auth()->user();
         $grpCodigo = (int) $id;
         $grupo = $this->grupos->obtener($grpCodigo);
-        if ($grupo) {
-            $proyecto = $this->proyectoRepo->findFirstByEquipoRef($grupo->clave);
-            if ($proyecto && $proyecto->estado_validacion === 'aprobado') {
-                if ($request->ajax() || $request->wantsJson()) {
-                    return response()->json(['success' => false, 'message' => 'No se puede eliminar el grupo porque el proyecto asociado ya está aprobado.']);
-                }
-                return redirect()->route('grupos-proyecto.index')
-                    ->with('error', 'No se puede eliminar el grupo porque el proyecto asociado ya está aprobado.');
+
+        if (! $grupo) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Grupo no encontrado.']);
             }
+            return redirect()->route('grupos-proyecto.index')
+                ->with('error', 'Grupo no encontrado.');
+        }
+
+        // Solo el creador puede eliminar
+        if (trim((string) $grupo->creador_cedula) !== trim((string) $user->usu_cedula)) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'No tienes permiso para eliminar este grupo.']);
+            }
+            return redirect()->route('grupos-proyecto.index')
+                ->with('error', 'No tienes permiso para eliminar este grupo.');
+        }
+
+        $proyecto = $this->proyectoRepo->findFirstByEquipoRef($grupo->clave);
+        if ($proyecto && $proyecto->estado_validacion === 'aprobado') {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'No se puede eliminar el grupo porque el proyecto asociado ya está aprobado.']);
+            }
+            return redirect()->route('grupos-proyecto.index')
+                ->with('error', 'No se puede eliminar el grupo porque el proyecto asociado ya está aprobado.');
         }
 
         $ok = $this->grupos->eliminar($grpCodigo);
@@ -514,14 +544,21 @@ class GrupoProyectoController extends Controller
     /**
      * Get estudiantes (candidates) for a given lapso and seccion (JSON).
      */
-    public function getEstudiantes($lapso, $seccion)
+    public function getEstudiantes(Request $request, $lapso, $seccion)
     {
         $lapCodigo = (int) $lapso;
         $secCodigo = (int) $seccion;
 
         $candidatos = $this->grupos->candidatosSeccion($lapCodigo, $secCodigo);
 
-        return response()->json($candidatos);
+        // Filtrar estudiantes que ya están en otros grupos en este lapso
+        $excludeGrp = $request->get('exclude_grp') ? (int) $request->get('exclude_grp') : null;
+        $ocupadas = $this->grupos->cedulasOcupadasEnLapso($lapCodigo, $excludeGrp);
+        $ocupadasIndex = array_flip($ocupadas);
+
+        $candidatos = $candidatos->reject(fn ($est) => isset($ocupadasIndex[trim($est->cedula ?? '')]));
+
+        return response()->json($candidatos->values());
     }
 
     /**

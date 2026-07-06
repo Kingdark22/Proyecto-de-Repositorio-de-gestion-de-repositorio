@@ -524,7 +524,7 @@ seccionSelect.addEventListener('change', function() {
     statusEl.textContent = 'Cargando estudiantes...';
     estudianteSearch.placeholder = 'Cargando...';
 
-    fetch('/grupos-proyecto/api/estudiantes/' + lapso + '/' + seccion)
+    fetch('/grupos-proyecto/api/estudiantes/' + lapso + '/' + seccion + '?exclude_grp={{ isset($grupo) ? $grupo->grp_codigo : '' }}')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             estudiantesCache = data;

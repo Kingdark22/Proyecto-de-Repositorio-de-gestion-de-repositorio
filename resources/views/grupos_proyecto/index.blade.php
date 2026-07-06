@@ -140,6 +140,9 @@
                         <th>Lapso</th>
                         <th>Integrantes</th>
                         <th>Proyecto</th>
+                        @if(!$isProfessor)
+                        <th>Creador</th>
+                        @endif
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -180,6 +183,9 @@
                                     <span style="color: #999; font-size: 10px;">Sin proyecto</span>
                                 @endif
                             </td>
+                            @if(!$isProfessor)
+                            <td align="center" style="font-size:10px;">{{ $g->creador_cedula }}</td>
+                            @endif
                             <td align="center" nowrap>
                                 {{-- Actualizar va al formulario de registro del proyecto --}}
                                 @if(!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado')
@@ -187,10 +193,10 @@
                                     onclick="window.location='{{ $tieneProyecto ? route('proyectos.gestion.edit', $proyecto->id) : route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}'"
                                     title="Ir al formulario de proyecto">Actualizar</button>
                                 @endif
-                                @if (!$isProfessor && (!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado'))
+                                @if(trim($g->creador_cedula) === trim($userCedula) && (!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado'))
                                     <a href="{{ route('grupos-proyecto.edit', $g->grp_codigo) }}" class="cm-btn cm-btn-secondary cm-btn-sm" title="Editar grupo">Editar</a>
                                 @endif
-                                @if (!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado')
+                                @if(trim($g->creador_cedula) === trim($userCedula) && (!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado'))
                                 <form method="POST" action="{{ route('grupos-proyecto.destroy', $g->grp_codigo) }}" style="display:inline;"
                                     >
                                     @csrf
@@ -202,7 +208,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" align="center">No hay grupos registrados. Cree uno con integrantes de la sección.</td>
+                            <td colspan="{{ $isProfessor ? 8 : 9 }}" align="center">No hay grupos registrados. Cree uno con integrantes de la sección.</td>
                         </tr>
                     @endforelse
                 </tbody>
