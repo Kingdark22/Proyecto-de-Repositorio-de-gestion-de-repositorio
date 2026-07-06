@@ -160,12 +160,12 @@
             ?>
             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(in_array($activeRoleExport, ['administrador', 'coordinador'])): ?>
             <div style="margin-bottom:8px; display:flex; align-items:center; justify-content:flex-end;">
-                <a href="<?php echo e(route('proyectos.gestion.exportar-excel')); ?>"
+                <button type="button" onclick="abrirModalExcel()"
                    class="cm-btn cm-btn-success"
                    style="background:#155724; border-color:#0d3d19; font-size:0.8rem; padding:0.4rem 0.9rem;"
                    title="Descargar reporte Excel del depósito de proyectos">
                     &#8595; Exportar a Excel
-                </a>
+                </button>
             </div>
             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
@@ -263,6 +263,24 @@
     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
     
+    <div id="excelModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarModalExcel()">
+        <div style="background:#fff;border-radius:8px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+            <h3 style="margin:0 0 15px;font-size:16px;color:#000;">Exportar a Excel</h3>
+            <p style="font-size:12px;color:#555;margin-bottom:12px;">Seleccione el lapso académico para el reporte:</p>
+            <select id="excelLapsoSelect" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-size:13px;box-sizing:border-box;">
+                <option value="">- Todos los lapsos -</option>
+                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $lapsosFiltro; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $lap): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                    <option value="<?php echo e($lap->lap_codigo); ?>"><?php echo e($lap->lap_nombre); ?></option>
+                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+            </select>
+            <div style="margin-top:18px;text-align:center;display:flex;gap:10px;justify-content:center;">
+                <button type="button" class="cm-btn cm-btn-success" onclick="descargarExcel()">Descargar</button>
+                <button type="button" class="cm-btn cm-btn-secondary" onclick="cerrarModalExcel()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    
     <div id="rejectModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarRechazar()">
         <div style="background:#fff;border-radius:8px;padding:20px;max-width:520px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
             <h3 style="margin:0 0 15px;font-size:16px;color:#8b0000;">Motivo de rechazo</h3>
@@ -284,6 +302,21 @@
     }
     function cerrarRechazar() {
         document.getElementById('rejectModal').style.display = 'none';
+    }
+    function abrirModalExcel() {
+        document.getElementById('excelModal').style.display = 'flex';
+    }
+    function cerrarModalExcel() {
+        document.getElementById('excelModal').style.display = 'none';
+    }
+    function descargarExcel() {
+        var lapso = document.getElementById('excelLapsoSelect').value;
+        var url = '<?php echo e(route("proyectos.gestion.exportar-excel")); ?>';
+        if (lapso) {
+            url += '?lapso=' + encodeURIComponent(lapso);
+        }
+        window.open(url, '_blank');
+        cerrarModalExcel();
     }
     </script>
 <?php $__env->stopSection(); ?>

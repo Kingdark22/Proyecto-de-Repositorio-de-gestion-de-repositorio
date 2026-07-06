@@ -261,19 +261,19 @@
     @endif
 
     {{-- MODAL EXPORTAR EXCEL --}}
-    <div id="excelModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarModalExcel()">
-        <div style="background:#fff;border-radius:8px;padding:20px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
-            <h3 style="margin:0 0 15px;font-size:16px;color:#000;">Exportar a Excel</h3>
-            <p style="font-size:12px;color:#555;margin-bottom:12px;">Seleccione el lapso académico para el reporte:</p>
-            <select id="excelLapsoSelect" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-size:13px;box-sizing:border-box;">
+    <div id="excelModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarModalExcel()">
+        <div style="background:#fff;border-radius:8px;padding:25px;max-width:500px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+            <h3 style="margin:0 0 15px;font-weight:bold;font-size:17px;color:#000;">Exportar a Excel</h3>
+            <p style="font-size:13px;color:#555;margin-bottom:14px;">Seleccione el lapso académico para el reporte:</p>
+            <select id="excelLapsoSelect" style="width:100%;padding:10px 8px;border:1px solid #999;border-radius:4px;font-size:14px;box-sizing:border-box;background:#fff;">
                 <option value="">- Todos los lapsos -</option>
                 @foreach($lapsosFiltro as $lap)
                     <option value="{{ $lap->lap_codigo }}">{{ $lap->lap_nombre }}</option>
                 @endforeach
             </select>
-            <div style="margin-top:18px;text-align:center;display:flex;gap:10px;justify-content:center;">
-                <button type="button" class="cm-btn cm-btn-success" onclick="descargarExcel()">Descargar</button>
-                <button type="button" class="cm-btn cm-btn-secondary" onclick="cerrarModalExcel()">Cancelar</button>
+            <div style="margin-top:20px;text-align:center;display:flex;gap:12px;justify-content:center;">
+                <button type="button" class="cm-btn cm-btn-success" onclick="descargarExcel()" style="padding:8px 20px;font-size:14px;">Descargar</button>
+                <button type="button" class="cm-btn cm-btn-secondary" onclick="cerrarModalExcel()" style="padding:8px 20px;font-size:14px;">Cancelar</button>
             </div>
         </div>
     </div>
