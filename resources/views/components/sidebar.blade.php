@@ -74,13 +74,13 @@ $notificacionesCount = count($notificacionesList);
             @if ($nav['canManageSystemConfig'])
             <li>
                 <div class="legacy-menu-item has-submenu">
-                    Listado de Profesores
+                    Gestión de Profesores
                     <div class="arrow-icon"></div>
                 </div>
                 <div class="legacy-submenu">
                     <a href="{{ route('profesores-proyecto.index') }}"
                         class="{{ request()->routeIs('profesores-proyecto.index') ? 'active-sub' : '' }}">Profesores
-                        Asignados</a>
+                        de Proyecto</a>
                 </div>
             </li>
             @endif

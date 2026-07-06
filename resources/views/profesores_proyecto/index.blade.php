@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Profesores de Proyecto')
+@section('title', 'Gestión de Profesores de Proyecto')
 @section('header', 'Gestión de Profesores de Proyecto')
 
 @push('styles')
