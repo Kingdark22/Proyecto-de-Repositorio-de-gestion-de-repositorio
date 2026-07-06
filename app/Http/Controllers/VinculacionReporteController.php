@@ -149,25 +149,29 @@ class VinculacionReporteController extends Controller
             }
 
             $sedeNombre = '';
-            if ($ctx && !empty($ctx['sed_siglas'])) {
+            $sedSiglas = $ctx['sed_siglas'] ?? '';
+
+            // Fallback: extraer sede directamente del equipo_ref (ej: PNFI-ACA11-131-1 → ACA)
+            if ($sedSiglas === '' && preg_match('/^[A-Z]+-([A-Z]{2,4})\d+-\d+/', strtoupper($equipoRef), $m)) {
+                $sedSiglas = $m[1];
+            }
+
+            if ($sedSiglas !== '') {
                 try {
                     $academicConn = $equipoSvc->academicConnection();
                     $sedeConn = $academicConn === 'intranet' ? 'simulacion' : $academicConn;
                     $sedeNombre = DB::connection($sedeConn)->table('sede')
-                        ->where('sed_siglas', $ctx['sed_siglas'])
-                        ->value('sed_nombre') ?? $ctx['sed_siglas'];
+                        ->where('sed_siglas', $sedSiglas)
+                        ->value('sed_nombre') ?? $sedSiglas;
                 } catch (\Throwable $e) {
-                    $sedeNombre = $ctx['sed_siglas'];
+                    $sedeNombre = $sedSiglas;
                 }
             }
 
-            // Programa: siglas + nombre completo
-            $proSiglas = $ctx['pro_siglas'] ?? 'PNF';
+            // Programa: nombre completo
             $proNombre = $ctx['pro_nombre'] ?? '';
-            $programaInfo = $proSiglas;
-            if ($proNombre !== '' && $proNombre !== $proSiglas) {
-                $programaInfo = $proSiglas . ' - ' . $proNombre;
-            }
+            $proSiglas = $ctx['pro_siglas'] ?? 'PNF';
+            $programaInfo = $proNombre !== '' ? $proNombre : $proSiglas;
 
             $docente = '';
             if ($partes) {

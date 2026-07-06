@@ -159,40 +159,14 @@
                 $activeRoleExport = app(\App\Services\UserRoleService::class)->getActiveRole(auth()->user());
             ?>
             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(in_array($activeRoleExport, ['administrador', 'coordinador'])): ?>
-            <div style="margin-bottom:8px; display:flex; align-items:center; gap:8px; justify-content:flex-end;">
-                <select id="exportLapsoFilter" style="height:30px; padding:3px 6px; font-size:11px; border:1px solid #ccc; border-radius:4px; min-width:160px;">
-                    <option value="">Todos los lapsos</option>
-                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $lapsosFiltro; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $l): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
-                        <option value="<?php echo e($l->lap_codigo); ?>"><?php echo e($l->lap_nombre); ?></option>
-                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
-                </select>
-                <a href="#" id="exportExcelBtn"
+            <div style="margin-bottom:8px; display:flex; align-items:center; justify-content:flex-end;">
+                <a href="<?php echo e(route('proyectos.gestion.exportar-excel')); ?>"
                    class="cm-btn cm-btn-success"
                    style="background:#155724; border-color:#0d3d19; font-size:0.8rem; padding:0.4rem 0.9rem;"
                    title="Descargar reporte Excel del depósito de proyectos">
                     &#8595; Exportar a Excel
                 </a>
             </div>
-            <script>
-            document.getElementById('exportLapsoFilter').addEventListener('change', function() {
-                var lapso = this.value;
-                var baseUrl = '<?php echo e(route("proyectos.gestion.exportar-excel")); ?>';
-                var params = new URLSearchParams();
-                <?php if($filterEstado !== ''): ?>
-                    params.set('estado', '<?php echo e($filterEstado); ?>');
-                <?php endif; ?>
-                <?php if($filterComunidad !== ''): ?>
-                    params.set('comunidad', '<?php echo e($filterComunidad); ?>');
-                <?php endif; ?>
-                if (lapso !== '') {
-                    params.set('lapso', lapso);
-                }
-                var qs = params.toString();
-                document.getElementById('exportExcelBtn').href = baseUrl + (qs ? '?' + qs : '');
-            });
-            // Trigger on load to set initial href
-            document.getElementById('exportLapsoFilter').dispatchEvent(new Event('change'));
-            </script>
             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
             <form method="GET" action="<?php echo e(route('proyectos.gestion')); ?>" style="margin-bottom:8px;">
