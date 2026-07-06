@@ -40,6 +40,12 @@ class ProjectProfessorManager extends Component
         $this->resetPage();
     }
 
+    public function updatingLapsoFilter(): void
+    {
+        $this->search = '';
+        $this->resetPage();
+    }
+
     public function placeholder(): string
     {
         return '<div style="text-align:center;padding:40px;color:#666;">Cargando listado de profesores...</div>';

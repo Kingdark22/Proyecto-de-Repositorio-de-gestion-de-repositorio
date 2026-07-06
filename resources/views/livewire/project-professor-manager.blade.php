@@ -9,12 +9,19 @@
     @endif
 
     <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px; box-sizing: border-box;">
-        <legend style="font-weight: bold; font-size: 12px;">Búsqueda</legend>
+        <legend style="font-weight: bold; font-size: 12px;">Filtros</legend>
         <table class="ppm-filters-table" width="100%" border="0" cellpadding="8" cellspacing="0">
             <tr>
-                <td width="100%">
-                    <b>Buscar docente:</b><br>
-                    <input wire:model.live.debounce.300ms="search" type="text" placeholder="Cédula o nombre del docente..." style="width: 100%; max-width: 400px;">
+                <td width="30%"><b>Lapso académico:</b><br>
+                    <select wire:model.live="lapsoFilter" style="width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;">
+                        <option value="">- Lapso -</option>
+                        @foreach($lapsos as $lap)
+                            <option value="{{ $lap->lap_codigo }}">{{ $lap->lap_nombre }}</option>
+                        @endforeach
+                    </select>
+                </td>
+                <td width="70%"><b>Buscar docente:</b><br>
+                    <input wire:model.live.debounce.300ms="search" type="text" placeholder="Cédula o nombre del docente..." style="width: 100%; padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;box-sizing:border-box;">
                 </td>
             </tr>
         </table>
@@ -29,7 +36,7 @@
     <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0; position: relative; box-sizing: border-box;">
         <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Docentes asignados al lapso vigente</legend>
 
-        <div wire:loading.flex wire:target="search" 
+        <div wire:loading.flex wire:target="search, lapsoFilter" 
             style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); z-index: 10; justify-content: center; align-items: center; flex-direction: column; gap: 8px;">
             <div style="width: 200px; height: 4px; background: #e0e0e0; border-radius: 2px; overflow: hidden;">
                 <div style="width: 40%; height: 100%; background: #8b0000; border-radius: 2px; animation: ppmProgress 1.2s ease-in-out infinite;"></div>
@@ -40,16 +47,18 @@
         <table width="100%" border="1" cellpadding="6" cellspacing="0" class="ppm-table" style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px; position: relative; table-layout: fixed;">
             <thead>
                 <tr style="background-color: #8bb2b7; color: #000; text-align: center; font-weight: bold;">
-                    <th width="30%">Docente / cédula</th>
-                    <th width="15%">PNF</th>
-                    <th width="35%">Asignación intranet</th>
-                    <th width="20%">Detalle sección</th>
+                    <th width="25%">Docente / cédula</th>
+                    <th width="12%">PNF</th>
+                    <th width="30%">Asignación intranet</th>
+                    <th width="18%">Módulo</th>
+                    <th width="15%">Estatus</th>
                 </tr>
             </thead>
             <tbody class="Texto">
                 @foreach($docentes as $doc)
                     @php
                         $cedula = $doc->cedula;
+                        $habilitado = $doc->habilitado_modulo ?? false;
                     @endphp
                     <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }};" valign="top">
                         <td style="padding: 5px;">
@@ -75,16 +84,26 @@
                                 <span style="color: #666;">+ {{ $doc->asignaciones->count() - 3 }} más</span>
                             @endif
                         </td>
+                        <td align="center" style="padding: 5px; font-size: 10px;">
+                            @if($habilitado)
+                                <span style="display:inline-block;background:#e8f5e9;border:1px solid #198754;border-radius:4px;padding:2px 8px;font-weight:bold;color:#198754;font-size:10px;">HABILITADO</span>
+                                @if($doc->ppm_anio)
+                                    <br><span style="font-size:9px;color:#555;">{{ $doc->ppm_anio }} - Sec. {{ $doc->ppm_seccion ?? '-' }}</span>
+                                @endif
+                            @else
+                                <span style="display:inline-block;background:#f5f5f5;border:1px solid #ccc;border-radius:4px;padding:2px 8px;color:#888;font-size:10px;">Solo intranet</span>
+                            @endif
+                        </td>
                         <td align="center" style="padding: 5px;">
-                            <span style="font-weight: bold; color: #333;">{{ $doc->ppm_anio ?? '-' }}</span><br>
-                            Sec: {{ $doc->ppm_seccion ?? '-' }}
+                            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:{{ $habilitado ? '#198754' : '#ccc' }};"></span>
+                            <span style="font-size:9px;color:#555;display:block;margin-top:2px;">{{ $habilitado ? 'Activo' : 'Inactivo' }}</span>
                         </td>
                     </tr>
                 @endforeach
                 @if($docentes->isEmpty())
                     <tr>
-                        <td colspan="4" align="center" style="padding: 20px;">
-                            No hay docentes asignados para el lapso vigente.
+                        <td colspan="5" align="center" style="padding: 20px;">
+                            No hay docentes asignados para el lapso seleccionado.
                         </td>
                     </tr>
                 @endif
