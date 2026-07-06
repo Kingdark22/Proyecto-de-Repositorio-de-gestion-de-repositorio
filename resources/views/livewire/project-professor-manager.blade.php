@@ -1,4 +1,6 @@
 <div class="ppm-manager">
+    <h2 class="titulo" style="margin-bottom: 20px; font-weight: bolder; margin-top: 10px;">Listado de Profesores de Proyecto</h2>
+
     {{-- Mensaje de aviso solo si no hay datos en absoluto --}}
     @if(! $intranetDisponible && $docentes->isEmpty() && $search === '')
         <div style="background-color: #fff3cd; color: #856404; padding: 10px; border: 1px solid #ffeeba; border-radius: 4px; margin-bottom: 15px; font-size: 13px; text-align: center;">
@@ -20,6 +22,7 @@
                 </td>
                 <td width="70%"><b>Buscar docente:</b><br>
                     <input wire:model.live.debounce.300ms="search" type="text" placeholder="Cédula o nombre del docente..." style="width: 100%; padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;box-sizing:border-box;">
+
                 </td>
             </tr>
         </table>
@@ -35,6 +38,7 @@
         <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Docentes asignados al lapso vigente</legend>
 
         <div wire:loading.flex wire:target="search, lapsoFilter" 
+
             style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); z-index: 10; justify-content: center; align-items: center; flex-direction: column; gap: 8px;">
             <div style="width: 200px; height: 4px; background: #e0e0e0; border-radius: 2px; overflow: hidden;">
                 <div style="width: 40%; height: 100%; background: #8b0000; border-radius: 2px; animation: ppmProgress 1.2s ease-in-out infinite;"></div>
@@ -50,6 +54,7 @@
                     <th width="30%">Asignación intranet</th>
                     <th width="18%">Módulo</th>
                     <th width="15%">Estatus</th>
+
                 </tr>
             </thead>
             <tbody class="Texto">
@@ -57,6 +62,7 @@
                     @php
                         $cedula = $doc->cedula;
                         $habilitado = $doc->habilitado_modulo ?? false;
+
                     @endphp
                     <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }};" valign="top">
                         <td style="padding: 5px;">
@@ -95,6 +101,7 @@
                         <td align="center" style="padding: 5px;">
                             <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:{{ $habilitado ? '#198754' : '#ccc' }};"></span>
                             <span style="font-size:9px;color:#555;display:block;margin-top:2px;">{{ $habilitado ? 'Activo' : 'Inactivo' }}</span>
+
                         </td>
                     </tr>
                 @endforeach
@@ -102,6 +109,7 @@
                     <tr>
                         <td colspan="5" align="center" style="padding: 20px;">
                             No hay docentes asignados para el lapso seleccionado.
+
                         </td>
                     </tr>
                 @endif
