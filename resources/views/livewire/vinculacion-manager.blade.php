@@ -40,9 +40,6 @@
             <button type="button" wire:click="abrirWizard" class="cm-btn cm-btn-success" style="font-size:13px;">
                 + Vincular Proyectos
             </button>
-            <button type="button" wire:click="exportarExcelGeneral" class="cm-btn cm-btn-primary" style="font-size:13px;">
-                &darr; Exportar Excel
-            </button>
             <button type="button" wire:click="abrirModalReporte" class="cm-btn cm-btn-primary" style="font-size:13px;">
                 &darr; Reporte de Proyectos
             </button>
@@ -779,9 +776,6 @@
     <script>
 
         window.addEventListener('descargar-pdf', event => {
-            window.open(event.detail.url, '_blank');
-        });
-        window.addEventListener('descargar-excel', event => {
             window.open(event.detail.url, '_blank');
         });
     </script>

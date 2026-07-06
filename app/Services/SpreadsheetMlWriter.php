@@ -25,12 +25,12 @@ class SpreadsheetMlWriter
     /** @var list<int|null> */
     protected array $colWidths = [];
 
-    // Colores personalizables
-    protected string $headerBg     = '#4F6228';
-    protected string $headerColor  = '#FFFFFF';
-    protected string $titleBg      = '#1F3864';
-    protected string $titleColor   = '#FFFFFF';
-    protected string $altRowBg     = '#EAF1DD';
+    // Colores personalizables (default: simple sin color)
+    protected string $headerBg     = '#FFFFFF';
+    protected string $headerColor  = '#000000';
+    protected string $titleBg      = '#FFFFFF';
+    protected string $titleColor   = '#000000';
+    protected string $altRowBg     = '#FFFFFF';
 
     public function setTitle(string $title): static
     {
@@ -147,20 +147,18 @@ class SpreadsheetMlWriter
    <Font ss:FontName="Calibri" ss:Size="10"/>
    <Alignment ss:WrapText="1" ss:Vertical="Top"/>
   </Style>
-   <Style ss:ID="sHeader">
-    <Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="{$this->headerColor}"/>
-    <Interior ss:Color="{$this->headerBg}" ss:Pattern="Solid"/>
-    <Alignment ss:WrapText="1" ss:Vertical="Center" ss:Horizontal="Center"/>
-    <Borders>
-     <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="{$this->headerColor}"/>
-     <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="{$this->headerColor}"/>
-    </Borders>
-   </Style>
-   <Style ss:ID="sTitle">
-    <Font ss:FontName="Calibri" ss:Size="12" ss:Bold="1" ss:Color="{$this->titleColor}"/>
-    <Interior ss:Color="{$this->titleBg}" ss:Pattern="Solid"/>
-    <Alignment ss:WrapText="0" ss:Vertical="Center" ss:Horizontal="Center"/>
-   </Style>
+    <Style ss:ID="sHeader">
+     <Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1"/>
+     <Alignment ss:WrapText="1" ss:Vertical="Center" ss:Horizontal="Center"/>
+     <Borders>
+      <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+      <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
+     </Borders>
+    </Style>
+    <Style ss:ID="sTitle">
+     <Font ss:FontName="Calibri" ss:Size="12" ss:Bold="1"/>
+     <Alignment ss:WrapText="0" ss:Vertical="Center" ss:Horizontal="Center"/>
+    </Style>
    <Style ss:ID="sData">
     <Font ss:FontName="Calibri" ss:Size="10"/>
     <Alignment ss:WrapText="1" ss:Vertical="Top"/>

@@ -559,12 +559,6 @@ class VinculacionManager extends Component
         $this->mostrarModalReporte = false;
     }
 
-    public function exportarExcelGeneral(): void
-    {
-        $url = route('vinculacion.reporte-excel');
-        $this->dispatch('descargar-excel', url: $url);
-    }
-
     public function generarReporte(): void
     {
         if ($this->tipoReporte === 'titulo') {

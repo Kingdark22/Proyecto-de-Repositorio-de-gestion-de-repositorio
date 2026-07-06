@@ -13,6 +13,7 @@ use App\Repositories\CatalogoRepository;
 use App\Repositories\ComunidadRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class ProyectoController extends Controller
 {
@@ -456,11 +457,37 @@ class ProyectoController extends Controller
         $datos   = $this->reporteDeposito->construirFilasReporte($filtros);
         $filas   = $datos['filas'];
         $maxInt  = $datos['maxIntegrantes'];
-        $lapso   = $datos['lapsoMasActual']  ?? ($lapsoNombre ?: '');
+        $lapso   = $lapsoNombre ?: ($datos['lapsoMasActual'] ?? '');
         $pnf     = $datos['pnfPredominante'] ?? ($proSiglas ?: '');
 
+        // ── Sede fallback: extraer desde equipo_ref cuando la sede vino vacía ──
+        $proyectosEquipo = Proyecto::where('estado_validacion', 'aprobado')
+            ->where('estado_logico', true)
+            ->orderBy('id')
+            ->select(['pry_codigo', 'pry_direccion_logica'])
+            ->get();
+        foreach ($filas as $idx => &$fila) {
+            if ($fila['sede'] === '' || $fila['sede'] === '—') {
+                $proy = $proyectosEquipo[$idx] ?? null;
+                if ($proy && $proy->equipo_ref && preg_match('/^[A-Z]+-([A-Z]{2,4})\d+-\d+/', strtoupper($proy->equipo_ref), $m)) {
+                    $sedSiglas = $m[1];
+                    try {
+                        $academicConn = $this->equipoSeccion->academicConnection();
+                        $sedeConn = $academicConn === 'intranet' ? 'simulacion' : $academicConn;
+                        $sedNombre = DB::connection($sedeConn)->table('sede')
+                            ->where('sed_siglas', $sedSiglas)
+                            ->value('sed_nombre') ?? $sedSiglas;
+                        $fila['sede'] = strtoupper($sedNombre);
+                    } catch (\Throwable) {
+                        $fila['sede'] = $sedSiglas;
+                    }
+                }
+            }
+        }
+        unset($fila);
+
         $writer  = new SpreadsheetMlWriter();
-        $writer->setTitle('Deposito de Proyectos');
+        $writer->setTitle('Proyectos Sociotecnologicos');
 
         // ── Calcular número total de columnas ──────────────────────────────
         $colsFijas       = 9;
@@ -469,14 +496,11 @@ class ProyectoController extends Controller
         $totalCols       = $colsFijas + $colsIntegrantes + $colsFinales;
 
         // ── Fila de título ─────────────────────────────────────────────────
-        $tituloReporte = 'UPTP JUAN DE JESÚS MONTILLA – DEPÓSITO DE PROYECTOS';
+        $tituloReporte = 'UPTP JUAN DE JESÚS MONTILLA — PROYECTOS SOCIOTECNOLÓGICOS';
         if ($lapso !== '') {
             $tituloReporte .= ' — ' . mb_strtoupper($lapso);
         }
-        if ($pnf !== '') {
-            $tituloReporte .= ' — ' . mb_strtoupper($pnf);
-        }
-        $writer->addMergedTitleRow($tituloReporte, $totalCols, '#1F3864');
+        $writer->addMergedTitleRow($tituloReporte, $totalCols);
 
         // ── Anchos de columna (puntos) ─────────────────────────────────────
         $widths = [
