@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Proyecto;
 use App\Models\Vinculacion;
 use App\Services\IntranetEquipoSeccionService;
+use App\Services\ProyectoGestionService;
 use App\Services\SpreadsheetMlWriter;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class VinculacionReporteController extends Controller
 {
@@ -124,6 +127,7 @@ class VinculacionReporteController extends Controller
         Proyecto::precargarTitulos($proyectos);
 
         $equipoSvc = app(IntranetEquipoSeccionService::class);
+        $gestionSvc = app(ProyectoGestionService::class);
         
         $writer = new SpreadsheetMlWriter();
         $writer->setTitle('Vinculaciones')
@@ -177,7 +181,8 @@ class VinculacionReporteController extends Controller
             $p = $v->proyecto;
             if (!$p) continue;
 
-            $partes = $equipoSvc->parsearClave($p->equipo_ref ?? '');
+            $equipoRef = $p->equipo_ref ?? '';
+            $partes = $equipoSvc->parsearClave($equipoRef);
             $ctx = [];
             if ($partes) {
                 $ctx = $equipoSvc->etiquetasContexto(
@@ -187,8 +192,24 @@ class VinculacionReporteController extends Controller
                 );
             }
             
+            // Obtener Docente, Tutor y Representante desde Involucrados
+            $docente = ''; $tutor = ''; $representante = '';
+            try {
+                $involucrados = $gestionSvc->involucradosDelProyecto($p->pry_codigo);
+                foreach ($involucrados as $inv) {
+                    foreach ($inv['roles'] as $rol) {
+                        $rolNombre = strtoupper($rol['nombre']);
+                        if (str_contains($rolNombre, 'DOCENTE')) $docente = strtoupper($inv['nombre'] . ' ' . $inv['apellido']);
+                        if (str_contains($rolNombre, 'TUTOR')) $tutor = strtoupper($inv['nombre'] . ' ' . $inv['apellido']);
+                        if (str_contains($rolNombre, 'REPRESENTANTE')) $representante = strtoupper($inv['nombre'] . ' ' . $inv['apellido']);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::error('Error obteniendo involucrados para Excel: ' . $e->getMessage());
+            }
+
             // Integrantes (Exacto: NOMBRE APELLIDO C.I V-XXXX)
-            $integrantes = $equipoSvc->integrantes($p->equipo_ref ?? '');
+            $integrantes = $equipoSvc->integrantes($equipoRef);
             $miembros = [];
             for ($i = 0; $i < 6; $i++) {
                 $m = $integrantes->get($i);
@@ -220,9 +241,9 @@ class VinculacionReporteController extends Controller
                 $v->titulo,
                 $p->pry_resumen ?? '',
                 $p->linea_investigacion?->nombre ?? '',
-                $p->docente?->nombre_completo ?? '',
-                $p->tutor?->nombre_completo ?? '',
-                $p->representante?->nombre_completo ?? '',
+                $docente,
+                $tutor,
+                $representante,
                 ...$miembros,
                 $loc,
                 $p->comunidad?->nombre ?? '',
