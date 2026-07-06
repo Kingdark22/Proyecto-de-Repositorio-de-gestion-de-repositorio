@@ -159,23 +159,22 @@ class SpreadsheetMlWriter
      <Font ss:FontName="Calibri" ss:Size="12" ss:Bold="1"/>
      <Alignment ss:WrapText="0" ss:Vertical="Center" ss:Horizontal="Center"/>
     </Style>
-   <Style ss:ID="sData">
-    <Font ss:FontName="Calibri" ss:Size="10"/>
-    <Alignment ss:WrapText="1" ss:Vertical="Top"/>
-    <Borders>
-     <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-     <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-    </Borders>
-   </Style>
-   <Style ss:ID="sDataAlt">
-    <Font ss:FontName="Calibri" ss:Size="10"/>
-    <Interior ss:Color="{$this->altRowBg}" ss:Pattern="Solid"/>
-    <Alignment ss:WrapText="1" ss:Vertical="Top"/>
-    <Borders>
-     <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-     <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
-    </Borders>
-   </Style>
+    <Style ss:ID="sData">
+     <Font ss:FontName="Calibri" ss:Size="10"/>
+     <Alignment ss:WrapText="1" ss:Vertical="Center" ss:Horizontal="Center"/>
+     <Borders>
+      <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
+      <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
+     </Borders>
+    </Style>
+    <Style ss:ID="sDataAlt">
+     <Font ss:FontName="Calibri" ss:Size="10"/>
+     <Alignment ss:WrapText="1" ss:Vertical="Center" ss:Horizontal="Center"/>
+     <Borders>
+      <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
+      <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CCCCCC"/>
+     </Borders>
+    </Style>
  </Styles>
  <Worksheet ss:Name="{$title}">
   <Table>
