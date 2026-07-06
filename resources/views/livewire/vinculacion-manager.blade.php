@@ -105,6 +105,9 @@
                 {{-- PASO 1: TÍTULO --}}
                 @if($pasoActual === 1)
                     <h4 style="margin:0 0 16px 0;font-size:15px;color:#333;">Paso 1: Seleccionar Título de Vinculación</h4>
+                    <div style="margin-bottom:4px;font-size:11px;color:#888;">
+                        Títulos cargados: {{ count($titulosDisponibles) }}
+                    </div>
                     <div style="margin-bottom:12px;">
                         <select wire:model.live="tituloSeleccionado" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:15px;box-sizing:border-box;">
                             <option value="">Seleccione un título...</option>
