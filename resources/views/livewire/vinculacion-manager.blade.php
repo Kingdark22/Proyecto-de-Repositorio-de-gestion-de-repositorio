@@ -109,7 +109,7 @@
                         Títulos cargados: {{ count($titulosDisponibles) }}
                     </div>
                     <div style="margin-bottom:12px;">
-                        <select wire:model.live="tituloSeleccionado" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:15px;box-sizing:border-box;">
+                        <select wire:model="tituloSeleccionado" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:15px;box-sizing:border-box;">
                             <option value="">Seleccione un título...</option>
                             @forelse($titulosDisponibles as $tid => $ttitulo)
                                 <option value="{{ $tid }}">{{ $ttitulo }}</option>

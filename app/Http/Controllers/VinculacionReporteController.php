@@ -90,7 +90,7 @@ class VinculacionReporteController extends Controller
     protected function proyectosEnLapso(int $lapCodigo): array
     {
         $equipoSeccion = app(IntranetEquipoSeccionService::class);
-        $proyectos = Proyecto::where('estado_logico', true)->get(['id', 'equipo_ref']);
+        $proyectos = Proyecto::where('estado_logico', true)->select('id', 'equipo_ref')->get();
         $ids = [];
 
         foreach ($proyectos as $p) {
