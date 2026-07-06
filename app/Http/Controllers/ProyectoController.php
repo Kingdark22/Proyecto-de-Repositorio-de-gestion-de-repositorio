@@ -528,24 +528,24 @@ class ProyectoController extends Controller
 
         // ── Anchos de columna (puntos) ─────────────────────────────────────
         $widths = [
-            25,   // N°
-            90,   // Sede
-            60,   // PNF
-            60,   // Trayecto
-            60,   // Sección
-            80,   // Lapso
-            200,  // Título
-            100,  // Comunidad
-            100,  // Equipo
-            120,  // Docente
+            30,   // N°
+            120,  // Sede
+            120,  // PNF
+            80,   // Trayecto
+            80,   // Sección
+            110,  // Lapso
+            300,  // Título
+            180,  // Comunidad
+            160,  // Equipo
+            220,  // Docente
         ];
         for ($i = 0; $i < $maxInt; $i++) {
-            $widths[] = 130; // Nombre
-            $widths[] = 70;  // Cédula
+            $widths[] = 230; // Nombre
+            $widths[] = 100; // Cédula
         }
-        $widths[] = 130; // Tutor Académico
-        $widths[] = 70;  // Cumplió Requisitos
-        $widths[] = 80;  // Cant. Beneficiados
+        $widths[] = 220; // Tutor Académico
+        $widths[] = 90;  // Cumplió Requisitos
+        $widths[] = 100; // Cant. Beneficiados
 
         // ── Encabezados ───────────────────────────────────────────────────
         $headers = [
