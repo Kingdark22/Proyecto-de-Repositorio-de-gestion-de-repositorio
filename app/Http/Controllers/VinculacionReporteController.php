@@ -95,8 +95,8 @@ class VinculacionReporteController extends Controller
         $proyectoIds = $request->get('proyectos', []);
 
         $query = Vinculacion::with([
-            'proyecto',
-            'comunidad',
+            'proyecto.linea_investigacion',
+            'proyecto.comunidad.direccion.municipio.estado',
             'tituloVinculacion',
         ]);
 
@@ -124,30 +124,31 @@ class VinculacionReporteController extends Controller
         Proyecto::precargarTitulos($proyectos);
 
         $equipoSeccion = app(IntranetEquipoSeccionService::class);
-        foreach ($vinculaciones as $v) {
-            $p = $v->proyecto;
-            if ($p && $p->equipo_ref) {
-                $integrantes = $equipoSeccion->integrantes($p->equipo_ref);
-                $v->integrantesLista = $integrantes->pluck('nombre_completo')->implode(', ');
-                $partes = $equipoSeccion->parsearClave($p->equipo_ref);
-                $v->lapso = $partes ? ($partes['lap_codigo'] ?? null) : null;
-            } else {
-                $v->integrantesLista = '';
-                $v->lapso = null;
-            }
-        }
-
+        
         $writer = new SpreadsheetMlWriter();
         $writer->setTitle('Vinculaciones')
             ->setHeaderStyle('#8b0000', '#FFFFFF')
             ->setTitleStyle('#8b0000', '#FFFFFF')
             ->setAltRowStyle('#f5ebeb');
 
-        $headers = ['N°', 'Título Vinculación', 'Proyecto', 'Comunidad', 'Equipo / Sección', 'Lapso'];
-        $widths  = [6, 40, 60, 40, 25, 15];
+        $headers = [
+            'SEDE', 'PROGRAMA NACIONAL DE FORMACIÓN', 'TRAYECTO', 'SEMESTRE', 
+            'TÍTULO DE PROYECTO', 'RESUMEN O PRESENTACIÓN (NO MAS DE 150 PALABRAS)', 
+            'LÍNEA DE INVESTIGACIÓN', 'DOCENTE DE PROYECTO', 'TUTOR ACADÉMICO', 
+            'REPRESENTANTE INSTITUCIONAL', 
+            'INTEGRANTE Nº 1; CÉDULA DE IDENTIDAD', 'INTEGRANTE Nº 2; CÉDULA DE IDENTIDAD', 
+            'INTEGRANTE Nº 3; CÉDULA DE IDENTIDAD', 'INTEGRANTE Nº 4; CÉDULA DE IDENTIDAD', 
+            'INTEGRANTE Nº 5; CÉDULA DE IDENTIDAD', 'INTEGRANTE Nº 6; CÉDULA DE IDENTIDAD', 
+            'LOCALIDAD GEOGRÁFICA DONDE SE DESARROLLÓ EL PROYECTO (PARROQUIA, URBANIZACIÓN, BARRIO, ENTRE OTROS)', 
+            'COMUNIDAD BENEFICIADA', 'RESULTADO DE LA SOCIALIZACIÓN'
+        ];
+
+        $widths = [
+            40, 60, 20, 20, 60, 150, 60, 60, 60, 60, 
+            60, 60, 60, 60, 60, 60, 100, 60, 60
+        ];
 
         $totalCols = count($headers);
-
         $tituloReporte = $filtroTitulo ?: ($filtroLapso ? 'Vinculaciones - Lapso' : 'Todas las vinculaciones');
         $writer->addMergedTitleRow(
             'UPTP JUAN DE JESUS MONTILLA – VINCULACIONES — ' . strtoupper($tituloReporte),
@@ -155,23 +156,50 @@ class VinculacionReporteController extends Controller
             '#8b0000'
         );
 
-        $writer->addRow($headers, isHeader: true, height: 35, widths: $widths);
+        $writer->addRow($headers, isHeader: true, height: 40, widths: $widths);
 
         $idx = 0;
         foreach ($vinculaciones as $v) {
             $idx++;
-            $lapsoNombre = '';
-            if ($v->lapso) {
-                $lapso = \App\Models\LapsoAcademico::find((int) $v->lapso);
-                $lapsoNombre = $lapso?->nombre ?? '';
+            $p = $v->proyecto;
+            if (!$p) continue;
+
+            $partes = $equipoSeccion->parsearClave($p->equipo_ref ?? '');
+            
+            // Integrantes (Nombre + CI)
+            $integrantes = $equipoSeccion->integrantes($p->equipo_ref ?? '');
+            $miembros = [];
+            for ($i = 0; $i < 6; $i++) {
+                $m = $integrantes->get($i);
+                $miembros[] = $m ? strtoupper($m->nombre_completo) . ' C.I ' . ($m->cedula ?? '') : '';
             }
+
+            // Localidad Geográfica
+            $loc = '';
+            if ($p->comunidad && $p->comunidad->direccion) {
+                $dir = $p->comunidad->direccion;
+                $loc = trim(sprintf('%s, %s, %s', 
+                    $dir->dir_calle ?? '', 
+                    $dir->municipio->mun_nombre ?? '', 
+                    $dir->municipio->estado->est_nombre ?? ''
+                ));
+            }
+
             $writer->addRow([
-                $idx,
+                $p->sede ?? '',
+                strtoupper($p->pnf ?? ''),
+                $partes['trayecto'] ?? '',
+                $partes['semestre'] ?? '',
                 $v->titulo,
-                $v->proyecto?->titulo ?? '',
-                $v->comunidad?->nombre ?? '',
-                $v->proyecto?->equipo_ref ?? '',
-                $lapsoNombre,
+                $p->pry_resumen ?? '',
+                $p->linea_investigacion?->nombre ?? '',
+                $p->docente?->nombre_completo ?? '',
+                $p->tutor?->nombre_completo ?? '',
+                $p->representante?->nombre_completo ?? '',
+                ...$miembros,
+                $loc,
+                $p->comunidad?->nombre ?? '',
+                $v->estado_socializacion ?? 'APROBADO', // Valor por defecto según imagen
             ], wrap: true);
         }
 
