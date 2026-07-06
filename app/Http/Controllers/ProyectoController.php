@@ -528,24 +528,24 @@ class ProyectoController extends Controller
 
         // ── Anchos de columna (puntos) ─────────────────────────────────────
         $widths = [
-            30,   // N°
-            120,  // Sede
-            120,  // PNF
-            80,   // Trayecto
-            80,   // Sección
-            110,  // Lapso
-            300,  // Título
-            180,  // Comunidad
-            160,  // Equipo
-            220,  // Docente
+            35,   // N°
+            150,  // Sede
+            200,  // PNF
+            100,  // Trayecto
+            100,  // Sección
+            130,  // Lapso
+            400,  // Título
+            250,  // Comunidad
+            200,  // Equipo
+            280,  // Docente
         ];
         for ($i = 0; $i < $maxInt; $i++) {
-            $widths[] = 230; // Nombre
-            $widths[] = 100; // Cédula
+            $widths[] = 280; // Nombre
+            $widths[] = 120; // Cédula
         }
-        $widths[] = 220; // Tutor Académico
-        $widths[] = 90;  // Cumplió Requisitos
-        $widths[] = 100; // Cant. Beneficiados
+        $widths[] = 280; // Tutor Académico
+        $widths[] = 110; // Cumplió Requisitos
+        $widths[] = 120; // Cant. Beneficiados
 
         // ── Encabezados ───────────────────────────────────────────────────
         $headers = [
@@ -588,7 +588,7 @@ class ProyectoController extends Controller
             $celdas[] = $fila['cumplio_requisitos'];
             $celdas[] = $fila['cant_beneficiados'];
 
-            $writer->addRow($celdas, wrap: true);
+            $writer->addRow($celdas, wrap: true, height: 45);
         }
 
         // ── Generar nombre de archivo ──────────────────────────────────────
