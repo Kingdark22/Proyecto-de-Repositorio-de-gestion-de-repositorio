@@ -995,9 +995,9 @@ class IntranetProfessorService
                         'trayecto_nombre' => trim($a->tra_nombre ?? ''),
                     ])->values(),
                     'habilitado_modulo' => $cfg ? (bool) $cfg->ppm_habilitado : false,
-                    'ppm_anio' => $cfg->ppm_anio ?? null,
-                    'ppm_seccion' => $cfg->ppm_seccion ?? null,
-                    'sud_codigo' => $cfg->ppm_sud_codigo ?? $primera->sud_codigo,
+                    'ppm_anio' => $cfg?->ppm_anio ?? null,
+                    'ppm_seccion' => $cfg?->ppm_seccion ?? null,
+                    'sud_codigo' => $cfg?->ppm_sud_codigo ?? $primera->sud_codigo,
                 ];
             })
             ->filter(function ($doc) use ($search) {

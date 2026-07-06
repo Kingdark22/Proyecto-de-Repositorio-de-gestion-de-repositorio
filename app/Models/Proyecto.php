@@ -133,7 +133,7 @@ class Proyecto extends RepositorioModel
 
     public function objetivo_investigacion()
     {
-        return $this->belongsTo(ObjetivoInvestigacion::class, 'obi_codigo', 'obi_codigo');
+        return $this->belongsTo(ObjetivoInvestigacion::class, 'objetivo_investigacion_id', 'obi_codigo');
     }
 
     public function comunidad()
