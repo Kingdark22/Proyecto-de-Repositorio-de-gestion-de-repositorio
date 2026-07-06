@@ -239,7 +239,6 @@ class GrupoProyectoRepository
             return false;
         }
 
-        // 1. Check active groups in same lapso via JSONB (fast path con índice GIN)
         $query = GrupoProyectoModulo::whereRaw(
             'CAST(grp_miembros AS jsonb) @> ? AND CAST(grp_contexto AS jsonb)->>\'lap_codigo\' = ?',
             [json_encode([['cedula' => $cedula]]), (string) $lapCodigo]
@@ -249,25 +248,7 @@ class GrupoProyectoRepository
             $query->where('grp_codigo', '!=', $excludeGrpCodigo);
         }
 
-        if ($query->exists()) {
-            return true;
-        }
-
-        // 2. Fallback: approved projects via JOIN (cubre casos donde estado_logico
-        //    o la igualdad JSONB no coincidan por datos inconsistentes)
-        try {
-            return GrupoProyectoModulo::query()
-                ->from('grupo_proyecto_modulo as gp')
-                ->join('proyectos as p', 'p.pry_direccion_logica', '=', 'gp.grp_identificador')
-                ->whereRaw("CAST(gp.grp_miembros AS jsonb) @> ?", [json_encode([['cedula' => $cedula]])])
-                ->where('p.pry_estado_validacion', 'aprobado')
-                ->where('p.pry_estado_logico', true)
-                ->whereRaw("CAST(gp.grp_contexto AS jsonb)->>'lap_codigo' = ?", [(string) $lapCodigo])
-                ->when($excludeGrpCodigo !== null, fn ($q) => $q->where('gp.grp_codigo', '!=', $excludeGrpCodigo))
-                ->exists();
-        } catch (\Throwable) {
-            return false;
-        }
+        return $query->exists();
     }
 
     /**
