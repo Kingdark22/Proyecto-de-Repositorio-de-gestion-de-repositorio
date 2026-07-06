@@ -530,6 +530,11 @@ class VinculacionManager extends Component
             ->pluck('tiv_titulo', 'tiv_codigo')
             ->toArray();
 
+        $this->cargarLapsosReporte();
+    }
+
+    protected function cargarLapsosReporte(): void
+    {
         $vinculaciones = Vinculacion::with('proyecto')->get();
         $equipoSeccion = app(IntranetEquipoSeccionService::class);
         $lapsos = [];
@@ -558,6 +563,7 @@ class VinculacionManager extends Component
     {
         $this->mostrarModalExcel = true;
         $this->excelLapsoId = '';
+        $this->cargarLapsosReporte(); // ¡AHORA SÍ SE CARGAN LOS LAPSOS!
     }
 
     public function cerrarModalExcel(): void

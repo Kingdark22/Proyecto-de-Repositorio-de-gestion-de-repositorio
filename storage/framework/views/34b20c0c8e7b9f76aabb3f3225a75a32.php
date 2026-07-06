@@ -1,1 +1,0 @@
-<div style="text-align:center;padding:40px;color:#666;">Cargando gesti&oacute;n de profesores...</div><?php /**PATH C:\Users\tu hermana\Downloads\proyecto\Proyecto-de-Repositorio-de-gestion-de-repositorio\storage\framework\views/ac210ec568064d945ab574c189987ca0.blade.php ENDPATH**/ ?>
