@@ -128,56 +128,12 @@ class VinculacionReporteController extends Controller
 
         $equipoSvc = app(IntranetEquipoSeccionService::class);
         $gestionSvc = app(ProyectoGestionService::class);
-        
-        $writer = new SpreadsheetMlWriter();
-        $writer->setTitle('Vinculaciones')
-            ->setHeaderStyle('#8b0000', '#FFFFFF')
-            ->setTitleStyle('#8b0000', '#FFFFFF')
-            ->setAltRowStyle('#f5ebeb');
 
-        $headers = [
-            'SEDE', 'PROGRAMA NACIONAL DE FORMACIÓN', 'TRAYECTO', 'SEMESTRE', 
-            'TÍTULO DE PROYECTO', 'RESUMEN O PRESENTACIÓN (NO MAS DE 150 PALABRAS)', 
-            'LÍNEA DE INVESTIGACIÓN', 'DOCENTE DE PROYECTO', 'TUTOR ACADÉMICO', 
-            'REPRESENTANTE INSTITUCIONAL', 
-            'INTEGRANTE Nº 1; CÉDULA DE IDENTIDAD', 'INTEGRANTE Nº 2; CÉDULA DE IDENTIDAD', 
-            'INTEGRANTE Nº 3; CÉDULA DE IDENTIDAD', 'INTEGRANTE Nº 4; CÉDULA DE IDENTIDAD', 
-            'INTEGRANTE Nº 5; CÉDULA DE IDENTIDAD', 'INTEGRANTE Nº 6; CÉDULA DE IDENTIDAD', 
-            'LOCALIDAD GEOGRÁFICA DONDE SE DESARROLLÓ EL PROYECTO (PARROQUIA, URBANIZACIÓN, BARRIO, ENTRE OTROS)', 
-            'COMUNIDAD BENEFICIADA', 'RESULTADO de la SOCIALIZACIÓN'
-        ];
+        // ── Primera pasada: resolver datos y encontrar max integrantes ──
+        $rows = [];
+        $maxIntegrantes = 0;
 
-        $widths = [
-            40, 60, 20, 20, 60, 150, 60, 60, 60, 60, 
-            60, 60, 60, 60, 60, 60, 100, 60, 60
-        ];
-
-        $totalCols = count($headers);
-        
-        if ($filtroTitulo !== '') {
-            $tituloReporte = 'Vinculaciones - ' . $filtroTitulo;
-            $nombreArchivo = "vinculacion_titulo_" . strtolower(str_replace(' ', '_', $filtroTitulo));
-        } elseif ($filtroLapso !== '') {
-            $lapsoObj = \App\Models\LapsoAcademico::find((int) $filtroLapso);
-            $nombreLapso = $lapsoObj?->nombre ?? $filtroLapso;
-            $tituloReporte = 'Vinculaciones - ' . $nombreLapso;
-            $nombreArchivo = "vinculacion_lapso_" . $filtroLapso;
-        } else {
-            $tituloReporte = 'Todas las Vinculaciones';
-            $nombreArchivo = 'vinculacion_general';
-        }
-
-        $writer->addMergedTitleRow(
-            'UPTP JUAN DE JESUS MONTILLA – VINCULACIONES — ' . strtoupper($tituloReporte),
-            $totalCols,
-            '#8b0000'
-        );
-
-        $writer->addRow($headers, isHeader: true, height: 40, widths: $widths);
-
-        $idx = 0;
         foreach ($vinculaciones as $v) {
-            $idx++;
             $p = $v->proyecto;
             if (!$p) continue;
 
@@ -186,13 +142,12 @@ class VinculacionReporteController extends Controller
             $ctx = [];
             if ($partes) {
                 $ctx = $equipoSvc->etiquetasContexto(
-                    $partes['lap_codigo'], 
-                    $partes['sec_codigo'], 
+                    $partes['lap_codigo'],
+                    $partes['sec_codigo'],
                     $p->linea_investigacion_id ?? null
                 );
             }
-            
-            // Sede completa
+
             $sedeNombre = '';
             if ($ctx && !empty($ctx['sed_siglas'])) {
                 try {
@@ -206,7 +161,14 @@ class VinculacionReporteController extends Controller
                 }
             }
 
-            // Docente desde SUD Intranet
+            // Programa: siglas + nombre completo
+            $proSiglas = $ctx['pro_siglas'] ?? 'PNF';
+            $proNombre = $ctx['pro_nombre'] ?? '';
+            $programaInfo = $proSiglas;
+            if ($proNombre !== '' && $proNombre !== $proSiglas) {
+                $programaInfo = $proSiglas . ' - ' . $proNombre;
+            }
+
             $docente = '';
             if ($partes) {
                 try {
@@ -225,7 +187,6 @@ class VinculacionReporteController extends Controller
                 }
             }
 
-            // Tutor y Representante desde Involucrados
             $tutor = ''; $representante = '';
             try {
                 $involucrados = $gestionSvc->involucradosDelProyecto($p->pry_codigo);
@@ -240,47 +201,137 @@ class VinculacionReporteController extends Controller
                 Log::error('Error obteniendo involucrados: ' . $e->getMessage());
             }
 
-            // Integrantes (Exacto: NOMBRE APELLIDO C.I V-XXXX)
             $integrantes = $equipoSvc->integrantes($equipoRef);
-            $miembros = [];
-            for ($i = 0; $i < 6; $i++) {
-                $m = $integrantes->get($i);
-                if ($m) {
-                    $nombreCompleto = strtoupper(trim($m->nombre . ' ' . $m->apellido));
-                    $cedula = $m->cedula ?? '';
-                    $miembros[] = $nombreCompleto . ' C.I ' . $cedula;
-                } else {
-                    $miembros[] = '';
-                }
+            $totalInt = $integrantes->count();
+            if ($totalInt > $maxIntegrantes) {
+                $maxIntegrantes = $totalInt;
             }
 
-            // Localidad Geográfica
+            $miembros = [];
+            foreach ($integrantes as $m) {
+                $miembros[] = [
+                    'nombre' => strtoupper(trim($m->nombre . ' ' . $m->apellido)),
+                    'cedula' => $m->cedula ?? '',
+                ];
+            }
+
             $loc = '';
             if ($p->comunidad && $p->comunidad->direccion) {
                 $dir = $p->comunidad->direccion;
-                $loc = trim(sprintf('%s, %s, %s', 
-                    $dir->dir_calle ?? '', 
-                    $dir->municipio->mun_nombre ?? '', 
+                $loc = trim(sprintf('%s, %s, %s',
+                    $dir->dir_calle ?? '',
+                    $dir->municipio->mun_nombre ?? '',
                     $dir->municipio->estado->est_nombre ?? ''
                 ));
             }
 
-            $writer->addRow([
-                strtoupper($sedeNombre),
-                strtoupper($ctx['pro_siglas'] ?? 'PNF'),
-                $ctx['tra_codigo'] ?? '',
-                $ctx['sem_codigo'] ?? '',
-                $v->titulo,
-                $p->pry_resumen ?? '',
-                $p->linea_investigacion?->nombre ?? '',
-                $docente,
-                $tutor,
-                $representante,
-                ...$miembros,
-                $loc,
-                $p->comunidad?->nombre ?? '',
-                $v->estado_socializacion ?? 'APROBADO',
-            ], wrap: true);
+            $rows[] = [
+                'sede' => strtoupper($sedeNombre),
+                'programa' => strtoupper($programaInfo),
+                'trayecto' => $ctx['tra_codigo'] ?? '',
+                'semestre' => $ctx['sem_codigo'] ?? '',
+                'titulo_proyecto' => $v->titulo,
+                'resumen' => $p->pry_resumen ?? '',
+                'linea' => $p->linea_investigacion?->nombre ?? '',
+                'docente' => $docente,
+                'tutor' => $tutor,
+                'representante' => $representante,
+                'integrantes' => $miembros,
+                'localidad' => $loc,
+                'comunidad' => $p->comunidad?->nombre ?? '',
+                'socializacion' => $v->estado_socializacion ?? 'APROBADO',
+            ];
+        }
+
+        if ($maxIntegrantes < 1) $maxIntegrantes = 1;
+
+        // ── Construir headers dinámicos ──
+        $headers = [
+            'SEDE',
+            'PROGRAMA NACIONAL DE FORMACIÓN',
+            'TRAYECTO',
+            'SEMESTRE',
+            'TÍTULO DE PROYECTO',
+            'RESUMEN O PRESENTACIÓN (NO MAS DE 150 PALABRAS)',
+            'LÍNEA DE INVESTIGACIÓN',
+            'DOCENTE DE PROYECTO',
+            'TUTOR ACADÉMICO',
+            'REPRESENTANTE INSTITUCIONAL',
+        ];
+
+        for ($i = 1; $i <= $maxIntegrantes; $i++) {
+            $headers[] = "INTEGRANTE N° $i; NOMBRE Y APELLIDO";
+            $headers[] = "INTEGRANTE N° $i; CÉDULA DE IDENTIDAD";
+        }
+
+        $headers[] = 'LOCALIDAD GEOGRÁFICA DONDE SE DESARROLLÓ EL PROYECTO (PARROQUIA, URBANIZACIÓN, BARRIO, ENTRE OTROS)';
+        $headers[] = 'COMUNIDAD BENEFICIADA';
+        $headers[] = 'RESULTADO DE LA SOCIALIZACIÓN';
+
+        $totalCols = count($headers);
+
+        $widths = [];
+        foreach ($headers as $h) {
+            if (str_contains($h, 'RESUMEN')) $widths[] = 150;
+            elseif (str_contains($h, 'LOCALIDAD')) $widths[] = 100;
+            elseif (str_contains($h, 'PROGRAMA')) $widths[] = 80;
+            elseif (str_contains($h, 'INTEGRANTE N°')) $widths[] = 60;
+            elseif (str_contains($h, 'CÉDULA')) $widths[] = 40;
+            else $widths[] = 50;
+        }
+
+        if ($filtroTitulo !== '') {
+            $tituloReporte = 'Vinculaciones - ' . $filtroTitulo;
+            $nombreArchivo = "vinculacion_titulo_" . strtolower(str_replace(' ', '_', $filtroTitulo));
+        } elseif ($filtroLapso !== '') {
+            $lapsoObj = \App\Models\LapsoAcademico::find((int) $filtroLapso);
+            $nombreLapso = $lapsoObj?->nombre ?? $filtroLapso;
+            $tituloReporte = 'Vinculaciones - ' . $nombreLapso;
+            $nombreArchivo = "vinculacion_lapso_" . $filtroLapso;
+        } else {
+            $tituloReporte = 'Todas las Vinculaciones';
+            $nombreArchivo = 'vinculacion_general';
+        }
+
+        $writer = new SpreadsheetMlWriter();
+        $writer->setTitle('Vinculaciones')
+            ->setHeaderStyle('#8b0000', '#FFFFFF')
+            ->setTitleStyle('#8b0000', '#FFFFFF')
+            ->setAltRowStyle('#f5ebeb');
+
+        $writer->addMergedTitleRow(
+            'UPTP JUAN DE JESUS MONTILLA – VINCULACIONES — ' . strtoupper($tituloReporte),
+            $totalCols,
+            '#8b0000'
+        );
+
+        $writer->addRow($headers, isHeader: true, height: 40, widths: $widths);
+
+        foreach ($rows as $r) {
+            $data = [
+                $r['sede'],
+                $r['programa'],
+                $r['trayecto'],
+                $r['semestre'],
+                $r['titulo_proyecto'],
+                $r['resumen'],
+                $r['linea'],
+                $r['docente'],
+                $r['tutor'],
+                $r['representante'],
+            ];
+
+            for ($i = 0; $i < $maxIntegrantes; $i++) {
+                $m = $r['integrantes'][$i] ?? null;
+                $data[] = $m ? $m['nombre'] : '';
+                $data[] = $m ? $m['cedula'] : '';
+            }
+
+            $data[] = $r['localidad'];
+            $data[] = $r['comunidad'];
+            $data[] = $r['socializacion'];
+
+            $writer->addRow($data, wrap: true);
         }
 
         return $writer->download($nombreArchivo . '.xls');

@@ -532,7 +532,7 @@ class IntranetEquipoSeccionService
             return ['lap_nombre' => '', 'sec_nombre' => '', 'pro_siglas' => '', 'pro_nombre' => '', 'tra_codigo' => null, 'trayecto_nombre' => '', 'sed_siglas' => '', 'sem_codigo' => null, 'semestre_nombre' => ''];
         }
 
-        $cacheKey = 'eq_ctx_' . $lapCodigo . '_' . $secCodigo . '_' . ($proCodigo ?? '0') . '_' . $this->academicConnection();
+        $cacheKey = 'eq_ctx_v2_' . $lapCodigo . '_' . $secCodigo . '_' . ($proCodigo ?? '0') . '_' . $this->academicConnection();
 
         return Cache::remember($cacheKey, 3600, function () use ($lapCodigo, $secCodigo, $proCodigo) {
             try {

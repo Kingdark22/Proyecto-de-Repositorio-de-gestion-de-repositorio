@@ -37,9 +37,7 @@ class VinculacionManager extends Component
     public array $lapsosReporte = [];
     public array $titulosReporte = [];
 
-    // Excel modal (independiente)
-    public bool $mostrarModalExcel = false;
-    public string $excelLapsoId = '';
+
 
     // Título seleccionado
     public string $tituloSeleccionado = '';
@@ -561,29 +559,10 @@ class VinculacionManager extends Component
         $this->mostrarModalReporte = false;
     }
 
-    // ─── Excel modal ────────────────────────────────────────────
-
-    public function abrirModalExcel(): void
+    public function exportarExcelGeneral(): void
     {
-        $this->mostrarModalExcel = true;
-        $this->excelLapsoId = '';
-        $this->cargarLapsosReporte();
-    }
-
-    public function cerrarModalExcel(): void
-    {
-        $this->mostrarModalExcel = false;
-    }
-
-    public function generarExcelPorLapso(): void
-    {
-        if (empty($this->excelLapsoId)) {
-            $this->safeDispatch('error', 'Seleccione un lapso académico.');
-            return;
-        }
-        $url = route('vinculacion.reporte-excel', ['filtro_lapso' => $this->excelLapsoId]);
+        $url = route('vinculacion.reporte-excel');
         $this->dispatch('descargar-excel', url: $url);
-        $this->cerrarModalExcel();
     }
 
     public function generarReporte(): void
@@ -647,9 +626,27 @@ class VinculacionManager extends Component
                 Proyecto::precargarTitulos(collect($proyectosPaginados->items()));
             }
 
+            $equipoSvc = app(IntranetEquipoSeccionService::class);
             $todasVinculaciones = Vinculacion::with('proyecto', 'comunidad', 'tituloVinculacion')->get();
             $proyectosVinculados = $todasVinculaciones->pluck('proyecto')->filter();
             Proyecto::precargarTitulos($proyectosVinculados);
+
+            foreach ($todasVinculaciones as $v) {
+                $p = $v->proyecto;
+                $v->sede = '';
+                $v->lapso_nombre = '';
+                if ($p && $p->equipo_ref) {
+                    $partes = $equipoSvc->parsearClave($p->equipo_ref);
+                    if ($partes) {
+                        $ctx = $equipoSvc->etiquetasContexto($partes['lap_codigo'], $partes['sec_codigo']);
+                        $v->sede = $ctx['sed_siglas'] ?? '';
+                        if (!empty($ctx['lap_nombre'])) {
+                            $v->lapso_nombre = $ctx['lap_nombre'];
+                        }
+                    }
+                }
+            }
+
             $vinculacionesAgrupadas = $todasVinculaciones
                 ->groupBy(fn($v) => $v->titulo . '|' . ($v->comunidad?->nombre ?? 'sin-comunidad'));
 

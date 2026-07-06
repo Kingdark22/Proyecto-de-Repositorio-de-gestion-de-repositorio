@@ -40,7 +40,7 @@
             <button type="button" wire:click="abrirWizard" class="cm-btn cm-btn-success" style="font-size:13px;">
                 + Vincular Proyectos
             </button>
-            <button type="button" wire:click="abrirModalExcel" class="cm-btn cm-btn-primary" style="font-size:13px;">
+            <button type="button" wire:click="exportarExcelGeneral" class="cm-btn cm-btn-primary" style="font-size:13px;">
                 &darr; Exportar Excel
             </button>
             <button type="button" wire:click="abrirModalReporte" class="cm-btn cm-btn-primary" style="font-size:13px;">
@@ -56,20 +56,28 @@
                 <table width="100%" style="font-size:12px;border-collapse:collapse;">
                     <thead>
                         <tr style="background:#8bb2b7;color:#000;font-weight:bold;">
-                            <th width="5%" style="padding:8px 4px;text-align:center;">N&deg;</th>
-                            <th width="30%" style="padding:8px 4px;">Proyecto</th>
-                            <th width="20%" style="padding:8px 4px;">Título vinculación</th>
-                            <th width="20%" style="padding:8px 4px;">Comunidad</th>
-                            <th width="15%" style="padding:8px 4px;">Acción</th>
+                            <th width="4%" style="padding:8px 4px;text-align:center;">N&deg;</th>
+                            <th width="25%" style="padding:8px 4px;">Proyecto</th>
+                            <th width="15%" style="padding:8px 4px;">Título vinculación</th>
+                            <th width="12%" style="padding:8px 4px;">Sede</th>
+                            <th width="7%" style="padding:8px 4px;">Lapso</th>
+                            <th width="15%" style="padding:8px 4px;">Comunidad</th>
+                            <th width="10%" style="padding:8px 4px;">Acción</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($vinculacionesAgrupadas as $grupoKey => $grupo)
                             @foreach($grupo as $idx => $v)
+                                @php
+                                    $vSede = $v->sede ?? '';
+                                    $vLapso = $v->lapso_nombre ?? '';
+                                @endphp
                                 <tr style="background:{{ ($loop->parent->iteration + $idx) % 2 == 0 ? '#E0E0E0' : '#FFF' }};" valign="top">
                                     <td align="center" style="padding:6px 4px;">{{ $loop->parent->iteration }}</td>
                                     <td style="font-weight:bold;padding:6px 4px;">{{ $v->proyecto->titulo ?? 'N/A' }}</td>
                                     <td style="padding:6px 4px;">{{ $v->titulo }}</td>
+                                    <td style="padding:6px 4px;font-size:11px;">{{ $vSede }}</td>
+                                    <td style="padding:6px 4px;font-size:11px;">{{ $vLapso }}</td>
                                     <td style="padding:6px 4px;">{{ $v->comunidad?->nombre ?? '-' }}</td>
                                     <td align="center" style="padding:6px 4px;">
                                         <button type="button" wire:click="quitarVinculacion({{ $v->proyecto_id }})" style="background:none;border:1px solid #c62828;color:#c62828;border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;font-weight:600;" onmouseover="this.style.background='#c62828';this.style.color='#fff'" onmouseout="this.style.background='';this.style.color='#c62828'">Quitar</button>
@@ -763,36 +771,6 @@
 
                 <div style="margin-top:18px;text-align:right;">
                     <button type="button" class="cm-btn cm-btn-secondary" wire:click="cerrarDetalle" style="padding:8px 24px;font-size:13px;">Cerrar</button>
-                </div>
-            </div>
-        </div>
-    @endif
-
-    {{-- ─── MODAL EXPORTAR EXCEL ─── --}}
-    @if ($mostrarModalExcel)
-        <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;">
-            <div style="background:#fff;border-radius:10px;padding:24px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #8b0000;">
-                    <div style="width:36px;height:36px;border-radius:50%;background:#8b0000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:bold;">X</div>
-                    <h3 style="margin:0;font-size:16px;font-weight:bold;color:#333;">Exportar Excel de Vinculaciones</h3>
-                </div>
-
-                <div style="margin-bottom:16px;">
-                    <b style="font-size:13px;color:#555;display:block;margin-bottom:8px;">Seleccione el lapso académico:</b>
-                    <select wire:model="excelLapsoId" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:13px;background:#fff;cursor:pointer;outline:none;font-family:inherit;color:#222;">
-                        <option value="">— Seleccione lapso —</option>
-                        @foreach($lapsosReporte as $lid => $lnombre)
-                            <option value="{{ $lid }}">{{ $lnombre }}</option>
-                        @endforeach
-                    </select>
-                    @if(empty($lapsosReporte))
-                        <div style="margin-top:6px;font-size:12px;color:#888;font-style:italic;">No hay lapsos disponibles con vinculaciones registradas.</div>
-                    @endif
-                </div>
-
-                <div style="margin-top:20px;text-align:right;display:flex;gap:10px;justify-content:flex-end;">
-                    <button type="button" class="cm-btn cm-btn-secondary" wire:click="cerrarModalExcel" style="padding:10px 24px;font-size:13px;border-radius:6px;">Cancelar</button>
-                    <button type="button" class="cm-btn cm-btn-success" wire:click="generarExcelPorLapso" style="padding:10px 24px;font-size:13px;border-radius:6px;">Descargar Excel</button>
                 </div>
             </div>
         </div>
