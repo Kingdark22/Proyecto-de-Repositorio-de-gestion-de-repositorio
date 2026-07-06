@@ -521,7 +521,13 @@ class GrupoProyectoController extends Controller
 
         $candidatos = $this->grupos->candidatosSeccion($lapCodigo, $secCodigo);
 
-        return response()->json($candidatos);
+        // Filtrar en tiempo real: excluir estudiantes que ya están en otro grupo en este lapso
+        $ocupadas = $this->grupos->cedulasOcupadasEnLapso($lapCodigo);
+        $ocupadasIndex = array_flip($ocupadas);
+
+        $candidatos = $candidatos->reject(fn ($est) => isset($ocupadasIndex[trim($est->cedula ?? '')]));
+
+        return response()->json($candidatos->values());
     }
 
     /**

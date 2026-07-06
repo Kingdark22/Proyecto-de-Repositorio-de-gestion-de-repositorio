@@ -471,6 +471,15 @@ class GrupoProyectoService
         return $this->repo->estudianteEnGrupoEnLapso($cedula, $lapCodigo, $excludeGrpCodigo);
     }
 
+    public function cedulasOcupadasEnLapso(int $lapCodigo, ?int $excludeGrpCodigo = null): array
+    {
+        if (! $this->tablaDisponible()) {
+            return [];
+        }
+
+        return $this->repo->cedulasOcupadasEnLapso($lapCodigo, $excludeGrpCodigo);
+    }
+
     /**
      * @return array{
      *     lap_codigo: int,

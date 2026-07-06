@@ -234,15 +234,66 @@ class GrupoProyectoRepository
      */
     public function estudianteEnGrupoEnLapso(string $cedula, int $lapCodigo, ?int $excludeGrpCodigo = null): bool
     {
+        $cedula = trim($cedula);
+        if ($cedula === '') {
+            return false;
+        }
+
+        // 1. Check active groups in same lapso via JSONB (fast path con índice GIN)
         $query = GrupoProyectoModulo::whereRaw(
             'CAST(grp_miembros AS jsonb) @> ? AND CAST(grp_contexto AS jsonb)->>\'lap_codigo\' = ?',
-            [json_encode([['cedula' => trim($cedula)]]), (string) $lapCodigo]
+            [json_encode([['cedula' => $cedula]]), (string) $lapCodigo]
         )->where('estado_logico', true);
 
         if ($excludeGrpCodigo !== null) {
             $query->where('grp_codigo', '!=', $excludeGrpCodigo);
         }
 
-        return $query->exists();
+        if ($query->exists()) {
+            return true;
+        }
+
+        // 2. Fallback: approved projects via JOIN (cubre casos donde estado_logico
+        //    o la igualdad JSONB no coincidan por datos inconsistentes)
+        return GrupoProyectoModulo::query()
+            ->from('grupo_proyecto_modulo as gp')
+            ->join('proyectos as p', 'p.pry_direccion_logica', '=', 'gp.grp_identificador')
+            ->whereRaw("CAST(gp.grp_miembros AS jsonb) @> ?", [json_encode([['cedula' => $cedula]])])
+            ->where('p.pry_estado_validacion', 'aprobado')
+            ->where('p.pry_estado_logico', true)
+            ->whereRaw("CAST(gp.grp_contexto AS jsonb)->>'lap_codigo' = ?", [(string) $lapCodigo])
+            ->when($excludeGrpCodigo !== null, fn ($q) => $q->where('gp.grp_codigo', '!=', $excludeGrpCodigo))
+            ->exists();
+    }
+
+    /**
+     * Devuelve todas las cédulas que ya están en grupos activos en el lapso indicado.
+     * Útil para filtrar el listado de candidatos en tiempo real.
+     */
+    public function cedulasOcupadasEnLapso(int $lapCodigo, ?int $excludeGrpCodigo = null): array
+    {
+        $query = GrupoProyectoModulo::query()
+            ->whereRaw("CAST(grp_contexto AS jsonb)->>'lap_codigo' = ?", [(string) $lapCodigo])
+            ->where('estado_logico', true);
+
+        if ($excludeGrpCodigo !== null) {
+            $query->where('grp_codigo', '!=', $excludeGrpCodigo);
+        }
+
+        $groups = $query->get(['grp_miembros']);
+
+        $cedulas = [];
+        foreach ($groups as $group) {
+            $miembros = $group->grp_miembros;
+            $miembros = $miembros instanceof Collection ? $miembros->toArray() : (array) $miembros;
+            foreach ($miembros as $m) {
+                $cedula = trim($m['cedula'] ?? '');
+                if ($cedula !== '') {
+                    $cedulas[$cedula] = true;
+                }
+            }
+        }
+
+        return array_keys($cedulas);
     }
 }
