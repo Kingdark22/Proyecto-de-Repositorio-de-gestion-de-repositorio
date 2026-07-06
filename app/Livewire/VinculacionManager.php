@@ -84,16 +84,22 @@ class VinculacionManager extends Component
 
     protected function cargarTitulos(): void
     {
-        $this->titulosDisponibles = TituloVinculacion::where('tiv_estado_logico', true)
-            ->orderBy('tiv_titulo')
-            ->pluck('tiv_titulo', 'tiv_codigo')
-            ->toArray();
+        try {
+            $this->titulosDisponibles = TituloVinculacion::where('tiv_estado_logico', true)
+                ->orderBy('tiv_titulo')
+                ->pluck('tiv_titulo', 'tiv_codigo')
+                ->toArray();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error cargando títulos: ' . $e->getMessage());
+            $this->titulosDisponibles = [];
+        }
     }
 
     // ─── Wizard ────────────────────────────────────────────────
 
     public function abrirWizard(): void
     {
+        $this->cargarTitulos();
         $this->limpiar();
         $this->pasoActual = 1;
         $this->mostrarWizard = true;
