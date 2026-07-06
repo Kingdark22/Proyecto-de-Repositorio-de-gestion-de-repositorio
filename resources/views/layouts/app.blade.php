@@ -97,6 +97,7 @@
             -moz-border-radius:5px;
             border-radius: 10px;
             -webkit-border-radius: 5px;
+            box-sizing: border-box;
         }
         .obligatorio { color: #FF0000; font-weight: bold; width:auto; }
 
@@ -663,6 +664,20 @@
         if (typeof lucide !== 'undefined' && lucide.createIcons) {
             lucide.createIcons();
         }
+    </script>
+    <script>
+        document.addEventListener('input', function (e) {
+            if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                if (e.target.type === 'text' || e.target.tagName === 'TEXTAREA') {
+                    if (!e.target.dataset.noUppercase && e.target.name !== 'correo' && e.target.name !== 'email' && e.target.name !== 'password') {
+                        const start = e.target.selectionStart;
+                        const end = e.target.selectionEnd;
+                        e.target.value = e.target.value.toUpperCase();
+                        e.target.setSelectionRange(start, end);
+                    }
+                }
+            }
+        });
     </script>
     <script>
         function validarCorreo(el) {

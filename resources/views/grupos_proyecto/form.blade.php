@@ -133,13 +133,13 @@
             {{-- Hidden field for members JSON --}}
             <input type="hidden" name="miembros" id="miembrosInput" value="">
 
-            <table width="100%" style="font-size:11px;">
+            <table width="100%" style="font-size:11px; table-layout: fixed; border-collapse: collapse;">
                 <tr>
-                    <td width="50%">
+                    <td width="40%" style="vertical-align: top;">
                         <b>Nombre del equipo:</b> <span style="color:#c82333;">*</span><br>
                         <input type="text" name="nombre" id="nombreInput"
                             value="{{ old('nombre', $grupo->nombre ?? '') }}"
-                            class="grp-filter-input" style="width:90%;" maxlength="120" required
+                            class="grp-filter-input" style="width:100%;" maxlength="120" required
                             placeholder="Ej: Equipo Alpha, Proyecto Web"
                             data-check-url="{{ route('grupos-proyecto.api.check-nombre') }}"
                             data-exclude="{{ $grupo->grp_codigo ?? '' }}"
@@ -147,28 +147,28 @@
                         <span id="nombreStatus" class="status-indicator"></span>
                     </td>
                     @if (isset($grupo) && ($grupo->identificador ?? ''))
-                    <td>
+                    <td width="30%" style="vertical-align: top;">
                         <b>Código del equipo:</b><br>
                         <span style="font-size:13px;font-weight:bold;color:#8b0000;">{{ $grupo->identificador }}</span>
                     </td>
                     @endif
-                    <td>
+                    <td width="{{ isset($grupo) && ($grupo->identificador ?? '') ? '30%' : '50%' }}" style="vertical-align: top;">
                         <b>Comunidad:</b><br>
-                        <div style="display:flex;gap:4px;align-items:center;">
+                        <div style="display:flex;gap:4px;align-items:center; min-width: 0;">
                             @php $comSel = old('comunidad', $grupo->com_codigo ?? ''); @endphp
                             <input type="hidden" name="comunidad" id="comunidadId" value="{{ $comSel }}">
-                            <div id="comunidadBadge" style="display:{{ $comSel ? 'flex' : 'none' }};align-items:center;gap:6px;background:#f0f7f0;border:1px solid #b8d4b8;border-radius:4px;padding:4px 10px;font-size:12px;flex:1;">
-                                <span style="font-weight:bold;">{{ $comSel ? ($comunidades->firstWhere('com_codigo', (int)$comSel)?->com_nombre ?? '') : '' }}</span>
-                                <button type="button" onclick="document.getElementById('comunidadId').value='';document.getElementById('comunidadBadge').style.display='none';document.getElementById('comunidadSearchWrapper').style.display='flex'" style="background:none;border:none;cursor:pointer;color:#991b1b;font-size:14px;padding:0 2px;" title="Cambiar comunidad">✕</button>
+                            <div id="comunidadBadge" style="display:{{ $comSel ? 'flex' : 'none' }};align-items:center;gap:6px;background:#f0f7f0;border:1px solid #b8d4b8;border-radius:4px;padding:4px 10px;font-size:12px;flex:1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                                <span style="font-weight:bold; overflow: hidden; text-overflow: ellipsis;">{{ $comSel ? ($comunidades->firstWhere('com_codigo', (int)$comSel)?->com_nombre ?? '') : '' }}</span>
+                                <button type="button" onclick="document.getElementById('comunidadId').value='';document.getElementById('comunidadBadge').style.display='none';document.getElementById('comunidadSearchWrapper').style.display='flex'" style="background:none;border:none;cursor:pointer;color:#991b19;font-size:14px;padding:0 2px; flex-shrink: 0;" title="Cambiar comunidad">✕</button>
                             </div>
-                            <div class="grp-search-wrapper" id="comunidadSearchWrapper" style="flex:1;display:{{ $comSel ? 'none' : 'block' }};">
+                            <div class="grp-search-wrapper" id="comunidadSearchWrapper" style="flex:1;display:{{ $comSel ? 'none' : 'block' }}; min-width: 0;">
                                 <input type="text" id="comunidadSearch" placeholder="Buscar comunidad..."
                                     value="" class="grp-filter-input" style="width:100%;" autocomplete="off">
                                 <div class="grp-dropdown" id="comunidadDropdown">
                                     <div class="grp-dropdown-empty">Escriba para buscar comunidades...</div>
                                 </div>
                             </div>
-                            <button type="button" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space:nowrap;" onclick="abrirModalComunidad()" title="Crear nueva comunidad">+</button>
+                            <button type="button" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space:nowrap; flex-shrink: 0;" onclick="abrirModalComunidad()" title="Crear nueva comunidad">+</button>
                         </div>
                         @error('comunidad')<span style="color:#dc3545;font-size:10px;">{{ $message }}</span>@enderror
                     </td>
@@ -216,7 +216,7 @@
                 <b>Agregar integrante:</b>
                 <span id="studentSectionStatus" style="font-size:10px;color:#666;margin-left:8px;"></span><br>
                 <div style="display:flex;gap:16px;align-items:center;margin-top:4px;">
-                    <div class="grp-search-wrapper" style="position:relative;flex:1;">
+                    <div class="grp-search-wrapper" style="position:relative;flex:1; min-width: 0;">
                         <input type="text" id="estudianteSearch"
                             placeholder="🔍 Escriba nombre, apellido o cédula para buscar..."
                             class="grp-filter-input" style="width:100%;padding:8px 10px;font-size:12px;height:34px;"
