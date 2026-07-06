@@ -355,55 +355,74 @@
     {{-- ─── MODAL REPORTE PDF ─── --}}
     @if ($mostrarModalReporte)
         <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;">
-            <div style="background:#fff;border-radius:10px;padding:24px;max-width:480px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+            <div style="background:#fff;border-radius:10px;padding:24px;max-width:520px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #8b0000;">
                     <div style="width:36px;height:36px;border-radius:50%;background:#8b0000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:bold;">R</div>
                     <h3 style="margin:0;font-size:16px;font-weight:bold;color:#333;">Reporte de Vinculaciones</h3>
                 </div>
 
-                <div style="margin-bottom:18px;">
-                    <b style="font-size:13px;color:#555;">Tipo de reporte:</b>
-                    <div style="margin-top:8px;display:flex;gap:16px;">
-                        <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;padding:6px 14px;border:2px solid {{ $tipoReporte === 'titulo' ? '#8b0000' : '#ddd' }};border-radius:8px;background:{{ $tipoReporte === 'titulo' ? '#fff0f0' : '#fafafa' }};transition:all 0.2s;">
-                            <input type="radio" wire:model="tipoReporte" value="titulo" style="accent-color:#8b0000;">
+                <div style="margin-bottom:16px;">
+                    <b style="font-size:13px;color:#555;display:block;margin-bottom:8px;">Tipo de reporte:</b>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:8px 14px;border:2px solid {{ $tipoReporte === 'titulo' ? '#8b0000' : '#ddd' }};border-radius:8px;background:{{ $tipoReporte === 'titulo' ? '#fff0f0' : '#fafafa' }};flex:1;min-width:120px;transition:all 0.2s;">
+                            <input type="radio" wire:model.live="tipoReporte" value="titulo" style="accent-color:#8b0000;">
                             Por título
                         </label>
-                        <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;padding:6px 14px;border:2px solid {{ $tipoReporte === 'lapso' ? '#8b0000' : '#ddd' }};border-radius:8px;background:{{ $tipoReporte === 'lapso' ? '#fff0f0' : '#fafafa' }};transition:all 0.2s;">
-                            <input type="radio" wire:model="tipoReporte" value="lapso" style="accent-color:#8b0000;">
+                        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:8px 14px;border:2px solid {{ $tipoReporte === 'lapso' ? '#8b0000' : '#ddd' }};border-radius:8px;background:{{ $tipoReporte === 'lapso' ? '#fff0f0' : '#fafafa' }};flex:1;min-width:120px;transition:all 0.2s;">
+                            <input type="radio" wire:model.live="tipoReporte" value="lapso" style="accent-color:#8b0000;">
                             Por lapso académico
                         </label>
+                        @if(count($selectedProjects) > 0)
+                            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:8px 14px;border:2px solid {{ $tipoReporte === 'wizard' ? '#8b0000' : '#ddd' }};border-radius:8px;background:{{ $tipoReporte === 'wizard' ? '#fff0f0' : '#fafafa' }};flex:1;min-width:120px;transition:all 0.2s;">
+                                <input type="radio" wire:model.live="tipoReporte" value="wizard" style="accent-color:#8b0000;">
+                                Selección actual ({{ count($selectedProjects) }} proyecto(s))
+                            </label>
+                        @endif
                     </div>
                 </div>
 
                 @if($tipoReporte === 'titulo')
                     <div style="margin-bottom:16px;">
-                        <b style="font-size:14px;color:#555;display:block;margin-bottom:8px;">Seleccione el título:</b>
-                        <div style="position:relative;">
-                            <select wire:model="reporteTituloId" style="width:100%;padding:14px 16px;border:2px solid #8b0000;border-radius:10px;font-size:16px;background:#fff;appearance:none;-webkit-appearance:none;-moz-appearance:none;cursor:pointer;outline:none;font-family:inherit;font-weight:500;color:#222;box-shadow:0 2px 6px rgba(139,0,0,0.15);transition:box-shadow 0.2s;">
-                                <option value="">— Seleccione título —</option>
-                                @foreach($titulosReporte as $tid => $ttitulo)
-                                    <option value="{{ $tid }}">{{ $ttitulo }}</option>
-                                @endforeach
-                            </select>
-                            <span style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:14px;color:#8b0000;pointer-events:none;">&#9660;</span>
-                        </div>
+                        <b style="font-size:13px;color:#555;display:block;margin-bottom:6px;">Seleccione el título:</b>
+                        <select wire:model="reporteTituloId" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:13px;background:#fff;cursor:pointer;outline:none;font-family:inherit;color:#222;">
+                            <option value="">— Seleccione título —</option>
+                            @foreach($titulosReporte as $tid => $ttitulo)
+                                <option value="{{ $tid }}">{{ $ttitulo }}</option>
+                            @endforeach
+                        </select>
                     </div>
-                @else
+                @elseif($tipoReporte === 'lapso')
                     <div style="margin-bottom:16px;">
-                        <b style="font-size:14px;color:#555;display:block;margin-bottom:8px;">Seleccione el lapso académico:</b>
-                        <div style="position:relative;">
-                            <select wire:model="reporteLapsoId" style="width:100%;padding:14px 16px;border:2px solid #8b0000;border-radius:10px;font-size:16px;background:#fff;appearance:none;-webkit-appearance:none;-moz-appearance:none;cursor:pointer;outline:none;font-family:inherit;font-weight:500;color:#222;box-shadow:0 2px 6px rgba(139,0,0,0.15);transition:box-shadow 0.2s;">
-                                <option value="">— Seleccione lapso —</option>
-                                @foreach($lapsosReporte as $lid => $lnombre)
-                                    <option value="{{ $lid }}">{{ $lnombre }}</option>
-                                @endforeach
-                            </select>
-                            <span style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:14px;color:#8b0000;pointer-events:none;">&#9660;</span>
+                        <b style="font-size:13px;color:#555;display:block;margin-bottom:6px;">Seleccione el lapso académico:</b>
+                        <select wire:model="reporteLapsoId" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:13px;background:#fff;cursor:pointer;outline:none;font-family:inherit;color:#222;">
+                            <option value="">— Seleccione lapso —</option>
+                            @foreach($lapsosReporte as $lid => $lnombre)
+                                <option value="{{ $lid }}">{{ $lnombre }}</option>
+                            @endforeach
+                        </select>
+                        @if(empty($lapsosReporte))
+                            <div style="margin-top:6px;font-size:12px;color:#888;font-style:italic;">No hay lapsos disponibles con vinculaciones registradas.</div>
+                        @endif
+                    </div>
+                @elseif($tipoReporte === 'wizard')
+                    <div style="margin-bottom:16px;background:#f9f9f9;border:1px solid #e0e0e0;border-radius:6px;padding:12px;">
+                        <div style="font-size:12px;color:#555;margin-bottom:6px;">
+                            Se generará un reporte con los <b>{{ count($selectedProjects) }}</b> proyecto(s) seleccionados actualmente en el wizard.
+                        </div>
+                        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                            @foreach($selectedProjects as $pid)
+                                @php
+                                    $p = \App\Models\Proyecto::find($pid);
+                                @endphp
+                                @if($p)
+                                    <span style="display:inline-block;background:#fff;border:1px solid #c8e6c9;border-radius:3px;padding:2px 6px;font-size:10px;">{{ $p->titulo ?? 'ID:'.$pid }}</span>
+                                @endif
+                            @endforeach
                         </div>
                     </div>
                 @endif
 
-                <div style="margin-top:24px;text-align:right;display:flex;gap:10px;justify-content:flex-end;">
+                <div style="margin-top:20px;text-align:right;display:flex;gap:10px;justify-content:flex-end;">
                     <button type="button" class="cm-btn cm-btn-secondary" wire:click="cerrarModalReporte" style="padding:10px 24px;font-size:13px;border-radius:6px;">Cancelar</button>
                     <button type="button" class="cm-btn cm-btn-success" wire:click="generarReporte" style="padding:10px 24px;font-size:13px;border-radius:6px;">Generar PDF</button>
                 </div>

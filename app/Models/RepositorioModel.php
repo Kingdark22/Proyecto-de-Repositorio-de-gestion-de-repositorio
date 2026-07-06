@@ -19,6 +19,12 @@ abstract class RepositorioModel extends Model
             $value = strtoupper($value);
         }
 
+        $physical = static::legacyColumnMap()[$key] ?? null;
+        if ($physical !== null && $physical !== $key) {
+            $value = $this->mapLegacyValueForQuery($key, $value);
+            return parent::setAttribute($physical, $value);
+        }
+
         return parent::setAttribute($key, $value);
     }
 

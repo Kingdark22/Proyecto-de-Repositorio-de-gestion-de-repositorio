@@ -191,11 +191,31 @@
 
                 @if(isset($v->integrantes) && $v->integrantes->isNotEmpty())
                     <div class="field-label" style="margin-top:8px;">Integrantes del equipo</div>
-                    <div class="field-value" style="font-size:8.5pt;">
-                        @foreach($v->integrantes as $i => $integrante)
-                            <span>{{ $integrante->nombre }} {{ $integrante->apellido }} ({{ $integrante->cedula }}){{ ($integrante->rol ?? '') === 'Líder' ? ' — Líder' : '' }}</span>{{ !$loop->last ? ',' : '' }}
-                        @endforeach
-                    </div>
+                    <table style="width:100%;border-collapse:collapse;font-size:8pt;margin-top:4px;">
+                        <thead>
+                            <tr style="background:#f0f0f0;">
+                                <th style="border:1px solid #ccc;padding:4px 6px;text-align:center;width:20px;font-weight:bold;">N°</th>
+                                <th style="border:1px solid #ccc;padding:4px 6px;text-align:left;font-weight:bold;">Apellidos y Nombres</th>
+                                <th style="border:1px solid #ccc;padding:4px 6px;text-align:center;font-weight:bold;width:90px;">Cédula</th>
+                                <th style="border:1px solid #ccc;padding:4px 6px;text-align:center;font-weight:bold;width:70px;">Rol</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($v->integrantes as $i => $integrante)
+                                @php
+                                    $fullName = trim(($integrante->apellido ?? '') . ', ' . ($integrante->nombre ?? ''));
+                                    if (trim($fullName) === ', ') $fullName = trim(($integrante->nombre ?? '') . ' ' . ($integrante->apellido ?? ''));
+                                    $rol = ($integrante->rol ?? '') === 'Líder' ? 'Líder' : 'Integrante';
+                                @endphp
+                                <tr style="background:{{ $loop->iteration % 2 == 0 ? '#fafafa' : '#fff' }};">
+                                    <td style="border:1px solid #ddd;padding:3px 6px;text-align:center;">{{ $loop->iteration }}</td>
+                                    <td style="border:1px solid #ddd;padding:3px 6px;">{{ $fullName }}</td>
+                                    <td style="border:1px solid #ddd;padding:3px 6px;text-align:center;">{{ $integrante->cedula }}</td>
+                                    <td style="border:1px solid #ddd;padding:3px 6px;text-align:center;font-weight:{{ $rol === 'Líder' ? 'bold' : 'normal' }};color:{{ $rol === 'Líder' ? '#000' : '#555' }};">{{ $rol }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 @endif
 
                 @if($v->comunidad)
