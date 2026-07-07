@@ -134,7 +134,7 @@ class ProyectoGestionService
         $this->proyectoRepo->update($id, [
             'estado_validacion' => 'rechazado',
             'motivo_rechazo' => $motivo,
-            'estado_logico' => false,
+            'estado_logico' => true,
         ]);
         $this->registrarAuditoria($proyecto, 'rechazar');
     }

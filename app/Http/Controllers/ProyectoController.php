@@ -277,11 +277,19 @@ class ProyectoController extends Controller
         );
 
         if ($modoActualizacion) {
-            $proyecto->update([
+            $updateData = [
                 'actualizado_por_estudiante' => true,
                 'fecha_actualizacion_estudiante' => now(),
                 'estado_logico' => true,
-            ]);
+            ];
+
+            // Si estaba rechazado, volver a pendiente para re-evaluación
+            if ($proyecto->estado_validacion === 'rechazado') {
+                $updateData['estado_validacion'] = 'pendiente';
+                $updateData['motivo_rechazo'] = null;
+            }
+
+            $proyecto->update($updateData);
         }
 
         return redirect()->route('proyectos.gestion')

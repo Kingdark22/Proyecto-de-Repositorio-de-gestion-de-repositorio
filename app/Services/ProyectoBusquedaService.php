@@ -116,7 +116,12 @@ class ProyectoBusquedaService
         $termino = trim((string) ($filtros['search'] ?? ''));
         if ($termino !== '') {
             $query->where(function (Builder $q) use ($termino) {
-                $q->whereRaw('pry_resumen ILIKE ?', ['%'.$termino.'%']);
+                $q->whereRaw('pry_resumen ILIKE ?', ['%'.$termino.'%'])
+                  ->orWhere('equipo_ref', 'ILIKE', '%'.$termino.'%')
+                  ->orWhere('pry_direccion_logica', 'ILIKE', '%'.$termino.'%');
+                $q->orWhereHas('comunidad', function (Builder $cq) use ($termino) {
+                    $cq->where('nombre', 'ILIKE', '%'.$termino.'%');
+                });
             });
         }
 
