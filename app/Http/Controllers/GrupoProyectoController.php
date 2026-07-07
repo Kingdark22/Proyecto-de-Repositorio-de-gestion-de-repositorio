@@ -86,7 +86,6 @@ class GrupoProyectoController extends Controller
         $filters = ['lapso' => $lapCodigo, 'programa' => $programaCodigo, 'busqueda' => $search];
 
         if ($isProfessor) {
-            $filters['creador'] = trim((string) $user->usu_cedula);
             $secCodigos = $this->profesores->seccionesDelDocente(
                 trim((string) $user->usu_cedula),
                 $lapCodigo,
@@ -118,6 +117,22 @@ class GrupoProyectoController extends Controller
             }
         }
 
+        // Mapa de nombres de creadores (cédula => nombre completo)
+        $creadorNombres = collect();
+        if ($lista->isNotEmpty()) {
+            try {
+                $cedulas = $lista->pluck('creador_cedula')->filter()->unique()->toArray();
+                if ($cedulas !== []) {
+                    $usuarios = \App\Models\User::whereIn('usu_cedula', $cedulas)->get();
+                    $creadorNombres = $usuarios->mapWithKeys(fn ($u) => [
+                        trim((string) $u->usu_cedula) => trim($u->usu_nombre),
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Error cargando nombres de creadores: ' . $e->getMessage());
+            }
+        }
+
         // Paginación manual
         $perPage = 10;
         $page = (int) $request->get('page', 1);
@@ -128,7 +143,7 @@ class GrupoProyectoController extends Controller
             'items', 'total', 'perPage', 'page',
             'lapsos', 'programas', 'secciones',
             'filterLapso', 'filterPrograma', 'filterSeccion', 'search',
-            'tablaOk', 'isProfessor', 'proyectoPorClave',
+            'tablaOk', 'isProfessor', 'proyectoPorClave', 'creadorNombres',
         ))->with('userCedula', trim((string) $user->usu_cedula));
     }
 

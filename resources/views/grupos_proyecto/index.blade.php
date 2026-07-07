@@ -140,9 +140,7 @@
                         <th>Lapso</th>
                         <th>Integrantes</th>
                         <th>Proyecto</th>
-                        @if(!$isProfessor)
                         <th>Creador</th>
-                        @endif
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -183,9 +181,14 @@
                                     <span style="color: #999; font-size: 10px;">Sin proyecto</span>
                                 @endif
                             </td>
-                            @if(!$isProfessor)
-                            <td align="center" style="font-size:10px;">{{ $g->creador_cedula }}</td>
-                            @endif
+                            <td align="center" style="font-size:10px;">
+                                @php $ced = trim($g->creador_cedula ?? ''); @endphp
+                                @if($ced !== '')
+                                    {{ $creadorNombres[$ced] ?? $ced }}
+                                @else
+                                    —
+                                @endif
+                            </td>
                             <td align="center" nowrap>
                                 {{-- Actualizar va al formulario de registro del proyecto --}}
                                 @if(!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado')
@@ -208,7 +211,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ $isProfessor ? 8 : 9 }}" align="center">No hay grupos registrados. Cree uno con integrantes de la sección.</td>
+                            <td colspan="9" align="center">No hay grupos registrados. Cree uno con integrantes de la sección.</td>
                         </tr>
                     @endforelse
                 </tbody>
