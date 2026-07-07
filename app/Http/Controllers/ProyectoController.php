@@ -764,9 +764,6 @@ class ProyectoController extends Controller
 
             $datos  = $this->gestion->datosSolvencia((int) $id, $cedula);
             $now    = now();
-            $folio  = 'SOL-' . str_pad((string) $id, 5, '0', STR_PAD_LEFT)
-                    . '-' . $cedula
-                    . '-' . $now->format('Y');
 
             // Tomar el primer (y único) integrante filtrado
             $integrante = $datos['integrantes'][0] ?? null;
@@ -780,7 +777,6 @@ class ProyectoController extends Controller
             $nombreProfesor = $userCreator ? ($userCreator->nombre . ' ' . $userCreator->apellido) : 'No disponible';
 
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.solvencia', [
-                'folio'          => $folio,
                 'integrante'     => $integrante,
                 'titulo_proyecto'=> $datos['titulo_proyecto'],
                 'comunidad'      => $datos['comunidad'],

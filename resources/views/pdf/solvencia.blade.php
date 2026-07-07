@@ -2,13 +2,12 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>SOLVENCIA OFICIAL - {{ $folio }}</title>
+    <title>SOLVENCIA OFICIAL</title>
     <style>
         @page { margin: 25mm; }
         body { font-family: 'Times New Roman', serif; font-size: 12pt; color: #000; line-height: 1.8; text-align: justify; }
         .header-img { text-align: center; margin-bottom: 20px; }
         .header-img img { width: 100%; max-width: 650px; }
-        .folio { text-align: right; font-size: 9pt; margin-bottom: 30px; }
         .title { text-align: center; font-size: 16pt; font-weight: bold; margin: 40px 0; text-decoration: underline; }
         .content { margin-bottom: 60px; }
         .signature-area { margin-top: 100px; text-align: center; }
@@ -20,8 +19,6 @@
     <div class="header-img">
         <img src="{{ public_path('imagenes/barras.jpeg') }}" alt="Encabezado UPTP">
     </div>
-
-    <div class="folio">Folio: {{ $folio }}</div>
 
     <div class="title">SOLVENCIA</div>
 
@@ -42,7 +39,7 @@
     </div>
 
     <div class="footer">
-        Sistema de Repositorio de {{ $tipoProyecto == 'Proyecto Sociotecnológico' ? 'Proyectos Sociotecnológicos' : 'Proyectos Sociocomunitarios' }} — Folio: {{ $folio }}
+        Sistema de Repositorio de {{ $tipoProyecto == 'Proyecto Sociotecnológico' ? 'Proyectos Sociotecnológicos' : 'Proyectos Sociocomunitarios' }}
     </div>
 </body>
 </html>
