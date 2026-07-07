@@ -215,8 +215,8 @@
                             @php $srchDocs = $p->documentos; @endphp
                             @if ($srchDocs->isNotEmpty())
                                 @foreach ($srchDocs as $doc)
-                                    <br><a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank"
-                                        style="color: #008000; font-size: 10px;">[{{ $doc->componente?->nombre ?? 'Documento' }}]</a>
+                                    <br><a href="{{ route('documentos.view', $doc->pd_codigo) }}" target="_blank"
+                                        style="color: #0000EE; font-size: 10px;">[Ver {{ $doc->componente?->nombre ?? 'Documento' }}]</a>
                                 @endforeach
                             @endif
                         </td>
@@ -241,62 +241,95 @@
             <div
                 style="background-color: #FFF; border: 2px solid #8b0000; border-radius: 6px; padding: 20px; width: 850px; max-height: 90vh; overflow-y: auto;">
                 <div
-                    style="display: flex; justify-content: space-between; border-bottom: 1px solid #CCC; padding-bottom: 10px; margin-bottom: 15px;">
+                    style="display: flex; justify-content: space-between; border-bottom: 2px solid #8b0000; padding-bottom: 10px; margin-bottom: 15px;">
                     <div style="width: 90%;">
-                        <h3 style="margin: 5px 0; font-size: 16px; font-weight: bold;">{{ $selectedProject->titulo }}
+                        <h3 style="margin: 0; font-size: 16px; font-weight: bold; color: #8b0000;">{{ $selectedProject->titulo }}
                         </h3>
-                        <span style="font-size: 10px;"><b>Equipo:</b> {{ $selectedProject->equipo_resumen }}</span>
+                        <span style="font-size: 11px;"><b>Equipo:</b> {{ $selectedProject->equipo_resumen }}</span>
                     </div>
                     <button type="button" wire:click="closeDetails"
-                        style="background: none; border: none; font-size: 16px; color: #FF0000; cursor: pointer;">X</button>
+                        style="background: #8b0000; border: none; font-size: 14px; color: #FFF; cursor: pointer; font-weight: bold; padding: 2px 8px; border-radius: 3px;">X</button>
                 </div>
 
-                <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
-                    <legend style="font-weight: bold; font-size: 12px;">Resumen</legend>
-                    <div style="font-size: 12px; text-align: justify;">{{ $selectedProject->resumen }}</div>
-                </fieldset>
-
-                <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 11px;">
+                <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 11px; margin-bottom: 10px;">
                     <tr>
-                        <td width="48%" valign="top">
-                            <fieldset style="border: 1px solid #CCC; padding: 10px;">
-                                <legend style="font-weight: bold; font-size: 12px;">Ficha técnica</legend>
-                                <b>Publicación:</b> {{ $selectedProject->tipo_publicacion?->nombre ?? 'N/D' }}<br>
-                                <b>Investigación:</b> {{ $selectedProject->tipo_investigacion?->nombre ?? 'N/D' }}<br>
-                                <b>Metodología:</b> {{ $selectedProject->metodologia?->nombre ?? 'N/D' }}<br>
-                                <b>Línea:</b>
-                                {{ $selectedProject->linea_investigacion?->nombre_investigacion ?? 'N/D' }}
+                        <td width="50%" valign="top">
+                            <fieldset style="border: 1px solid #CCC; padding: 8px;">
+                                <legend style="font-weight: bold; font-size: 11px;">Informaci&oacute;n del equipo</legend>
+                                <b>Equipo:</b> {{ $selectedProject->equipo_resumen }}<br>
+                                <b>T&iacute;tulo:</b> {{ $selectedProject->titulo }}
                             </fieldset>
                         </td>
-                        <td width="4%"></td>
-                        <td width="48%" valign="top">
-                            <fieldset style="border: 1px solid #CCC; padding: 10px;">
-                                <legend style="font-weight: bold; font-size: 12px;">Comunidad</legend>
+                        <td width="50%" valign="top">
+                            <fieldset style="border: 1px solid #CCC; padding: 8px;">
+                                <legend style="font-weight: bold; font-size: 11px;">Comunidad</legend>
                                 <b>Nombre:</b> {{ $selectedProject->comunidad->nombre ?? 'N/A' }}<br>
                                 <b>RIF:</b> {{ $selectedProject->comunidad->rif ?? 'N/A' }}<br>
-                                <b>Dirección:</b> {{ $selectedProject->comunidad->direccion?->dir_calle ?? 'N/A' }}
+                                <b>Direcci&oacute;n:</b> {{ $selectedProject->comunidad->direccion?->dir_calle ?? 'N/A' }}
                             </fieldset>
                         </td>
                     </tr>
                 </table>
 
+                <fieldset style="border: 1px solid #CCC; padding: 8px; margin-bottom: 10px;">
+                    <legend style="font-weight: bold; font-size: 11px;">Resumen</legend>
+                    <div style="font-size: 11px; text-align: justify; line-height: 1.5;">{{ $selectedProject->resumen ?: 'Sin resumen disponible.' }}</div>
+                </fieldset>
+
+                <fieldset style="border: 1px solid #CCC; padding: 8px; margin-bottom: 10px;">
+                    <legend style="font-weight: bold; font-size: 11px;">Ficha t&eacute;cnica</legend>
+                    <table width="100%" cellpadding="3" cellspacing="0" style="font-size: 11px;">
+                        <tr>
+                            <td width="25%"><b>Publicaci&oacute;n:</b></td>
+                            <td width="25%">{{ $selectedProject->tipo_publicacion?->nombre ?? 'N/D' }}</td>
+                            <td width="25%"><b>Investigaci&oacute;n:</b></td>
+                            <td width="25%">{{ $selectedProject->tipo_investigacion?->nombre ?? 'N/D' }}</td>
+                        </tr>
+                        <tr>
+                            <td><b>Metodolog&iacute;a:</b></td>
+                            <td>{{ $selectedProject->metodologia?->nombre ?? 'N/D' }}</td>
+                            <td><b>L&iacute;nea de investigaci&oacute;n:</b></td>
+                            <td>{{ $selectedProject->linea_investigacion?->nombre_investigacion ?? 'N/D' }}</td>
+                        </tr>
+                        <tr>
+                            <td><b>Objetivo de investigaci&oacute;n:</b></td>
+                            <td colspan="3">{{ $selectedProject->objetivo_investigacion?->nombre ?? 'N/D' }}</td>
+                        </tr>
+                    </table>
+                </fieldset>
+
                 @php $detSrchDocs = $selectedProject->documentos; @endphp
                 @if ($detSrchDocs->isNotEmpty())
-                    <fieldset style="border: 1px solid #CCC; padding: 10px; margin-top: 15px;">
-                        <legend style="font-weight: bold; font-size: 12px;">Documentos</legend>
-                        @foreach ($detSrchDocs as $doc)
-                            <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank"
-                                class="cm-btn cm-btn-secondary cm-btn-sm"
-                                style="display: inline-block; margin: 4px; text-decoration: none;">
-                                {{ $doc->componente?->nombre ?? 'Documento' }}
-                            </a>
-                        @endforeach
+                    <fieldset style="border: 1px solid #CCC; padding: 8px; margin-bottom: 10px;">
+                        <legend style="font-weight: bold; font-size: 11px;">Documentos</legend>
+                        <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 11px; border-collapse: collapse;">
+                            @foreach ($detSrchDocs as $doc)
+                                <tr style="border-bottom: 1px solid #EEE;">
+                                    <td width="60%" style="padding: 4px;">{{ $doc->componente?->nombre ?? 'Documento' }}</td>
+                                    <td width="20%" align="center" style="padding: 4px;">
+                                        @if ($doc->pd_estado === 1)
+                                            <span style="color: green; font-weight: bold;">Aprobado</span>
+                                        @elseif ($doc->pd_estado === 2)
+                                            <span style="color: red; font-weight: bold;">Rechazado</span>
+                                        @else
+                                            <span style="color: #888;">Pendiente</span>
+                                        @endif
+                                    </td>
+                                    <td width="20%" align="center" style="padding: 4px;">
+                                        <a href="{{ route('documentos.view', $doc->pd_codigo) }}" target="_blank"
+                                            style="color: #0000EE;">[Ver]</a>
+                                        &nbsp;
+                                        <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank"
+                                            style="color: #008000;">[Descargar]</a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </table>
                     </fieldset>
                 @endif
 
-                <div style="text-align: center; margin-top: 20px;">
-                    <button type="button" wire:click="closeDetails" class="cm-btn cm-btn-secondary cm-btn-sm">Cerrar
-                        detalles</button>
+                <div style="text-align: center; margin-top: 15px;">
+                    <button type="button" wire:click="closeDetails" style="background: #8b0000; border: none; color: #FFF; font-weight: bold; padding: 6px 20px; border-radius: 4px; cursor: pointer; font-size: 12px;">Cerrar detalles</button>
                 </div>
             </div>
         </div>

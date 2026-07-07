@@ -222,6 +222,9 @@ Route::middleware(['auth', 'active.role'])->group(function () {
 
 });
 
+Route::get('/documentos/ver/{id}', [\App\Http\Controllers\DocumentoController::class, 'view'])
+    ->middleware(['auth', 'active.role'])->name('documentos.view');
+
 Route::get('/documentos/{path}', function (string $path) {
     if (!Storage::disk('public')->exists($path)) {
         abort(404);
