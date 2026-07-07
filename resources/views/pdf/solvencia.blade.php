@@ -24,7 +24,7 @@
 
     <div class="content">
         <p>
-            Quien suscribe, <strong>Coordinación del Programa Nacional de Formación en {{ $pnf_limpio }}</strong> de la Universidad Politécnica Territorial Juan de Jesús Montilla, hace constar por medio de la presente que el/la bachiller <strong>{{ $integrante['nombre_completo'] }}</strong>, titular de la cédula de identidad N° <strong>V-{{ $integrante['cedula'] }}</strong>, adscrito(a) a la sección <strong>{{ $seccion }}</strong> del Trayecto <strong>{{ $trayecto }}</strong>, se encuentra <strong>SOLVENTE</strong> con todos los requisitos académicos, documentales y técnicos exigidos por el programa, tras haber culminado y aprobado satisfactoriamente el <strong>{{ $tipoProyecto }}</strong> titulado <strong>“{{ $titulo_proyecto }}”</strong>, desarrollado en la comunidad <strong>{{ $comunidad }}</strong> durante el lapso académico <strong>{{ $lapso }}</strong>, bajo la supervisión y aval académico del docente <strong>{{ $profesor_responsable }}</strong>.
+            Quien emite, <strong>Coordinación de Proyectos</strong> de la Universidad Politécnica Territorial Juan de Jesús Montilla, hace constar por medio de la presente que el/la bachiller <strong>{{ $integrante['nombre_completo'] }}</strong>, titular de la cédula de identidad N° <strong>V-{{ $integrante['cedula'] }}</strong>, adscrito(a) a la sección <strong>{{ $seccion }}</strong> del Trayecto <strong>{{ $trayecto }}</strong>, se encuentra <strong>SOLVENTE</strong> con todos los requisitos académicos, documentales y técnicos exigidos por el programa, tras haber culminado y aprobado satisfactoriamente el <strong>{{ $tipoProyecto }}</strong> titulado <strong>“{{ $titulo_proyecto }}”</strong>, desarrollado en la comunidad <strong>{{ $comunidad }}</strong> durante el lapso académico <strong>{{ $lapso }}</strong>, bajo la supervisión y aval académico del docente <strong>{{ $profesor_responsable }}</strong>.
         </p>
         
         <p>
@@ -34,7 +34,7 @@
 
     <div class="signature-area">
         <div class="signature-line"></div>
-        <strong>Coordinación del PNF</strong>
+        <strong>Coordinación de Proyectos</strong>
         <br>UPTP Juan de Jesús Montilla
     </div>
 
