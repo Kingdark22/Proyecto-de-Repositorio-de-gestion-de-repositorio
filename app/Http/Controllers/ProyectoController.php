@@ -288,18 +288,6 @@ class ProyectoController extends Controller
             ->with('success', 'Proyecto actualizado con éxito.');
     }
 
-    public function completar($id)
-    {
-        try {
-            $this->gestion->completar((int) $id);
-            return redirect()->route('proyectos.gestion')
-                ->with('success', 'Proyecto marcado como completado.');
-        } catch (\Throwable $e) {
-            return redirect()->route('proyectos.gestion')
-                ->with('error', $e->getMessage());
-        }
-    }
-
     public function toggleStatus($id)
     {
         $this->gestion->alternarEstado((int) $id);
@@ -310,9 +298,13 @@ class ProyectoController extends Controller
     public function approve($id)
     {
         try {
+            $proyecto = \App\Models\Proyecto::findOrFail($id);
             $this->gestion->aprobar((int) $id);
+            $msg = $proyecto->estado_validacion === 'pendiente'
+                ? 'Proyecto marcado como completado. El administrador debe aprobarlo.'
+                : 'Proyecto aprobado con éxito.';
             return redirect()->route('proyectos.gestion')
-                ->with('success', 'Proyecto aprobado con éxito.');
+                ->with('success', $msg);
         } catch (\Throwable $e) {
             return redirect()->route('proyectos.gestion')
                 ->with('error', $e->getMessage());
