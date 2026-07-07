@@ -95,12 +95,19 @@ class ProyectoController extends Controller
         $canValidate = $user ? $this->gestion->usuarioPuedeValidar($user) : false;
         $proyectosLiderIds = $this->gestion->proyectosDondeEsMiembro($user);
 
+        $proyectosConDocumentosRechazados = \App\Models\ProyectoDocumento::where('pd_estado', 2)
+            ->pluck('pry_codigo')
+            ->unique()
+            ->values()
+            ->toArray();
+
         return view('proyectos.index', compact(
             'search', 'filterEstado', 'filterComunidad', 'filterLapso',
             'esProfesor', 'esGestionador', 'esEstudianteLider',
             'gruposDocente', 'proyectosLider', 'proyectosLiderIds',
             'datosListado', 'mostrarListado', 'canValidate',
             'lapsosFiltro', 'programasFiltro', 'trayectosFiltro',
+            'proyectosConDocumentosRechazados',
         ));
     }
 

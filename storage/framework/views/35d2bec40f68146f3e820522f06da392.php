@@ -41,6 +41,7 @@
     .cm-btn-danger { background: #c82333; border-color: #a71d2a; color: #fff; }
     .cm-btn-secondary { background: #f4f4f4; border-color: #c2c2c2; color: #222; }
     .cm-btn-sm { padding: 0.35rem 0.75rem; font-size: 0.85rem; }
+    .cm-btn-xs { padding: 0.2rem 0.5rem; font-size: 0.75rem; }
 
     .grp-filter-select, .grp-filter-input {
         height: 32px;
@@ -138,9 +139,7 @@
                         <th>Lapso</th>
                         <th>Integrantes</th>
                         <th>Proyecto</th>
-                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!$isProfessor): ?>
                         <th>Creador</th>
-                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -181,32 +180,38 @@
                                     <span style="color: #999; font-size: 10px;">Sin proyecto</span>
                                 <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                             </td>
-                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!$isProfessor): ?>
-                            <td align="center" style="font-size:10px;"><?php echo e($g->creador_cedula); ?></td>
-                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                            <td align="center" style="font-size:10px;">
+                                <?php $ced = trim($g->creador_cedula ?? ''); ?>
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($ced !== ''): ?>
+                                    <?php echo e($creadorNombres[$ced] ?? $ced); ?>
+
+                                <?php else: ?>
+                                    —
+                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                            </td>
                             <td align="center" nowrap>
                                 
                                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado'): ?>
-                                <button type="button" class="cm-btn cm-btn-success cm-btn-sm"
+                                <button type="button" class="cm-btn cm-btn-success cm-btn-xs"
                                     onclick="window.location='<?php echo e($tieneProyecto ? route('proyectos.gestion.edit', $proyecto->id) : route('proyectos.gestion.desde-grupo', $g->grp_codigo)); ?>'"
                                     title="Ir al formulario de proyecto">Actualizar</button>
                                 <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(trim($g->creador_cedula) === trim($userCedula) && (!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado')): ?>
-                                    <a href="<?php echo e(route('grupos-proyecto.edit', $g->grp_codigo)); ?>" class="cm-btn cm-btn-secondary cm-btn-sm" title="Editar grupo">Editar</a>
+                                    <a href="<?php echo e(route('grupos-proyecto.edit', $g->grp_codigo)); ?>" class="cm-btn cm-btn-secondary cm-btn-xs" title="Editar grupo">Editar</a>
                                 <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(trim($g->creador_cedula) === trim($userCedula) && (!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado')): ?>
                                 <form method="POST" action="<?php echo e(route('grupos-proyecto.destroy', $g->grp_codigo)); ?>" style="display:inline;"
                                     >
                                     <?php echo csrf_field(); ?>
                                     <?php echo method_field('DELETE'); ?>
-                                    <button type="submit" class="cm-btn cm-btn-danger cm-btn-sm" title="Eliminar grupo" data-ajax-delete data-delete-name="<?php echo e($g->nombre); ?>">Eliminar</button>
+                                    <button type="submit" class="cm-btn cm-btn-danger cm-btn-xs" title="Eliminar grupo" data-ajax-delete data-delete-name="<?php echo e($g->nombre); ?>">Eliminar</button>
                                 </form>
                                 <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                             </td>
                         </tr>
                     <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
                         <tr>
-                            <td colspan="<?php echo e($isProfessor ? 8 : 9); ?>" align="center">No hay grupos registrados. Cree uno con integrantes de la sección.</td>
+                            <td colspan="9" align="center">No hay grupos registrados. Cree uno con integrantes de la sección.</td>
                         </tr>
                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                 </tbody>

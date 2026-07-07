@@ -43,6 +43,7 @@
     .cm-btn-danger { background: #c82333; border-color: #a71d2a; color: #fff; }
     .cm-btn-secondary { background: #f4f4f4; border-color: #c2c2c2; color: #222; }
     .cm-btn-sm { padding: 0.35rem 0.75rem; font-size: 0.85rem; }
+    .cm-btn-xs { padding: 0.2rem 0.5rem; font-size: 0.75rem; }
 
     .grp-filter-select, .grp-filter-input {
         height: 32px;
@@ -123,7 +124,7 @@
             <input name="search" type="text" value="{{ $search }}" placeholder="Buscar nombre&hellip;" class="grp-filter-input" style="flex: 1; min-width: 200px;" oninput="buscarConDebounce(this)">
             <noscript><button type="submit" class="cm-btn cm-btn-sm">Buscar</button></noscript>
         </form>
-        <a href="{{ route('grupos-proyecto.create') }}" class="cm-btn cm-btn-success" style="margin-left: auto;">Registrar nuevo grupo</a>
+        <a href="{{ route('grupos-proyecto.create') }}" class="cm-btn cm-btn-success cm-btn-sm" style="margin-left: auto;">Registrar nuevo grupo</a>
     </div>
 
     {{-- Listado --}}
@@ -192,19 +193,19 @@
                             <td align="center" nowrap>
                                 {{-- Actualizar va al formulario de registro del proyecto --}}
                                 @if(!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado')
-                                <button type="button" class="cm-btn cm-btn-success cm-btn-sm"
+                                <button type="button" class="cm-btn cm-btn-success cm-btn-xs"
                                     onclick="window.location='{{ $tieneProyecto ? route('proyectos.gestion.edit', $proyecto->id) : route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}'"
                                     title="Ir al formulario de proyecto">Actualizar</button>
                                 @endif
                                 @if(trim($g->creador_cedula) === trim($userCedula) && (!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado'))
-                                    <a href="{{ route('grupos-proyecto.edit', $g->grp_codigo) }}" class="cm-btn cm-btn-secondary cm-btn-sm" title="Editar grupo">Editar</a>
+                                    <a href="{{ route('grupos-proyecto.edit', $g->grp_codigo) }}" class="cm-btn cm-btn-secondary cm-btn-xs" title="Editar grupo">Editar</a>
                                 @endif
                                 @if(trim($g->creador_cedula) === trim($userCedula) && (!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado'))
                                 <form method="POST" action="{{ route('grupos-proyecto.destroy', $g->grp_codigo) }}" style="display:inline;"
                                     >
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="cm-btn cm-btn-danger cm-btn-sm" title="Eliminar grupo" data-ajax-delete data-delete-name="{{ $g->nombre }}">Eliminar</button>
+                                    <button type="submit" class="cm-btn cm-btn-danger cm-btn-xs" title="Eliminar grupo" data-ajax-delete data-delete-name="{{ $g->nombre }}">Eliminar</button>
                                 </form>
                                 @endif
                             </td>
