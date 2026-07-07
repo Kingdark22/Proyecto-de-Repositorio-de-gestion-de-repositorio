@@ -117,26 +117,22 @@ class GrupoProyectoController extends Controller
             }
         }
 
-        // Mapa de nombres de creadores (cédula => nombre completo)
+        // Mapa de nombres de creadores (cédula => usuario)
         $creadorNombres = collect();
         if ($lista->isNotEmpty()) {
             try {
                 $cedulas = $lista->pluck('creador_cedula')->filter()->unique()->toArray();
                 if ($cedulas !== []) {
-                    try {
-                        $personas = \App\Helpers\DualDatabase::table('persona')
-                            ->whereIn('per_cedula', $cedulas)
+                    \App\Models\User::whereIn('usu_cedula', $cedulas)->get()
+                        ->each(fn ($u) => $creadorNombres[trim((string) $u->usu_cedula)] = trim($u->usu_nombre));
+
+                    $cedulasFaltantes = array_diff($cedulas, $creadorNombres->keys()->toArray());
+                    if ($cedulasFaltantes !== []) {
+                        \App\Helpers\DualDatabase::table('persona')
+                            ->whereIn('per_cedula', $cedulasFaltantes)
                             ->select(['per_cedula', 'per_nombres', 'per_apellidos'])
-                            ->get();
-                        $creadorNombres = $personas->mapWithKeys(fn ($p) => [
-                            trim((string) $p->per_cedula) => trim(($p->per_nombres ?? '') . ' ' . ($p->per_apellidos ?? '')),
-                        ]);
-                    } catch (\Throwable $e2) {
-                        Log::warning('Error cargando creadores desde persona: ' . $e2->getMessage());
-                        $usuarios = \App\Models\User::whereIn('usu_cedula', $cedulas)->get();
-                        $creadorNombres = $usuarios->mapWithKeys(fn ($u) => [
-                            trim((string) $u->usu_cedula) => trim($u->nombre . ' ' . $u->apellido),
-                        ]);
+                            ->get()
+                            ->each(fn ($p) => $creadorNombres[trim((string) $p->per_cedula)] = trim(($p->per_nombres ?? '') . ' ' . ($p->per_apellidos ?? '')));
                     }
                 }
             } catch (\Throwable $e) {
