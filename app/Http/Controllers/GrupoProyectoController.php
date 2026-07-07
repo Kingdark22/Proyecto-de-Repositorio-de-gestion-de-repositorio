@@ -123,10 +123,21 @@ class GrupoProyectoController extends Controller
             try {
                 $cedulas = $lista->pluck('creador_cedula')->filter()->unique()->toArray();
                 if ($cedulas !== []) {
-                    $usuarios = \App\Models\User::whereIn('usu_cedula', $cedulas)->get();
-                    $creadorNombres = $usuarios->mapWithKeys(fn ($u) => [
-                        trim((string) $u->usu_cedula) => trim($u->nombre . ' ' . $u->apellido),
-                    ]);
+                    try {
+                        $personas = \App\Helpers\DualDatabase::table('persona')
+                            ->whereIn('per_cedula', $cedulas)
+                            ->select(['per_cedula', 'per_nombres', 'per_apellidos'])
+                            ->get();
+                        $creadorNombres = $personas->mapWithKeys(fn ($p) => [
+                            trim((string) $p->per_cedula) => trim(($p->per_nombres ?? '') . ' ' . ($p->per_apellidos ?? '')),
+                        ]);
+                    } catch (\Throwable $e2) {
+                        Log::warning('Error cargando creadores desde persona: ' . $e2->getMessage());
+                        $usuarios = \App\Models\User::whereIn('usu_cedula', $cedulas)->get();
+                        $creadorNombres = $usuarios->mapWithKeys(fn ($u) => [
+                            trim((string) $u->usu_cedula) => trim($u->nombre . ' ' . $u->apellido),
+                        ]);
+                    }
                 }
             } catch (\Throwable $e) {
                 Log::warning('Error cargando nombres de creadores: ' . $e->getMessage());
