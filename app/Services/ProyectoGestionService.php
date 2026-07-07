@@ -110,6 +110,19 @@ class ProyectoGestionService
         return static::$roleCache[$key] = $result;
     }
 
+    public function completar(int $id, ?User $user = null): void
+    {
+        $user = $user ?? auth()->user();
+        $proyecto = $this->proyectoRepo->findOrFail($id);
+        $this->autorizarValidacionProyecto($user, $proyecto);
+
+        $this->proyectoRepo->update($id, [
+            'estado_validacion' => 'completado',
+            'estado_logico' => true,
+        ]);
+        $this->registrarAuditoria($proyecto, 'completar');
+    }
+
     public function aprobar(int $id, ?User $user = null): void
     {
         $user = $user ?? auth()->user();

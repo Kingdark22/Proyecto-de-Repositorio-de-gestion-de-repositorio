@@ -104,6 +104,7 @@ Route::middleware(['auth', 'active.role'])->group(function () {
         Route::put('/proyectos/gestion/{id}', [\App\Http\Controllers\ProyectoController::class, 'update'])->name('proyectos.gestion.update');
         Route::get('/proyectos/gestion', [\App\Http\Controllers\ProyectoController::class, 'index'])->name('proyectos.gestion');
         Route::get('/proyectos/gestion/{id}/aprobar', [\App\Http\Controllers\ProyectoController::class, 'approve'])->name('proyectos.gestion.approve');
+        Route::get('/proyectos/gestion/{id}/completar', [\App\Http\Controllers\ProyectoController::class, 'completar'])->name('proyectos.gestion.completar');
         Route::post('/proyectos/gestion/{id}/rechazar', [\App\Http\Controllers\ProyectoController::class, 'reject'])->name('proyectos.gestion.reject');
         Route::post('/proyectos/documentos/{id}/estado', [\App\Http\Controllers\ProyectoController::class, 'actualizarEstadoDocumento'])->name('proyectos.documentos.estado');
         Route::get('/proyectos/gestion/{id}/solvencia/{cedula?}', [\App\Http\Controllers\ProyectoController::class, 'solvencia'])->name('proyectos.gestion.solvencia');

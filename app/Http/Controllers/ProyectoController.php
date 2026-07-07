@@ -280,13 +280,24 @@ class ProyectoController extends Controller
             $proyecto->update([
                 'actualizado_por_estudiante' => true,
                 'fecha_actualizacion_estudiante' => now(),
-                'estado_validacion' => 'completado',
                 'estado_logico' => true,
             ]);
         }
 
         return redirect()->route('proyectos.gestion')
             ->with('success', 'Proyecto actualizado con éxito.');
+    }
+
+    public function completar($id)
+    {
+        try {
+            $this->gestion->completar((int) $id);
+            return redirect()->route('proyectos.gestion')
+                ->with('success', 'Proyecto marcado como completado.');
+        } catch (\Throwable $e) {
+            return redirect()->route('proyectos.gestion')
+                ->with('error', $e->getMessage());
+        }
     }
 
     public function toggleStatus($id)
