@@ -533,7 +533,7 @@ class ProyectoGestionService
             || app(UserRoleService::class)->roleMatches('administrador', $activeRole);
 
         $rules = [
-            'titulo' => 'required|min:5|max:255',
+            'titulo' => 'required|max:255',
             'resumen' => $esProfesor ? 'nullable|string' : 'required|min:10',
 
             'linea_investigacion_id' => ['nullable', Rule::exists('\App\Models\LineaInvestigacion', (new \App\Models\LineaInvestigacion())->getKeyName())],
