@@ -7,6 +7,8 @@ use App\Models\Proyecto;
 use App\Models\User;
 use App\Repositories\GrupoProyectoRepository;
 use App\Repositories\ProyectoRepository;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class NotificacionService
 {
@@ -172,6 +174,90 @@ class NotificacionService
         }
 
         return $notificaciones;
+    }
+
+    public function correoProfesor(string $cedulaProfesor, string $subject, string $message, ?string $url = null, ?string $urlText = null): void
+    {
+        try {
+            $email = \App\Helpers\DualDatabase::table('persona')
+                ->whereRaw('TRIM(per_cedula) = ?', [trim($cedulaProfesor)])
+                ->value('per_email');
+
+            if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                Mail::to($email)->send(new \App\Mail\NotificacionProyecto($subject, $message, $url, $urlText));
+            }
+        } catch (\Throwable $e) {
+            Log::warning("Error enviando correo a profesor {$cedulaProfesor}: " . $e->getMessage());
+        }
+    }
+
+    public function correoEstudiante(string $cedula, string $subject, string $message, ?string $url = null, ?string $urlText = null): void
+    {
+        try {
+            $email = \App\Helpers\DualDatabase::table('persona')
+                ->whereRaw('TRIM(per_cedula) = ?', [trim($cedula)])
+                ->value('per_email');
+
+            if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                Mail::to($email)->send(new \App\Mail\NotificacionProyecto($subject, $message, $url, $urlText));
+            }
+        } catch (\Throwable $e) {
+            Log::warning("Error enviando correo a estudiante {$cedula}: " . $e->getMessage());
+        }
+    }
+
+    public function notificarActualizacionEstudiante(Proyecto $proyecto, string $cedulaProfesor): void
+    {
+        $url = route('proyectos.gestion.edit', $proyecto->id);
+        $this->correoProfesor(
+            $cedulaProfesor,
+            'Estudiante actualizó el proyecto',
+            "El proyecto \"{$proyecto->titulo}\" ha sido actualizado por un integrante del equipo. Ingrese al sistema para revisar los cambios.",
+            $url,
+            'Revisar proyecto'
+        );
+    }
+
+    public function notificarDocumentoRechazado(Proyecto $proyecto, string $componenteNombre, string $observacion, array $cedulasEstudiantes): void
+    {
+        $url = route('proyectos.gestion', ['edit' => $proyecto->id]);
+        foreach ($cedulasEstudiantes as $cedula) {
+            $this->correoEstudiante(
+                $cedula,
+                'Documento rechazado',
+                "El documento \"{$componenteNombre}\" del proyecto \"{$proyecto->titulo}\" ha sido rechazado.\nMotivo: {$observacion}\nCorrija y vuelva a subir el documento.",
+                $url,
+                'Ver proyecto'
+            );
+        }
+    }
+
+    public function notificarProyectoAprobado(Proyecto $proyecto, array $cedulasEstudiantes): void
+    {
+        $url = route('proyectos.gestion.solvencia', $proyecto->id);
+        foreach ($cedulasEstudiantes as $cedula) {
+            $this->correoEstudiante(
+                $cedula,
+                'Proyecto aprobado',
+                "El proyecto \"{$proyecto->titulo}\" ha sido aprobado. Ya puede descargar su solvencia.",
+                $url,
+                'Descargar solvencia'
+            );
+        }
+    }
+
+    public function notificarNuevoGrupo(string $nombreGrupo, string $cedulaProfesor, array $cedulasEstudiantes): void
+    {
+        $url = route('grupos-proyecto.index');
+        foreach ($cedulasEstudiantes as $cedula) {
+            $this->correoEstudiante(
+                $cedula,
+                'Nuevo equipo de proyecto',
+                "Has sido agregado al equipo \"{$nombreGrupo}\". Ingrese al sistema para más información.",
+                $url,
+                'Ver equipo'
+            );
+        }
     }
 
     public function contarPendientes(?User $user): int

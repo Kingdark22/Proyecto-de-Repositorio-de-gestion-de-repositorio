@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Proyecto;
+use App\Services\NotificacionService;
 use App\Services\ProyectoGestionService;
 use App\Services\GrupoProyectoService;
 use App\Services\IntranetEquipoSeccionService;
@@ -23,6 +24,7 @@ class ProyectoController extends Controller
         protected IntranetEquipoSeccionService $equipoSeccion,
         protected ReporteDepositoService $reporteDeposito,
         protected UserRoleService $userRoleService,
+        protected NotificacionService $notificacionService,
         protected CatalogoRepository $catalogoRepo,
         protected ComunidadRepository $comunidadRepo,
     ) {}
@@ -33,6 +35,7 @@ class ProyectoController extends Controller
         $activeRole = $this->userRoleService->getActiveRole($user);
         $esProfesor = $this->userRoleService->roleMatches('profesor proyecto', $activeRole);
         $esGestionador = $this->userRoleService->roleMatches('gestionador', $activeRole);
+        $esAdmin = $this->userRoleService->roleMatches('administrador', $activeRole);
 
         $search = $request->get('search', '');
         $filterEstado = $request->get('estado', '');
@@ -103,7 +106,7 @@ class ProyectoController extends Controller
 
         return view('proyectos.index', compact(
             'search', 'filterEstado', 'filterComunidad', 'filterLapso',
-            'esProfesor', 'esGestionador', 'esEstudianteLider',
+            'esProfesor', 'esAdmin', 'esGestionador', 'esEstudianteLider',
             'gruposDocente', 'proyectosLider', 'proyectosLiderIds',
             'datosListado', 'mostrarListado', 'canValidate',
             'lapsosFiltro', 'programasFiltro', 'trayectosFiltro',
@@ -158,11 +161,11 @@ class ProyectoController extends Controller
 
         $estadoForm = [
             'resumen' => $request->input('resumen', $proyecto->resumen ?? ''),
-            'linea_investigacion_id' => $request->input('linea_investigacion_id'),
-            'metodologia_id' => $request->input('metodologia_id'),
-            'tipo_publicacion_id' => $request->input('tipo_publicacion_id'),
-            'tipo_investigacion_id' => $request->input('tipo_investigacion_id'),
-            'objetivo_investigacion_id' => $request->input('objetivo_investigacion_id'),
+            'linea_investigacion_id' => $request->input('linea_investigacion_id', $proyecto->linea_investigacion_id),
+            'metodologia_id' => $request->input('metodologia_id', $proyecto->metodologia_id),
+            'tipo_publicacion_id' => $request->input('tipo_publicacion_id', $proyecto->tipo_publicacion_id),
+            'tipo_investigacion_id' => $request->input('tipo_investigacion_id', $proyecto->tipo_investigacion_id),
+            'objetivo_investigacion_id' => $request->input('objetivo_investigacion_id', $proyecto->objetivo_investigacion_id),
             'titulo' => $proyecto->titulo,
             'comunidad_id' => $request->input('comunidad_id', $proyecto->comunidad_id),
             'equipo_seccion_clave' => $request->input('equipo_seccion_clave', $proyecto->equipo_ref),
@@ -297,6 +300,12 @@ class ProyectoController extends Controller
             }
 
             $proyecto->update($updateData);
+
+            try {
+                $this->notificacionService->notificarActualizacionEstudiante($proyecto, $proyecto->creador_cedula);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("Error notificando actualización: " . $e->getMessage());
+            }
         }
 
         return redirect()->route('proyectos.gestion')
@@ -314,10 +323,23 @@ class ProyectoController extends Controller
     {
         try {
             $proyecto = \App\Models\Proyecto::findOrFail($id);
+            $estadoAnterior = $proyecto->estado_validacion;
             $this->gestion->aprobar((int) $id);
-            $msg = $proyecto->estado_validacion === 'pendiente'
+            $msg = $estadoAnterior === 'pendiente'
                 ? 'Proyecto marcado como completado. El administrador debe aprobarlo.'
                 : 'Proyecto aprobado con éxito.';
+
+            if ($estadoAnterior === 'completado') {
+                try {
+                    $proyecto->refresh();
+                    $grupo = \App\Models\GrupoProyectoModulo::where('grp_identificador', $proyecto->equipo_ref)->first();
+                    $cedulas = collect($grupo?->grp_miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
+                    $this->notificacionService->notificarProyectoAprobado($proyecto, $cedulas);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Error notificando aprobación: " . $e->getMessage());
+                }
+            }
+
             return redirect()->route('proyectos.gestion')
                 ->with('success', $msg);
         } catch (\Throwable $e) {
@@ -743,10 +765,31 @@ class ProyectoController extends Controller
         ]);
 
         try {
-            \App\Models\ProyectoDocumento::findOrFail($id)->update([
-                'pd_estado' => $request->input('estado'),
-                'pd_observacion' => $request->input('observacion'),
+            $doc = \App\Models\ProyectoDocumento::findOrFail($id);
+            $nuevoEstado = $request->input('estado');
+            $observacion = $request->input('observacion', '');
+
+            $doc->update([
+                'pd_estado' => $nuevoEstado,
+                'pd_observacion' => $observacion,
             ]);
+
+            if ($nuevoEstado == 2) {
+                try {
+                    $proyecto = $doc->proyecto;
+                    $grupo = \App\Models\GrupoProyectoModulo::where('grp_identificador', $proyecto->equipo_ref)->first();
+                    $cedulas = collect($grupo?->grp_miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
+                    $this->notificacionService->notificarDocumentoRechazado(
+                        $proyecto,
+                        $doc->componente->nombre ?? 'Documento',
+                        $observacion,
+                        $cedulas
+                    );
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Error notificando rechazo de documento: " . $e->getMessage());
+                }
+            }
+
             return response()->json(['success' => true, 'message' => 'Estado del documento actualizado correctamente.']);
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'message' => 'Error al actualizar: ' . $e->getMessage()], 500);
