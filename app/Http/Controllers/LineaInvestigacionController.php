@@ -46,6 +46,11 @@ class LineaInvestigacionController extends Controller
             'descripcion.required' => 'La descripción es obligatoria.',
             'descripcion.min' => 'La descripción debe tener al menos 3 caracteres.',
             'descripcion.max' => 'La descripción no puede exceder 500 caracteres.',
+        ], [
+            'nombre_investigacion' => 'nombre de la línea de investigación',
+            'area_de_investigacion' => 'área de investigación',
+            'programa_id' => 'programa',
+            'descripcion' => 'descripción',
         ]);
 
         $nombre = trim($validated['nombre_investigacion']);
@@ -99,6 +104,11 @@ class LineaInvestigacionController extends Controller
             'descripcion.required' => 'La descripción es obligatoria.',
             'descripcion.min' => 'La descripción debe tener al menos 3 caracteres.',
             'descripcion.max' => 'La descripción no puede exceder 500 caracteres.',
+        ], [
+            'nombre_investigacion' => 'nombre de la línea de investigación',
+            'area_de_investigacion' => 'área de investigación',
+            'programa_id' => 'programa',
+            'descripcion' => 'descripción',
         ]);
 
         $nombre = trim($validated['nombre_investigacion']);

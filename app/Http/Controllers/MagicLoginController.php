@@ -207,7 +207,11 @@ class MagicLoginController extends Controller
      */
     public function aplicarRol(Request $request)
     {
-        $request->validate(['role' => 'required|string']);
+        $request->validate(['role' => 'required|string'], [
+            'role.required' => 'Debe seleccionar un rol.',
+        ], [
+            'role' => 'rol',
+        ]);
 
         if (!Auth::check()) {
             return redirect()->route('magic-login');

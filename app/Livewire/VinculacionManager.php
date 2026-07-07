@@ -210,6 +210,11 @@ class VinculacionManager extends Component
             'modalComunidadEstadoId.required' => 'Seleccione un estado.',
             'modalComunidadMunicipioId.required' => 'Seleccione un municipio.',
             'modalComunidadDirNombre.required' => 'La dirección exacta es obligatoria.',
+        ], [
+            'modalComunidadNombre' => 'nombre de la comunidad',
+            'modalComunidadEstadoId' => 'estado',
+            'modalComunidadMunicipioId' => 'municipio',
+            'modalComunidadDirNombre' => 'dirección',
         ]);
 
         if ($this->modalComunidadNombreStatus === 'no_disponible') {
@@ -410,10 +415,29 @@ class VinculacionManager extends Component
 
     public function guardarVinculacion(): void
     {
-        if (empty($this->selectedProjects)) {
-            $this->safeDispatch('error', 'Seleccione al menos un proyecto.');
-            return;
+        $rules = [
+            'selectedProjects' => 'required|array|min:1',
+            'tituloSeleccionado' => 'required|string',
+        ];
+        $messages = [
+            'selectedProjects.required' => 'Seleccione al menos un proyecto.',
+            'selectedProjects.min' => 'Seleccione al menos un proyecto.',
+            'tituloSeleccionado.required' => 'Seleccione o cree un título de vinculación.',
+        ];
+        $attributes = [
+            'selectedProjects' => 'proyectos seleccionados',
+            'tituloSeleccionado' => 'título de vinculación',
+        ];
+
+        if ($this->tituloSeleccionado === 'nuevo') {
+            $rules['nuevoTitulo'] = 'required|string|min:3|max:255';
+            $messages['nuevoTitulo.required'] = 'Escriba el nombre del nuevo título.';
+            $messages['nuevoTitulo.min'] = 'El título debe tener al menos 3 caracteres.';
+            $messages['nuevoTitulo.max'] = 'El título no puede exceder 255 caracteres.';
+            $attributes['nuevoTitulo'] = 'nuevo título';
         }
+
+        $this->validate($rules, $messages, $attributes);
 
         $tituloId = null;
         $tituloTexto = '';

@@ -48,6 +48,11 @@ class ComponenteController extends Controller
             'tamano_maximo_mb.integer' => 'El tamaño máximo debe ser un número entero.',
             'tamano_maximo_mb.min' => 'El tamaño máximo debe ser al menos 1 MB.',
             'tamano_maximo_mb.max' => 'El tamaño máximo no puede exceder 200 MB.',
+        ], [
+            'nombre' => 'nombre del componente',
+            'tipo_archivo' => 'tipo de archivo',
+            'tamano_maximo_mb' => 'tamaño máximo',
+            'es_obligatorio' => 'obligatorio',
         ]);
 
         $nombre = trim($request->input('nombre'));
@@ -98,6 +103,11 @@ class ComponenteController extends Controller
             'tamano_maximo_mb.integer' => 'El tamaño máximo debe ser un número entero.',
             'tamano_maximo_mb.min' => 'El tamaño máximo debe ser al menos 1 MB.',
             'tamano_maximo_mb.max' => 'El tamaño máximo no puede exceder 200 MB.',
+        ], [
+            'nombre' => 'nombre del componente',
+            'tipo_archivo' => 'tipo de archivo',
+            'tamano_maximo_mb' => 'tamaño máximo',
+            'es_obligatorio' => 'obligatorio',
         ]);
 
         $item = Componente::findOrFail($id);
@@ -243,6 +253,15 @@ class ComponenteController extends Controller
         $request->validate([
             'componente_ids' => 'required|array|min:1',
             'componente_ids.*' => 'required|integer|min:1|exists:componentes,comp_codigo',
+        ], [
+            'componente_ids.required' => 'Seleccione al menos un componente.',
+            'componente_ids.min' => 'Seleccione al menos un componente.',
+            'componente_ids.*.required' => 'Cada componente seleccionado debe ser válido.',
+            'componente_ids.*.integer' => 'Cada componente debe tener un código numérico.',
+            'componente_ids.*.exists' => 'Uno de los componentes seleccionados no existe.',
+        ], [
+            'componente_ids' => 'componentes',
+            'componente_ids.*' => 'componente',
         ]);
 
         $componenteIds = $request->input('componente_ids', []);

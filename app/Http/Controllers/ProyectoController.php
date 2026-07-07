@@ -171,6 +171,8 @@ class ProyectoController extends Controller
             // Validación base
             $request->validate([
                 'documentos' => 'nullable|array',
+            ], [], [
+                'documentos' => 'documentos',
             ]);
 
             // Validación dinámica por componente (tipo, tamaño, obligatorios)
@@ -238,7 +240,11 @@ class ProyectoController extends Controller
                 }
 
                 if ($docRules) {
-                    $request->validate($docRules, $docMessages);
+                    $docAttributes = [];
+                    foreach ($componentes as $comp) {
+                        $docAttributes['documentos.' . $comp->id] = $comp->nombre;
+                    }
+                    $request->validate($docRules, $docMessages, $docAttributes);
                 }
             }
         } else {
@@ -247,6 +253,16 @@ class ProyectoController extends Controller
                 'titulo.required' => 'El título del proyecto es obligatorio.',
                 'resumen.required' => 'El resumen es obligatorio para los estudiantes.',
                 'comunidad_id.required' => 'La comunidad es obligatoria.',
+            ], [
+                'titulo' => 'título del proyecto',
+                'resumen' => 'resumen',
+                'linea_investigacion_id' => 'línea de investigación',
+                'metodologia_id' => 'metodología',
+                'tipo_publicacion_id' => 'tipo de publicación',
+                'tipo_investigacion_id' => 'tipo de investigación',
+                'objetivo_investigacion_id' => 'objetivo de investigación',
+                'comunidad_id' => 'comunidad',
+                'equipo_seccion_clave' => 'equipo y sección',
             ]);
         }
 
@@ -299,6 +315,8 @@ class ProyectoController extends Controller
         ], [
             'motivo.required' => 'Debe indicar el motivo de rechazo.',
             'motivo.min' => 'El motivo debe tener al menos 10 caracteres.',
+        ], [
+            'motivo' => 'motivo de rechazo',
         ]);
 
         try {
@@ -370,6 +388,10 @@ class ProyectoController extends Controller
         ], [
             'roles.required' => 'Debe asignar al menos un rol al involucrado.',
             'roles.min' => 'Debe asignar al menos un rol al involucrado.',
+        ], [
+            'involucrado_id' => 'involucrado',
+            'roles' => 'roles',
+            'roles.*' => 'rol',
         ]);
 
         $this->gestion->agregarInvolucradoAProyecto(
@@ -396,6 +418,12 @@ class ProyectoController extends Controller
         ], [
             'roles.required' => 'Debe asignar al menos un rol al involucrado.',
             'roles.min' => 'Debe asignar al menos un rol al involucrado.',
+        ], [
+            'nombre' => 'nombre',
+            'apellido' => 'apellido',
+            'cedula' => 'cédula',
+            'roles' => 'roles',
+            'roles.*' => 'rol',
         ]);
 
         $involucrado = $this->gestion->crearInvolucrado(
@@ -432,6 +460,11 @@ class ProyectoController extends Controller
     {
         $request->validate([
             'rol_id' => 'required|integer',
+        ], [
+            'rol_id.required' => 'Debe seleccionar un rol.',
+            'rol_id.integer' => 'El rol seleccionado no es válido.',
+        ], [
+            'rol_id' => 'rol',
         ]);
 
         $pivotId = $this->gestion->agregarInvolucradoAProyecto(
@@ -462,6 +495,12 @@ class ProyectoController extends Controller
     {
         $request->validate([
             'nombre' => 'required|min:2|max:255',
+        ], [
+            'nombre.required' => 'El nombre del rol es obligatorio.',
+            'nombre.min' => 'El nombre debe tener al menos 2 caracteres.',
+            'nombre.max' => 'El nombre no puede exceder 255 caracteres.',
+        ], [
+            'nombre' => 'nombre del rol',
         ]);
 
         $rol = $this->gestion->crearRol($request->input('nombre'));
@@ -675,6 +714,14 @@ class ProyectoController extends Controller
         $request->validate([
             'estado' => 'required|in:1,2',
             'observacion' => 'required_if:estado,2|nullable|string|max:500',
+        ], [
+            'estado.required' => 'Debe seleccionar un estado para el documento.',
+            'estado.in' => 'El estado seleccionado no es válido.',
+            'observacion.required_if' => 'Debe indicar una observación cuando rechaza el documento.',
+            'observacion.max' => 'La observación no puede exceder 500 caracteres.',
+        ], [
+            'estado' => 'estado del documento',
+            'observacion' => 'observación',
         ]);
 
         try {

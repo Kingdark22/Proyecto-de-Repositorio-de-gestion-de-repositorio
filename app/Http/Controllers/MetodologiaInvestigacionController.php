@@ -36,6 +36,9 @@ class MetodologiaInvestigacionController extends Controller
             'nombre.max' => 'El nombre no puede exceder 100 caracteres.',
             'descripcion.min' => 'La descripción debe tener al menos 3 caracteres.',
             'descripcion.max' => 'La descripción no puede exceder 500 caracteres.',
+        ], [
+            'nombre' => 'nombre de la metodología',
+            'descripcion' => 'descripción',
         ]);
 
         $nombre = trim($validated['nombre']);
@@ -78,6 +81,9 @@ class MetodologiaInvestigacionController extends Controller
             'nombre.max' => 'El nombre no puede exceder 100 caracteres.',
             'descripcion.min' => 'La descripción debe tener al menos 3 caracteres.',
             'descripcion.max' => 'La descripción no puede exceder 500 caracteres.',
+        ], [
+            'nombre' => 'nombre de la metodología',
+            'descripcion' => 'descripción',
         ]);
 
         $nombre = trim($validated['nombre']);

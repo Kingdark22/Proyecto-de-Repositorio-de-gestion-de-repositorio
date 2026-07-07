@@ -48,7 +48,30 @@ class ComunidadController extends Controller
 
     public function store(Request $request, UnicidadNombreService $unicidadService, ValidacionRifService $rifService, ValidacionCorreoService $correoService)
     {
-        $validated = $request->validate($this->gestion->reglasValidacion());
+        $validated = $request->validate($this->gestion->reglasValidacion(), [
+            'nombre.required' => 'El nombre de la comunidad es obligatorio.',
+            'nombre.max' => 'El nombre no puede exceder 255 caracteres.',
+            'rif.regex' => 'El formato del RIF no es válido (ej: J-123456789-0).',
+            'estado_id.required' => 'Seleccione un estado.',
+            'estado_id.exists' => 'El estado seleccionado no es válido.',
+            'municipio_id.required' => 'Seleccione un municipio.',
+            'municipio_id.exists' => 'El municipio seleccionado no es válido.',
+            'dir_nombre.required' => 'La dirección exacta es obligatoria.',
+            'dir_nombre.max' => 'La dirección no puede exceder 500 caracteres.',
+            'correo.email' => 'El correo electrónico no tiene un formato válido.',
+            'correo.max' => 'El correo no puede exceder 150 caracteres.',
+            'prefijo_telefono.max' => 'El prefijo telefónico no puede exceder 4 caracteres.',
+            'numero_telefono.max' => 'El número telefónico no puede exceder 15 caracteres.',
+        ], [
+            'nombre' => 'nombre de la comunidad',
+            'rif' => 'RIF',
+            'estado_id' => 'estado',
+            'municipio_id' => 'municipio',
+            'dir_nombre' => 'dirección',
+            'correo' => 'correo electrónico',
+            'prefijo_telefono' => 'prefijo telefónico',
+            'numero_telefono' => 'número telefónico',
+        ]);
 
         $nombre = trim($validated['nombre']);
 
@@ -139,7 +162,30 @@ class ComunidadController extends Controller
 
     public function update(Request $request, $id, UnicidadNombreService $unicidadService, ValidacionRifService $rifService, ValidacionCorreoService $correoService)
     {
-        $validated = $request->validate($this->gestion->reglasValidacion());
+        $validated = $request->validate($this->gestion->reglasValidacion(), [
+            'nombre.required' => 'El nombre de la comunidad es obligatorio.',
+            'nombre.max' => 'El nombre no puede exceder 255 caracteres.',
+            'rif.regex' => 'El formato del RIF no es válido (ej: J-123456789-0).',
+            'estado_id.required' => 'Seleccione un estado.',
+            'estado_id.exists' => 'El estado seleccionado no es válido.',
+            'municipio_id.required' => 'Seleccione un municipio.',
+            'municipio_id.exists' => 'El municipio seleccionado no es válido.',
+            'dir_nombre.required' => 'La dirección exacta es obligatoria.',
+            'dir_nombre.max' => 'La dirección no puede exceder 500 caracteres.',
+            'correo.email' => 'El correo electrónico no tiene un formato válido.',
+            'correo.max' => 'El correo no puede exceder 150 caracteres.',
+            'prefijo_telefono.max' => 'El prefijo telefónico no puede exceder 4 caracteres.',
+            'numero_telefono.max' => 'El número telefónico no puede exceder 15 caracteres.',
+        ], [
+            'nombre' => 'nombre de la comunidad',
+            'rif' => 'RIF',
+            'estado_id' => 'estado',
+            'municipio_id' => 'municipio',
+            'dir_nombre' => 'dirección',
+            'correo' => 'correo electrónico',
+            'prefijo_telefono' => 'prefijo telefónico',
+            'numero_telefono' => 'número telefónico',
+        ]);
 
         $nombre = trim($validated['nombre']);
         $comunidad = Comunidad::findOrFail($id);

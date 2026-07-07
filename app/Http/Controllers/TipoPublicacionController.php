@@ -38,6 +38,9 @@ class TipoPublicacionController extends Controller
             'nombre.required' => 'El nombre del tipo de publicación es obligatorio.',
             'nombre.min' => 'El nombre debe tener al menos 3 caracteres.',
             'nombre.max' => 'El nombre no puede exceder 100 caracteres.',
+        ], [
+            'nombre' => 'nombre del tipo de publicación',
+            'mencion_honorifica' => 'mención honorífica',
         ]);
 
         $nombre = trim($validated['nombre']);
@@ -78,6 +81,9 @@ class TipoPublicacionController extends Controller
             'nombre.required' => 'El nombre del tipo de publicación es obligatorio.',
             'nombre.min' => 'El nombre debe tener al menos 3 caracteres.',
             'nombre.max' => 'El nombre no puede exceder 100 caracteres.',
+        ], [
+            'nombre' => 'nombre del tipo de publicación',
+            'mencion_honorifica' => 'mención honorífica',
         ]);
 
         $nombre = trim($validated['nombre']);

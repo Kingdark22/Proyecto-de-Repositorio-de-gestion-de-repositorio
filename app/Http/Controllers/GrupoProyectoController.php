@@ -189,9 +189,17 @@ class GrupoProyectoController extends Controller
         ], [
             'nombre.required' => 'Indique un nombre para el equipo.',
             'lapso.required' => 'Seleccione el lapso académico.',
+            'programa.integer' => 'El programa seleccionado no es válido.',
             'seccion.required' => 'Seleccione la sección del PNF.',
             'comunidad.required' => 'Seleccione la comunidad.',
             'miembros.required' => 'Debe agregar al menos un integrante al grupo.',
+        ], [
+            'nombre' => 'nombre del equipo',
+            'lapso' => 'lapso académico',
+            'programa' => 'programa',
+            'seccion' => 'sección',
+            'comunidad' => 'comunidad',
+            'miembros' => 'integrantes',
         ]);
 
         $lapCodigo = (int) $request->input('lapso');
@@ -342,9 +350,17 @@ class GrupoProyectoController extends Controller
         ], [
             'nombre.required' => 'Indique un nombre para el equipo/grupo.',
             'lapso.required' => 'Seleccione el lapso académico.',
+            'programa.integer' => 'El programa seleccionado no es válido.',
             'seccion.required' => 'Seleccione la sección del PNF.',
             'comunidad.required' => 'Seleccione la comunidad.',
             'miembros.required' => 'Debe agregar al menos un integrante al grupo.',
+        ], [
+            'nombre' => 'nombre del equipo',
+            'lapso' => 'lapso académico',
+            'programa' => 'programa',
+            'seccion' => 'sección',
+            'comunidad' => 'comunidad',
+            'miembros' => 'integrantes',
         ]);
 
         $lapCodigo = (int) $request->input('lapso');
@@ -596,6 +612,16 @@ class GrupoProyectoController extends Controller
             'estado_id.required' => 'Seleccione un estado.',
             'municipio_id.required' => 'Seleccione un municipio.',
             'dir_nombre.required' => 'La dirección exacta es obligatoria.',
+        ], [
+            'nombre' => 'nombre de la comunidad',
+            'rif_letra' => 'letra del RIF',
+            'rif_numero' => 'número del RIF',
+            'correo' => 'correo electrónico',
+            'prefijo_telefono' => 'prefijo telefónico',
+            'numero_telefono' => 'número telefónico',
+            'estado_id' => 'estado',
+            'municipio_id' => 'municipio',
+            'dir_nombre' => 'dirección',
         ]);
 
         // Validar unicidad del nombre
