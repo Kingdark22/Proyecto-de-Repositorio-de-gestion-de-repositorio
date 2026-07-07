@@ -270,6 +270,9 @@ class VinculacionManager extends Component
 
     public function updatedModalComunidadNombre(): void
     {
+        // Filtrar caracteres no permitidos (solo letras, números y espacios)
+        $this->modalComunidadNombre = preg_replace('/[^a-zA-ZáéíóúÁÉÍÓÚüÜñÑ0-9\s]/', '', $this->modalComunidadNombre);
+
         if (strlen(trim($this->modalComunidadNombre)) < 3) {
             $this->modalComunidadNombreStatus = null;
             $this->resetValidation('modalComunidadNombre');
