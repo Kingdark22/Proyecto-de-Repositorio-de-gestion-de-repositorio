@@ -117,7 +117,7 @@ class GrupoProyectoController extends Controller
             }
         }
 
-        // Mapa de nombres de creadores (cédula => cédula del usuario)
+        // Mapa de creador para grupos existentes sin creador_usuario en contexto
         $creadorNombres = collect();
         if ($lista->isNotEmpty()) {
             try {
@@ -125,15 +125,6 @@ class GrupoProyectoController extends Controller
                 if ($cedulas !== []) {
                     \App\Models\User::whereIn('usu_cedula', $cedulas)->get()
                         ->each(fn ($u) => $creadorNombres[trim((string) $u->usu_cedula)] = trim((string) $u->usu_cedula));
-
-                    $cedulasFaltantes = array_diff($cedulas, $creadorNombres->keys()->toArray());
-                    if ($cedulasFaltantes !== []) {
-                        \App\Helpers\DualDatabase::table('persona')
-                            ->whereIn('per_cedula', $cedulasFaltantes)
-                            ->select(['per_cedula', 'per_nombres', 'per_apellidos'])
-                            ->get()
-                            ->each(fn ($p) => $creadorNombres[trim((string) $p->per_cedula)] = trim((string) $p->per_cedula));
-                    }
                 }
             } catch (\Throwable $e) {
                 Log::warning('Error cargando nombres de creadores: ' . $e->getMessage());
@@ -278,6 +269,7 @@ class GrupoProyectoController extends Controller
             trim((string) $user->usu_cedula),
             null, // grpCodigo = null (nuevo)
             $etiquetas,
+            trim((string) $user->usu_nombre),
         );
 
         if (! $clave) {
@@ -442,6 +434,7 @@ class GrupoProyectoController extends Controller
             trim((string) $user->usu_cedula),
             $grpCodigo,
             $etiquetas,
+            trim((string) $user->usu_nombre),
         );
 
         if (! $clave) {

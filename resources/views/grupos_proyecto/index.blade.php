@@ -185,7 +185,7 @@
                             <td align="center" style="font-size:10px;">
                                 @php $ced = trim($g->creador_cedula ?? ''); @endphp
                                 @if($ced !== '')
-                                    {{ $creadorNombres[$ced] ?? $ced }}
+                                    {{ trim($g->creador_usuario ?? '') ?: ($creadorNombres[$ced] ?? $ced) }}
                                 @else
                                     —
                                 @endif

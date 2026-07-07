@@ -133,6 +133,7 @@ class GrupoProyectoService
         string $creadorCedula,
         ?int $grpCodigo = null,
         ?array $etiquetasAcademicas = null,
+        string $creadorUsuario = '',
     ): ?string {
         if (! $this->tablaDisponible()) {
             return null;
@@ -146,6 +147,7 @@ class GrupoProyectoService
         $nombre = trim($nombre) ?: 'Equipo';
 
         $contexto = array_filter(array_merge([
+            'creador_usuario' => trim($creadorUsuario),
             'lap_codigo' => $lapCodigo,
             'sec_codigo' => $secCodigo,
             'pro_codigo' => $proCodigo,
@@ -494,6 +496,7 @@ class GrupoProyectoService
     protected function decodificarContexto(object $row): array
     {
         $vacio = [
+            'creador_usuario' => null,
             'lap_codigo' => 0,
             'sec_codigo' => 0,
             'pro_codigo' => null,
@@ -511,6 +514,7 @@ class GrupoProyectoService
             $ctx = (array) $raw;
             if (count($ctx) > 0) {
                 return [
+                    'creador_usuario' => trim((string) ($ctx['creador_usuario'] ?? '')),
                     'lap_codigo' => (int) ($ctx['lap_codigo'] ?? 0),
                     'sec_codigo' => (int) ($ctx['sec_codigo'] ?? 0),
                     'pro_codigo' => isset($ctx['pro_codigo']) ? (int) $ctx['pro_codigo'] : null,
@@ -528,6 +532,7 @@ class GrupoProyectoService
             $ctx = json_decode($raw, true);
             if (is_array($ctx)) {
                 return [
+                    'creador_usuario' => trim((string) ($ctx['creador_usuario'] ?? '')),
                     'lap_codigo' => (int) ($ctx['lap_codigo'] ?? 0),
                     'sec_codigo' => (int) ($ctx['sec_codigo'] ?? 0),
                     'pro_codigo' => isset($ctx['pro_codigo']) ? (int) $ctx['pro_codigo'] : null,
@@ -687,6 +692,7 @@ class GrupoProyectoService
             'pro_siglas' => $ctx['pro_siglas'],
             'pro_nombre' => $ctx['pro_nombre'],
             'resumen_pnf_sec' => '',
+            'creador_usuario' => trim((string) ($ctx['creador_usuario'] ?? '')),
             'com_codigo' => ($row->grp_com_codigo ?? $row->gpb_com_codigo ?? null) ? (int) ($row->grp_com_codigo ?? $row->gpb_com_codigo) : null,
             'creador_cedula' => trim((string) ($row->grp_creador_cedula ?? $row->gpb_creador_cedula ?? '')),
             'miembros' => $miembros,
