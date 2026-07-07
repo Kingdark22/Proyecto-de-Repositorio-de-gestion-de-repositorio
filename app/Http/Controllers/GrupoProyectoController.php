@@ -14,6 +14,7 @@ use App\Services\UnicidadNombreService;
 use App\Services\UserRoleService;
 use App\Services\ValidacionCorreoService;
 use App\Services\ValidacionRifService;
+use App\Services\NotificacionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -25,6 +26,7 @@ class GrupoProyectoController extends Controller
         protected IntranetEquipoSeccionService $equipos,
         protected IntranetProfessorService $profesores,
         protected ProyectoRepository $proyectoRepo,
+        protected NotificacionService $notificacionService,
     ) {}
 
     public function index(Request $request)
@@ -275,6 +277,13 @@ class GrupoProyectoController extends Controller
         if (! $clave) {
             return redirect()->back()->withInput()
                 ->with('error', 'Debe incluir al menos un integrante y un líder, o el grupo pudo no haberse creado correctamente.');
+        }
+
+        try {
+            $cedulas = collect($miembros)->pluck('cedula')->filter()->values()->toArray();
+            $this->notificacionService->notificarNuevoGrupo($nombre, trim((string) $user->usu_cedula), $cedulas);
+        } catch (\Throwable $e) {
+            Log::warning("Error notificando nuevo grupo: " . $e->getMessage());
         }
 
         return redirect()->route('grupos-proyecto.index')

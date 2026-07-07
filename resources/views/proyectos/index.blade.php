@@ -240,12 +240,15 @@
                             </td>
                             <td align="center" style="padding:5px;">
                                 <div style="display:inline-flex;gap:4px;flex-wrap:wrap;justify-content:center;">
-                                    @if (!empty($canValidate) && ($p->estado_validacion === 'pendiente' || $p->estado_validacion === 'completado') && !in_array($p->pry_codigo, $proyectosConDocumentosRechazados ?? []))
+                                    @if (!empty($canValidate) && ($p->estado_validacion === 'pendiente' || $p->estado_validacion === 'completado') && !in_array($p->pry_codigo, $proyectosConDocumentosRechazados ?? []) && !($esAdmin && auth()->user()->usu_cedula != $p->creador_cedula))
                                         <button type="button" class="cm-btn cm-btn-success cm-btn-sm" onclick="mostrarModalAccion({icon:'\u2705',title:'Aprobar proyecto',message:'\u00bfAprueba este proyecto?',confirmText:'S\u00ed, aprobar',confirmClass:'cm-btn-success',onConfirm:function(){window.location='{{ route('proyectos.gestion.approve', $p->id) }}'}})">Aprobar</button>
                                         <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" onclick="abrirRechazar({{ $p->id }})">Rechazar</button>
                                     @endif
-                                    @if ($p->estado_validacion !== 'aprobado')
+                                    @if ($p->estado_validacion !== 'aprobado' && !($esAdmin && auth()->user()->usu_cedula != $p->creador_cedula))
                                         <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-secondary cm-btn-sm">Actualizar</a>
+                                    @endif
+                                    @if ($esAdmin && auth()->user()->usu_cedula != $p->creador_cedula)
+                                        <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-info cm-btn-sm">Ver</a>
                                     @endif
                                 </div>
                             </td>
