@@ -88,6 +88,7 @@ class VinculacionManager extends Component
     {
         try {
             $this->titulosDisponibles = TituloVinculacion::where('tiv_estado_logico', true)
+                ->whereDoesntHave('vinculaciones')
                 ->orderBy('tiv_titulo')
                 ->pluck('tiv_titulo', 'tiv_codigo')
                 ->toArray();
