@@ -24,7 +24,7 @@ class UserRoleService
      */
     protected function persistedActiveRoleKey(User $user): string
     {
-        return 'active_role_persisted_' . trim((string) $user->usu_cedula);
+        return 'active_role_persisted_' . trim((string) $user->usu_cedula) . '_' . trim($user->usu_nombre ?? '');
     }
 
     public function sessionKey(): string

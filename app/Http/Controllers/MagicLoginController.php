@@ -140,9 +140,11 @@ class MagicLoginController extends Controller
                 </body></html>', 404);
             }
 
-            // 5. Login + regenerar sesión
+            // 5. Login + regenerar sesión limpiando cualquier sesión previa
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
             Auth::login($user);
-            $request->session()->regenerate();
             Log::info('User authenticated: ' . (Auth::check() ? 'true' : 'false') . ' as ' . trim($user->usu_nombre ?? ''));
 
             $roleService = app(UserRoleService::class);
