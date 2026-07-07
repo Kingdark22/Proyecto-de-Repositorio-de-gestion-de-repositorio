@@ -242,12 +242,15 @@
                             </td>
                             <td align="center" style="padding:5px;">
                                 <div style="display:inline-flex;gap:4px;flex-wrap:wrap;justify-content:center;">
-                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($canValidate) && ($p->estado_validacion === 'pendiente' || $p->estado_validacion === 'completado')): ?>
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!empty($canValidate) && ($p->estado_validacion === 'pendiente' || $p->estado_validacion === 'completado') && !in_array($p->pry_codigo, $proyectosConDocumentosRechazados ?? []) && !($esAdmin && auth()->user()->usu_cedula != $p->creador_cedula)): ?>
                                         <button type="button" class="cm-btn cm-btn-success cm-btn-sm" onclick="mostrarModalAccion({icon:'\u2705',title:'Aprobar proyecto',message:'\u00bfAprueba este proyecto?',confirmText:'S\u00ed, aprobar',confirmClass:'cm-btn-success',onConfirm:function(){window.location='<?php echo e(route('proyectos.gestion.approve', $p->id)); ?>'}})">Aprobar</button>
                                         <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" onclick="abrirRechazar(<?php echo e($p->id); ?>)">Rechazar</button>
                                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
-                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($p->estado_validacion !== 'aprobado'): ?>
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($p->estado_validacion !== 'aprobado' && !($esAdmin && auth()->user()->usu_cedula != $p->creador_cedula)): ?>
                                         <a href="<?php echo e(route('proyectos.gestion.edit', $p->id)); ?>" class="cm-btn cm-btn-secondary cm-btn-sm">Actualizar</a>
+                                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($esAdmin && auth()->user()->usu_cedula != $p->creador_cedula): ?>
+                                        <a href="<?php echo e(route('proyectos.gestion.edit', $p->id)); ?>" class="cm-btn cm-btn-info cm-btn-sm">Ver</a>
                                     <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                                 </div>
                             </td>

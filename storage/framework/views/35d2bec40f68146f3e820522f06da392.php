@@ -183,7 +183,7 @@
                             <td align="center" style="font-size:10px;">
                                 <?php $ced = trim($g->creador_cedula ?? ''); ?>
                                 <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($ced !== ''): ?>
-                                    <?php echo e($creadorNombres[$ced] ?? $ced); ?>
+                                    <?php echo e(trim($g->creador_usuario ?? '') ?: ($creadorNombres[$ced] ?? $ced)); ?>
 
                                 <?php else: ?>
                                     —

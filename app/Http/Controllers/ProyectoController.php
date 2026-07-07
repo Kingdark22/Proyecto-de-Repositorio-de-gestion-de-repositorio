@@ -120,10 +120,13 @@ class ProyectoController extends Controller
         $activeRole = $this->userRoleService->getActiveRole($user);
         $esProfesor = $this->userRoleService->roleMatches('profesor proyecto', $activeRole);
         $esGestionador = $this->userRoleService->roleMatches('gestionador', $activeRole);
+        $esAdmin = $this->userRoleService->roleMatches('administrador', $activeRole);
 
         $proyecto = Proyecto::findOrFail($id);
         $esMiembro = $this->gestion->usuarioEsMiembroDelProyecto($user, $proyecto);
-        $modoActualizacion = $esMiembro && !$this->gestion->usuarioEsAdminEnSistema($user);
+        $esAdminEnSistema = $this->gestion->usuarioEsAdminEnSistema($user);
+        $esAdminProyectoAjeno = $esAdmin && $user->usu_cedula != $proyecto->creador_cedula;
+        $modoActualizacion = $esMiembro && !$esAdminEnSistema && !$esAdminProyectoAjeno;
         $canValidate = $user ? $this->gestion->usuarioPuedeValidar($user) : false;
 
         $datosForm = $this->gestion->cargarParaEdicion($id);
@@ -155,9 +158,15 @@ class ProyectoController extends Controller
 
         $activeRole = $this->userRoleService->getActiveRole($user);
         $esProfesor = $this->userRoleService->roleMatches('profesor proyecto', $activeRole);
+        $esAdmin = $this->userRoleService->roleMatches('administrador', $activeRole);
         $esMiembro = $this->gestion->usuarioEsMiembroDelProyecto($user, $proyecto);
-        $esAdmin = $this->gestion->usuarioEsAdminEnSistema($user);
-        $modoActualizacion = $esMiembro && !$esAdmin;
+        $esAdminEnSistema = $this->gestion->usuarioEsAdminEnSistema($user);
+
+        if ($esAdmin && $user->usu_cedula != $proyecto->creador_cedula) {
+            abort(403, 'No tienes permiso para modificar este proyecto.');
+        }
+
+        $modoActualizacion = $esMiembro && !$esAdminEnSistema;
 
         $estadoForm = [
             'resumen' => $request->input('resumen', $proyecto->resumen ?? ''),
