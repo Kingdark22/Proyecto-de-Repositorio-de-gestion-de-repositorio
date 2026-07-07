@@ -104,16 +104,16 @@
                         @endforeach
                     </select>
                 </td>
-                <td width="25%">
-                    <b>Sección:</b><br>
-                    <select wire:model.live="seccionFilter" style="width: 95%;" @disabled(!$lapsoFilter || !$intranetDisponible)>
-                        <option value="">- Todas -</option>
-                        @foreach ($secciones as $sec)
-                    @php $secLabel = trim($sec->sec_nombre) . ($sec->pro_siglas ? ' (' . trim($sec->pro_siglas) . ')' : ''); @endphp
-                            <option value="{{ $sec->sec_codigo }}">{{ $secLabel }}</option>
-                        @endforeach
-                    </select>
-                </td>
+                    <td width="25%">
+                        <b>Sección:</b><br>
+                        <select wire:model.live="seccionFilter" style="width: 95%;" @disabled(!$lapsoFilter)>
+                            <option value="">- Todas -</option>
+                            @foreach ($secciones->merge($seccionesDesdeGrupos)->unique('sec_codigo') as $sec)
+                        @php $secLabel = trim($sec->sec_nombre ?? $sec->sec_nombre ?? '') . (!empty($sec->pro_siglas) ? ' (' . trim($sec->pro_siglas) . ')' : ''); @endphp
+                                <option value="{{ $sec->sec_codigo }}">{{ $secLabel }}</option>
+                            @endforeach
+                        </select>
+                    </td>
                 <td width="25%">
                     <b>Comunidad:</b><br>
                     <select wire:model.live="comunidadFilter" style="width: 95%;">
@@ -203,20 +203,17 @@
                                 <div style="font-size: 10px;"><b>Comunidad:</b>
                                     {{ $p->comunidad->nombre }}</div>
                             @endif
-                            @if ($p->linea_investigacion)
-                                <div style="font-size: 9px; color: #666;">
-                                    {{ $p->linea_investigacion->nombre_investigacion }}</div>
-                            @endif
                         </td>
                         <td style="padding: 5px; font-size: 10px;">{{ Str::limit($p->resumen, 100) }}</td>
                         <td align="center" style="padding: 5px;">
                             <a href="#" wire:click.prevent="openDetails({{ $p->id }})"
-                                style="color: #0000EE; font-weight: bold;">[Ver detalles]</a>
+                                style="color:#0000EE; font-weight:bold;">Ver detalles</a>
                             @php $srchDocs = $p->documentos; @endphp
                             @if ($srchDocs->isNotEmpty())
+                                <br><span style="font-size:9px; color:#666;">Docs:</span>
                                 @foreach ($srchDocs as $doc)
-                                    <br><a href="{{ route('documentos.view', $doc->pd_codigo) }}" target="_blank"
-                                        style="color: #0000EE; font-size: 10px;">[Ver {{ $doc->componente?->nombre ?? 'Documento' }}]</a>
+                                    <a href="{{ route('documentos.view', $doc->pd_codigo) }}"
+                                        style="color:#0000EE; font-size:10px;">{{ $doc->componente?->nombre ?? 'Doc' }}</a>@if (!$loop->last), @endif
                                 @endforeach
                             @endif
                         </td>
@@ -298,7 +295,7 @@
                     </table>
                 </fieldset>
 
-                @php $detSrchDocs = $selectedProject->documentos; @endphp
+                        @php $detSrchDocs = $selectedProject->documentos; @endphp
                 @if ($detSrchDocs->isNotEmpty())
                     <fieldset style="border: 1px solid #CCC; padding: 8px; margin-bottom: 10px;">
                         <legend style="font-weight: bold; font-size: 11px;">Documentos</legend>
@@ -316,11 +313,8 @@
                                         @endif
                                     </td>
                                     <td width="20%" align="center" style="padding: 4px;">
-                                        <a href="{{ route('documentos.view', $doc->pd_codigo) }}" target="_blank"
-                                            style="color: #0000EE;">[Ver]</a>
-                                        &nbsp;
-                                        <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank"
-                                            style="color: #008000;">[Descargar]</a>
+                                        <a href="{{ route('documentos.view', $doc->pd_codigo) }}"
+                                            style="color: #0000EE;">Ver</a>
                                     </td>
                                 </tr>
                             @endforeach

@@ -61,6 +61,7 @@ class ProyectoBusquedaService
             'secciones' => $lapCodigo && $intranetDisponible
                 ? $this->intranet->seccionesEnLapso($lapCodigo, $programaCodigo, $trayectoCodigo)
                 : collect(),
+            'seccionesDesdeGrupos' => $lapCodigo ? $this->seccionesDesdeGrupos($lapCodigo, $programaCodigo, $trayectoCodigo) : collect(),
             'comunidades' => Cache::remember('busqueda_comunidades', $catTtl, fn() => Comunidad::orderBy('nombre')->get()),
             'lineas' => app(ModuloRepositorioService::class)->lineasInvestigacionActivas(),
             'tipos_publicacion' => Cache::remember('busqueda_tipos_publicacion', $catTtl, fn() => TipoPublicacion::where('estado_logico', true)->orderBy('nombre')->get()),
@@ -258,5 +259,39 @@ class ProyectoBusquedaService
             'prefijo' => $query->where('equipo_ref', 'ILIKE', $equipoFiltro['valor'].'%'),
             default => null,
         };
+    }
+
+    protected function seccionesDesdeGrupos(?int $lapCodigo, ?int $programaCodigo = null, ?int $trayectoCodigo = null): \Illuminate\Support\Collection
+    {
+        if ($lapCodigo === null) {
+            return collect();
+        }
+
+        try {
+            $grupos = app(\App\Services\GrupoProyectoService::class)->listar([
+                'lapso' => $lapCodigo,
+                'programa' => $programaCodigo,
+            ]);
+
+            $secVistos = [];
+            $secciones = collect();
+
+            foreach ($grupos as $g) {
+                if ($g->sec_codigo && !in_array($g->sec_codigo, $secVistos, true)) {
+                    if ($trayectoCodigo === null || (int) ($g->tra_codigo ?? 0) === $trayectoCodigo) {
+                        $secVistos[] = $g->sec_codigo;
+                        $secciones->push((object) [
+                            'sec_codigo' => $g->sec_codigo,
+                            'sec_nombre' => $g->sec_nombre,
+                            'pro_siglas' => $g->pro_siglas,
+                        ]);
+                    }
+                }
+            }
+
+            return $secciones->sortBy('sec_nombre')->values();
+        } catch (\Throwable) {
+            return collect();
+        }
     }
 }

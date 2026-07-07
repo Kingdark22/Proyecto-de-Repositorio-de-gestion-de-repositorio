@@ -225,12 +225,7 @@ Route::middleware(['auth', 'active.role'])->group(function () {
 Route::get('/documentos/ver/{id}', [\App\Http\Controllers\DocumentoController::class, 'view'])
     ->middleware(['auth', 'active.role'])->name('documentos.view');
 
-Route::get('/documentos/{path}', function (string $path) {
-    if (!Storage::disk('public')->exists($path)) {
-        abort(404);
-    }
-    return Storage::disk('public')->response($path);
-})->where('path', '.*')->middleware(['auth', 'active.role'])->name('documentos.serve');
+
 
 Route::get('/session/keepalive', function () {
     // Forzar escritura de la sesión en BD para refrescar last_activity
