@@ -87,13 +87,7 @@ class VinculacionManager extends Component
     protected function cargarTitulos(): void
     {
         try {
-            $usados = \App\Models\Vinculacion::whereNotNull('tiv_codigo')
-                ->distinct()
-                ->pluck('tiv_codigo')
-                ->toArray();
-
             $this->titulosDisponibles = TituloVinculacion::where('tiv_estado_logico', true)
-                ->when($usados, fn ($q) => $q->whereNotIn('tiv_codigo', $usados))
                 ->orderBy('tiv_titulo')
                 ->pluck('tiv_titulo', 'tiv_codigo')
                 ->toArray();
