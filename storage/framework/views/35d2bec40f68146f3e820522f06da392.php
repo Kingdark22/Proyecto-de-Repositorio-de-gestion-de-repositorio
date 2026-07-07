@@ -122,7 +122,7 @@
             <input name="search" type="text" value="<?php echo e($search); ?>" placeholder="Buscar nombre&hellip;" class="grp-filter-input" style="flex: 1; min-width: 200px;" oninput="buscarConDebounce(this)">
             <noscript><button type="submit" class="cm-btn cm-btn-sm">Buscar</button></noscript>
         </form>
-        <a href="<?php echo e(route('grupos-proyecto.create')); ?>" class="cm-btn cm-btn-success" style="margin-left: auto;">Registrar nuevo grupo</a>
+        <a href="<?php echo e(route('grupos-proyecto.create')); ?>" class="cm-btn cm-btn-success cm-btn-sm" style="margin-left: auto;">Registrar nuevo grupo</a>
     </div>
 
     

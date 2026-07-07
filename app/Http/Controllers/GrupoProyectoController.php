@@ -125,7 +125,7 @@ class GrupoProyectoController extends Controller
                 if ($cedulas !== []) {
                     $usuarios = \App\Models\User::whereIn('usu_cedula', $cedulas)->get();
                     $creadorNombres = $usuarios->mapWithKeys(fn ($u) => [
-                        trim((string) $u->usu_cedula) => trim($u->usu_nombre),
+                        trim((string) $u->usu_cedula) => trim($u->nombre . ' ' . $u->apellido),
                     ]);
                 }
             } catch (\Throwable $e) {
