@@ -117,14 +117,14 @@ class GrupoProyectoController extends Controller
             }
         }
 
-        // Mapa de nombres de creadores (cédula => usuario)
+        // Mapa de nombres de creadores (cédula => cédula del usuario)
         $creadorNombres = collect();
         if ($lista->isNotEmpty()) {
             try {
                 $cedulas = $lista->pluck('creador_cedula')->filter()->unique()->toArray();
                 if ($cedulas !== []) {
                     \App\Models\User::whereIn('usu_cedula', $cedulas)->get()
-                        ->each(fn ($u) => $creadorNombres[trim((string) $u->usu_cedula)] = trim($u->usu_nombre));
+                        ->each(fn ($u) => $creadorNombres[trim((string) $u->usu_cedula)] = trim((string) $u->usu_cedula));
 
                     $cedulasFaltantes = array_diff($cedulas, $creadorNombres->keys()->toArray());
                     if ($cedulasFaltantes !== []) {
@@ -132,7 +132,7 @@ class GrupoProyectoController extends Controller
                             ->whereIn('per_cedula', $cedulasFaltantes)
                             ->select(['per_cedula', 'per_nombres', 'per_apellidos'])
                             ->get()
-                            ->each(fn ($p) => $creadorNombres[trim((string) $p->per_cedula)] = trim(($p->per_nombres ?? '') . ' ' . ($p->per_apellidos ?? '')));
+                            ->each(fn ($p) => $creadorNombres[trim((string) $p->per_cedula)] = trim((string) $p->per_cedula));
                     }
                 }
             } catch (\Throwable $e) {
