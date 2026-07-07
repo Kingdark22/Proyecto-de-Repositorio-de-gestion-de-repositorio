@@ -93,7 +93,7 @@
                                 $comNombre = optional($catalogosForm['comunidades'] ?? collect())->firstWhere('id', $datosForm['comunidad_id'] ?? 0);
                             ?>
                             <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($comNombre): ?>
-                                <span style="background:#f9f2f2;border:1px solid #8b0000;padding:4px 10px;border-radius:4px;font-weight:bold;color:#8b0000;"><?php echo e($comNombre->nombre); ?></span>
+                                <span style="font-weight:bold;"><?php echo e($comNombre->nombre); ?></span>
                             <?php else: ?>
                                 <span style="color:#999;">(asignada automáticamente del grupo)</span>
                             <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
