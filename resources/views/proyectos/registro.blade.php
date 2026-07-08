@@ -395,9 +395,25 @@
                             </td>
                             <td width="45%">
                                 @if(!$esProfesor)
-                                    {{-- File upload para no-profesores (estudiante) --}}
-                                    <input type="file" name="documentos[{{ $comp->id }}]" accept="{{ $acceptStr }}" style="width:100%;font-size:11px;">
-                                    @error('documentos.' . $comp->id)<br><span class="validation-error">{{ $message }}</span>@enderror
+                                    @php $estDoc = $docActual['estado'] ?? 0; @endphp
+                                    @if($docActual && $estDoc == 1)
+                                        <div style="font-size:11px;">
+                                            <span style="color: #28a745; font-weight: bold;">✓ Aceptado</span>
+                                        </div>
+                                    @else
+                                        @if($docActual && $estDoc == 2)
+                                            <div style="font-size:10px;color:#dc3545;margin-bottom:4px;">
+                                                <b>✗ Rechazado</b>
+                                                @if(!empty($docActual['observacion']))
+                                                    <br><span style="color:#666;"><i>Motivo:</i> {{ $docActual['observacion'] }}</span>
+                                                @endif
+                                            </div>
+                                        @elseif($docActual)
+                                            <div style="font-size:10px;color:#666;margin-bottom:4px;">Pendiente de revisión</div>
+                                        @endif
+                                        <input type="file" name="documentos[{{ $comp->id }}]" accept="{{ $acceptStr }}" style="width:100%;font-size:11px;">
+                                        @error('documentos.' . $comp->id)<br><span class="validation-error">{{ $message }}</span>@enderror
+                                    @endif
                                 @else
                                     {{-- Para profesor: mostrar mensaje según si hay documento o no --}}
                                     @if($docActual)

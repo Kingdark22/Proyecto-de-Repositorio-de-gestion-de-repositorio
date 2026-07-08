@@ -99,9 +99,8 @@ class ProyectoController extends Controller
         $proyectosLiderIds = $this->gestion->proyectosDondeEsMiembro($user);
 
         $proyectosConDocumentosRechazados = \App\Models\ProyectoDocumento::where('pd_estado', 2)
+            ->distinct()
             ->pluck('pry_codigo')
-            ->unique()
-            ->values()
             ->toArray();
 
         return view('proyectos.index', compact(
@@ -318,6 +317,17 @@ class ProyectoController extends Controller
             }
 
             $proyecto->update($updateData);
+
+            $proyecto = $proyecto->fresh();
+            if ($this->gestion->verificarSiProyectoEstaCompletado($proyecto)) {
+                if ($proyecto->estado_validacion === 'pendiente') {
+                    $proyecto->update(['estado_validacion' => 'completado']);
+                }
+            } else {
+                if ($proyecto->estado_validacion === 'completado') {
+                    $proyecto->update(['estado_validacion' => 'pendiente']);
+                }
+            }
 
             try {
                 // Buscar el profesor real que creó el grupo (no el creador del proyecto)

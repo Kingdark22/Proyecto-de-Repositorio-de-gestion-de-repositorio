@@ -114,7 +114,7 @@ class ProyectoRepository
      */
     public function paginate(array $filtros, int $page): LengthAwarePaginator
     {
-        return Proyecto::with($this->relaciones)
+        $paginator = Proyecto::with($this->relaciones)
             ->whereNotNull('pry_direccion_logica')
             ->where('pry_direccion_logica', '!=', '')
             ->when(($filtros['search'] ?? '') !== '', function ($q) use ($filtros) {
@@ -131,6 +131,11 @@ class ProyectoRepository
             ->when(($filtros['equipo_ref'] ?? null) !== null, fn($q) => $q->whereIn('pry_direccion_logica', $filtros['equipo_ref']))
             ->latest()
             ->paginate(10, page: $page);
+
+        // Pre-cargar títulos de grupos en UNA sola consulta (evita N+1)
+        Proyecto::precargarTitulos($paginator->items());
+
+        return $paginator;
     }
 
     /**

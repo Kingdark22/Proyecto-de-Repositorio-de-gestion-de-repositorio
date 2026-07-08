@@ -7,6 +7,7 @@ use App\Models\Proyecto;
 use App\Models\User;
 use App\Repositories\GrupoProyectoRepository;
 use App\Repositories\ProyectoRepository;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 
@@ -373,7 +374,25 @@ class NotificacionService
 
     public function contarPendientes(?User $user): int
     {
-        return count($this->listar($user));
+        if (!$user) {
+            return 0;
+        }
+
+        $cacheKey = 'notif_count_' . trim((string) $user->usu_cedula) . '_' . session('active_role', 'none');
+
+        return (int) Cache::remember($cacheKey, now()->addMinutes(5), function () use ($user) {
+            return count($this->listar($user));
+        });
+    }
+
+    /**
+     * Invalida el cache del conteo de notificaciones para un usuario.
+     * Llamar cuando cambia el estado de un proyecto o documento.
+     */
+    public function invalidarCache(User $user): void
+    {
+        $cacheKey = 'notif_count_' . trim((string) $user->usu_cedula) . '_' . session('active_role', 'none');
+        Cache::forget($cacheKey);
     }
 
     /**
