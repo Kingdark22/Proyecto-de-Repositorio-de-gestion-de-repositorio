@@ -67,7 +67,7 @@ class GrupoProyectoRepository
         $version = Cache::get('grp_cache_version') ?? 1;
         $cacheKey = 'grp_listar_' . $version . '_' . md5(json_encode($filtros));
 
-        return Cache::remember($cacheKey, now()->addMinutes(2), function () use ($filtros) {
+        return Cache::remember($cacheKey, now()->addMinutes(60), function () use ($filtros) {
             $query = GrupoProyectoModulo::query()
                 ->select(['grp_codigo', 'grp_nombre', 'grp_identificador', 'grp_contexto', 'grp_com_codigo', 'grp_creador_cedula', 'grp_miembros']);
 

@@ -131,8 +131,9 @@ class ProjectSearch extends Component
         $this->resetPage();
     }
 
-    public function openDetails(int $id, ProyectoBusquedaService $busqueda): void
+    public function openDetails(int $id): void
     {
+        $busqueda = app(ProyectoBusquedaService::class);
         $this->selectedProject = $busqueda->proyectoDetalle($id);
         $this->isDetailsModalOpen = $this->selectedProject !== null;
         $this->safeRefreshIcons();

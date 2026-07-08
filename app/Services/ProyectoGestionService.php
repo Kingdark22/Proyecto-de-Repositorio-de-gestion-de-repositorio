@@ -545,33 +545,39 @@ class ProyectoGestionService
         if ($user === null) {
             return false;
         }
+
+        $cacheKey = 'miembro_' . $user->getKey() . '_' . $proyecto->id;
+        if (array_key_exists($cacheKey, static::$roleCache)) {
+            return static::$roleCache[$cacheKey] ?? false;
+        }
+
         $cedula = trim((string) $user->usu_cedula);
         $clave = $proyecto->equipo_ref ?? '';
 
         if ($clave === '') {
-            return false;
+            return static::$roleCache[$cacheKey] = false;
         }
 
         $gruposSvc = app(GrupoProyectoService::class);
         $partes = $gruposSvc->parsearClave($clave);
         if (!$partes || ($partes['tipo'] ?? '') !== GrupoProyectoService::PREFIJO) {
-            return false;
+            return static::$roleCache[$cacheKey] = false;
         }
 
         $grupo = $this->grupoRepo->find($partes['grp_codigo'] ?? 0);
         if (!$grupo) {
-            return false;
+            return static::$roleCache[$cacheKey] = false;
         }
 
         $miembros = $grupo->grp_miembros ?? [];
         foreach ($miembros as $m) {
             $mCedula = trim((string) ($m['cedula'] ?? ''));
             if ($mCedula === $cedula) {
-                return true;
+                return static::$roleCache[$cacheKey] = true;
             }
         }
 
-        return false;
+        return static::$roleCache[$cacheKey] = false;
     }
 
     public function reglasValidacion(array $estado, User $user, bool $esEdicion = false): array

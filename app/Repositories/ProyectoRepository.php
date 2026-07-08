@@ -37,7 +37,9 @@ class ProyectoRepository
      */
     public function findWhereIn(string $column, array $ids): Collection
     {
-        return Proyecto::whereIn($column, $ids)->get();
+        $result = Proyecto::with(['comunidad'])->whereIn($column, $ids)->get();
+        Proyecto::precargarTitulos($result);
+        return $result;
     }
 
     /**
@@ -49,9 +51,12 @@ class ProyectoRepository
             return collect();
         }
 
-        return Proyecto::with($this->relaciones)
+        $result = Proyecto::with($this->relaciones)
             ->whereIn('pry_direccion_logica', $claves)
             ->get();
+
+        Proyecto::precargarTitulos($result);
+        return $result;
     }
 
     public function findFirstByEquipoRef(string $clave): ?Proyecto
