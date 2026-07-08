@@ -204,23 +204,24 @@ class ComponenteController extends Controller
         $componentes = Componente::query()->where('estado_logico', true)->orderBy('nombre')->get();
 
         $programas = $catalogoRepo->programasDisponibles();
-        $trayectos = $catalogoRepo->trayectosPorPrograma(0);
 
         // Cargar asignaciones existentes de todos los componentes
         $compIds = $componentes->pluck('id')->toArray();
         $asignaciones = ComponentePrograma::whereIn('comp_codigo', $compIds)->get();
 
-        $trayectosDisponibles = $trayectos->toArray();
         $pnfRows = [];
 
         foreach ($programas as $prog) {
             $proCodigo = (int) $prog->pro_codigo;
             $trayectosData = [];
 
+            // Obtener los trayectos específicos de este PNF usando la lógica de malla del sistema
+            $pnfTrayectos = $catalogoRepo->trayectosPorPrograma($proCodigo);
+
             // Verificar si algún componente tiene este PNF asignado
             $asigsEstePnf = $asignaciones->where('pro_codigo', $proCodigo);
 
-            foreach ($trayectos as $tra) {
+            foreach ($pnfTrayectos as $tra) {
                 $traCodigo = (string) $tra->tra_codigo;
                 $asig = $asigsEstePnf->firstWhere('tra_codigo', $traCodigo);
                 $trayectosData[$traCodigo] = [
@@ -240,7 +241,6 @@ class ComponenteController extends Controller
         return view('componentes.vinculacion_global', compact(
             'componentes',
             'pnfRows',
-            'trayectosDisponibles',
             'asignaciones'
         ));
     }
