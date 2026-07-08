@@ -40,6 +40,26 @@
             font-weight: bold;
             letter-spacing: 4px;
         }
+
+        /* ─── Secciones por título de vinculación ─── */
+        .titulo-section {
+            page-break-before: always;
+        }
+        .titulo-section:first-of-type {
+            page-break-before: avoid;
+        }
+        .titulo-header {
+            background: #8b0000;
+            color: #fff;
+            padding: 10px 14px;
+            font-size: 13pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            letter-spacing: 1px;
+        }
+
         .card {
             border: 1px solid #999;
             border-radius: 4px;
@@ -89,13 +109,26 @@
             color: #000;
             margin-right: 3px;
         }
+
+        /* ─── Comunidad destacada (PRIMERO) ─── */
         .comunidad-block {
-            background: #f5f5f5;
-            border-left: 3px solid #000;
-            padding: 6px 10px;
-            margin-top: 6px;
-            font-size: 8.5pt;
+            background: #fff3e0;
+            border-left: 4px solid #8b0000;
+            padding: 8px 12px;
+            margin-top: 8px;
+            margin-bottom: 10px;
+            font-size: 9pt;
         }
+        .comunidad-block strong {
+            color: #8b0000;
+            font-size: 9.5pt;
+        }
+        .comunidad-block .com-detalle {
+            font-size: 8pt;
+            color: #555;
+            margin-top: 2px;
+        }
+
         .resumen-text {
             font-size: 8.5pt;
             color: #222;
@@ -108,6 +141,36 @@
             color: #999;
             margin-top: 60px;
             font-style: italic;
+        }
+
+        /* ─── Tabla de integrantes ─── */
+        .integrantes-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8pt;
+            margin-top: 6px;
+        }
+        .integrantes-table th {
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            padding: 4px 6px;
+            font-weight: bold;
+        }
+        .integrantes-table td {
+            border: 1px solid #ddd;
+            padding: 3px 6px;
+        }
+        .integrantes-table tr:nth-child(even) td {
+            background: #fafafa;
+        }
+
+        .section-footer {
+            text-align: right;
+            font-size: 7.5pt;
+            color: #888;
+            margin-top: 4px;
+            padding-top: 4px;
+            border-top: 1px dotted #ccc;
         }
     </style>
 </head>
@@ -123,109 +186,130 @@
         <div class="sub">Programa Nacional de Formación en Informática</div>
     </div>
 
-    <h1>Reporte de los Proyectos seleccionados</h1>
+    <h1>Reporte de los Proyectos Vinculados</h1>
     <h2>{{ $titulo }}</h2>
     <div class="fecha">Generado: {{ $fecha }}</div>
 
     @if($vinculaciones->isEmpty())
         <p class="empty-state">No se encontraron proyectos vinculados.</p>
     @else
-        @foreach($vinculaciones as $idx => $v)
-            @php $p = $v->proyecto; @endphp
-            <div class="card">
-                <div class="card-header">
-                    {{ $idx + 1 }}. {{ $p?->titulo ?? 'N/A' }}
+        {{-- Iterar por grupo de título de vinculación --}}
+        @foreach($gruposPorTitulo as $nombreTitulo => $vinculacionesDelGrupo)
+            <div class="titulo-section">
+                <div class="titulo-header">
+                    {{ $loop->iteration }}. {{ $nombreTitulo }}
                 </div>
 
-                <table class="two-col">
-                    <tr>
-                        <td>
-                            @if($p && $p->resumen)
+                @foreach($vinculacionesDelGrupo as $v)
+                    @php $p = $v->proyecto; @endphp
+                    <div class="card">
+                        <div class="card-header">
+                            {{ $loop->parent->iteration }}.{{ $loop->iteration }} {{ $p?->titulo ?? 'N/A' }}
+                        </div>
+
+                        {{-- COMUNIDAD — PRIMERO y destacado --}}
+                        @if($v->comunidad)
+                            <div class="comunidad-block">
+                                <strong>Comunidad vinculada:</strong> {{ $v->comunidad->nombre }}
+                                @if($v->comunidad->rif)
+                                    <div class="com-detalle">RIF: {{ $v->comunidad->rif }}</div>
+                                @endif
+                                @if($v->comunidad->correo)
+                                    <div class="com-detalle">Correo: {{ $v->comunidad->correo }}</div>
+                                @endif
+                                @if($v->comunidad->numero_telefono)
+                                    <div class="com-detalle">Teléfono: {{ $v->comunidad->numero_telefono }}</div>
+                                @endif
+                                @if($v->comunidad->direccion)
+                                    @php
+                                        $dirCom = $v->comunidad->direccion;
+                                        $dirTexto = trim($dirCom->dir_calle ?? '');
+                                        if ($dirCom->municipio) {
+                                            $dirTexto .= ($dirTexto ? ', ' : '') . $dirCom->municipio->mun_nombre;
+                                            if ($dirCom->municipio->estado) {
+                                                $dirTexto .= ', ' . $dirCom->municipio->estado->est_nombre;
+                                            }
+                                        }
+                                    @endphp
+                                    @if($dirTexto)
+                                        <div class="com-detalle">Dirección: {{ $dirTexto }}</div>
+                                    @endif
+                                @endif
+                            </div>
+                        @else
+                            <div style="background:#f5f5f5;border-left:4px solid #999;padding:6px 10px;margin-top:8px;margin-bottom:10px;font-size:8pt;color:#888;">
+                                Sin comunidad asignada
+                            </div>
+                        @endif
+
+                        {{-- Datos del proyecto (resumen, equipo, lapso) --}}
+                        @if($p)
+                            @if($p->resumen)
                                 <div class="field-label">Resumen</div>
                                 <div class="resumen-text">{{ Str::limit(strip_tags($p->resumen), 300) }}</div>
                             @endif
-
-                            <div class="field-label">Título de la vinculación</div>
-                            <div class="field-value">{{ $v->titulo }}</div>
 
                             @if(isset($v->lapso) && $v->lapso && isset($lapsosNombres[$v->lapso]))
                                 <div class="field-label">Lapso académico</div>
                                 <div class="field-value">{{ $lapsosNombres[$v->lapso] }}</div>
                             @endif
-                        </td>
-                        <td>
-                            @if($p)
-                                @if($p->equipo_ref)
-                                    <div class="field-label">Equipo / Grupo</div>
-                                    <div class="field-value">{{ $p->equipo_resumen }}</div>
+
+                            @if($p->equipo_ref)
+                                <div class="field-label">Equipo / Grupo</div>
+                                <div class="field-value">{{ $p->equipo_resumen }}</div>
+                            @endif
+                        @endif
+
+                        {{-- INTEGRANTES del equipo --}}
+                        @if(isset($v->integrantes) && $v->integrantes->isNotEmpty())
+                            <div class="field-label" style="margin-top:10px;">Integrantes del equipo</div>
+                            <table class="integrantes-table">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align:center;width:20px;">N°</th>
+                                        <th style="text-align:left;">Apellidos y Nombres</th>
+                                        <th style="text-align:center;width:90px;">Cédula</th>
+                                        <th style="text-align:center;width:70px;">Rol</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($v->integrantes as $i => $integrante)
+                                        @php
+                                            $fullName = trim(($integrante->apellido ?? '') . ', ' . ($integrante->nombre ?? ''));
+                                            if (trim($fullName) === ', ') $fullName = trim(($integrante->nombre ?? '') . ' ' . ($integrante->apellido ?? ''));
+                                            $rol = ($integrante->rol ?? '') === 'Líder' ? 'Líder' : 'Integrante';
+                                        @endphp
+                                        <tr>
+                                            <td style="text-align:center;">{{ $loop->iteration }}</td>
+                                            <td>{{ $fullName }}</td>
+                                            <td style="text-align:center;">{{ $integrante->cedula }}</td>
+                                            <td style="text-align:center;font-weight:{{ $rol === 'Líder' ? 'bold' : 'normal' }};color:{{ $rol === 'Líder' ? '#000' : '#555' }};">{{ $rol }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        @endif
+
+                        {{-- Proyecto info adicional --}}
+                        @if($p)
+                            <div style="margin-top:6px;padding-top:6px;border-top:1px dotted #ddd;font-size:7.5pt;color:#888;">
+                                @if($p->linea_investigacion)
+                                    <span>Línea: {{ $p->linea_investigacion->nombre_investigacion ?? '' }}</span>
+                                @endif
+                                @if($p->tipo_publicacion)
+                                    &nbsp;|&nbsp; <span>Publicación: {{ $p->tipo_publicacion->nombre ?? '' }}</span>
                                 @endif
                                 @if($p->creador_cedula)
-                                    <div class="field-label">Creador (Cédula)</div>
-                                    <div class="field-value">{{ $p->creador_cedula }}</div>
+                                    &nbsp;|&nbsp; <span>Creador cédula: {{ $p->creador_cedula }}</span>
                                 @endif
-                            @endif
-                        </td>
-                    </tr>
-                </table>
-
-                @if($p)
-                    <div class="field-label" style="margin-top:8px;">Clasificación</div>
-                    <div>
-                        @if($p->linea_investigacion)
-                            <span class="tag">{{ $p->linea_investigacion->nombre ?? $p->linea_investigacion->lin_nombre_investigacion }}</span>
-                        @endif
-                        @if($p->tipo_investigacion)
-                            <span class="tag">{{ $p->tipo_investigacion->tin_nombre ?? '' }}</span>
-                        @endif
-                        @if($p->metodologia)
-                            <span class="tag">{{ $p->metodologia->mei_nombre ?? '' }}</span>
-                        @endif
-                        @if($p->tipo_publicacion)
-                            <span class="tag">{{ $p->tipo_publicacion->tpu_nombre ?? '' }}</span>
-                        @endif
-                        @if(!$p->linea_investigacion && !$p->tipo_investigacion && !$p->metodologia && !$p->tipo_publicacion)
-                            <span style="color:#999;">Sin clasificación</span>
+                            </div>
                         @endif
                     </div>
-                @endif
+                @endforeach
 
-                @if(isset($v->integrantes) && $v->integrantes->isNotEmpty())
-                    <div class="field-label" style="margin-top:8px;">Integrantes del equipo</div>
-                    <table style="width:100%;border-collapse:collapse;font-size:8pt;margin-top:4px;">
-                        <thead>
-                            <tr style="background:#f0f0f0;">
-                                <th style="border:1px solid #ccc;padding:4px 6px;text-align:center;width:20px;font-weight:bold;">N°</th>
-                                <th style="border:1px solid #ccc;padding:4px 6px;text-align:left;font-weight:bold;">Apellidos y Nombres</th>
-                                <th style="border:1px solid #ccc;padding:4px 6px;text-align:center;font-weight:bold;width:90px;">Cédula</th>
-                                <th style="border:1px solid #ccc;padding:4px 6px;text-align:center;font-weight:bold;width:70px;">Rol</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($v->integrantes as $i => $integrante)
-                                @php
-                                    $fullName = trim(($integrante->apellido ?? '') . ', ' . ($integrante->nombre ?? ''));
-                                    if (trim($fullName) === ', ') $fullName = trim(($integrante->nombre ?? '') . ' ' . ($integrante->apellido ?? ''));
-                                    $rol = ($integrante->rol ?? '') === 'Líder' ? 'Líder' : 'Integrante';
-                                @endphp
-                                <tr style="background:{{ $loop->iteration % 2 == 0 ? '#fafafa' : '#fff' }};">
-                                    <td style="border:1px solid #ddd;padding:3px 6px;text-align:center;">{{ $loop->iteration }}</td>
-                                    <td style="border:1px solid #ddd;padding:3px 6px;">{{ $fullName }}</td>
-                                    <td style="border:1px solid #ddd;padding:3px 6px;text-align:center;">{{ $integrante->cedula }}</td>
-                                    <td style="border:1px solid #ddd;padding:3px 6px;text-align:center;font-weight:{{ $rol === 'Líder' ? 'bold' : 'normal' }};color:{{ $rol === 'Líder' ? '#000' : '#555' }};">{{ $rol }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                @endif
-
-                @if($v->comunidad)
-                    <div class="comunidad-block">
-                        <strong>Comunidad:</strong> {{ $v->comunidad->nombre }}
-                        @if($v->comunidad->rif)
-                            <br><span style="font-size:7.5pt;color:#555;">RIF: {{ $v->comunidad->rif }}</span>
-                        @endif
-                    </div>
-                @endif
+                <div class="section-footer">
+                    {{ $vinculacionesDelGrupo->count() }} proyecto(s) vinculado(s) bajo este título
+                </div>
             </div>
         @endforeach
     @endif

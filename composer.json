@@ -9,14 +9,12 @@
         "php": "^8.2",
         "barryvdh/laravel-dompdf": "^3.0",
         "doctrine/dbal": "^4.4",
-        "fpdf/fpdf": "*",
+        "fpdf/fpdf": "^1.86",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
         "livewire/livewire": "^4.1",
         "phpoffice/phpspreadsheet": "^5.0",
-        "fpdf/fpdf": "^1.86",
-        "setasign/fpdi": "^2.6",
-        "setasign/fpdi": "*"
+        "setasign/fpdi": "^2.6"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -29,14 +27,14 @@
     },
     "autoload": {
         "psr-4": {
-            "App\\": "app/",
-            "Database\\Factories\\": "database/factories/",
-            "Database\\Seeders\\": "database/seeders/"
+            "App\\\\": "app/",
+            "Database\\\\Factories\\\\": "database/factories/",
+            "Database\\\\Seeders\\\\": "database/seeders/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Tests\\": "tests/"
+            "Tests\\\\": "tests/"
         }
     },
     "scripts": {
@@ -49,7 +47,7 @@
             "npm run build"
         ],
         "dev": [
-            "Composer\\Config::disableProcessTimeout",
+            "Composer\\\\Config::disableProcessTimeout",
             "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=0\" \"npm run dev\" --names=server,queue,vite --kill-others"
         ],
         "test": [
@@ -57,7 +55,7 @@
             "@php artisan test"
         ],
         "post-autoload-dump": [
-            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+            "Illuminate\\\\Foundation\\\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
         ],
         "post-update-cmd": [
@@ -72,7 +70,7 @@
             "@php artisan migrate --graceful --ansi"
         ],
         "pre-package-uninstall": [
-            "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
+            "Illuminate\\\\Foundation\\\\ComposerScripts::prePackageUninstall"
         ]
     },
     "extra": {
@@ -82,7 +80,7 @@
     },
     "config": {
         "optimize-autoloader": true,
-        "preferred-install": "source",
+        "preferred-install": "dist",
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,

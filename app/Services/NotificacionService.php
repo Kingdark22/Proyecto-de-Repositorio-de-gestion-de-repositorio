@@ -65,8 +65,8 @@ class NotificacionService
             foreach ($proyectosActualizados as $p) {
                 $notificaciones[] = [
                     'type' => 'info',
-                    'title' => 'Actualizado por el líder',
-                    'mensaje' => $p->titulo,
+                    'title' => 'Componentes subidos',
+                    'mensaje' => 'Los estudiantes subieron documentos en: ' . $p->titulo . '. Revise y apruebe los componentes.',
                     'url' => route('proyectos.gestion.edit', $p->id),
                     'proyecto_id' => $p->id,
                 ];
@@ -103,8 +103,35 @@ class NotificacionService
                 \Illuminate\Support\Facades\Log::warning('Error notificando equipo de proyecto: ' . $e->getMessage());
             }
 
-            // 1. Proyectos nuevos que necesitan subir documentos
+            // 1. Proyectos nuevos — notificación de proyecto creado desde grupo + subir documentos
             $proyectosNuevos = $this->proyectoRepo->pendientesEstudiante();
+
+            foreach ($proyectosNuevos as $p) {
+                if ($this->esMiembroDelProyecto($p, $cedula, $gruposSvc, [])) {
+                    $notificaciones[] = [
+                        'type' => 'info',
+                        'title' => 'Nuevo proyecto',
+                        'mensaje' => 'Se ha creado un proyecto para tu equipo: ' . $p->titulo . '. Ingresa para completar los datos.',
+                        'url' => route('proyectos.gestion.edit', $p->id),
+                        'proyecto_id' => $p->id,
+                    ];
+                }
+            }
+
+            // 1.5 Proyectos completados — todos los documentos aceptados, pendiente de aprobación final
+            $proyectosCompletados = Proyecto::where('estado_validacion', 'completado')->where('estado_logico', true)->get();
+            $gruposCacheComp = $this->precargarGruposProyecto($proyectosCompletados, $gruposSvc);
+            foreach ($proyectosCompletados as $p) {
+                if ($this->esMiembroDelProyecto($p, $cedula, $gruposSvc, $gruposCacheComp)) {
+                    $notificaciones[] = [
+                        'type' => 'info',
+                        'title' => 'Proyecto completado',
+                        'mensaje' => 'Tu proyecto "' . $p->titulo . '" ha sido completado. Todos los documentos fueron aceptados por el profesor. Espera la aprobación final.',
+                        'url' => route('proyectos.gestion.edit', $p->id),
+                        'proyecto_id' => $p->id,
+                    ];
+                }
+            }
 
             // 2. Proyectos rechazados que necesitan correcciones
             $proyectosRechazados = $this->proyectoRepo->rechazados();
@@ -157,11 +184,20 @@ class NotificacionService
                 }
             }
 
-            // 3. Proyectos aprobados con solvencia disponible
+            // 3. Proyectos aprobados — notificación de repositorio + solvencia
             $proyectosAprobados = Proyecto::where('estado_validacion', 'aprobado')->where('estado_logico', true)->get();
             $gruposCacheAprob = $this->precargarGruposProyecto($proyectosAprobados, $gruposSvc);
             foreach ($proyectosAprobados as $p) {
                 if ($this->esMiembroDelProyecto($p, $cedula, $gruposSvc, $gruposCacheAprob)) {
+                    // Notificación: subido al repositorio
+                    $notificaciones[] = [
+                        'type' => 'success',
+                        'title' => 'Repositorio',
+                        'mensaje' => 'Tu proyecto "' . $p->titulo . '" ha sido subido al repositorio institucional exitosamente.',
+                        'url' => route('proyectos.buscar'),
+                        'proyecto_id' => $p->id,
+                    ];
+                    // Notificación: solvencia disponible
                     $notificaciones[] = [
                         'type' => 'success',
                         'title' => 'Solvencia disponible',
@@ -179,12 +215,21 @@ class NotificacionService
     public function correoProfesor(string $cedulaProfesor, string $subject, string $message, ?string $url = null, ?string $urlText = null): void
     {
         try {
-            $email = \App\Helpers\DualDatabase::table('persona')
-                ->whereRaw('TRIM(per_cedula) = ?', [trim($cedulaProfesor)])
-                ->value('per_email');
+            $cedula = trim($cedulaProfesor);
+            $email = null;
+
+            try {
+                $email = \App\Helpers\DualDatabase::table('persona')
+                    ->whereRaw('TRIM(per_cedula) = ?', [$cedula])
+                    ->value('per_email');
+            } catch (\Throwable) {
+                // Intranet/simulación no disponible
+            }
 
             if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 Mail::to($email)->send(new \App\Mail\NotificacionProyecto($subject, $message, $url, $urlText));
+            } else {
+                Log::info("No se pudo enviar correo a profesor {$cedula}: email no encontrado en persona. Verifique que el docente tenga per_email en intranet.");
             }
         } catch (\Throwable $e) {
             Log::warning("Error enviando correo a profesor {$cedulaProfesor}: " . $e->getMessage());
@@ -211,11 +256,25 @@ class NotificacionService
         $url = route('proyectos.gestion.edit', $proyecto->id);
         $this->correoProfesor(
             $cedulaProfesor,
-            'Estudiante actualizó el proyecto',
-            "El proyecto \"{$proyecto->titulo}\" ha sido actualizado por un integrante del equipo. Ingrese al sistema para revisar los cambios.",
+            'Estudiante subió componentes del proyecto',
+            "Un integrante del equipo ha subido documentos al proyecto \"{$proyecto->titulo}\". Ingrese al sistema para revisar y aprobar/rechazar los componentes.",
             $url,
-            'Revisar proyecto'
+            'Revisar componentes'
         );
+    }
+
+    public function notificarDocumentoAceptado(Proyecto $proyecto, string $componenteNombre, array $cedulasEstudiantes): void
+    {
+        $url = route('proyectos.gestion', ['edit' => $proyecto->id]);
+        foreach ($cedulasEstudiantes as $cedula) {
+            $this->correoEstudiante(
+                $cedula,
+                'Documento aceptado',
+                "El documento \"{$componenteNombre}\" del proyecto \"{$proyecto->titulo}\" ha sido aceptado por el profesor. Continúe con los siguientes pasos.",
+                $url,
+                'Ver proyecto'
+            );
+        }
     }
 
     public function notificarDocumentoRechazado(Proyecto $proyecto, string $componenteNombre, string $observacion, array $cedulasEstudiantes): void
@@ -232,15 +291,53 @@ class NotificacionService
         }
     }
 
-    public function notificarProyectoAprobado(Proyecto $proyecto, array $cedulasEstudiantes): void
+    public function notificarProyectoRechazado(Proyecto $proyecto, string $motivo, array $cedulasEstudiantes): void
     {
-        $url = route('proyectos.gestion.solvencia', $proyecto->id);
+        $url = route('proyectos.gestion', ['edit' => $proyecto->id]);
         foreach ($cedulasEstudiantes as $cedula) {
             $this->correoEstudiante(
                 $cedula,
-                'Proyecto aprobado',
-                "El proyecto \"{$proyecto->titulo}\" ha sido aprobado. Ya puede descargar su solvencia.",
+                'Proyecto rechazado — requiere correcciones',
+                "El proyecto \"{$proyecto->titulo}\" ha sido rechazado.\n\nMotivo: {$motivo}\n\nIngrese al sistema para corregir y volver a enviar los documentos requeridos.",
                 $url,
+                'Ver proyecto'
+            );
+        }
+    }
+
+    public function notificarProyectoCompletado(Proyecto $proyecto, array $cedulasEstudiantes): void
+    {
+        $url = route('proyectos.gestion.edit', $proyecto->id);
+        foreach ($cedulasEstudiantes as $cedula) {
+            $this->correoEstudiante(
+                $cedula,
+                'Proyecto completado — pendiente de aprobación',
+                "El proyecto \"{$proyecto->titulo}\" ha sido completado. Todos los documentos han sido aceptados por el profesor.\n\nAhora queda pendiente de la aprobación final. Puede consultar el estado en el sistema.",
+                $url,
+                'Ver proyecto'
+            );
+        }
+    }
+
+    public function notificarProyectoAprobado(Proyecto $proyecto, array $cedulasEstudiantes): void
+    {
+        $urlRepo = route('proyectos.buscar');
+        $urlSolvencia = route('proyectos.gestion.solvencia', $proyecto->id);
+        foreach ($cedulasEstudiantes as $cedula) {
+            // Correo: subido al repositorio
+            $this->correoEstudiante(
+                $cedula,
+                'Proyecto subido al Repositorio Institucional',
+                "El proyecto \"{$proyecto->titulo}\" ha sido subido con éxito al Repositorio Institucional de la UPTP Juan de Jesús Montilla.\n\nYa puede consultarlo en el repositorio público y descargar su solvencia.",
+                $urlRepo,
+                'Ver en el repositorio'
+            );
+            // Correo: solvencia disponible
+            $this->correoEstudiante(
+                $cedula,
+                'Solvencia disponible',
+                "El proyecto \"{$proyecto->titulo}\" ha sido aprobado. Ya puede descargar su solvencia.",
+                $urlSolvencia,
                 'Descargar solvencia'
             );
         }
@@ -256,6 +353,20 @@ class NotificacionService
                 "Has sido agregado al equipo \"{$nombreGrupo}\". Ingrese al sistema para más información.",
                 $url,
                 'Ver equipo'
+            );
+        }
+    }
+
+    public function notificarNuevoProyectoDesdeGrupo(Proyecto $proyecto, string $nombreGrupo, array $cedulasEstudiantes): void
+    {
+        $url = route('proyectos.gestion.edit', $proyecto->id);
+        foreach ($cedulasEstudiantes as $cedula) {
+            $this->correoEstudiante(
+                $cedula,
+                'Nuevo proyecto creado para tu equipo',
+                "Se ha creado un nuevo proyecto para el equipo \"{$nombreGrupo}\".\n\nIngrese al sistema para completar los datos y subir los documentos requeridos.",
+                $url,
+                'Completar proyecto'
             );
         }
     }

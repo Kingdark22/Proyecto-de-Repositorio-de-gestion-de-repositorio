@@ -14,8 +14,8 @@ Route::get('/', function () {
     return Auth::check() ? redirect()->route('dashboard') : redirect()->route('login');
 });
 
-Route::view('/repositorio', 'repositorio')->name('repositorio');
-Route::view('/publicaciones/publico', 'repositorio')->name('publicaciones.publico');
+Route::redirect('/repositorio', '/proyectos/buscar')->name('repositorio')->middleware(['auth', 'active.role']);
+Route::redirect('/publicaciones/publico', '/proyectos/buscar')->name('publicaciones.publico')->middleware(['auth', 'active.role']);
 
 Route::get('/magic-login', [MagicLoginController::class, 'login'])->name('magic-login');
 Route::middleware('auth')->group(function () {
@@ -225,6 +225,12 @@ Route::middleware(['auth', 'active.role'])->group(function () {
 Route::get('/documentos/ver/{id}', [\App\Http\Controllers\DocumentoController::class, 'view'])
     ->middleware(['auth', 'active.role'])->name('documentos.view');
 
+Route::get('/documentos/serve/{path}', function (string $path) {
+    if (!\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+        abort(404);
+    }
+    return \Illuminate\Support\Facades\Storage::disk('public')->response($path);
+})->middleware(['auth', 'active.role'])->where('path', '.*')->name('documentos.serve');
 
 
 Route::get('/session/keepalive', function () {

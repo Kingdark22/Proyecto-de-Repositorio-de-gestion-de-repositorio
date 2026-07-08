@@ -27,6 +27,7 @@
         .paso-line.done { background: #198754; }
         .uppercase { text-transform: uppercase; }
         .contenido-uppercase td, .contenido-uppercase th, .contenido-uppercase div, .contenido-uppercase span { text-transform: uppercase; }
+        .wizard-titulo { text-transform: uppercase; }
     </style>
 
 
@@ -117,7 +118,7 @@
                         Títulos cargados: {{ count($titulosDisponibles) }}
                     </div>
                     <div style="margin-bottom:12px;">
-                        <select wire:model="tituloSeleccionado" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:15px;box-sizing:border-box;">
+                        <select wire:model.live="tituloSeleccionado" wire:key="titulo-vinculacion-select" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:15px;box-sizing:border-box;">
                             <option value="">Seleccionar un título para la vinculación</option>
                             @forelse($titulosDisponibles as $tid => $ttitulo)
                                 <option value="{{ $tid }}">{{ $ttitulo }}</option>
@@ -129,7 +130,7 @@
                     </div>
                     @if($tituloSeleccionado === 'nuevo')
                         <div style="margin-bottom:12px;">
-                            <input type="text" wire:model="nuevoTitulo" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:15px;box-sizing:border-box;" placeholder="Escriba el nombre del nuevo título...">
+                            <input type="text" wire:model.live="nuevoTitulo" wire:key="nuevo-titulo-input" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:15px;box-sizing:border-box;" placeholder="Escriba el nombre del nuevo título...">
                         </div>
                     @endif
                 @endif
@@ -142,7 +143,7 @@
                     @if($tituloSeleccionado)
                         <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:13px;">
                             <span style="font-weight:bold;color:#e65100;">Título seleccionado:</span>
-                            <span style="color:#333;">
+                            <span style="color:#333;" class="wizard-titulo">
                                 @if($tituloSeleccionado === 'nuevo')
                                     {{ $nuevoTitulo }}
                                 @else
@@ -190,7 +191,7 @@
                         <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:13px;">
                             <div style="display:flex;align-items:center;gap:4px;">
                                 <span style="font-weight:bold;color:#e65100;">Título:</span>
-                                <span style="color:#333;">
+                                <span style="color:#333;" class="wizard-titulo">
                                     @if($tituloSeleccionado === 'nuevo')
                                         {{ $nuevoTitulo }}
                                     @else
@@ -308,7 +309,7 @@
                             <tr>
                                 <td style="font-weight:bold;color:#555;padding-right:20px;">Título:</td>
                                 <td>
-                                    <span style="font-weight:bold;color:#19692e;">
+                                    <span style="font-weight:bold;color:#19692e;" class="wizard-titulo">
                                         @if($tituloSeleccionado === 'nuevo')
                                             {{ $nuevoTitulo }}
                                         @else

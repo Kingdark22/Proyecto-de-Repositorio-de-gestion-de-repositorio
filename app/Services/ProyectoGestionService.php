@@ -116,6 +116,41 @@ class ProyectoGestionService
         $proyecto = $this->proyectoRepo->findOrFail($id);
         $this->autorizarValidacionProyecto($user, $proyecto);
 
+        // Verificar que todos los documentos estén aceptados antes de aprobar
+        $proyectoConDocs = $this->proyectoRepo->findWithDocuments($id);
+        $componentes = app(\App\Repositories\CatalogoRepository::class)->componentesPorProgramaYTrayecto(
+            $proyectoConDocs->linea_investigacion?->programa_id ?? null,
+            null
+        );
+        $docsPorComponente = $proyectoConDocs->documentos->keyBy('comp_codigo');
+
+        $hayPendientes = false;
+        $hayRechazados = false;
+        foreach ($componentes as $comp) {
+            $doc = $docsPorComponente->get($comp->id);
+            if (!$doc || (int) $doc->pd_estado === 0) {
+                $hayPendientes = true;
+                continue;
+            }
+            if ((int) $doc->pd_estado === 2) {
+                $hayRechazados = true;
+            }
+        }
+
+        if ($hayRechazados) {
+            throw new \RuntimeException(
+                'No se puede aprobar el proyecto porque hay componentes rechazados. ' .
+                'El estudiante debe corregirlos y el profesor debe aceptarlos primero.'
+            );
+        }
+
+        if ($hayPendientes) {
+            throw new \RuntimeException(
+                'No se puede aprobar el proyecto hasta que todos los componentes estén aceptados por el profesor. ' .
+                'Hay componentes pendientes de revisión.'
+            );
+        }
+
         $nuevoEstado = $proyecto->estado_validacion === 'pendiente' ? 'completado' : 'aprobado';
 
         $this->proyectoRepo->update($id, [
@@ -838,8 +873,8 @@ class ProyectoGestionService
             return false;
         }
 
-        return $this->usuarioEsAdminEnSistema($user)
-            || $user->hasRole('coordinador', 'profesor proyecto');
+        // Admin NO puede aprobar proyectos (solo coordina/profesor proyecto)
+        return $user->hasRole('coordinador', 'profesor proyecto');
     }
 
     public function usuarioPuedeValidarProyecto(?User $user, Proyecto $proyecto): bool
@@ -848,8 +883,9 @@ class ProyectoGestionService
             return false;
         }
 
+        // Admin NO puede aprobar proyectos (solo coordina/profesor proyecto)
         if ($this->usuarioEsAdminEnSistema($user)) {
-            return true;
+            return false;
         }
 
         $userRoleService = app(UserRoleService::class);

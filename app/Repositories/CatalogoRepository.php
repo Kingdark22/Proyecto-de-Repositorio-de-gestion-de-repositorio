@@ -49,6 +49,10 @@ class CatalogoRepository
         foreach ($keys as $key) {
             Cache::forget($key);
         }
+        // Limpiar caché de trayectos por programa (pro 1-20)
+        for ($pro = 0; $pro <= 20; $pro++) {
+            Cache::forget('cat_trayectos_programa_' . $pro);
+        }
     }
 
     public function lineasActivas(): Collection
@@ -148,15 +152,35 @@ class CatalogoRepository
     }
 
     /**
-     * Retorna los trayectos disponibles para vinculación (I, II, III, IV, V) excluyendo
-     * INICIAL y TRANSICIÓN, ordenados secuencialmente.
+     * Retorna los trayectos disponibles para un programa específico, consultando la malla
+     * activa (mal_estatus = 'A'). Solo incluye trayectos I-V (excluye INICIAL y TRANSICIÓN).
+     * Si $proCodigo es 0 o no hay malla, retorna todos los trayectos como fallback.
      */
     public function trayectosPorPrograma(int $proCodigo): Collection
     {
         $conn = DualDatabase::academicConnection();
-        $cacheKey = 'cat_trayectos_todos';
-        return Cache::remember($cacheKey, now()->addHours(24), function () use ($conn) {
+        $cacheKey = 'cat_trayectos_programa_' . $proCodigo;
+        return Cache::remember($cacheKey, now()->addHours(24), function () use ($conn, $proCodigo) {
             try {
+                if ($proCodigo > 0) {
+                    // Obtener trayectos que existen en la malla activa de este programa
+                    $trayectos = DB::connection($conn)
+                        ->table('malla')
+                        ->join('trayecto', 'tra_codigo', '=', 'mal_cod_trayecto')
+                        ->where('mal_cod_programa', $proCodigo)
+                        ->where('mal_estatus', 'A')
+                        ->whereNotIn('tra_nombre', ['INICIAL', 'TRANSICIÓN'])
+                        ->select('trayecto.tra_codigo', 'trayecto.tra_nombre')
+                        ->distinct()
+                        ->orderBy('trayecto.tra_codigo')
+                        ->get();
+
+                    if ($trayectos->isNotEmpty()) {
+                        return $trayectos;
+                    }
+                }
+
+                // Fallback: todos los trayectos disponibles
                 return DB::connection($conn)
                     ->table('trayecto')
                     ->whereNotIn('tra_nombre', ['INICIAL', 'TRANSICIÓN'])

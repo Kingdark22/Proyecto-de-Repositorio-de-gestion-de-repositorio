@@ -1,1 +1,0 @@
-<div style="text-align:center;padding:40px;color:#666;">Cargando listado de profesores...</div>

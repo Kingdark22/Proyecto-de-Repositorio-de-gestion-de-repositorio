@@ -119,9 +119,14 @@ class Componente extends RepositorioModel
                 'programa_id' => $programa_id,
                 'es_obligatorio' => $row['es_obligatorio'],
                 'estado_logico' => true,
+                'tipo_archivo' => $row['tipo_archivo'] ?? null,
+                'tamano_maximo_mb' => $row['tamano_maximo_mb'] ?? null,
             ]);
             // Sync pivot for new components
-            $comp->programas()->create(['pro_codigo' => $programa_id]);
+            $comp->programas()->create([
+                'pro_codigo' => $programa_id,
+                'tra_codigo' => $row['tra_codigo'] ?? null,
+            ]);
         }
     }
 

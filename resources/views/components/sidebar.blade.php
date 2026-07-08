@@ -65,8 +65,7 @@ $notificacionesCount = count($notificacionesList);
                         class="{{ request()->routeIs('proyectos.buscar') ? 'active-sub' : '' }}">Explorar proyectos</a>
                     @if ($nav['canRegisterProject'] || $nav['canValidateProjects'])
                     <a href="{{ route('proyectos.gestion') }}"
-                        class="{{ request()->routeIs('proyectos.gestion', 'proyectos.crear', 'validaciones.index') ? 'active-sub' : '' }}">Deposito
-                        proyecto</a>
+                        class="{{ request()->routeIs('proyectos.gestion', 'proyectos.crear', 'validaciones.index') ? 'active-sub' : '' }}">Depósito de proyectos</a>
                     @endif
                 </div>
             </li>
@@ -127,65 +126,50 @@ $notificacionesCount = count($notificacionesList);
     </nav>
 
     <div id="notificacionesContainer" class="notif-container">
-        <div class="notif-card-header">
-            <span class="notif-card-title">Notificaciones</span>
-            <button type="button" onclick="toggleNotificaciones()" class="notif-bell-btn {{ $notificacionesCount > 0 ? 'has-notifications' : '' }}">
-                <i data-lucide="bell"></i>
-                @if ($notificacionesCount > 0)
-                <span class="notif-badge">{{ $notificacionesCount }}</span>
-                @endif
-            </button>
-        </div>
-        
-        <div class="notif-card-body">
+        <button type="button" onclick="toggleNotificaciones()" class="notif-bell-btn {{ $notificacionesCount > 0 ? 'has-notifications' : '' }}" id="notifBellBtn" title="Notificaciones">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             @if ($notificacionesCount > 0)
-                <div class="notif-alert-box" onclick="toggleNotificaciones()" style="cursor:pointer;">
-                    <i data-lucide="alert-circle" style="width:14px; height:14px; color:#d97706; flex-shrink:0;"></i>
-                    <span style="font-size:10px; color:#78350f; font-weight:700;">Tienes {{ $notificacionesCount }} pendiente(s)</span>
-                </div>
-            @else
-                <div class="notif-ok-box">
-                    <i data-lucide="check-circle" style="width:14px; height:14px; color:#16a34a; flex-shrink:0;"></i>
-                    <span style="font-size:10px; color:#14532d; font-weight:700;">Todo al día</span>
-                </div>
+            <span class="notif-badge">{{ $notificacionesCount }}</span>
             @endif
-        </div>
-
-        <div id="notificacionesDropdown" class="notif-dropdown">
+        </button>
+        
+        <div id="notificacionesDropdown" class="notif-dropdown" style="display: none;">
             <div class="notif-header">
                 <div class="notif-header-title">
-                    <i data-lucide="bell" style="width:16px; height:16px; color:#8b0000;"></i>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;display:block;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                     <span>Notificaciones</span>
                 </div>
-                <span style="background:#f1f5f9; color:#475569; font-size:10px; padding:2px 6px; border-radius:10px; font-weight:600;">
-                    {{ $notificacionesCount }}
-                </span>
+                <span class="notif-header-count">{{ $notificacionesCount }}</span>
             </div>
             <div class="notif-list">
                 @forelse ($notificacionesList as $notif)
                 @php
-                    $iconName = 'info';
-                    $iconClass = 'info';
+                    $dismissId = md5(($notif['proyecto_id'] ?? '') . '|' . ($notif['title'] ?? '') . '|' . ($notif['mensaje'] ?? ''));
+                    $iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+                    $itemType = 'item-info';
                     if (($notif['type'] ?? '') === 'warning') {
-                        $iconName = 'alert-triangle';
-                        $iconClass = 'warning';
+                        $iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+                        $itemType = 'item-warning';
                     } elseif (($notif['type'] ?? '') === 'success') {
-                        $iconName = 'check-circle';
-                        $iconClass = 'success';
+                        $iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+                        $itemType = 'item-success';
+                    } elseif (($notif['type'] ?? '') === 'danger') {
+                        $itemType = 'item-danger';
                     }
                 @endphp
-                <a href="{{ $notif['url'] }}" class="notif-item">
-                    <div class="notif-item-icon {{ $iconClass }}">
-                        <i data-lucide="{{ $iconName }}" style="width:16px; height:16px;"></i>
+                <a href="{{ $notif['url'] }}" class="notif-item {{ $itemType }}" data-dismiss-id="{{ $dismissId }}">
+                    <div class="notif-item-icon">
+                        {!! $iconSvg !!}
                     </div>
                     <div class="notif-item-text">
                         <div class="notif-item-title">{{ $notif['title'] ?? 'Aviso' }}</div>
-                        <div>{{ $notif['mensaje'] }}</div>
+                        <div class="notif-item-msg">{{ $notif['mensaje'] }}</div>
                     </div>
+                    <button type="button" class="notif-dismiss" onclick="event.preventDefault();event.stopPropagation();dismissNotif('{{ $dismissId }}')" title="Descartar notificación">&times;</button>
                 </a>
                 @empty
                 <div class="notif-empty">
-                    <i data-lucide="bell-off" style="width:32px; height:32px; color:#94a3b8;"></i>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;opacity:0.35;"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                     <span>No tienes notificaciones pendientes</span>
                 </div>
                 @endforelse
@@ -197,12 +181,11 @@ $notificacionesCount = count($notificacionesList);
 <script>
     function toggleNotificaciones() {
         var el = document.getElementById('notificacionesDropdown');
-        var aberto = el.style.display !== 'none';
-        el.style.display = aberto ? 'none' : 'block';
-        var btn = el.parentNode.querySelector('button');
+        var isOpen = el.style.display !== 'none';
+        el.style.display = isOpen ? 'none' : 'block';
+        var btn = document.getElementById('notifBellBtn');
         if (btn) {
-            var icon = btn.querySelector('[data-lucide]');
-            if (icon) icon.style.transform = aberto ? 'rotate(0deg)' : 'rotate(15deg)';
+            btn.classList.toggle('is-open', !isOpen);
         }
     }
     document.addEventListener('click', function(e) {
@@ -212,6 +195,70 @@ $notificacionesCount = count($notificacionesList);
             if (dd) dd.style.display = 'none';
         }
     });
+
+    // ─── Descartar notificaciones con localStorage ───
+    function dismissNotif(id) {
+        try {
+            var dismissed = JSON.parse(localStorage.getItem('dismissedNotifs') || '[]');
+            if (dismissed.indexOf(id) === -1) {
+                dismissed.push(id);
+                localStorage.setItem('dismissedNotifs', JSON.stringify(dismissed));
+            }
+        } catch(e) {}
+        var items = document.querySelectorAll('[data-dismiss-id="' + id + '"]');
+        items.forEach(function(item) {
+            item.style.transition = 'all 0.3s ease';
+            item.style.opacity = '0';
+            item.style.transform = 'translateX(20px)';
+            item.style.maxHeight = '0';
+            item.style.padding = '0 14px';
+            item.style.overflow = 'hidden';
+            setTimeout(function() { item.style.display = 'none'; actualizarConteoNotifs(); }, 350);
+        });
+    }
+
+    function actualizarConteoNotifs() {
+        var visible = document.querySelectorAll('.notif-item[style*="display: none"]');
+        var total = document.querySelectorAll('.notif-item');
+        var restantes = total.length - visible.length;
+        var badge = document.querySelector('.notif-badge');
+        var headerCount = document.querySelector('.notif-header-count');
+        var bellBtn = document.getElementById('notifBellBtn');
+
+        if (restantes > 0) {
+            if (badge) {
+                badge.textContent = restantes;
+            } else if (bellBtn) {
+                var newBadge = document.createElement('span');
+                newBadge.className = 'notif-badge';
+                newBadge.textContent = restantes;
+                bellBtn.appendChild(newBadge);
+            }
+            if (bellBtn) {
+                bellBtn.classList.add('has-notifications');
+            }
+        } else {
+            if (badge) badge.remove();
+            if (bellBtn) {
+                bellBtn.classList.remove('has-notifications');
+            }
+        }
+        if (headerCount) headerCount.textContent = restantes;
+    }
+
+    // Limpiar notificaciones descartadas al cargar la página
+    (function limpiarDescartadas() {
+        try {
+            var dismissed = JSON.parse(localStorage.getItem('dismissedNotifs') || '[]');
+            if (dismissed.length > 0) {
+                dismissed.forEach(function(id) {
+                    var items = document.querySelectorAll('[data-dismiss-id="' + id + '"]');
+                    items.forEach(function(item) { item.style.display = 'none'; });
+                });
+                actualizarConteoNotifs();
+            }
+        } catch(e) {}
+    })();
 
     function initSidebarAccordion() {
         document.querySelectorAll('.has-submenu').forEach(header => {

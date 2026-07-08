@@ -37,8 +37,11 @@ class GrupoProyectoController extends Controller
 
         $tablaOk = $this->grupos->tablaDisponible();
 
-        // Lapsos
-        $lapsos = $this->profesores->lapsosActivos();
+        // Lapsos: coordinador ve todos, profesor solo activos
+        $esCoordinador = $activeRole === 'coordinador';
+        $lapsos = $esCoordinador
+            ? $this->profesores->todosLosLapsos()
+            : $this->profesores->lapsosActivos();
 
         // Filtros
         $filterLapso = $request->get('lapso', '');
@@ -139,11 +142,13 @@ class GrupoProyectoController extends Controller
         $total = $lista->count();
         $items = $lista->slice(($page - 1) * $perPage, $perPage)->values();
 
+        $esAdmin = $activeRole === 'administrador';
+
         return view('grupos_proyecto.index', compact(
             'items', 'total', 'perPage', 'page',
             'lapsos', 'programas', 'secciones',
             'filterLapso', 'filterPrograma', 'filterSeccion', 'search',
-            'tablaOk', 'isProfessor', 'proyectoPorClave', 'creadorNombres',
+            'tablaOk', 'isProfessor', 'esAdmin', 'esCoordinador', 'proyectoPorClave', 'creadorNombres',
         ))->with('userCedula', trim((string) $user->usu_cedula));
     }
 
@@ -155,11 +160,21 @@ class GrupoProyectoController extends Controller
         $user = auth()->user();
         $activeRole = app(UserRoleService::class)->getActiveRole($user);
         $isProfessor = $activeRole === 'profesor proyecto';
+        $esCoordinador = $activeRole === 'coordinador';
+
+        // Admin no puede crear grupos de proyecto
+        if ($activeRole === 'administrador') {
+            return redirect()->route('grupos-proyecto.index')
+                ->with('error', 'El administrador no puede crear grupos de proyecto. Esta función es del profesor.');
+        }
 
         Log::info('create: rol='.($activeRole ?? 'null').', isProfessor='.($isProfessor ? 'true' : 'false').', cedula='.$user->usu_cedula);
 
         $tablaOk = $this->grupos->tablaDisponible();
-        $lapsos = $this->profesores->lapsosActivos();
+        // Coordinador ve todos los lapsos (incluyendo viejos); profesor solo los activos
+        $lapsos = $esCoordinador
+            ? $this->profesores->todosLosLapsos()
+            : $this->profesores->lapsosActivos();
 
         // Comunidades para el select
         $comunidades = Cache::remember('grupos_comunidades_form', 3600, fn () =>
@@ -185,7 +200,7 @@ class GrupoProyectoController extends Controller
 
         return view('grupos_proyecto.form', compact(
             'lapsos', 'comunidades', 'estados',
-            'tablaOk', 'isProfessor', 'lapsoPreseleccionado',
+            'tablaOk', 'isProfessor', 'esCoordinador', 'lapsoPreseleccionado',
         ))->with('grupo', null);
     }
 
@@ -194,6 +209,15 @@ class GrupoProyectoController extends Controller
      */
     public function store(Request $request)
     {
+        $user = auth()->user();
+        $activeRole = app(UserRoleService::class)->getActiveRole($user);
+
+        // Admin no puede crear grupos de proyecto
+        if ($activeRole === 'administrador') {
+            return redirect()->route('grupos-proyecto.index')
+                ->with('error', 'El administrador no puede crear grupos de proyecto. Esta función es del profesor.');
+        }
+
         $validated = $request->validate([
             'nombre' => 'required|string|max:120',
             'lapso' => 'required|integer|min:1',
@@ -299,6 +323,12 @@ class GrupoProyectoController extends Controller
         $activeRole = app(UserRoleService::class)->getActiveRole($user);
         $isProfessor = $activeRole === 'profesor proyecto';
 
+        // Admin no puede editar grupos de proyecto
+        if ($activeRole === 'administrador') {
+            return redirect()->route('grupos-proyecto.index')
+                ->with('error', 'El administrador no puede editar grupos de proyecto. Esta función es del profesor.');
+        }
+
         $tablaOk = $this->grupos->tablaDisponible();
         $lapsos = $this->profesores->lapsosActivos();
 
@@ -343,6 +373,14 @@ class GrupoProyectoController extends Controller
     public function update(Request $request, $id)
     {
         $user = auth()->user();
+        $activeRole = app(UserRoleService::class)->getActiveRole($user);
+
+        // Admin no puede actualizar grupos de proyecto
+        if ($activeRole === 'administrador') {
+            return redirect()->route('grupos-proyecto.index')
+                ->with('error', 'El administrador no puede actualizar grupos de proyecto. Solo tiene permisos de lectura.');
+        }
+
         $grpCodigo = (int) $id;
         $grupo = $this->grupos->obtener($grpCodigo);
         if (! $grupo) {
