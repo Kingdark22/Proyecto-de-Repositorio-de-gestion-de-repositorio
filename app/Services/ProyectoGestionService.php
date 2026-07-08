@@ -116,6 +116,41 @@ class ProyectoGestionService
         $proyecto = $this->proyectoRepo->findOrFail($id);
         $this->autorizarValidacionProyecto($user, $proyecto);
 
+        // Verificar que todos los documentos estén aceptados antes de aprobar
+        $proyectoConDocs = $this->proyectoRepo->findWithDocuments($id);
+        $componentes = app(\App\Repositories\CatalogoRepository::class)->componentesPorProgramaYTrayecto(
+            $proyectoConDocs->linea_investigacion?->programa_id ?? null,
+            null
+        );
+        $docsPorComponente = $proyectoConDocs->documentos->keyBy('comp_codigo');
+
+        $hayPendientes = false;
+        $hayRechazados = false;
+        foreach ($componentes as $comp) {
+            $doc = $docsPorComponente->get($comp->id);
+            if (!$doc || (int) $doc->pd_estado === 0) {
+                $hayPendientes = true;
+                continue;
+            }
+            if ((int) $doc->pd_estado === 2) {
+                $hayRechazados = true;
+            }
+        }
+
+        if ($hayRechazados) {
+            throw new \RuntimeException(
+                'No se puede aprobar el proyecto porque hay componentes rechazados. ' .
+                'El estudiante debe corregirlos y el profesor debe aceptarlos primero.'
+            );
+        }
+
+        if ($hayPendientes) {
+            throw new \RuntimeException(
+                'No se puede aprobar el proyecto hasta que todos los componentes estén aceptados por el profesor. ' .
+                'Hay componentes pendientes de revisión.'
+            );
+        }
+
         $nuevoEstado = $proyecto->estado_validacion === 'pendiente' ? 'completado' : 'aprobado';
 
         $this->proyectoRepo->update($id, [
@@ -277,6 +312,17 @@ class ProyectoGestionService
         }
 
         $this->registrarAuditoria($proyecto, $editingId ? 'actualizar' : 'registrar');
+
+        $proyecto = $proyecto->fresh();
+        if ($this->verificarSiProyectoEstaCompletado($proyecto)) {
+            if ($proyecto->estado_validacion === 'pendiente') {
+                $proyecto->update(['estado_validacion' => 'completado']);
+            }
+        } else {
+            if ($proyecto->estado_validacion === 'completado') {
+                $proyecto->update(['estado_validacion' => 'pendiente']);
+            }
+        }
 
         return $proyecto->fresh();
     }
@@ -838,8 +884,8 @@ class ProyectoGestionService
             return false;
         }
 
-        return $this->usuarioEsAdminEnSistema($user)
-            || $user->hasRole('coordinador', 'profesor proyecto');
+        // Admin NO puede aprobar proyectos (solo coordina/profesor proyecto)
+        return $user->hasRole('coordinador', 'profesor proyecto');
     }
 
     public function usuarioPuedeValidarProyecto(?User $user, Proyecto $proyecto): bool
@@ -848,6 +894,7 @@ class ProyectoGestionService
             return false;
         }
 
+        // Admin CAN validate all projects
         if ($this->usuarioEsAdminEnSistema($user)) {
             return true;
         }
@@ -1345,5 +1392,62 @@ class ProyectoGestionService
             ['nombre' => trim($nombre)],
             ['nombre' => trim($nombre)]
         );
+    }
+
+    public function verificarSiProyectoEstaCompletado(Proyecto $proyecto): bool
+    {
+        // 1. Verificar campos de texto obligatorios
+        if (empty(trim($proyecto->resumen ?? ''))) return false;
+        if (!$proyecto->linea_investigacion_id) return false;
+        if (!$proyecto->metodologia_id) return false;
+        if (!$proyecto->tipo_publicacion_id) return false;
+        if (!$proyecto->tipo_investigacion_id) return false;
+        if (!$proyecto->objetivo_investigacion_id) return false;
+        if (!$proyecto->comunidad_id) return false;
+
+        // 2. Obtener programa y trayecto del proyecto
+        $partes = $this->equipoSeccion->parsearClave($proyecto->equipo_ref);
+        if (!$partes) {
+            return false;
+        }
+
+        $programaDerived = null;
+        $traCodigo = null;
+        try {
+            $row = DB::connection($this->equipoSeccion->academicConnection())
+                ->table('seccion as sec')
+                ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
+                ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
+                ->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
+                ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'sem.sem_cod_trayecto')
+                ->where('sec.sec_codigo', $partes['sec_codigo'])
+                ->select(['pro.pro_codigo', 'tra.tra_codigo'])
+                ->first();
+            if ($row) {
+                $programaDerived = $row->pro_codigo ?? null;
+                $traCodigo = isset($row->tra_codigo) ? (string) $row->tra_codigo : null;
+            }
+        } catch (\Throwable) {
+            return false;
+        }
+
+        if (!$programaDerived) {
+            return false;
+        }
+
+        // 3. Obtener componentes requeridos para este programa y trayecto
+        $componentes = app(CatalogoRepository::class)->componentesPorProgramaYTrayecto($programaDerived, $traCodigo);
+
+        // 4. Verificar que cada componente obligatorio tenga un documento subido
+        $existingDocs = $proyecto->documentos->keyBy('comp_codigo');
+        foreach ($componentes as $comp) {
+            if ($comp->es_obligatorio) {
+                if (!$existingDocs->has($comp->id)) {
+                    return false; // Falta un documento obligatorio
+                }
+            }
+        }
+
+        return true;
     }
 }

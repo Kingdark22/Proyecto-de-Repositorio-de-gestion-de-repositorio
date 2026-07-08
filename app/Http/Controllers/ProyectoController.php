@@ -99,9 +99,8 @@ class ProyectoController extends Controller
         $proyectosLiderIds = $this->gestion->proyectosDondeEsMiembro($user);
 
         $proyectosConDocumentosRechazados = \App\Models\ProyectoDocumento::where('pd_estado', 2)
+            ->distinct()
             ->pluck('pry_codigo')
-            ->unique()
-            ->values()
             ->toArray();
 
         return view('proyectos.index', compact(
@@ -124,10 +123,15 @@ class ProyectoController extends Controller
 
         $proyecto = Proyecto::findOrFail($id);
         $esMiembro = $this->gestion->usuarioEsMiembroDelProyecto($user, $proyecto);
+        $esCreador = $user && trim((string) $user->usu_cedula) === trim((string) $proyecto->creador_cedula);
         $esAdminEnSistema = $this->gestion->usuarioEsAdminEnSistema($user);
-        $esAdminProyectoAjeno = $esAdmin && $user->usu_cedula != $proyecto->creador_cedula;
+        $esAdminProyectoAjeno = $esAdmin && !$esCreador;
         $modoActualizacion = $esMiembro && !$esAdminEnSistema && !$esAdminProyectoAjeno;
         $canValidate = $user ? $this->gestion->usuarioPuedeValidar($user) : false;
+
+        // Admin y Coordinador solo pueden ver proyectos en modo solo lectura
+        $adminPuedeEditar = false;
+        $esCoordinador = $this->userRoleService->roleMatches('coordinador', $activeRole);
 
         $datosForm = $this->gestion->cargarParaEdicion($id);
         $estadoForm = $this->buildEstadoFromDatos($datosForm);
@@ -147,7 +151,8 @@ class ProyectoController extends Controller
             'proyecto', 'datosForm', 'catalogosForm',
             'esProfesor', 'esGestionador', 'modoActualizacion',
             'involucradosProyecto', 'miembrosGrupo', 'clave',
-            'canValidate',
+            'canValidate', 'esAdminProyectoAjeno', 'adminPuedeEditar', 'esAdmin', 'esCoordinador',
+            'esCreador', 'esMiembro',
         ));
     }
 
@@ -159,12 +164,15 @@ class ProyectoController extends Controller
         $activeRole = $this->userRoleService->getActiveRole($user);
         $esProfesor = $this->userRoleService->roleMatches('profesor proyecto', $activeRole);
         $esAdmin = $this->userRoleService->roleMatches('administrador', $activeRole);
+
+        // Admin no puede actualizar proyectos
+        if ($esAdmin) {
+            return redirect()->route('proyectos.gestion')
+                ->with('error', 'El administrador no puede actualizar proyectos. Solo tiene permisos de lectura.');
+        }
+
         $esMiembro = $this->gestion->usuarioEsMiembroDelProyecto($user, $proyecto);
         $esAdminEnSistema = $this->gestion->usuarioEsAdminEnSistema($user);
-
-        if ($esAdmin && $user->usu_cedula != $proyecto->creador_cedula) {
-            abort(403, 'No tienes permiso para modificar este proyecto.');
-        }
 
         $modoActualizacion = $esMiembro && !$esAdminEnSistema;
 
@@ -310,8 +318,32 @@ class ProyectoController extends Controller
 
             $proyecto->update($updateData);
 
+            $proyecto = $proyecto->fresh();
+            if ($this->gestion->verificarSiProyectoEstaCompletado($proyecto)) {
+                if ($proyecto->estado_validacion === 'pendiente') {
+                    $proyecto->update(['estado_validacion' => 'completado']);
+                }
+            } else {
+                if ($proyecto->estado_validacion === 'completado') {
+                    $proyecto->update(['estado_validacion' => 'pendiente']);
+                }
+            }
+
             try {
-                $this->notificacionService->notificarActualizacionEstudiante($proyecto, $proyecto->creador_cedula);
+                // Buscar el profesor real que creó el grupo (no el creador del proyecto)
+                $cedulaProfesor = $proyecto->creador_cedula;
+                $clave = $proyecto->equipo_ref;
+                if ($clave) {
+                    $grupo = \App\Models\GrupoProyectoModulo::where('grp_identificador', $clave)->first();
+                    if (!$grupo && str_starts_with($clave, 'EQGRP:')) {
+                        $codigo = (int) substr($clave, 6);
+                        $grupo = \App\Models\GrupoProyectoModulo::find($codigo);
+                    }
+                    if ($grupo && $grupo->grp_creador_cedula) {
+                        $cedulaProfesor = trim((string) $grupo->grp_creador_cedula);
+                    }
+                }
+                $this->notificacionService->notificarActualizacionEstudiante($proyecto, $cedulaProfesor);
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning("Error notificando actualización: " . $e->getMessage());
             }
@@ -370,6 +402,23 @@ class ProyectoController extends Controller
 
         try {
             $this->gestion->rechazar((int) $id, $request->input('motivo'));
+
+            // Notificar a estudiantes del proyecto rechazado
+            try {
+                $proyecto = \App\Models\Proyecto::findOrFail($id);
+                $grupo = \App\Models\GrupoProyectoModulo::where('grp_identificador', $proyecto->equipo_ref)->first();
+                $cedulas = collect($grupo?->grp_miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
+                if (!empty($cedulas)) {
+                    $this->notificacionService->notificarProyectoRechazado(
+                        $proyecto,
+                        $request->input('motivo'),
+                        $cedulas
+                    );
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("Error notificando rechazo de proyecto: " . $e->getMessage());
+            }
+
             return redirect()->route('proyectos.gestion')
                 ->with('success', 'Proyecto rechazado.');
         } catch (\Throwable $e) {
@@ -380,6 +429,14 @@ class ProyectoController extends Controller
 
     public function destroy($id)
     {
+        $user = auth()->user();
+        $proyecto = Proyecto::findOrFail($id);
+        $esAdmin = $this->userRoleService->roleMatches('administrador', $this->userRoleService->getActiveRole($user));
+
+        if ($esAdmin && $user->usu_cedula != $proyecto->creador_cedula) {
+            abort(403, 'No tienes permiso para eliminar este proyecto.');
+        }
+
         $this->gestion->eliminar((int) $id);
         return redirect()->route('proyectos.gestion')
             ->with('success', 'Proyecto eliminado correctamente.');
@@ -393,6 +450,23 @@ class ProyectoController extends Controller
         if (!$proyecto) {
             return redirect()->route('proyectos.gestion')
                 ->with('error', 'No se pudo registrar el proyecto desde el grupo.');
+        }
+
+        // Notificar a estudiantes del equipo
+        try {
+            $grupo = \App\Models\GrupoProyectoModulo::where('grp_identificador', $proyecto->equipo_ref)->first();
+            if ($grupo) {
+                $cedulas = collect($grupo->grp_miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
+                if (!empty($cedulas)) {
+                    $this->notificacionService->notificarNuevoProyectoDesdeGrupo(
+                        $proyecto,
+                        $grupo->grp_nombre,
+                        $cedulas
+                    );
+                }
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Error notificando nuevo proyecto desde grupo: " . $e->getMessage());
         }
 
         return redirect()->route('proyectos.gestion.edit', $proyecto->id)
@@ -783,20 +857,41 @@ class ProyectoController extends Controller
                 'pd_observacion' => $observacion,
             ]);
 
-            if ($nuevoEstado == 2) {
-                try {
-                    $proyecto = $doc->proyecto;
-                    $grupo = \App\Models\GrupoProyectoModulo::where('grp_identificador', $proyecto->equipo_ref)->first();
-                    $cedulas = collect($grupo?->grp_miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
+            try {
+                $proyecto = $doc->proyecto;
+                $grupo = \App\Models\GrupoProyectoModulo::where('grp_identificador', $proyecto->equipo_ref)->first();
+                $cedulas = collect($grupo?->grp_miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
+
+                if ($nuevoEstado == 1) {
+                    // Cuando se acepta un documento, verificar si TODOS están aceptados
+                    $allDocs = \App\Models\ProyectoDocumento::where('pry_codigo', $proyecto->id)->get();
+                    $todosAceptados = $allDocs->every(fn ($d) => (int) $d->pd_estado === 1);
+
+                    if ($todosAceptados && $proyecto->estado_validacion !== 'aprobado') {
+                        $proyecto->update(['estado_validacion' => 'completado']);
+                        \Illuminate\Support\Facades\Log::info("Proyecto {$proyecto->id} auto-completado: todos los documentos aceptados.");
+
+                        // Notificar a los estudiantes que el proyecto fue completado
+                        if (!empty($cedulas)) {
+                            $this->notificacionService->notificarProyectoCompletado($proyecto, $cedulas);
+                        }
+                    }
+
+                    $this->notificacionService->notificarDocumentoAceptado(
+                        $proyecto,
+                        $doc->componente->nombre ?? 'Documento',
+                        $cedulas
+                    );
+                } elseif ($nuevoEstado == 2) {
                     $this->notificacionService->notificarDocumentoRechazado(
                         $proyecto,
                         $doc->componente->nombre ?? 'Documento',
                         $observacion,
                         $cedulas
                     );
-                } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::warning("Error notificando rechazo de documento: " . $e->getMessage());
                 }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning("Error notificando estado de documento: " . $e->getMessage());
             }
 
             return response()->json(['success' => true, 'message' => 'Estado del documento actualizado correctamente.']);
@@ -845,7 +940,7 @@ class ProyectoController extends Controller
                 'anio'           => $now->year,
             ]);
 
-            $nombreArchivo = 'Solvencia_' . ($integrante ? preg_replace('/[^a-zA-Z0-9_-]/', '_', $integrante['nombre_completo']) : $folio);
+            $nombreArchivo = 'Solvencia_' . ($integrante ? preg_replace('/[^a-zA-Z0-9_-]/', '_', $integrante['nombre_completo']) : 'integrante');
 
             return $pdf->download("{$nombreArchivo}.pdf");
         } catch (\RuntimeException $e) {

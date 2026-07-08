@@ -77,6 +77,7 @@ class ProyectoBusquedaService
             'linea_investigacion',
             'metodologia',
             'tipo_investigacion',
+            'objetivo_investigacion',
             'comunidad',
             'documentos.componente',
         ])
@@ -255,7 +256,7 @@ class ProyectoBusquedaService
 
         match ($equipoFiltro['tipo']) {
             'exacto' => $query->where('equipo_ref', $equipoFiltro['valor']),
-            'lista' => $query->whereIn('pry_direccion_logica', $equipoFiltro['valor']),
+            'lista' => $query->whereIn('equipo_ref', $equipoFiltro['valor']),
             'prefijo' => $query->where('equipo_ref', 'ILIKE', $equipoFiltro['valor'].'%'),
             default => null,
         };

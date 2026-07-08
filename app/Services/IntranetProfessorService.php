@@ -54,6 +54,36 @@ class IntranetProfessorService
         });
     }
 
+    /**
+     * Retorna TODOS los lapsos académicos (activos e inactivos), excluyendo
+     * los que tienen nombre vacío o 'No Regist.', ordenados descendente.
+     *
+     * @return Collection<int, object{lap_codigo: int, lap_nombre: string}>
+     */
+    public function todosLosLapsos(): Collection
+    {
+        $cacheKey = 'lapsos_todos_'.DbHelper::connection();
+
+        return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(60), function () {
+            try {
+                $rows = DualDatabase::table('lapso_academico')
+                    ->orderByDesc('lap_codigo')
+                    ->get(['lap_codigo', 'lap_nombre']);
+
+                if (DbHelper::isUsingIntranet()) {
+                    DualDatabase::mirrorAcademicRows('lapso_academico', $rows);
+                }
+
+                return $rows->reject(fn ($l) =>
+                    empty(trim($l->lap_nombre ?? '')) || trim($l->lap_nombre) === 'No Regist.'
+                )->values();
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error("Error en todosLosLapsos: " . $e->getMessage());
+                return collect();
+            }
+        });
+    }
+
     public function lapsoVigenteCodigo(): ?int
     {
         // Tomar el primer lapso activo que no sea "No Regist." ni vacío

@@ -57,7 +57,7 @@
             width: 230px;
             /* Opcional */
             margin-top: 5px; /* Bajado un poco mas */
-            overflow: hidden;
+            overflow: visible;
         }
 
         #centro{/* Capa central donde se ubica los datos del sistema */
@@ -570,16 +570,20 @@
         {{-- Auto-detectar session flashes y mostrarlos como modal visual --}}
         @php
             $_flashMsg = session('message');
+            $_flashSuccess = session('success');
             $_flashErr = session('message_error');
             $_flashErr2 = session('error');
         @endphp
-        @if($_flashMsg || $_flashErr || $_flashErr2)
+        @if($_flashMsg || $_flashSuccess || $_flashErr || $_flashErr2)
         <script>
         (function() {
             var type = 'info', msg = '';
             @if($_flashMsg)
                 type = 'success';
                 msg = '{{ addslashes($_flashMsg) }}';
+            @elseif($_flashSuccess)
+                type = 'success';
+                msg = '{{ addslashes($_flashSuccess) }}';
             @elseif($_flashErr)
                 type = 'error';
                 msg = '{{ addslashes($_flashErr) }}';

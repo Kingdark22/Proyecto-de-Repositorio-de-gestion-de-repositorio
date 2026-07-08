@@ -29,12 +29,7 @@
 @endpush
 
 @section('content')
-    @if (session('success'))
-        <div style="background: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border: 1px solid #c3e6cb; border-radius: 4px; font-weight: bold; text-align: center;">{{ session('success') }}</div>
-    @endif
-    @if (session('error'))
-        <div style="background: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px; font-weight: bold; text-align: center;">{{ session('error') }}</div>
-    @endif
+
 
     {{-- GRUPOS DEL DOCENTE (profesor/admin) --}}
     @if (!empty($gruposDocente))
@@ -74,14 +69,23 @@
                                 @endif
                             </td>
                             <td align="center" style="padding:5px;">
-                                @if ($g->tiene_proyecto)
-                                    @if ($g->proyecto_estado_validacion !== 'aprobado')
-                                        <a href="{{ route('proyectos.gestion.edit', $g->proyecto_id) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
+                                @if ($esAdmin)
+                                    {{-- Admin solo ve enlace de solo lectura --}}
+                                    @if ($g->tiene_proyecto)
+                                        <a href="{{ route('proyectos.gestion.edit', $g->proyecto_id) }}" class="cm-btn cm-btn-secondary cm-btn-sm" style="background:#fff;border:2px solid #6c757d;color:#333;font-weight:600;">Ver</a>
                                     @else
-                                        <span style="color:#008000;font-weight:bold;font-size:10px;">Aprobado</span>
+                                        <span style="color:#999;font-size:10px;">Sin proyecto</span>
                                     @endif
                                 @else
-                                    <a href="{{ route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
+                                    @if ($g->tiene_proyecto)
+                                        @if ($g->proyecto_estado_validacion !== 'aprobado')
+                                            <a href="{{ route('proyectos.gestion.edit', $g->proyecto_id) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
+                                        @else
+                                            <span style="color:#008000;font-weight:bold;font-size:10px;">Aprobado</span>
+                                        @endif
+                                    @else
+                                        <a href="{{ route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
+                                    @endif
                                 @endif
                             </td>
                         </tr>
@@ -240,15 +244,14 @@
                             </td>
                             <td align="center" style="padding:5px;">
                                 <div style="display:inline-flex;gap:4px;flex-wrap:wrap;justify-content:center;">
-                                    @if (!empty($canValidate) && ($p->estado_validacion === 'pendiente' || $p->estado_validacion === 'completado') && !in_array($p->pry_codigo, $proyectosConDocumentosRechazados ?? []) && !($esAdmin && auth()->user()->usu_cedula != $p->creador_cedula))
+                                    @if (!empty($canValidate) && $p->estado_validacion === 'completado' && !in_array($p->pry_codigo, $proyectosConDocumentosRechazados ?? []))
                                         <button type="button" class="cm-btn cm-btn-success cm-btn-sm" onclick="mostrarModalAccion({icon:'\u2705',title:'Aprobar proyecto',message:'\u00bfAprueba este proyecto?',confirmText:'S\u00ed, aprobar',confirmClass:'cm-btn-success',onConfirm:function(){window.location='{{ route('proyectos.gestion.approve', $p->id) }}'}})">Aprobar</button>
                                         <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" onclick="abrirRechazar({{ $p->id }})">Rechazar</button>
                                     @endif
-                                    @if ($p->estado_validacion !== 'aprobado' && !($esAdmin && auth()->user()->usu_cedula != $p->creador_cedula))
-                                        <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-secondary cm-btn-sm">Actualizar</a>
-                                    @endif
-                                    @if ($esAdmin && auth()->user()->usu_cedula != $p->creador_cedula)
-                                        <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-info cm-btn-sm">Ver</a>
+                                    @if ($esAdmin)
+                                        <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-secondary cm-btn-sm" style="background:#fff;border:2px solid #6c757d;color:#333;font-weight:600;">Ver</a>
+                                    @elseif ($p->estado_validacion !== 'aprobado')
+                                        <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
                                     @endif
                                 </div>
                             </td>

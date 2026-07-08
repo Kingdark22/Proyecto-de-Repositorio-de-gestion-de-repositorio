@@ -446,7 +446,7 @@ class VinculacionManager extends Component
         $tituloTexto = '';
 
         if ($this->tituloSeleccionado === 'nuevo') {
-            $tituloTexto = trim($this->nuevoTitulo);
+            $tituloTexto = strtoupper(trim($this->nuevoTitulo));
             $existing = TituloVinculacion::where('tiv_titulo', $tituloTexto)->first();
             if ($existing) {
                 $tituloId = $existing->id;
@@ -457,7 +457,7 @@ class VinculacionManager extends Component
         } elseif ($this->tituloSeleccionado !== '') {
             $tituloId = (int) $this->tituloSeleccionado;
             $tv = TituloVinculacion::find($tituloId);
-            $tituloTexto = $tv?->titulo ?? '';
+            $tituloTexto = strtoupper($tv?->titulo ?? '');
         }
 
         if (!$tituloId) {
