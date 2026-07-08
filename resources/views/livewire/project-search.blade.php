@@ -106,10 +106,10 @@
                 </td>
                     <td width="25%">
                         <b>Sección:</b><br>
-                        <select wire:model.live="seccionFilter" style="width: 95%;" @disabled(!$lapsoFilter)>
+                        <select wire:model.live="seccionFilter" style="width: 95%;" @disabled(!$lapsoFilter || !$intranetDisponible)>
                             <option value="">- Todas -</option>
                             @foreach ($secciones->merge($seccionesDesdeGrupos)->unique('sec_codigo') as $sec)
-                        @php $secLabel = trim($sec->sec_nombre ?? $sec->sec_nombre ?? '') . (!empty($sec->pro_siglas) ? ' (' . trim($sec->pro_siglas) . ')' : ''); @endphp
+                        @php $secLabel = trim($sec->sec_nombre ?? '') . (!empty($sec->pro_siglas) ? ' (' . trim($sec->pro_siglas) . ')' : ''); @endphp
                                 <option value="{{ $sec->sec_codigo }}">{{ $secLabel }}</option>
                             @endforeach
                         </select>

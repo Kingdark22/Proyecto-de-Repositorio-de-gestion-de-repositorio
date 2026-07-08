@@ -1,0 +1,1007 @@
+<?php $__env->startSection('title', isset($grupo) ? 'Editar Grupo de Proyecto' : 'Registrar Grupo de Proyecto'); ?>
+<?php $__env->startSection('header', isset($grupo) ? 'Editar Grupo de Proyecto' : 'Registrar Grupo de Proyecto'); ?>
+
+<?php $__env->startPush('styles'); ?>
+<style>
+    .cm-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        padding: 0.55rem 0.95rem;
+        font-size: 0.92rem;
+        font-weight: 600;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: background-color 0.2s ease, transform 0.2s ease;
+        text-decoration: none;
+    }
+    .cm-btn:hover { transform: translateY(-1px); }
+    .cm-btn-primary { background: #19692e; border-color: #154f26; color: #fff; }
+    .cm-btn-success { background: #198754; border-color: #166f43; color: #fff; }
+    .cm-btn-danger { background: #c82333; border-color: #a71d2a; color: #fff; }
+    .cm-btn-secondary { background: #f4f4f4; border-color: #c2c2c2; color: #222; }
+    .cm-btn-sm { padding: 0.35rem 0.75rem; font-size: 0.85rem; }
+    .cm-btn-warning { background: #f0b606; border-color: #d99e00; color: #212529; }
+
+    .grp-field { margin-bottom: 8px; }
+    .grp-field label { display: block; font-weight: 600; font-size: 12px; margin-bottom: 2px; color: #333; }
+    .grp-field select, .grp-field input[type="text"] {
+        width: 100%; max-width: 400px;
+        height: 30px; padding: 4px 8px;
+        border: 1px solid #ccc; border-radius: 4px;
+        font-size: 12px; background: #fff;
+        box-sizing: border-box;
+    }
+    .grp-field select:disabled, .grp-field input:disabled { background: #f5f5f5; color: #999; }
+    .grp-field input.error { border-color: #dc3545; }
+
+    .grp-search-wrapper { position: relative; }
+    .grp-dropdown {
+        position: absolute; top: 100%; left: 0; right: 0;
+        max-height: 220px; overflow-y: auto;
+        background: #fff; border: 1px solid #ccc; border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12); z-index: 1000;
+        display: none;
+    }
+    .grp-dropdown.show { display: block; }
+    .grp-dropdown-item {
+        padding: 6px 10px; cursor: pointer; font-size: 11px;
+        border-bottom: 1px solid #eee;
+    }
+    .grp-dropdown-item:hover { background: #f0f7f0; }
+    .grp-dropdown-empty { padding: 10px; text-align: center; color: #999; font-size: 11px; }
+
+    .grp-member-row {
+        display: flex; align-items: center; gap: 6px;
+        padding: 6px 8px; border-bottom: 1px solid #eee;
+        font-size: 12px;
+    }
+    .grp-member-row:hover { background: #f9f9f9; }
+    .grp-member-rol-badge {
+        display: inline-block; padding: 2px 6px;
+        font-size: 10px; font-weight: 600;
+    }
+    .grp-rol-lider { background: #8b0000; color: #fff; }
+    .grp-rol-autor { background: #6c757d; color: #fff; }
+
+    .grp-filter-select {
+        height: 30px; padding: 3px 6px; font-size: 11px;
+        border: 1px solid #ccc; border-radius: 4px; background: #fff;
+        box-sizing: border-box;
+    }
+    .grp-filter-input {
+        height: 30px; padding: 4px 8px; font-size: 12px;
+        border: 1px solid #ccc; border-radius: 4px; background: #fff;
+        box-sizing: border-box;
+    }
+
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5); z-index: 9999;
+        display: none; align-items: center; justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-content {
+        background: #fff; border-radius: 8px; padding: 20px;
+        max-width: 650px; width: 92%; max-height: 88vh; overflow-y: auto;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+
+    .status-indicator { font-size: 10px; margin-left: 4px; }
+    .status-ok { color: #198754; }
+    .status-err { color: #dc3545; }
+    .is-invalid { border-color: #dc3545 !important; }
+
+    .com-row {
+        display: flex; align-items: center; gap: 6px;
+        padding: 6px 10px; border-bottom: 1px solid #eee;
+        font-size: 11px; cursor: pointer;
+    }
+    .com-row:hover { background: #e8f0fe; }
+    .com-row.selected { background: #cce5ff; font-weight: 600; }
+</style>
+<?php $__env->stopPush(); ?>
+
+<?php $__env->startSection('content'); ?>
+    
+
+    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(!$tablaOk): ?>
+        <div style="background: #fff3cd; padding: 10px; font-size: 11px; margin-bottom: 12px;">
+            Falta la tabla <code>grupo_proyecto_modulo</code> en MySQL repositorio.
+            Ejecute: <code>php artisan migrate --path=database/migrations/2026_05_26_100000_create_grupo_proyecto_modulo_table.php</code>
+        </div>
+    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+    <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
+        <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 8px;">
+            <?php echo e(isset($grupo) ? 'Editar grupo: ' . $grupo->nombre : 'Nuevo grupo de proyecto'); ?>
+
+        </legend>
+
+        <form method="POST" action="<?php echo e(isset($grupo) ? route('grupos-proyecto.update', $grupo->grp_codigo) : route('grupos-proyecto.store')); ?>" id="grupoForm">
+            <?php echo csrf_field(); ?>
+            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(isset($grupo)): ?>
+                <?php echo method_field('PUT'); ?>
+            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+
+            
+            <input type="hidden" name="miembros" id="miembrosInput" value="">
+
+            <table width="100%" style="font-size:11px; table-layout: fixed; border-collapse: collapse;">
+                <tr>
+                    <td width="40%" style="vertical-align: top;">
+                        <b>Nombre del equipo:</b> <span style="color:#c82333;">*</span><br>
+                        <input type="text" name="nombre" id="nombreInput"
+                            value="<?php echo e(old('nombre', $grupo->nombre ?? '')); ?>"
+                            class="grp-filter-input" style="width:100%;" maxlength="120" required
+                            placeholder="Ej: Equipo Alpha, Proyecto Web"
+                            data-check-url="<?php echo e(route('grupos-proyecto.api.check-nombre')); ?>"
+                            data-exclude="<?php echo e($grupo->grp_codigo ?? ''); ?>"
+                            oninput="validarNombreDisponible(this)">
+                        <span id="nombreStatus" class="status-indicator"></span>
+                    </td>
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(isset($grupo) && ($grupo->identificador ?? '')): ?>
+                    <td width="30%" style="vertical-align: top;">
+                        <b>Código del equipo:</b><br>
+                        <span style="font-size:13px;font-weight:bold;color:#8b0000;"><?php echo e($grupo->identificador); ?></span>
+                    </td>
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                    <td width="<?php echo e(isset($grupo) && ($grupo->identificador ?? '') ? '30%' : '50%'); ?>" style="vertical-align: top;">
+                        <b>Comunidad:</b><br>
+                        <div style="display:flex;gap:4px;align-items:center; min-width: 0;">
+                            <?php $comSel = old('comunidad', $grupo->com_codigo ?? ''); ?>
+                            <input type="hidden" name="comunidad" id="comunidadId" value="<?php echo e($comSel); ?>">
+                            <div id="comunidadBadge" style="display:<?php echo e($comSel ? 'flex' : 'none'); ?>;align-items:center;gap:6px;background:#f0f7f0;border:1px solid #b8d4b8;border-radius:4px;padding:4px 10px;font-size:12px;flex:1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                                <span style="font-weight:bold; overflow: hidden; text-overflow: ellipsis;"><?php echo e($comSel ? ($comunidades->firstWhere('com_codigo', (int)$comSel)?->com_nombre ?? '') : ''); ?></span>
+                                <button type="button" onclick="document.getElementById('comunidadId').value='';document.getElementById('comunidadBadge').style.display='none';document.getElementById('comunidadSearchWrapper').style.display='flex'" style="background:none;border:none;cursor:pointer;color:#991b19;font-size:14px;padding:0 2px; flex-shrink: 0;" title="Cambiar comunidad">✕</button>
+                            </div>
+                            <div class="grp-search-wrapper" id="comunidadSearchWrapper" style="flex:1;display:<?php echo e($comSel ? 'none' : 'block'); ?>; min-width: 0;">
+                                <input type="text" id="comunidadSearch" placeholder="Buscar comunidad..."
+                                    value="" class="grp-filter-input" style="width:100%;" autocomplete="off">
+                                <div class="grp-dropdown" id="comunidadDropdown">
+                                    <div class="grp-dropdown-empty">Escriba para buscar comunidades...</div>
+                                </div>
+                            </div>
+                            <button type="button" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space:nowrap; flex-shrink: 0;" onclick="abrirModalComunidad()" title="Crear nueva comunidad">+</button>
+                        </div>
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['comunidad'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><span style="color:#dc3545;font-size:10px;"><?php echo e($message); ?></span><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="padding-top:8px;">
+                        <b>Contexto académico:</b>
+                        <div style="display:flex;gap:16px;margin-top:4px;align-items:center;">
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($isProfessor && !isset($grupo) && $lapsoPreseleccionado): ?>
+                                <?php $lapsoActual = $lapsos->firstWhere('lap_codigo', (int)$lapsoPreseleccionado); ?>
+                                <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;height:32px;background:#f0f7f0;border:1px solid #b8d4b8;border-radius:4px;font-size:12px;font-weight:bold;box-sizing:border-box;">
+                                    📅 <?php echo e($lapsoActual->lap_nombre ?? 'Lapso #'.$lapsoPreseleccionado); ?>
+
+                                </span>
+                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                            <select name="lapso" id="lapsoSelect" class="grp-filter-select" required
+                                style="<?php echo e($isProfessor && !isset($grupo) && $lapsoPreseleccionado ? 'display:none;' : ''); ?>">
+                                <option value="">Lapso</option>
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $lapsos; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $l): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                                    <option value="<?php echo e($l->lap_codigo); ?>"
+                                        <?php echo e($lapsoPreseleccionado == $l->lap_codigo ? 'selected' : ''); ?>
+
+                                        <?php echo e(isset($grupo) && $grupo->lap_codigo == $l->lap_codigo ? 'selected' : ''); ?>>
+                                        <?php echo e($l->lap_nombre); ?>
+
+                                    </option>
+                                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                            </select>
+                            <select name="programa" id="programaSelect" class="grp-filter-select">
+                                <option value="">PNF</option>
+                            </select>
+                            <select name="seccion" id="seccionSelect" class="grp-filter-select" required>
+                                <option value="">Sección</option>
+                            </select>
+                        </div>
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['lapso'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><span style="color:#dc3545;font-size:10px;"><?php echo e($message); ?></span><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__errorArgs = ['seccion'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?><span style="color:#dc3545;font-size:10px;"><?php echo e($message); ?></span><?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                    </td>
+                </tr>
+            </table>
+
+            <div style="margin-top:6px;background:#f0f7f0;border:1px solid #b8d4b8;border-radius:4px;padding:6px 10px;font-size:12px; display:none;" id="selectedSectionBadge">
+                <b>Sección seleccionada:</b> <span id="selectedSectionText"></span>
+            </div>
+            <p style="font-size:11px;color:#856404;margin-top:4px;" id="selectSectionHint">Seleccione lapso, PNF y sección para buscar estudiantes.</p>
+
+            <div style="margin-top:8px;padding:8px;background:#f5f5f5;border:1px solid #ccc;display:none;" id="studentSection">
+                <b>Agregar integrante:</b>
+                <span id="studentSectionStatus" style="font-size:10px;color:#666;margin-left:8px;"></span><br>
+                <div style="display:flex;gap:16px;align-items:center;margin-top:4px;">
+                    <div class="grp-search-wrapper" style="position:relative;flex:1; min-width: 0;">
+                        <input type="text" id="estudianteSearch"
+                            placeholder="🔍 Escriba nombre, apellido o cédula para buscar..."
+                            class="grp-filter-input" style="width:100%;padding:8px 10px;font-size:12px;height:34px;"
+                            autocomplete="off" disabled>
+                        <div class="grp-dropdown" id="estudianteDropdown" style="width:100%;">
+                            <div class="grp-dropdown-empty">Primero seleccione lapso, PNF y sección.</div>
+                        </div>
+                    </div>
+                    <select id="rolSelect" class="grp-filter-select" style="width:130px;">
+                        <option value="1">Líder</option>
+                        <option value="2">Autor</option>
+                    </select>
+                    <button type="button" class="cm-btn cm-btn-success cm-btn-sm" id="agregarBtn" disabled
+                        onclick="agregarIntegrante()">Agregar</button>
+                </div>
+            </div>
+
+            <table width="100%" border="1" cellpadding="4"
+                style="font-size:11px;margin-top:10px;border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#ddd;">
+                        <th>Cédula</th>
+                        <th>Nombre</th>
+                        <th>Rol</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="miembrosTableBody">
+                    <tr id="miembrosEmptyRow">
+                        <td colspan="4" align="center" style="padding:12px;color:#999;">Agregue al menos un líder y los autores del grupo.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div style="margin-top:14px;text-align:center;">
+                <button type="submit" class="cm-btn cm-btn-success" id="guardarBtn"  <?php echo e(!$tablaOk ? 'disabled' : ''); ?>>
+                    <?php echo e(isset($grupo) ? 'Actualizar Grupo' : 'Registrar Grupo'); ?>
+
+                </button>
+                <a href="<?php echo e(route('grupos-proyecto.index')); ?>" class="cm-btn cm-btn-danger">Cancelar</a>
+            </div>
+            <p style="font-size:10px;color:#555;margin-top:8px;">Nota: El código del equipo se genera automáticamente. Seleccione un nombre, comunidad, contexto académico y agregue al menos un Líder.</p>
+        </form>
+    </fieldset>
+
+    
+    <div class="modal-overlay" id="comunidadModal">
+        <div class="modal-content">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #8b0000;">
+                <h3 style="margin:0;font-size:16px;font-weight:bold;color:#333;">Nueva Comunidad</h3>
+                <button type="button" onclick="cerrarModalComunidad()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#999;">&times;</button>
+            </div>
+            <div id="comunidadModalError" style="display:none;background:#f8d7da;color:#721c24;padding:10px;border-radius:4px;margin-bottom:12px;font-size:12px;font-weight:bold;"></div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div class="grp-field" style="grid-column:span 2;">
+                    <label>Nombre de la comunidad <span style="color:#c82333;">*</span></label>
+                    <input type="text" id="comNombre" placeholder="Nombre completo" style="width:100%;max-width:100%;" oninput="validarNombre(this)">
+                    <span id="comNombreStatus" class="status-indicator"></span>
+                </div>
+
+                <div class="grp-field">
+                    <label>RIF</label>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <select id="comRifLetra" style="width:60px;height:36px;border:1px solid #ccc;border-radius:4px;font-size:13px;" onchange="validarRif(document.getElementById('comRifNumero'))">
+                            <option value="J">J</option>
+                            <option value="V">V</option>
+                            <option value="C">C</option>
+                            <option value="G">G</option>
+                            <option value="P">P</option>
+                        </select>
+                        <span style="font-size:16px;">-</span>
+                        <input type="text" id="comRifNumero" placeholder="123456789" maxlength="9"
+                            style="flex:1;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;"
+                            data-check-url="<?php echo e(route('comunidades.check-rif')); ?>"
+                            data-status-span="comRifStatus"
+                            data-digito-span="comRifDigito"
+                            data-select-id="comRifLetra"
+                            oninput="this.value=this.value.replace(/\D/g,''); validarRif(this)">
+                        <span style="font-size:16px;">-</span>
+                        <span id="comRifDigito" style="font-weight:bold;font-size:16px;min-width:16px;">?</span>
+                    </div>
+                    <span id="comRifStatus" class="status-indicator"></span>
+                </div>
+
+                <div class="grp-field">
+                    <label>Correo electrónico</label>
+                    <input type="email" id="comCorreo" placeholder="comunidad@ejemplo.com"
+                        style="width:100%;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;" maxlength="40"
+                        data-check-url="<?php echo e(route('comunidades.check-email')); ?>"
+                        data-status-span="comCorreoStatus"
+                        oninput="validarCorreoRemoto(this)">
+                    <span id="comCorreoStatus" class="status-indicator"></span>
+                </div>
+
+                <div class="grp-field">
+                    <label>Teléfono</label>
+                    <div style="display:flex;gap:6px;">
+                        <select id="comTelPrefijo" style="width:80px;height:36px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+                            <option value="0424">0424</option>
+                            <option value="0414">0414</option>
+                            <option value="0416">0416</option>
+                            <option value="0426">0426</option>
+                            <option value="0412">0412</option>
+                            <option value="0251">0251</option>
+                            <option value="0252">0252</option>
+                            <option value="0261">0261</option>
+                            <option value="0271">0271</option>
+                        </select>
+                        <input type="text" id="comTelefono" placeholder="5555555" maxlength="7"
+                            style="flex:1;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;"
+                            oninput="this.value=this.value.replace(/\D/g,'').slice(0,7)">
+                    </div>
+                </div>
+
+                <div class="grp-field">
+                    <label>Estado <span style="color:#c82333;">*</span></label>
+                    <select id="comEstado" style="width:100%;height:36px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+                        <option value="">— Seleccione —</option>
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $estados; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $e): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoop($loop->index); ?><?php endif; ?>
+                            <option value="<?php echo e($e->est_codigo); ?>"><?php echo e($e->est_nombre); ?></option>
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
+                    </select>
+                </div>
+
+                <div class="grp-field">
+                    <label>Municipio <span style="color:#c82333;">*</span></label>
+                    <select id="comMunicipio" style="width:100%;height:36px;border:1px solid #ccc;border-radius:4px;font-size:13px;" disabled>
+                        <option value="">— Primero seleccione estado —</option>
+                    </select>
+                </div>
+
+                <div class="grp-field" style="grid-column:span 2;">
+                    <label>Dirección exacta <span style="color:#c82333;">*</span></label>
+                    <input type="text" id="comDireccion" placeholder="Calle, sector, número..."
+                        style="width:100%;height:36px;padding:6px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+                </div>
+            </div>
+
+            <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;">
+                <button type="button" class="cm-btn cm-btn-success" onclick="guardarComunidadAjax()">Guardar Comunidad</button>
+                <button type="button" class="cm-btn cm-btn-secondary" onclick="cerrarModalComunidad()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+<?php $__env->stopSection(); ?>
+
+<?php $__env->startPush('scripts'); ?>
+<script>
+// ========== State ==========
+let miembros = [];
+let estudiantesCache = [];
+let comunidadesCache = <?php echo json_encode($comunidades->map(fn($c) => ['id' => $c->com_codigo, 'nombre' => $c->com_nombre, 'rif' => $c->com_rif ?? ''])) ?>;
+let isProfessor = <?php echo e($isProfessor ? 'true' : 'false'); ?>;
+let editingMode = <?php echo e(isset($grupo) ? 'true' : 'false'); ?>;
+
+// ========== DOM refs ==========
+const lapsoSelect = document.getElementById('lapsoSelect');
+const programaSelect = document.getElementById('programaSelect');
+const seccionSelect = document.getElementById('seccionSelect');
+const nombreInput = document.getElementById('nombreInput');
+const estudianteSearch = document.getElementById('estudianteSearch');
+const estudianteDropdown = document.getElementById('estudianteDropdown');
+const agregarBtn = document.getElementById('agregarBtn');
+const miembrosTableBody = document.getElementById('miembrosTableBody');
+const miembrosEmptyRow = document.getElementById('miembrosEmptyRow');
+const miembrosInput = document.getElementById('miembrosInput');
+const comunidadSearch = document.getElementById('comunidadSearch');
+const comunidadDropdown = document.getElementById('comunidadDropdown');
+const comunidadId = document.getElementById('comunidadId');
+
+// ========== Utility: filter estudiantes excluyendo miembros ya seleccionados ==========
+function estudiantesDisponibles() {
+    var cedulasSeleccionadas = miembros.map(function(m) { return m.cedula; });
+    return estudiantesCache.filter(function(e) {
+        return cedulasSeleccionadas.indexOf(e.cedula) === -1;
+    });
+}
+
+// ========== Lapso → Programas ==========
+lapsoSelect.addEventListener('change', function() {
+    const lapso = this.value;
+    programaSelect.disabled = !lapso;
+    programaSelect.innerHTML = '<option value="">— Seleccione PNF —</option>';
+    seccionSelect.disabled = true;
+    seccionSelect.innerHTML = '<option value="">— Seleccione sección —</option>';
+    estudianteSearch.disabled = true;
+    estudianteSearch.value = '';
+    estudiantesCache = [];
+    if (!editingMode) {
+        miembros = [];
+        renderMiembros();
+    }
+
+    if (!lapso) return;
+
+    fetch('/grupos-proyecto/api/programas/' + lapso)
+        .then(function(r) {
+            return r.json();
+        })
+        .then(function(data) {
+            data.forEach(function(p) {
+                var opt = document.createElement('option');
+                opt.value = p.pro_codigo;
+                opt.textContent = p.pro_siglas;
+                programaSelect.appendChild(opt);
+            });
+            <?php if(isset($grupo) && $grupo->pro_codigo): ?>
+                programaSelect.value = '<?php echo e($grupo->pro_codigo); ?>';
+                programaSelect.dispatchEvent(new Event('change'));
+            <?php else: ?>
+                // Auto-select when only 1 programa disponible (para todos los roles)
+                if (data.length === 1) {
+                    programaSelect.value = data[0].pro_codigo;
+                    programaSelect.dispatchEvent(new Event('change'));
+                }
+                if (data.length > 1) {
+                    programaSelect.style.borderColor = '#f0b606';
+                }
+                if (data.length === 0) {
+                    programaSelect.style.borderColor = '#dc3545';
+                }
+            <?php endif; ?>
+        })
+        .catch(function(err) {
+            console.error('Error cargando programas:', err);
+            programaSelect.innerHTML = '<option value="">Error de conexión</option>';
+            programaSelect.style.borderColor = '#dc3545';
+        });
+});
+
+// ========== Programa → Secciones ==========
+programaSelect.addEventListener('change', function() {
+    const lapso = lapsoSelect.value;
+    const programa = this.value;
+    seccionSelect.disabled = !lapso || !programa;
+    seccionSelect.innerHTML = '<option value="">— Seleccione sección —</option>';
+    estudianteSearch.disabled = true;
+    estudianteSearch.value = '';
+    estudiantesCache = [];
+    if (!editingMode) {
+        miembros = [];
+        renderMiembros();
+    }
+
+    if (!lapso || !programa) return;
+
+    fetch('/grupos-proyecto/api/secciones/' + lapso + '/' + programa)
+        .then(function(r) {
+            return r.json();
+        })
+        .then(function(data) {
+            data.forEach(function(s) {
+                var opt = document.createElement('option');
+                opt.value = s.sec_codigo;
+                opt.textContent = s.sec_nombre + (s.tra_nombre ? ' (' + s.tra_nombre + ')' : '');
+                seccionSelect.appendChild(opt);
+            });
+            <?php if(isset($grupo)): ?>
+                seccionSelect.value = '<?php echo e($grupo->sec_codigo); ?>';
+                seccionSelect.dispatchEvent(new Event('change'));
+            <?php endif; ?>
+            if (data.length === 1 && !editingMode) {
+                seccionSelect.value = data[0].sec_codigo;
+                seccionSelect.dispatchEvent(new Event('change'));
+            }
+            if (data.length > 1) {
+                seccionSelect.style.borderColor = '#f0b606';
+            }                if (data.length === 0) {
+                    seccionSelect.style.borderColor = '#dc3545';
+                }
+        })
+        .catch(function(err) {
+            console.error('Error cargando secciones:', err);
+            seccionSelect.innerHTML = '<option value="">Error de conexión</option>';
+            seccionSelect.style.borderColor = '#dc3545';
+        });
+});
+
+// ========== Sección → Estudiantes ==========
+seccionSelect.addEventListener('change', function() {
+    const lapso = lapsoSelect.value;
+    const seccion = this.value;
+    estudianteSearch.disabled = !lapso || !seccion;
+    estudianteSearch.value = '';
+    estudianteDropdown.classList.remove('show');
+    estudiantesCache = [];
+
+    // Show/hide section badge and student section
+    var badge = document.getElementById('selectedSectionBadge');
+    var badgeText = document.getElementById('selectedSectionText');
+    var studentSection = document.getElementById('studentSection');
+    var hint = document.getElementById('selectSectionHint');
+    if (seccion) {
+        badge.style.display = 'block';
+        badgeText.textContent = this.options[this.selectedIndex].text;
+        studentSection.style.display = 'block';
+        hint.style.display = 'none';
+    } else {
+        badge.style.display = 'none';
+        studentSection.style.display = 'none';
+        hint.style.display = 'block';
+    }
+
+    if (!lapso || !seccion) return;
+
+    var statusEl = document.getElementById('studentSectionStatus');
+    statusEl.textContent = 'Cargando estudiantes...';
+    estudianteSearch.placeholder = 'Cargando...';
+
+    fetch('/grupos-proyecto/api/estudiantes/' + lapso + '/' + seccion + '?exclude_grp=<?php echo e(isset($grupo) ? $grupo->grp_codigo : ''); ?>')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            estudiantesCache = data;
+            <?php if(isset($grupo)): ?>
+                // Pre-load existing members (sin borrar los que ya estén cargados)
+                var miembrosData = <?php echo json_encode($grupo->miembros ?? [], 15, 512) ?>;
+                miembrosData.forEach(function(m) {
+                    var exists = miembros.some(function(ex) { return ex.cedula === m.cedula; });
+                    if (!exists) {
+                        miembros.push({
+                            cedula: m.cedula,
+                            nombre: m.nombre || '',
+                            apellido: m.apellido || '',
+                            rol_id: parseInt(m.rol_id || 2),
+                            rol_name: parseInt(m.rol_id || 2) === 1 ? 'Líder' : 'Autor'
+                        });
+                    }
+                });
+                renderMiembros();
+            <?php endif; ?>
+            // Show dropdown hint
+            if (data.length > 0) {
+                var disponibles = estudiantesDisponibles();
+                if (disponibles.length > 0) {
+                    estudianteSearch.placeholder = disponibles.length + ' estudiantes disponibles. Escriba para buscar...';
+                    statusEl.textContent = disponibles.length + ' estudiante(s) disponibles';
+                } else {
+                    statusEl.textContent = 'Todos los estudiantes ya fueron agregados';
+                }
+            } else {
+                statusEl.textContent = 'No se encontraron estudiantes en esta secci\u00f3n';
+                estudianteSearch.placeholder = 'Sin estudiantes disponibles';
+            }
+        })
+        .catch(function() {
+            statusEl.textContent = 'Error al cargar estudiantes';
+            estudianteSearch.placeholder = 'Error de carga';        });
+});
+
+// ========== Student search (excluye miembros ya seleccionados) ==========
+estudianteSearch.addEventListener('input', function() {
+    var disponibles = estudiantesDisponibles();
+    var q = this.value.trim().toLowerCase();
+    if (!q) {
+        showEstudianteDropdown(disponibles.slice(0, 30));
+        return;
+    }
+    var filtered = disponibles.filter(function(e) {
+        return (e.nombre || '').toLowerCase().indexOf(q) !== -1 ||
+               (e.apellido || '').toLowerCase().indexOf(q) !== -1 ||
+               (e.cedula || '').indexOf(q) !== -1;
+    });
+    showEstudianteDropdown(filtered);
+});
+
+estudianteSearch.addEventListener('focus', function() {
+    if (!this.disabled) {
+        var disponibles = estudiantesDisponibles();
+        showEstudianteDropdown(disponibles.slice(0, 30));
+    }
+});
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.grp-search-wrapper')) {
+        estudianteDropdown.classList.remove('show');
+        comunidadDropdown.classList.remove('show');
+    }
+});
+
+function showEstudianteDropdown(data) {
+    estudianteDropdown.innerHTML = '';
+    if (data.length === 0) {
+        estudianteDropdown.innerHTML = '<div class="grp-dropdown-empty">No hay estudiantes disponibles.</div>';
+    } else {
+        data.forEach(function(e) {
+            var div = document.createElement('div');
+            div.className = 'grp-dropdown-item';
+            div.textContent = (e.apellido || '') + ', ' + (e.nombre || '') + ' (' + e.cedula + ')';
+            div.onclick = function() { seleccionarEstudiante(e); };
+            estudianteDropdown.appendChild(div);
+        });
+    }
+    estudianteDropdown.classList.add('show');
+}
+
+function seleccionarEstudiante(est) {
+    estudianteSearch.value = (est.apellido || '') + ', ' + (est.nombre || '') + ' (' + est.cedula + ')';
+    estudianteDropdown.classList.remove('show');
+    agregarBtn.disabled = false;
+    agregarBtn.dataset.cedula = est.cedula;
+    agregarBtn.dataset.nombre = est.nombre || '';
+    agregarBtn.dataset.apellido = est.apellido || '';
+}
+
+// ========== Add/Remove members ==========
+function agregarIntegrante() {
+    var cedula = agregarBtn.dataset.cedula;
+    if (!cedula) return;
+
+    var exists = miembros.some(function(m) { return m.cedula === cedula; });
+    if (exists) {
+        showNotifyToast('warning', 'Ese estudiante ya est\u00e1 en el grupo.');
+        return;
+    }
+
+    var rolId = parseInt(document.getElementById('rolSelect').value);
+    miembros.push({
+        cedula: cedula,
+        nombre: agregarBtn.dataset.nombre || '',
+        apellido: agregarBtn.dataset.apellido || '',
+        rol_id: rolId,
+        rol_name: rolId === 1 ? 'Líder' : 'Autor'
+    });
+
+    renderMiembros();
+    estudianteSearch.value = '';
+    estudianteSearch.focus();
+    agregarBtn.disabled = true;
+    agregarBtn.dataset.cedula = '';
+}
+
+function quitarIntegrante(cedula) {
+    miembros = miembros.filter(function(m) { return m.cedula !== cedula; });
+    renderMiembros();
+}
+
+function renderMiembros() {
+    miembrosTableBody.innerHTML = '';
+    miembrosInput.value = JSON.stringify(miembros);
+
+    if (miembros.length === 0) {
+        miembrosTableBody.appendChild(miembrosEmptyRow);
+        return;
+    }
+
+    miembros.forEach(function(m) {
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+            '<td>' + escapeHtml(m.cedula) + '</td>' +
+            '<td><strong>' + escapeHtml(m.apellido) + ', ' + escapeHtml(m.nombre) + '</strong></td>' +
+            '<td><span class="grp-member-rol-badge ' + (m.rol_id === 1 ? 'grp-rol-lider' : 'grp-rol-autor') + '">' + m.rol_name + '</span></td>' +
+            '<td><button type="button" onclick="quitarIntegrante(\'' + m.cedula + '\')" ' +
+            'style="background:none;border:none;color:#c82333;cursor:pointer;font-size:14px;" title="Quitar">&times;</button></td>';
+        miembrosTableBody.appendChild(tr);
+    });
+}
+
+// ========== Nombre disponible (unicidad) ==========
+var nombreTimeout = null;
+function validarNombreDisponible(input) {
+    clearTimeout(nombreTimeout);
+    var statusEl = document.getElementById('nombreStatus');
+    var nombre = input.value.trim();
+    if (nombre.length < 2) {
+        statusEl.textContent = '';
+        statusEl.className = 'status-indicator';
+        return;
+    }
+    var baseUrl = input.getAttribute('data-check-url');
+    var exclude = input.getAttribute('data-exclude');
+    var url = baseUrl + '?nombre=' + encodeURIComponent(nombre);
+    if (exclude) {
+        url += '&exclude=' + encodeURIComponent(exclude);
+    }
+    nombreTimeout = setTimeout(function() {
+        statusEl.textContent = 'Verificando...';
+        statusEl.className = 'status-indicator';
+        fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.available) {
+                    statusEl.textContent = '✓ Disponible';
+                    statusEl.className = 'status-indicator status-ok';
+                } else {
+                    statusEl.textContent = '✗ Nombre no disponible';
+                    statusEl.className = 'status-indicator status-err';
+                }
+            })
+            .catch(function() {
+                statusEl.textContent = '';
+                statusEl.className = 'status-indicator';
+            });
+    }, 400);
+}
+
+// ========== Community search ==========
+comunidadSearch.addEventListener('input', function() {
+    var q = this.value.trim().toLowerCase();
+    var filtered = comunidadesCache.filter(function(c) {
+        return (c.nombre || '').toLowerCase().indexOf(q) !== -1 ||
+               (c.rif || '').toLowerCase().indexOf(q) !== -1;
+    });
+    showComunidadDropdown(filtered);
+    comunidadId.value = '';
+});
+
+comunidadSearch.addEventListener('focus', function() {
+    showComunidadDropdown(comunidadesCache);
+});
+
+function showComunidadDropdown(data) {
+    comunidadDropdown.innerHTML = '';
+    if (data.length === 0) {
+        comunidadDropdown.innerHTML = '<div class="grp-dropdown-empty">No se encontraron comunidades.</div>';
+    } else {
+        data.forEach(function(c) {
+            var div = document.createElement('div');
+            div.className = 'com-row' + (comunidadId.value == c.id ? ' selected' : '');
+            div.innerHTML = '<strong>' + escapeHtml(c.nombre) + '</strong>' +
+                (c.rif ? ' <span style="color:#666;font-size:10px;">(' + escapeHtml(c.rif) + ')</span>' : '');
+            div.onclick = function() {
+                comunidadId.value = c.id;
+                comunidadSearch.value = '';
+                comunidadDropdown.classList.remove('show');
+                document.getElementById('comunidadSearchWrapper').style.display = 'none';
+                var badge = document.getElementById('comunidadBadge');
+                badge.querySelector('span').textContent = c.nombre;
+                badge.style.display = 'flex';
+            };
+            comunidadDropdown.appendChild(div);
+        });
+    }
+    comunidadDropdown.classList.add('show');
+}
+
+// ========== Community creation modal ==========
+function abrirModalComunidad() {
+    document.getElementById('comunidadModal').classList.add('show');
+    document.getElementById('comunidadModalError').style.display = 'none';
+    document.getElementById('comNombre').value = '';
+    document.getElementById('comNombreStatus').textContent = '';
+    document.getElementById('comRifNumero').value = '';
+    document.getElementById('comRifNumero').dataset.rifOk = '';
+    document.getElementById('comRifDigito').textContent = '?';
+    document.getElementById('comRifStatus').textContent = '';
+    document.getElementById('comRifStatus').style.display = 'none';
+    document.getElementById('comCorreo').value = '';
+    document.getElementById('comCorreo').dataset.correoOk = '';
+    document.getElementById('comCorreoStatus').textContent = '';
+    document.getElementById('comCorreoStatus').style.display = 'none';
+    document.getElementById('comTelefono').value = '';
+    document.getElementById('comEstado').value = '';
+    document.getElementById('comMunicipio').disabled = true;
+    document.getElementById('comMunicipio').innerHTML = '<option value="">— Primero seleccione estado —</option>';
+    document.getElementById('comDireccion').value = '';
+}
+
+function cerrarModalComunidad() {
+    document.getElementById('comunidadModal').classList.remove('show');
+}
+
+document.getElementById('comunidadModal').addEventListener('click', function(e) {
+    if (e.target === this) cerrarModalComunidad();
+});
+
+// ========== Community modal: RIF & Email validation now handled by global functions validarRif / validarCorreoRemoto (HTML onchange/oninput) ==========
+
+// ========== Community modal: Estado \u2192 Municipio ==========
+document.getElementById('comEstado').addEventListener('change', function() {
+    var estadoId = this.value;
+    var munSelect = document.getElementById('comMunicipio');
+    munSelect.disabled = !estadoId;
+    munSelect.innerHTML = '<option value="">— Cargando... —</option>';
+
+    if (!estadoId) {
+        munSelect.innerHTML = '<option value="">— Primero seleccione estado —</option>';
+        return;
+    }
+
+    fetch('/comunidades/municipios/' + estadoId)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            munSelect.innerHTML = '<option value="">— Seleccione municipio —</option>';
+            data.forEach(function(m) {
+                var opt = document.createElement('option');
+                opt.value = m.mun_codigo;
+                opt.textContent = m.mun_nombre;
+                munSelect.appendChild(opt);
+            });
+        })
+        .catch(function() {
+            munSelect.innerHTML = '<option value="">— Error cargando municipios —</option>';
+        });
+});
+
+// ========== Community modal: nombre availability (client-side vs cache) ==========
+var comNombreTimeout = null;
+document.getElementById('comNombre').addEventListener('input', function() {
+    clearTimeout(comNombreTimeout);
+    var nombre = this.value.trim();
+    var statusEl = document.getElementById('comNombreStatus');
+    if (nombre.length < 3) {
+        statusEl.textContent = '';
+        return;
+    }
+    comNombreTimeout = setTimeout(function() {
+        // Verificar contra el caché de comunidades
+        var exists = comunidadesCache.some(function(c) {
+            return c.nombre.toLowerCase() === nombre.toLowerCase();
+        });
+        if (exists) {
+            statusEl.textContent = 'Nombre no disponible';
+            statusEl.className = 'status-indicator status-err';
+        } else {
+            statusEl.textContent = 'Disponible';
+            statusEl.className = 'status-indicator status-ok';
+        }
+    }, 400);
+});
+
+// ========== Save community via AJAX ==========
+function guardarComunidadAjax() {
+    var errorEl = document.getElementById('comunidadModalError');
+    errorEl.style.display = 'none';
+
+    var nombre = document.getElementById('comNombre').value.trim();
+    var estado = document.getElementById('comEstado').value;
+    var municipio = document.getElementById('comMunicipio').value;
+    var direccion = document.getElementById('comDireccion').value.trim();
+
+    if (!nombre) { showModalError('El nombre es obligatorio.'); return; }
+    if (!estado) { showModalError('Seleccione un estado.'); return; }
+    if (!municipio) { showModalError('Seleccione un municipio.'); return; }
+    if (!direccion) { showModalError('La dirección es obligatoria.'); return; }
+
+    var rifNumero = document.getElementById('comRifNumero').value.trim();
+    var correo = document.getElementById('comCorreo').value.trim();
+    var rifInput = document.getElementById('comRifNumero');
+    var correoInput = document.getElementById('comCorreo');
+
+    if (rifNumero.length > 0 && rifInput.dataset.rifOk !== 'true') {
+        showModalError('Corrige el RIF antes de guardar.');
+        return;
+    }
+    if (correo.length >= 5 && correoInput.dataset.correoOk !== 'true') {
+        showModalError('Corrige el correo antes de guardar.');
+        return;
+    }
+
+    var data = {
+        nombre: nombre,
+        rif_letra: document.getElementById('comRifLetra').value,
+        rif_numero: rifNumero,
+        correo: correo,
+        prefijo_telefono: document.getElementById('comTelPrefijo').value,
+        numero_telefono: document.getElementById('comTelefono').value,
+        estado_id: estado,
+        municipio_id: municipio,
+        dir_nombre: direccion
+    };
+
+    var btn = event.target;
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+
+    fetch('<?php echo e(route('grupos-proyecto.api.crear-comunidad')); ?>', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>' },
+        body: JSON.stringify(data)
+    })
+    .then(function(r) {
+        if (!r.ok) { return r.json().then(function(e) { throw new Error(e.error || 'Error al guardar'); }); }
+        return r.json();
+    })
+    .then(function(result) {
+        comunidadesCache.push({ id: result.id, nombre: result.nombre, rif: '' });
+        comunidadId.value = result.id;
+        comunidadSearch.value = result.nombre;
+        cerrarModalComunidad();
+    })
+    .catch(function(err) {
+        showModalError(err.message || 'Error al crear la comunidad.');
+    })
+    .finally(function() {
+        btn.disabled = false;
+        btn.textContent = 'Guardar Comunidad';
+    });
+}
+
+function showModalError(msg) {
+    var el = document.getElementById('comunidadModalError');
+    el.innerHTML = msg;
+    el.style.display = 'block';
+}
+
+// ========== Form submit validation ==========
+document.getElementById('grupoForm').addEventListener('submit', function(e) {
+    miembrosInput.value = JSON.stringify(miembros);
+
+    if (miembros.length === 0) {
+        e.preventDefault();
+        showNotifyToast('warning', 'Debe agregar al menos un integrante al grupo.');
+        return;
+    }
+
+    var tieneLider = miembros.some(function(m) { return m.rol_id === 1; });
+    if (!tieneLider) {
+        e.preventDefault();
+        showNotifyToast('warning', 'Debe haber al menos un integrante con rol de L\u00edder.');
+        return;
+    }
+
+    if (!comunidadId.value) {
+        e.preventDefault();
+        showNotifyToast('warning', 'Debe seleccionar una comunidad.');
+        return;
+    }
+
+});
+
+// ========== Utility ==========
+function escapeHtml(str) {
+    if (!str) return '';
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// ========== Init on page load ==========
+document.addEventListener('DOMContentLoaded', function() {
+    <?php if(isset($grupo)): ?>
+        if (lapsoSelect.value) {
+            lapsoSelect.dispatchEvent(new Event('change'));
+
+            <?php if(!$grupo->pro_codigo): ?>
+            setTimeout(function() {
+                var lapso = lapsoSelect.value;
+                if (!lapso) return;
+                fetch('/grupos-proyecto/api/secciones/' + lapso)
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        seccionSelect.innerHTML = '<option value="">— Seleccione sección —</option>';
+                        data.forEach(function(s) {
+                            var opt = document.createElement('option');
+                            opt.value = s.sec_codigo;
+                            opt.textContent = s.sec_nombre + (s.tra_nombre ? ' (' + s.tra_nombre + ')' : '');
+                            seccionSelect.appendChild(opt);
+                        });
+                        seccionSelect.value = '<?php echo e($grupo->sec_codigo); ?>';
+                        seccionSelect.dispatchEvent(new Event('change'));
+                    });
+            }, 400);
+            <?php endif; ?>
+        }
+    <?php elseif($lapsoPreseleccionado): ?>
+        lapsoSelect.value = '<?php echo e($lapsoPreseleccionado); ?>';
+        lapsoSelect.dispatchEvent(new Event('change'));
+    <?php else: ?>
+        // Sin lapso preseleccionado: si el select ya tiene valor por selected, disparar igual
+        if (lapsoSelect.value) {
+            lapsoSelect.dispatchEvent(new Event('change'));
+        }
+    <?php endif; ?>
+});
+</script>
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\tu hermana\Downloads\proyecto\Proyecto-de-Repositorio-de-gestion-de-repositorio\resources\views\grupos_proyecto\form.blade.php ENDPATH**/ ?>

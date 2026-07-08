@@ -1,1 +1,0 @@
-<div style="text-align:center;padding:40px;color:#666;">Cargando listado de profesores...</div><?php /**PATH C:\Users\Emanuel\Desktop\Sistemax\Proyecto-de-Repositorio-de-gestion-de-repositorio\storage\framework\views/5b588ee92b7e7683c2c1c983ab7e13c8.blade.php ENDPATH**/ ?>

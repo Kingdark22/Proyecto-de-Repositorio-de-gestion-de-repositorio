@@ -1,1 +1,0 @@
-paginator-<?php echo e($paginator->getPageName()); ?>-page<?php echo e($page); ?><?php /**PATH C:\Users\Emanuel\Desktop\Sistemax\Proyecto-de-Repositorio-de-gestion-de-repositorio\storage\framework\views/c04136f0ec1e2dea75ef010373030c34.blade.php ENDPATH**/ ?>

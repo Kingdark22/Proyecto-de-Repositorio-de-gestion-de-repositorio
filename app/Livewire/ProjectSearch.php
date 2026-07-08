@@ -41,12 +41,9 @@ class ProjectSearch extends Component
     public string $mensaje = '';
     public string $tipoMensaje = 'success';
 
-    public function mount(ProyectoBusquedaService $busqueda): void
+    public function mount(): void
     {
-        $lapsos = $busqueda->datosVista([], 1)['lapsos'];
-        if ($lapsos->isNotEmpty() && $this->lapsoFilter === '') {
-            $this->lapsoFilter = (string) $lapsos->first()->lap_codigo;
-        }
+        // No se auto-selecciona lapso: mostrar todos los proyectos al cargar
     }
 
     public function toggleProject(int $id): void
@@ -119,9 +116,10 @@ class ProjectSearch extends Component
         $this->resetPage();
     }
 
-    public function limpiarFiltros(ProyectoBusquedaService $busqueda): void
+    public function limpiarFiltros(): void
     {
         $this->search = '';
+        $this->lapsoFilter = '';
         $this->programaFilter = '';
         $this->trayectoFilter = '';
         $this->seccionFilter = '';
@@ -130,9 +128,6 @@ class ProjectSearch extends Component
         $this->tipoPublicacionFilter = '';
         $this->tipoInvestigacionFilter = '';
         $this->metodologiaFilter = '';
-
-        $lapsos = $busqueda->datosVista([], 1)['lapsos'];
-        $this->lapsoFilter = $lapsos->isNotEmpty() ? (string) $lapsos->first()->lap_codigo : '';
         $this->resetPage();
     }
 

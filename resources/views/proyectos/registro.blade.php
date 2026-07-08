@@ -28,12 +28,7 @@
 @endpush
 
 @section('content')
-    @if (session('success'))
-        <div style="background: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border: 1px solid #c3e6cb; border-radius: 4px; font-weight: bold; text-align: center;">{{ session('success') }}</div>
-    @endif
-    @if (session('error'))
-        <div style="background: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px; font-weight: bold; text-align: center;">{{ session('error') }}</div>
-    @endif
+
     @if ($errors->any())
         <div style="background: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px; font-weight: bold;">
             <ul style="margin:0;padding-left:20px;">
@@ -56,7 +51,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('proyectos.gestion.update', $proyecto->id) }}" enctype="multipart/form-data">
+    <form id="proyectoForm" method="POST" action="{{ route('proyectos.gestion.update', $proyecto->id) }}" enctype="multipart/form-data">
         @csrf
         @method('PUT')
 
@@ -69,6 +64,56 @@
         <input type="hidden" name="trayecto_derived" value="{{ $datosForm['trayecto_derived'] ?? '' }}">
         <input type="hidden" name="trayecto_derived_codigo" value="{{ $datosForm['trayecto_derived_codigo'] ?? '' }}">
         <input type="hidden" name="comunidad_id" value="{{ $datosForm['comunidad_id'] ?? '' }}">
+
+        @php
+            $esSoloLectura = !$esCreador && !$esMiembro;
+        @endphp
+
+        @if($esSoloLectura)
+            <style>
+                /* Deshabilitar TODOS los elementos interactivos del formulario */
+                #proyectoForm input, #proyectoForm select, #proyectoForm textarea,
+                #proyectoForm button, #proyectoForm .cm-btn, #proyectoForm [type="button"],
+                #proyectoForm [type="submit"], #proyectoForm [type="file"],
+                #proyectoForm [type="checkbox"], #proyectoForm [type="radio"] {
+                    pointer-events: none !important;
+                    background: #f5f5f5 !important;
+                    opacity: 0.6 !important;
+                    cursor: not-allowed !important;
+                }
+                /* Ocultar completamente botones de acción para que no ocupen espacio */
+                #proyectoForm button[type="submit"], #proyectoForm .pgm-btn-save,
+                #proyectoForm .cm-btn-success, #proyectoForm .cm-btn-danger,
+                #proyectoForm .cm-btn-warning, #proyectoForm .cm-btn-primary,
+                #proyectoForm [onclick] {
+                    display: none !important;
+                }
+                /* Links dentro del formulario también deshabilitados */
+                #proyectoForm a[href] {
+                    pointer-events: none !important;
+                    opacity: 0.6 !important;
+                }
+                /* EXCEPCIÓN: enlaces para ver documentos — se mantienen clickeables */
+                #proyectoForm a.simple-link {
+                    pointer-events: auto !important;
+                    opacity: 1 !important;
+                    color: #0000EE !important;
+                    text-decoration: underline !important;
+                }
+                #proyectoForm a.simple-link:hover {
+                    color: #8b0000 !important;
+                }
+                /* EXCEPCIÓN: selects de clasificación — mostrar valores con opacidad completa */
+                #proyectoForm fieldset select {
+                    opacity: 1 !important;
+                    color: #000 !important;
+                }
+                /* Deshabilitar campos file */
+                #proyectoForm input[type="file"] {
+                    display: none !important;
+                }
+            </style>
+        @endif
 
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
             <legend style="color: #000; font-weight: bold; padding: 0 5px;">&nbsp;</legend>
@@ -485,19 +530,24 @@
 
                     <div style="margin-top:6px;font-size:10px;color:#999;text-align:center;" id="rol-asignado-msg"></div>
                 </div>
-            </div>
-
-            {{-- == BOTONES == --}}
+            </div>                {{-- == BOTONES == --}}
             <div style="text-align:center;margin-top:20px;">
-                @if($proyecto->estado_validacion === 'completado')
-                    <a href="{{ route('proyectos.gestion') }}" class="pgm-btn-cancel" style="margin-right:10px;">Cerrar</a>
+                @if($esSoloLectura)
+                    <div style="background:#fff3cd;color:#856404;padding:8px 12px;margin-bottom:12px;border:1px solid #ffeeba;border-radius:4px;font-size:12px;font-weight:bold;">
+                        Vista de solo lectura — No puedes modificar este proyecto.
+                    </div>
+                    <a href="{{ route('proyectos.gestion') }}" class="pgm-btn-cancel" style="margin-right:10px;">Volver al listado</a>
                 @else
-                    <a href="{{ route('proyectos.gestion') }}" class="pgm-btn-cancel" style="margin-right:10px;">Cancelar</a>
-                @endif
-                <button type="submit" class="pgm-btn-save">{{ $modoActualizacion ? 'Subir documentos' : 'Guardar cambios' }}</button>
-                @if (!empty($canValidate) && $proyecto->estado_validacion === 'completado')
-                    <button type="button" class="cm-btn cm-btn-success cm-btn-sm" style="margin-left:10px;" onclick="mostrarModalAccion({icon:'\u2705',title:'Aprobar proyecto',message:'\u00bfAprueba este proyecto?',confirmText:'S\u00ed, aprobar',confirmClass:'cm-btn-success',onConfirm:function(){window.location='{{ route('proyectos.gestion.approve', $proyecto->id) }}'}})">Aprobar</button>
-                    <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" style="margin-left:5px;" onclick="abrirRechazar({{ $proyecto->id }})">Rechazar</button>
+                    @if($proyecto->estado_validacion === 'completado')
+                        <a href="{{ route('proyectos.gestion') }}" class="pgm-btn-cancel" style="margin-right:10px;">Cerrar</a>
+                    @else
+                        <a href="{{ route('proyectos.gestion') }}" class="pgm-btn-cancel" style="margin-right:10px;">Cancelar</a>
+                    @endif
+                    <button type="submit" class="pgm-btn-save">{{ $modoActualizacion ? 'Subir documentos' : 'Guardar cambios' }}</button>
+                    @if (!empty($canValidate) && $proyecto->estado_validacion === 'completado')
+                        <button type="button" class="cm-btn cm-btn-success cm-btn-sm" style="margin-left:10px;" onclick="mostrarModalAccion({icon:'\u2705',title:'Aprobar proyecto',message:'\u00bfAprueba este proyecto?',confirmText:'S\u00ed, aprobar',confirmClass:'cm-btn-success',onConfirm:function(){window.location='{{ route('proyectos.gestion.approve', $proyecto->id) }}'}})">Aprobar</button>
+                        <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" style="margin-left:5px;" onclick="abrirRechazar({{ $proyecto->id }})">Rechazar</button>
+                    @endif
                 @endif
             </div>
         </fieldset>
@@ -527,13 +577,50 @@
         document.getElementById('rejectModal').style.display = 'none';
     }
 function actualizarDoc(id, estado, observacion = '') {
+    // Buscar la fila del documento:
+    // - Accept: botón directo con onclick="actualizarDoc(id, 1)"
+    // - Reject: botón "Rechazar" con onclick="abrirModalRechazo(id)"
+    var row = null;
+    var btn = document.querySelector('button[onclick*="' + id + ',"]') ||
+              document.querySelector('button[onclick*="abrirModalRechazo(' + id + ')"]');
+    if (btn) row = btn.closest('tr');
+
     fetch('/proyectos/documentos/' + id + '/estado', {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
         body: JSON.stringify({ estado, observacion })
-    }).then(r => r.json()).then(data => {
-        if (data.success) location.reload();
-        else alert(data.message);
+    }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data.success) {
+            if (typeof showNotifyToast === 'function') {
+                showNotifyToast('success', estado == 1 ? 'Documento aceptado.' : 'Documento rechazado.');
+            }
+            if (row) {
+                // Actualizar estado visual en la UI
+                var statusCell = row.querySelector('td:nth-child(2) div');
+                if (statusCell) {
+                    if (estado == 1) {
+                        statusCell.innerHTML = '<span style="color: #28a745; font-weight: bold;">\u2713 Aceptado</span>';
+                    } else if (estado == 2) {
+                        var motivoHtml = observacion ? '<div style="font-size:10px; color:#666; margin-top:2px;"><i>Motivo:</i> ' + observacion + '</div>' : '';
+                        statusCell.innerHTML = '<span style="color: #dc3545; font-weight: bold;">\u2717 Rechazado</span>' + motivoHtml;
+                    }
+                }
+                // Ocultar los botones Aceptar/Rechazar
+                var actionDiv = row.querySelector('td:nth-child(3) div[style*="margin-top"]');
+                if (actionDiv && actionDiv.querySelector('button')) actionDiv.style.display = 'none';
+            }
+        } else {
+            var errMsg = data.message || 'Error al actualizar el documento.';
+            if (typeof showNotifyToast === 'function') {
+                showNotifyToast('error', errMsg);
+            } else {
+                alert(errMsg);
+            }
+        }
+    }).catch(function() {
+        if (typeof showNotifyToast === 'function') {
+            showNotifyToast('error', 'Error de conexi\u00f3n al actualizar.');
+        }
     });
 }
 

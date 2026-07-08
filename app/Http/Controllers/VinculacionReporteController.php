@@ -67,6 +67,11 @@ class VinculacionReporteController extends Controller
             }
         }
 
+        // Agrupar vinculaciones por título de vinculación
+        $gruposPorTitulo = $vinculaciones->groupBy(function ($v) {
+            return $v->tituloVinculacion?->titulo ?? 'Sin título';
+        });
+
         $lapsos = collect($vinculaciones)->pluck('lapso')->unique()->filter()->sort();
         $lapsosNombres = $lapsos->mapWithKeys(function ($lapCodigo) {
             $lapso = \App\Models\LapsoAcademico::find((int) $lapCodigo);
@@ -83,6 +88,7 @@ class VinculacionReporteController extends Controller
         $pdf = Pdf::loadView('pdf.vinculacion-reporte', [
             'titulo' => $titulo,
             'vinculaciones' => $vinculaciones,
+            'gruposPorTitulo' => $gruposPorTitulo,
             'lapsosNombres' => $lapsosNombres ?? [],
             'fecha' => now()->format('d/m/Y'),
         ]);
