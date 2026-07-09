@@ -319,15 +319,6 @@ class ProyectoController extends Controller
             $proyecto->update($updateData);
 
             $proyecto = $proyecto->fresh();
-            if ($this->gestion->verificarSiProyectoEstaCompletado($proyecto)) {
-                if ($proyecto->estado_validacion === 'pendiente') {
-                    $proyecto->update(['estado_validacion' => 'completado']);
-                }
-            } else {
-                if ($proyecto->estado_validacion === 'completado') {
-                    $proyecto->update(['estado_validacion' => 'pendiente']);
-                }
-            }
 
             try {
                 // Buscar el profesor real que creó el grupo (no el creador del proyecto)
@@ -857,21 +848,23 @@ class ProyectoController extends Controller
                 'pd_observacion' => $observacion,
             ]);
 
-            try {
-                $proyecto = $doc->proyecto;
+            // Cargar proyecto directamente desde el pry_codigo del documento
+            $proyectoId = $doc->getAttribute('pry_codigo');
+            $proyecto = $proyectoId ? \App\Models\Proyecto::find($proyectoId) : null;
+
+            if ($proyecto) {
                 $grupo = \App\Models\GrupoProyectoModulo::where('grp_identificador', $proyecto->equipo_ref)->first();
                 $cedulas = collect($grupo?->grp_miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
 
                 if ($nuevoEstado == 1) {
-                    // Cuando se acepta un documento, verificar si TODOS están aceptados
-                    $allDocs = \App\Models\ProyectoDocumento::where('pry_codigo', $proyecto->id)->get();
-                    $todosAceptados = $allDocs->every(fn ($d) => (int) $d->pd_estado === 1);
+                    $allDocs = \App\Models\ProyectoDocumento::where('pry_codigo', $proyecto->getKey())->get();
+                    $todosAceptados = $allDocs->isNotEmpty() && $allDocs->every(fn ($d) => (int) $d->pd_estado === 1);
+                    $completos = $todosAceptados && $this->gestion->verificarSiProyectoEstaCompletado($proyecto);
 
-                    if ($todosAceptados && $proyecto->estado_validacion !== 'aprobado') {
+                    if ($completos && $proyecto->estado_validacion !== 'aprobado') {
                         $proyecto->update(['estado_validacion' => 'completado']);
-                        \Illuminate\Support\Facades\Log::info("Proyecto {$proyecto->id} auto-completado: todos los documentos aceptados.");
+                        \Illuminate\Support\Facades\Log::info("Proyecto {$proyecto->getKey()} auto-completado: todos los documentos aceptados y componentes completos.");
 
-                        // Notificar a los estudiantes que el proyecto fue completado
                         if (!empty($cedulas)) {
                             $this->notificacionService->notificarProyectoCompletado($proyecto, $cedulas);
                         }
@@ -890,8 +883,8 @@ class ProyectoController extends Controller
                         $cedulas
                     );
                 }
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning("Error notificando estado de documento: " . $e->getMessage());
+            } else {
+                \Illuminate\Support\Facades\Log::warning("actualizarEstadoDocumento: no se encontró proyecto para documento {$id}, pry_codigo=" . var_export($proyectoId, true));
             }
 
             return response()->json(['success' => true, 'message' => 'Estado del documento actualizado correctamente.']);

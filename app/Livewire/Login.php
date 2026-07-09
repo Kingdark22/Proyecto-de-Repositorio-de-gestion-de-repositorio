@@ -109,12 +109,24 @@ class Login extends Component
                 }
             }
 
-            // 4. Buscar el modelo User (siempre en simulación después del mirroring)
-            $user = User::on('simulacion')->whereRaw('TRIM(usu_cedula) = ?', [$cedula])->first();
+            // 4. Buscar el modelo User exacto (misma cédula Y mismo usu_nombre)
+            //    para evitar que el sistema use una fila distinta cuando hay múltiples
+            //    registros con la misma cédula pero diferente usu_nombre.
+            $user = null;
 
-            // 5. Si vino de intranet pero el mirroring no copió el usuario, caer en intranet
-            if (! $user && $fromIntranet) {
-                $user = User::on('intranet')->whereRaw('TRIM(usu_cedula) = ?', [$cedula])->first();
+            if ($fromIntranet) {
+                // Buscar primero en intranet con ambos campos (el $extUser se encontró ahí)
+                $user = User::on('intranet')
+                    ->whereRaw('TRIM(usu_cedula) = ?', [trim($extUser->usu_cedula)])
+                    ->whereRaw('TRIM(usu_nombre) = ?', [trim($extUser->usu_nombre)])
+                    ->first();
+            }
+
+            if (! $user) {
+                // Fallback: simulación (después del mirroring) solo por cédula
+                $user = User::on('simulacion')
+                    ->whereRaw('TRIM(usu_cedula) = ?', [$cedula])
+                    ->first();
             }
 
             if (! $user) {
@@ -125,6 +137,7 @@ class Login extends Component
 
             Auth::login($user);
             request()->session()->regenerate();
+            \App\Providers\AppServiceProvider::persistUserAuth($user);
 
             $roleService = app(UserRoleService::class);
             $roleService->bootstrapSessionRole($user);

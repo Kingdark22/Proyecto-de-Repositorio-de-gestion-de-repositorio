@@ -133,6 +133,18 @@ class MagicLoginController extends Controller
                 }
             }
 
+            // Si aún no se encontró (ej: simulación tiene una fila con diferente usu_nombre),
+            // buscar solo por cédula
+            if (!$user) {
+                try {
+                    $user = User::on($conn)
+                        ->whereRaw('TRIM(usu_cedula) = ?', [$cedula])
+                        ->first();
+                } catch (\Exception $e) {
+                    Log::warning('MagicLogin: fallback solo-cedula falló: ' . $e->getMessage());
+                }
+            }
+
             if (!$user) {
                 return response('<html><body style="font-family:Verdana;text-align:center;padding:80px;background:#f5f5f5;">
                     <h1 style="color:#c00;">Error</h1>
@@ -145,6 +157,7 @@ class MagicLoginController extends Controller
             $request->session()->invalidate();
             $request->session()->regenerateToken();
             Auth::login($user);
+            \App\Providers\AppServiceProvider::persistUserAuth($user);
             Log::info('User authenticated: ' . (Auth::check() ? 'true' : 'false') . ' as ' . trim($user->usu_nombre ?? ''));
 
             $roleService = app(UserRoleService::class);

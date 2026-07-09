@@ -259,12 +259,12 @@ class GrupoProyectoService
         try {
             $proyecto = \App\Models\Proyecto::where('equipo_ref', $identificador)->first();
             if ($proyecto) {
-                $proyecto->update([
-                    'estado_logico' => false,
-                ]);
+                $proyectoId = $proyecto->getKey();
+                \App\Models\Vinculacion::where('proyecto_id', $proyectoId)->delete();
+                $proyecto->delete();
             }
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('Error desactivando proyecto asociado al grupo ' . $grpCodigo . ': ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::warning('Error eliminando proyecto asociado al grupo ' . $grpCodigo . ': ' . $e->getMessage());
         }
 
         $this->repo->invalidarCache();

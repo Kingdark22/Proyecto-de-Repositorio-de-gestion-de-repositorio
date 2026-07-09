@@ -313,17 +313,6 @@ class ProyectoGestionService
 
         $this->registrarAuditoria($proyecto, $editingId ? 'actualizar' : 'registrar');
 
-        $proyecto = $proyecto->fresh();
-        if ($this->verificarSiProyectoEstaCompletado($proyecto)) {
-            if ($proyecto->estado_validacion === 'pendiente') {
-                $proyecto->update(['estado_validacion' => 'completado']);
-            }
-        } else {
-            if ($proyecto->estado_validacion === 'completado') {
-                $proyecto->update(['estado_validacion' => 'pendiente']);
-            }
-        }
-
         return $proyecto->fresh();
     }
 
@@ -890,8 +879,8 @@ class ProyectoGestionService
             return false;
         }
 
-        // Admin NO puede aprobar proyectos (solo coordina/profesor proyecto)
-        return $user->hasRole('coordinador', 'profesor proyecto');
+        // Solo profesor de proyecto
+        return $user->hasRole('profesor proyecto');
     }
 
     public function usuarioPuedeValidarProyecto(?User $user, Proyecto $proyecto): bool

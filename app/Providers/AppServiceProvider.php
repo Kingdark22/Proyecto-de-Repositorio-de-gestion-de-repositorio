@@ -2,8 +2,12 @@
 
 namespace App\Providers;
 
+use App\Auth\ResilientUserProvider;
+use App\Models\User;
 use App\Services\UserRoleService;
 use App\Support\NavigationMenu;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
 
@@ -22,6 +26,23 @@ class AppServiceProvider extends ServiceProvider
             URL::forceRootUrl($scheme . $_SERVER['HTTP_HOST']);
         }
 
-        // (Global auto-uppercase removed per user request — values store as typed)
+        // Registrar proveedor de auth resiliente
+        Auth::provider('resilient', function ($app, array $config) {
+            return new ResilientUserProvider($app['hash'], $config['model']);
+        });
+    }
+
+    /**
+     * Persiste los datos del usuario autenticado en cache + sesión,
+     * para que ResilientUserProvider devuelva la fila exacta (con usu_nombre correcto)
+     * en cada request, incluso si User::find() por usu_cedula encuentra otra fila.
+     */
+    public static function persistUserAuth(User $user): void
+    {
+        $cedula = trim($user->usu_cedula);
+        $cacheKey = 'user_find_persisted_' . $cedula;
+        Cache::put($cacheKey, $user->getAttributes(), now()->addHours(24));
+        session(['user_backup_data_' . $cedula => $user->getAttributes()]);
+        session(['auth_usu_nombre' => trim($user->usu_nombre ?? '')]);
     }
 }

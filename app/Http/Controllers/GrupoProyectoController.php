@@ -96,6 +96,8 @@ class GrupoProyectoController extends Controller
                 $lapCodigo,
             );
             $filters['seccion'] = $secCodigos !== [] ? $secCodigos : [-1];
+        } elseif ($activeRole === 'estudiante') {
+            $filters['estudiante_cedula'] = trim((string) $user->usu_cedula);
         } elseif ($seccionCodigo) {
             $filters['seccion'] = $seccionCodigo;
         }
