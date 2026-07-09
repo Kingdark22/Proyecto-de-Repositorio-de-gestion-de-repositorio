@@ -152,27 +152,31 @@ class CatalogoRepository
     }
 
     /**
-     * Retorna los trayectos disponibles para un programa específico, consultando la malla
-     * activa (mal_estatus = 'A'). Solo incluye trayectos I-V (excluye INICIAL y TRANSICIÓN).
-     * Si $proCodigo es 0 o no hay malla, retorna todos los trayectos como fallback.
+     * Retorna los trayectos disponibles para un programa específico.
+     * Usa la misma lógica que IntranetEquipoSeccionService::trayectosEnLapso():
+     * seccion → semestre → trayecto, filtrado por malla → programa.
+     * Excluye INICIAL y TRANSICIÓN. Si $proCodigo es 0, retorna todos.
      */
     public function trayectosPorPrograma(int $proCodigo): Collection
     {
         $conn = DualDatabase::academicConnection();
-        $cacheKey = 'cat_trayectos_programa_' . $proCodigo;
+        $cacheKey = 'cat_trayectos_programa_v2_' . $proCodigo;
+
         return Cache::remember($cacheKey, now()->addHours(24), function () use ($conn, $proCodigo) {
             try {
                 if ($proCodigo > 0) {
-                    // Obtener trayectos que existen en la malla activa de este programa
+                    // Misma ruta que usa IntranetEquipoSeccionService:
+                    // seccion → semestre → trayecto, filtrado por malla → programa
                     $trayectos = DB::connection($conn)
-                        ->table('malla')
-                        ->join('trayecto', 'tra_codigo', '=', 'mal_cod_trayecto')
-                        ->where('mal_cod_programa', $proCodigo)
-                        ->where('mal_estatus', 'A')
-                        ->whereNotIn('tra_nombre', ['INICIAL', 'TRANSICIÓN'])
-                        ->select('trayecto.tra_codigo', 'trayecto.tra_nombre')
+                        ->table('seccion as sec')
+                        ->join('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
+                        ->join('trayecto as tra', 'tra.tra_codigo', '=', 'sem.sem_cod_trayecto')
+                        ->join('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
+                        ->where('mal.mal_cod_programa', $proCodigo)
+                        ->whereNotIn('tra.tra_nombre', ['INICIAL', 'TRANSICIÓN'])
+                        ->select('tra.tra_codigo', 'tra.tra_nombre')
                         ->distinct()
-                        ->orderBy('trayecto.tra_codigo')
+                        ->orderBy('tra.tra_codigo')
                         ->get();
 
                     if ($trayectos->isNotEmpty()) {
@@ -180,7 +184,7 @@ class CatalogoRepository
                     }
                 }
 
-                // Fallback: todos los trayectos disponibles
+                // Fallback: todos los trayectos (sin INICIAL y TRANSICIÓN)
                 return DB::connection($conn)
                     ->table('trayecto')
                     ->whereNotIn('tra_nombre', ['INICIAL', 'TRANSICIÓN'])

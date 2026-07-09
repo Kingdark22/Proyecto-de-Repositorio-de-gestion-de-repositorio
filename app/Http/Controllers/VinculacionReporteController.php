@@ -91,6 +91,7 @@ class VinculacionReporteController extends Controller
             'gruposPorTitulo' => $gruposPorTitulo,
             'lapsosNombres' => $lapsosNombres ?? [],
             'fecha' => now()->format('d/m/Y'),
+            'esFiltroEspecifico' => ($filtroTitulo !== ''),
         ]);
 
         $sanitized = preg_replace('/[^a-zA-Z0-9_-]/', '_', $titulo);

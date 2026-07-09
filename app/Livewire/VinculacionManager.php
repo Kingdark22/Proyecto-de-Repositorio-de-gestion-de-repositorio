@@ -447,12 +447,17 @@ class VinculacionManager extends Component
 
         if ($this->tituloSeleccionado === 'nuevo') {
             $tituloTexto = strtoupper(trim($this->nuevoTitulo));
-            $existing = TituloVinculacion::where('tiv_titulo', $tituloTexto)->first();
+            // Búsqueda case-insensitive para evitar duplicados por capitalización
+            $existing = TituloVinculacion::whereRaw('UPPER(tiv_titulo) = ?', [$tituloTexto])
+                ->where('tiv_estado_logico', true)
+                ->first();
             if ($existing) {
                 $tituloId = $existing->id;
             } else {
                 $tv = TituloVinculacion::create(['tiv_titulo' => $tituloTexto]);
                 $tituloId = $tv->id;
+                // Recargar títulos disponibles para el wizard
+                $this->cargarTitulos();
             }
         } elseif ($this->tituloSeleccionado !== '') {
             $tituloId = (int) $this->tituloSeleccionado;
@@ -549,13 +554,31 @@ class VinculacionManager extends Component
     public function abrirModalReporte(): void
     {
         $this->mostrarModalReporte = true;
-        $this->tipoReporte = 'titulo';
+        $this->tipoReporte = 'todos';
         $this->reporteTituloId = '';
         $this->reporteLapsoId = '';
-        $this->titulosReporte = TituloVinculacion::where('tiv_estado_logico', true)
-            ->orderBy('tiv_titulo')
-            ->pluck('tiv_titulo', 'tiv_codigo')
+
+        // Mostrar solo títulos que tienen al menos una vinculación vinculada
+        $tivConVinculaciones = Vinculacion::whereNotNull('titulo_vinculacion_id')
+            ->pluck('titulo_vinculacion_id')
+            ->unique()
+            ->filter()
+            ->values()
             ->toArray();
+
+        if (!empty($tivConVinculaciones)) {
+            $this->titulosReporte = TituloVinculacion::where('tiv_estado_logico', true)
+                ->whereIn('tiv_codigo', $tivConVinculaciones)
+                ->orderBy('tiv_titulo')
+                ->pluck('tiv_titulo', 'tiv_codigo')
+                ->toArray();
+        } else {
+            // Fallback: todos los títulos activos si no hay vinculaciones
+            $this->titulosReporte = TituloVinculacion::where('tiv_estado_logico', true)
+                ->orderBy('tiv_titulo')
+                ->pluck('tiv_titulo', 'tiv_codigo')
+                ->toArray();
+        }
 
         $this->cargarLapsosReporte();
     }
@@ -588,7 +611,9 @@ class VinculacionManager extends Component
 
     public function generarReporte(): void
     {
-        if ($this->tipoReporte === 'titulo') {
+        if ($this->tipoReporte === 'todos') {
+            $params = [];  // sin filtros → todos los vinculados
+        } elseif ($this->tipoReporte === 'titulo') {
             if (empty($this->reporteTituloId)) {
                 $this->safeDispatch('error', 'Seleccione un título.');
                 return;

@@ -85,7 +85,9 @@
                                     @endphp
                                     @foreach($pnfs as $proCodigo => $asigsPnf)
                                         @php
-                                            $trayectos = $asigsPnf->pluck('tra_codigo')->filter()->map(function($t) { return 'T.'.$t; })->implode(', ');
+                                            $trayectos = $asigsPnf->filter(fn($asig) => !empty($asig->tra_codigo))
+                                                ->map(fn($asig) => 'T.' . $asig->trayecto_nombre)
+                                                ->implode(', ');
                                         @endphp
                                         <span style="display:inline-block; background:#e8f0fe; border:1px solid #b3d4fc; border-radius:3px; padding:2px 6px; margin:1px; white-space:nowrap; font-size:10px;">
                                             <b>{{ $asigsPnf->first()->programa_nombre }}</b>
