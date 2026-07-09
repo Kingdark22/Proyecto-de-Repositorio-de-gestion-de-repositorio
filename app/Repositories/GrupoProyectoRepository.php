@@ -105,6 +105,13 @@ class GrupoProyectoRepository
             if (!empty($filtros['creador'])) {
                 $query->where('grp_creador_cedula', trim((string) $filtros['creador']));
             }
+            if (!empty($filtros['estudiante_cedula'])) {
+                $ced = trim((string) $filtros['estudiante_cedula']);
+                $query->where(function ($q) use ($ced) {
+                    $q->where('grp_creador_cedula', $ced)
+                      ->orWhereJsonContains('grp_miembros', ['cedula' => $ced]);
+                });
+            }
 
             return $query->orderByDesc($this->columnaId())->get();
         });

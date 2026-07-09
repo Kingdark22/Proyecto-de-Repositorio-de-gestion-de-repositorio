@@ -131,102 +131,104 @@
 
     {{-- Listado --}}
     <div id="searchResults">
-        <fieldset style="border: 2px solid #8b0000; padding: 8px;">
+        <fieldset style="border: 2px solid #8b0000; padding: 8px; min-width: 0; width: 100%; box-sizing: border-box;">
             <legend style="font-weight: bold;">Grupos de proyecto registrados</legend>
-            <table width="100%" border="1" cellpadding="4" style="font-size: 11px; border-collapse: collapse;">
-                <thead>
-                    <tr style="background: #8bb2b7;">
-                        <th>Nombre</th>
-                        <th>Código</th>
-                        <th>PNF</th>
-                        <th>Sección</th>
-                        <th>Lapso</th>
-                        <th>Integrantes</th>
-                        <th>Proyecto</th>
-                        <th>Creador</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($items as $g)
-                        @php
-                            $proyecto = $proyectoPorClave->get($g->clave);
-                            $tieneProyecto = $proyecto !== null;
-                            $estadoVal = $proyecto?->estado_validacion ?? '';
-                            $colorMap = ['aprobado' => '#008000', 'rechazado' => '#FF0000', 'completado' => '#2e7d32', 'pendiente' => '#d4a017'];
-                            $labelMap = ['aprobado' => 'Aprobado', 'rechazado' => 'Rechazado', 'completado' => 'Completado', 'pendiente' => 'En proceso'];
-                        @endphp
-                        <tr>
-                            <td>
-                                <a href="#" onclick="return false;"
-                                   style="cursor:pointer; font-weight:bold; color:#333;"
-                                   data-grp-codigo="{{ $g->grp_codigo }}"
-                                   data-grp-nombre="{{ $g->nombre }}"
-                                    data-grp-identificador="{{ $g->identificador ?? '' }}"
-                                    data-grp-lapso="{{ $g->lap_nombre ?: 'Lapso #'.$g->lap_codigo }}"
-                                   data-grp-pnf="{{ $g->pro_siglas ?: ($g->pro_nombre ?: '—') }}"
-                                   data-grp-seccion="{{ $g->sec_nombre ?: 'Sec. '.$g->sec_codigo }}"
-                                   data-grp-miembros='{{ json_encode($g->miembros ?? []) }}'
-                                   data-grp-proyecto-titulo="{{ $proyecto?->titulo ?? '' }}"
-                                   data-grp-proyecto-estado="{{ $estadoVal }}"
-                                   onclick="abrirInfoGrupo(this)"
-                                   title="Ver información del grupo">{{ $g->nombre }}</a>
-                            </td>
-                            <td><code style="font-size:9px;color:#8b0000;">{{ $g->identificador ?? '—' }}</code></td>
-                            <td>{{ $g->pro_siglas ?: ($g->pro_nombre ?: '—') }}</td>
-                            <td>{{ $g->sec_nombre ?: 'Sec. ' . $g->sec_codigo }}</td>
-                            <td>{{ $g->lap_nombre ?: '—' }}</td>
-                            <td align="center">{{ $g->integrantes }}</td>
-                            <td align="center">
-                                @if($tieneProyecto)
-                                    <span style="color: {{ $colorMap[$estadoVal] ?? '#d4a017' }}; font-weight: bold; font-size: 10px;">{{ $labelMap[$estadoVal] ?? 'En proceso' }}</span>
-                                @else
-                                    <span style="color: #999; font-size: 10px;">Sin proyecto</span>
-                                @endif
-                            </td>
-                            <td align="center" style="font-size:10px;">
-                                @php $ced = trim($g->creador_cedula ?? ''); @endphp
-                                @if($ced !== '')
-                                    {{ trim($g->creador_usuario ?? '') ?: ($creadorNombres[$ced] ?? $ced) }}
-                                @else
-                                    —
-                                @endif
-                            </td>
-                            <td align="center" nowrap>
-                                @if($esAdmin || $esCoordinador)
-                                    {{-- Admin y coordinador ven botón Ver (solo lectura) --}}
+            <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 10px;">
+                <table width="100%" border="1" cellpadding="4" style="font-size: 11px; border-collapse: collapse; min-width: 780px;">
+                    <thead>
+                        <tr style="background: #8bb2b7;">
+                            <th>Nombre</th>
+                            <th>Código</th>
+                            <th>PNF</th>
+                            <th>Sección</th>
+                            <th>Lapso</th>
+                            <th>Integrantes</th>
+                            <th>Proyecto</th>
+                            <th>Creador</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($items as $g)
+                            @php
+                                $proyecto = $proyectoPorClave->get($g->clave);
+                                $tieneProyecto = $proyecto !== null;
+                                $estadoVal = $proyecto?->estado_validacion ?? '';
+                                $colorMap = ['aprobado' => '#008000', 'rechazado' => '#FF0000', 'completado' => '#2e7d32', 'pendiente' => '#d4a017'];
+                                $labelMap = ['aprobado' => 'Aprobado', 'rechazado' => 'Rechazado', 'completado' => 'Completado', 'pendiente' => 'En proceso'];
+                            @endphp
+                            <tr>
+                                <td>
+                                    <a href="#" onclick="return false;"
+                                       style="cursor:pointer; font-weight:bold; color:#333;"
+                                       data-grp-codigo="{{ $g->grp_codigo }}"
+                                       data-grp-nombre="{{ $g->nombre }}"
+                                        data-grp-identificador="{{ $g->identificador ?? '' }}"
+                                        data-grp-lapso="{{ $g->lap_nombre ?: 'Lapso #'.$g->lap_codigo }}"
+                                       data-grp-pnf="{{ $g->pro_siglas ?: ($g->pro_nombre ?: '—') }}"
+                                       data-grp-seccion="{{ $g->sec_nombre ?: 'Sec. '.$g->sec_codigo }}"
+                                       data-grp-miembros='{{ json_encode($g->miembros ?? []) }}'
+                                       data-grp-proyecto-titulo="{{ $proyecto?->titulo ?? '' }}"
+                                       data-grp-proyecto-estado="{{ $estadoVal }}"
+                                       onclick="abrirInfoGrupo(this)"
+                                       title="Ver información del grupo">{{ $g->nombre }}</a>
+                                </td>
+                                <td><code style="font-size:9px;color:#8b0000;">{{ $g->identificador ?? '—' }}</code></td>
+                                <td>{{ $g->pro_siglas ?: ($g->pro_nombre ?: '—') }}</td>
+                                <td>{{ $g->sec_nombre ?: 'Sec. ' . $g->sec_codigo }}</td>
+                                <td>{{ $g->lap_nombre ?: '—' }}</td>
+                                <td align="center">{{ $g->integrantes }}</td>
+                                <td align="center">
                                     @if($tieneProyecto)
-                                        <a href="{{ route('proyectos.gestion.edit', $proyecto->id) }}" class="cm-btn cm-btn-secondary cm-btn-xs" title="Ver proyecto (solo lectura)">Ver</a>
+                                        <span style="color: {{ $colorMap[$estadoVal] ?? '#d4a017' }}; font-weight: bold; font-size: 10px;">{{ $labelMap[$estadoVal] ?? 'En proceso' }}</span>
                                     @else
-                                        <span style="color:#999;font-size:10px;">Sin proyecto</span>
+                                        <span style="color: #999; font-size: 10px;">Sin proyecto</span>
                                     @endif
-                                @else
-                                {{-- Actualizar va al formulario de registro del proyecto --}}
-                                @if(!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado')
-                                <button type="button" class="cm-btn cm-btn-success cm-btn-xs"
-                                    onclick="window.location='{{ $tieneProyecto ? route('proyectos.gestion.edit', $proyecto->id) : route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}'"
-                                    title="Ir al formulario de proyecto">Actualizar</button>
-                                @endif
-                                @if(trim($g->creador_cedula) === trim($userCedula) && (!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado'))
-                                    <a href="{{ route('grupos-proyecto.edit', $g->grp_codigo) }}" class="cm-btn cm-btn-secondary cm-btn-xs" title="Editar grupo">Editar</a>
-                                @endif
-                                @if(trim($g->creador_cedula) === trim($userCedula) && (!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado'))
-                                <form method="POST" action="{{ route('grupos-proyecto.destroy', $g->grp_codigo) }}" style="display:inline;">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="cm-btn cm-btn-danger cm-btn-xs" title="Eliminar grupo" data-ajax-delete data-delete-name="{{ $g->nombre }}">Eliminar</button>
-                                </form>
-                                @endif
-                                @endif
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="9" align="center">No hay grupos registrados. Cree uno con integrantes de la sección.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                                </td>
+                                <td align="center" style="font-size:10px;">
+                                    @php $ced = trim($g->creador_cedula ?? ''); @endphp
+                                    @if($ced !== '')
+                                        {{ trim($g->creador_usuario ?? '') ?: ($creadorNombres[$ced] ?? $ced) }}
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td align="center" nowrap>
+                                    @if($esAdmin || $esCoordinador)
+                                        {{-- Admin y coordinador ven botón Ver (solo lectura) --}}
+                                        @if($tieneProyecto)
+                                            <a href="{{ route('proyectos.gestion.edit', $proyecto->id) }}" class="cm-btn cm-btn-secondary cm-btn-xs" title="Ver proyecto (solo lectura)">Ver</a>
+                                        @else
+                                            <span style="color:#999;font-size:10px;">Sin proyecto</span>
+                                        @endif
+                                    @else
+                                    {{-- Actualizar va al formulario de registro del proyecto --}}
+                                    @if(!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado')
+                                    <button type="button" class="cm-btn cm-btn-success cm-btn-xs"
+                                        onclick="window.location='{{ $tieneProyecto ? route('proyectos.gestion.edit', $proyecto->id) : route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}'"
+                                        title="Ir al formulario de proyecto">Actualizar</button>
+                                    @endif
+                                    @if(trim($g->creador_cedula) === trim($userCedula) && (!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado'))
+                                        <a href="{{ route('grupos-proyecto.edit', $g->grp_codigo) }}" class="cm-btn cm-btn-secondary cm-btn-xs" title="Editar grupo">Editar</a>
+                                    @endif
+                                    @if(trim($g->creador_cedula) === trim($userCedula) && (!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado'))
+                                    <form method="POST" action="{{ route('grupos-proyecto.destroy', $g->grp_codigo) }}" style="display:inline;">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="cm-btn cm-btn-danger cm-btn-xs" title="Eliminar grupo" data-ajax-delete data-delete-name="{{ $g->nombre }}">Eliminar</button>
+                                    </form>
+                                    @endif
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="9" align="center">No hay grupos registrados. Cree uno con integrantes de la sección.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
 
             {{-- Paginación manual --}}
             @php

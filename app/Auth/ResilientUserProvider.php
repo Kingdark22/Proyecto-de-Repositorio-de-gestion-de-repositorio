@@ -37,20 +37,27 @@ class ResilientUserProvider extends EloquentUserProvider
         }
 
         Log::debug('ResilientUserProvider::retrieveById — inicio para cedula: ' . $identifier);
+        $cacheKey = 'user_find_persisted_' . trim((string) $identifier);
 
         // 1. Cache persistente
         try {
-            $cacheKey = 'user_find_persisted_' . trim((string) $identifier);
             $data = Cache::get($cacheKey);
 
             if (is_array($data) && isset($data['usu_cedula'])) {
-                Log::debug('ResilientUserProvider::retrieveById — encontrado en cache');
-                $instance = new User;
-                $instance->setConnection(\App\Helpers\DbHelper::connection());
-                $instance->setRawAttributes($data);
-                $instance->exists = true;
-                $instance->syncOriginal();
-                return $instance;
+                // Verificar que el cache tenga el usu_nombre correcto
+                $expectedNombre = trim(session('auth_usu_nombre', ''));
+                if ($expectedNombre && isset($data['usu_nombre']) && trim($data['usu_nombre']) !== $expectedNombre) {
+                    Log::info('ResilientUserProvider: cache tiene usu_nombre incorrecto, invalidando');
+                    Cache::forget($cacheKey);
+                } else {
+                    Log::debug('ResilientUserProvider::retrieveById — encontrado en cache');
+                    $instance = new User;
+                    $instance->setConnection(\App\Helpers\DbHelper::connection());
+                    $instance->setRawAttributes($data);
+                    $instance->exists = true;
+                    $instance->syncOriginal();
+                    return $instance;
+                }
             }
             Log::debug('ResilientUserProvider::retrieveById — cache miss para key: ' . $cacheKey);
         } catch (\Throwable $e) {
@@ -61,6 +68,23 @@ class ResilientUserProvider extends EloquentUserProvider
         try {
             $user = User::find($identifier);
             if ($user !== null) {
+                // Verificar que sea la fila correcta (mismo usu_nombre que en sesión)
+                $expectedNombre = trim(session('auth_usu_nombre', ''));
+                if ($expectedNombre && trim($user->usu_nombre ?? '') !== $expectedNombre) {
+                    // Fila incorrecta — buscar la correcta por cédula + nombre
+                    Log::info('ResilientUserProvider: User::find devolvió fila con usu_nombre="' . $user->usu_nombre . '", se esperaba "' . $expectedNombre . '"');
+                    $correctUser = User::on(\App\Helpers\DbHelper::connection())
+                        ->whereRaw('TRIM(usu_cedula) = ?', [$identifier])
+                        ->whereRaw('TRIM(usu_nombre) = ?', [$expectedNombre])
+                        ->first();
+                    if ($correctUser) {
+                        Cache::put($cacheKey, $correctUser->getAttributes(), now()->addHours(24));
+                        session(['user_backup_data_' . $identifier => $correctUser->getAttributes()]);
+                        Log::info('ResilientUserProvider: corregido a usu_nombre="' . $correctUser->usu_nombre . '"');
+                        return $correctUser;
+                    }
+                    Log::warning('ResilientUserProvider: no se pudo corregir — no se encontró fila con usu_nombre="' . $expectedNombre . '"');
+                }
                 Log::debug('ResilientUserProvider::retrieveById — encontrado via User::find');
                 return $user;
             }
@@ -79,6 +103,21 @@ class ResilientUserProvider extends EloquentUserProvider
                 $instance->setRawAttributes($sessionBackup);
                 $instance->exists = true;
                 $instance->syncOriginal();
+
+                // Verificar usu_nombre contra sesión, corregir si es necesario
+                $expectedNombre = trim(session('auth_usu_nombre', ''));
+                if ($expectedNombre && trim($instance->usu_nombre ?? '') !== $expectedNombre) {
+                    Log::info('ResilientUserProvider: session backup tiene usu_nombre incorrecto, corrigiendo');
+                    $correctUser = User::on(\App\Helpers\DbHelper::connection())
+                        ->whereRaw('TRIM(usu_cedula) = ?', [$identifier])
+                        ->whereRaw('TRIM(usu_nombre) = ?', [$expectedNombre])
+                        ->first();
+                    if ($correctUser) {
+                        Cache::put($cacheKey, $correctUser->getAttributes(), now()->addHours(24));
+                        session(['user_backup_data_' . $identifier => $correctUser->getAttributes()]);
+                        return $correctUser;
+                    }
+                }
                 return $instance;
             }
         } catch (\Throwable $e) {
