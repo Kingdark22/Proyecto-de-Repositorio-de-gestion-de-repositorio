@@ -266,7 +266,7 @@ class NotificacionService
 
     public function notificarDocumentoAceptado(Proyecto $proyecto, string $componenteNombre, array $cedulasEstudiantes): void
     {
-        $url = route('proyectos.gestion', ['edit' => $proyecto->id]);
+        $url = route('proyectos.gestion.edit', $proyecto->id);
         foreach ($cedulasEstudiantes as $cedula) {
             $this->correoEstudiante(
                 $cedula,
@@ -280,7 +280,7 @@ class NotificacionService
 
     public function notificarDocumentoRechazado(Proyecto $proyecto, string $componenteNombre, string $observacion, array $cedulasEstudiantes): void
     {
-        $url = route('proyectos.gestion', ['edit' => $proyecto->id]);
+        $url = route('proyectos.gestion.edit', $proyecto->id);
         foreach ($cedulasEstudiantes as $cedula) {
             $this->correoEstudiante(
                 $cedula,
@@ -294,7 +294,7 @@ class NotificacionService
 
     public function notificarProyectoRechazado(Proyecto $proyecto, string $motivo, array $cedulasEstudiantes): void
     {
-        $url = route('proyectos.gestion', ['edit' => $proyecto->id]);
+        $url = route('proyectos.gestion.edit', $proyecto->id);
         foreach ($cedulasEstudiantes as $cedula) {
             $this->correoEstudiante(
                 $cedula,

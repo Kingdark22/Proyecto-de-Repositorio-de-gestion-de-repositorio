@@ -80,6 +80,8 @@ class ProyectoBusquedaService
             'objetivo_investigacion',
             'comunidad',
             'documentos.componente',
+            'vinculaciones.tituloVinculacion',
+            'vinculaciones.comunidad',
         ])
             ->visiblesPublico()
             ->find($id);
@@ -110,7 +112,14 @@ class ProyectoBusquedaService
             ]);
         }
 
-        $query = Proyecto::with(['tipo_publicacion', 'linea_investigacion', 'comunidad', 'documentos'])
+        $query = Proyecto::with([
+            'tipo_publicacion',
+            'linea_investigacion',
+            'comunidad',
+            'documentos',
+            'vinculaciones.tituloVinculacion',
+            'vinculaciones.comunidad'
+        ])
             ->visiblesPublico();
 
         $this->aplicarFiltroEquipo($query, $equipoFiltro);

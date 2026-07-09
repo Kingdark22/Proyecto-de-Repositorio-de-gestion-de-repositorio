@@ -28,6 +28,11 @@
         .uppercase { text-transform: uppercase; }
         .contenido-uppercase td, .contenido-uppercase th, .contenido-uppercase div, .contenido-uppercase span { text-transform: uppercase; }
         .wizard-titulo { text-transform: uppercase; }
+        
+        /* Sobrescribir altura global de select para evitar recorte de texto por padding */
+        select {
+            height: auto !important;
+        }
     </style>
 
 
@@ -376,6 +381,10 @@
                 <div style="margin-bottom:16px;">
                     <b style="font-size:13px;color:#555;display:block;margin-bottom:8px;">Tipo de reporte:</b>
                     <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:8px 14px;border:2px solid {{ $tipoReporte === 'todos' ? '#8b0000' : '#ddd' }};border-radius:8px;background:{{ $tipoReporte === 'todos' ? '#fff0f0' : '#fafafa' }};flex:1;min-width:120px;transition:all 0.2s;">
+                            <input type="radio" wire:model.live="tipoReporte" value="todos" style="accent-color:#8b0000;">
+                            Todos los vinculados
+                        </label>
                         <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:8px 14px;border:2px solid {{ $tipoReporte === 'titulo' ? '#8b0000' : '#ddd' }};border-radius:8px;background:{{ $tipoReporte === 'titulo' ? '#fff0f0' : '#fafafa' }};flex:1;min-width:120px;transition:all 0.2s;">
                             <input type="radio" wire:model.live="tipoReporte" value="titulo" style="accent-color:#8b0000;">
                             Por título
@@ -393,25 +402,40 @@
                     </div>
                 </div>
 
-                @if($tipoReporte === 'titulo')
+                @if($tipoReporte === 'todos')
+                    <div style="margin-bottom:16px;background:#f0fff4;border:1px solid #c8e6c9;border-radius:6px;padding:12px;">
+                        <div style="font-size:13px;color:#19692e;font-weight:600;margin-bottom:4px;">&#10003; Reporte general de todos los proyectos vinculados</div>
+                        <div style="font-size:12px;color:#555;">Se incluirán todos los proyectos vinculados registrados en el sistema, agrupados por título y comunidad vinculada.</div>
+                    </div>
+                @elseif($tipoReporte === 'titulo')
                     <div style="margin-bottom:16px;">
-                        <b style="font-size:13px;color:#555;display:block;margin-bottom:6px;">Seleccione el título:</b>
-                        <select wire:model="reporteTituloId" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:13px;background:#fff;cursor:pointer;outline:none;font-family:inherit;color:#222;">
-                            <option value="">— Seleccione título —</option>
+                        <b style="font-size:13px;color:#555;display:block;margin-bottom:6px;">Seleccione el t&iacute;tulo:</b>
+                        <select wire:model.live="reporteTituloId" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:13px;background:#fff;cursor:pointer;outline:none;font-family:inherit;color:#222;">
+                            <option value="">&mdash; Seleccione t&iacute;tulo &mdash;</option>
                             @foreach($titulosReporte as $tid => $ttitulo)
-                                <option value="{{ $tid }}">{{ $ttitulo }}</option>
+                                <option value="{{ $tid }}" @selected((string)$reporteTituloId === (string)$tid)>{{ $ttitulo }}</option>
                             @endforeach
                         </select>
+                        @if(!empty($reporteTituloId))
+                            <div style="margin-top:4px;font-size:11px;color:#19692e;font-weight:600;">
+                                &#10003; Seleccionado: {{ $titulosReporte[(int)$reporteTituloId] ?? '' }}
+                            </div>
+                        @endif
                     </div>
                 @elseif($tipoReporte === 'lapso')
                     <div style="margin-bottom:16px;">
-                        <b style="font-size:13px;color:#555;display:block;margin-bottom:6px;">Seleccione el lapso académico:</b>
-                        <select wire:model="reporteLapsoId" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:13px;background:#fff;cursor:pointer;outline:none;font-family:inherit;color:#222;">
-                            <option value="">— Seleccione lapso —</option>
+                        <b style="font-size:13px;color:#555;display:block;margin-bottom:6px;">Seleccione el lapso acad&eacute;mico:</b>
+                        <select wire:model.live="reporteLapsoId" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:13px;background:#fff;cursor:pointer;outline:none;font-family:inherit;color:#222;">
+                            <option value="">&mdash; Seleccione lapso &mdash;</option>
                             @foreach($lapsosReporte as $lid => $lnombre)
-                                <option value="{{ $lid }}">{{ $lnombre }}</option>
+                                <option value="{{ $lid }}" @selected((string)$reporteLapsoId === (string)$lid)>{{ $lnombre }}</option>
                             @endforeach
                         </select>
+                        @if(!empty($reporteLapsoId))
+                            <div style="margin-top:4px;font-size:11px;color:#19692e;font-weight:600;">
+                                &#10003; Seleccionado: {{ $lapsosReporte[$reporteLapsoId] ?? $reporteLapsoId }}
+                            </div>
+                        @endif
                         @if(empty($lapsosReporte))
                             <div style="margin-top:6px;font-size:12px;color:#888;font-style:italic;">No hay lapsos disponibles con vinculaciones registradas.</div>
                         @endif
