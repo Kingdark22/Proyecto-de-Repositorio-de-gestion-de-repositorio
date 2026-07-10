@@ -95,7 +95,7 @@ class ReporteDepositoService
                 'integrantes'       => $integrantes,
                 'tutor_academico'   => $tutor,
                 'cumplio_requisitos' => $this->etiquetaCumplimiento($proyecto),
-                'cant_beneficiados' => '',
+                'cant_beneficiados' => $proyecto->pry_cantidad_beneficiados ?? '',
             ];
         }
 

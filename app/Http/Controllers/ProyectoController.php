@@ -185,7 +185,7 @@ class ProyectoController extends Controller
             'objetivo_investigacion_id' => $request->input('objetivo_investigacion_id', $proyecto->objetivo_investigacion_id),
             'titulo' => $proyecto->titulo,
             'comunidad_id' => $request->input('comunidad_id', $proyecto->comunidad_id),
-            'personas_beneficiadas' => $request->input('personas_beneficiadas', $proyecto->pry_personas_beneficiadas),
+            'cantidad_beneficiados' => $request->input('cantidad_beneficiados', $proyecto->pry_cantidad_beneficiados),
             'equipo_seccion_clave' => $request->input('equipo_seccion_clave', $proyecto->equipo_ref),
             'filterLapsoEquipo' => $request->input('filterLapsoEquipo', ''),
             'filterProgramaEquipo' => $request->input('filterProgramaEquipo', ''),
@@ -969,7 +969,7 @@ class ProyectoController extends Controller
             'tipo_investigacion_id' => $datos['tipo_investigacion_id'] ?? '',
             'objetivo_investigacion_id' => $datos['objetivo_investigacion_id'] ?? '',
             'comunidad_id' => $datos['comunidad_id'] ?? '',
-            'personas_beneficiadas' => $datos['pry_personas_beneficiadas'] ?? 0,
+            'cantidad_beneficiados' => $datos['pry_cantidad_beneficiados'] ?? 0,
         ];
     }
 
