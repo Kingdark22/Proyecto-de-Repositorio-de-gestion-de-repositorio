@@ -1395,10 +1395,8 @@ class ProyectoGestionService
         if (empty(trim($proyecto->resumen ?? ''))) return false;
         if (!$proyecto->linea_investigacion_id) return false;
         if (!$proyecto->metodologia_id) return false;
-        if (!$proyecto->tipo_publicacion_id) return false;
         if (!$proyecto->tipo_investigacion_id) return false;
         if (!$proyecto->objetivo_investigacion_id) return false;
-        if (!$proyecto->comunidad_id) return false;
 
         // 2. Obtener programa y trayecto del proyecto
         $partes = $this->equipoSeccion->parsearClave($proyecto->equipo_ref);
@@ -1433,12 +1431,16 @@ class ProyectoGestionService
         // 3. Obtener componentes requeridos para este programa y trayecto
         $componentes = app(CatalogoRepository::class)->componentesPorProgramaYTrayecto($programaDerived, $traCodigo);
 
-        // 4. Verificar que cada componente obligatorio tenga un documento subido
+        // 4. Verificar que cada componente obligatorio tenga un documento subido y aceptado
         $existingDocs = $proyecto->documentos->keyBy('comp_codigo');
         foreach ($componentes as $comp) {
             if ($comp->es_obligatorio) {
                 if (!$existingDocs->has($comp->id)) {
                     return false; // Falta un documento obligatorio
+                }
+                $doc = $existingDocs->get($comp->id);
+                if ((int)$doc->pd_estado !== 1) {
+                    return false; // Falta que el profesor acepte el documento
                 }
             }
         }

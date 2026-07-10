@@ -11,7 +11,12 @@ return new class extends Migration
     {
         $connection = (string) config('dual_database.repositorio_connection', 'pgsql');
 
+        // Verificar que la tabla exista y la columna NO exista antes de agregarla
         if (! Schema::connection($connection)->hasTable('grupo_proyecto_modulo')) {
+            return;
+        }
+
+        if (Schema::connection($connection)->hasColumn('grupo_proyecto_modulo', 'grp_identificador')) {
             return;
         }
 
@@ -28,8 +33,10 @@ return new class extends Migration
     {
         $connection = (string) config('dual_database.repositorio_connection', 'pgsql');
 
-        Schema::connection($connection)->table('grupo_proyecto_modulo', function (Blueprint $table) {
-            $table->dropColumn('grp_identificador');
-        });
+        if (Schema::connection($connection)->hasColumn('grupo_proyecto_modulo', 'grp_identificador')) {
+            Schema::connection($connection)->table('grupo_proyecto_modulo', function (Blueprint $table) {
+                $table->dropColumn('grp_identificador');
+            });
+        }
     }
 };

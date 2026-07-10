@@ -14,6 +14,10 @@ return new class extends Migration
             return;
         }
 
+        if (! Schema::connection($connection)->hasColumn('grupo_proyecto_modulo', 'grp_identificador')) {
+            return;
+        }
+
         $updated = DB::connection($connection)->statement("
             UPDATE proyectos p
             SET pry_direccion_logica = g.grp_identificador
@@ -31,6 +35,10 @@ return new class extends Migration
     public function down(): void
     {
         $connection = (string) config('dual_database.repositorio_connection', 'pgsql');
+
+        if (! Schema::connection($connection)->hasColumn('grupo_proyecto_modulo', 'grp_identificador')) {
+            return;
+        }
 
         DB::connection($connection)->statement("
             UPDATE proyectos p

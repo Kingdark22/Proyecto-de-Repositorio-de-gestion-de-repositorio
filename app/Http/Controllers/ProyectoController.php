@@ -340,6 +340,14 @@ class ProyectoController extends Controller
             }
         }
 
+        $proyecto = $proyecto->fresh(['documentos']);
+        $completos = $this->gestion->verificarSiProyectoEstaCompletado($proyecto);
+        if ($completos && $proyecto->estado_validacion !== 'aprobado') {
+            $proyecto->update(['estado_validacion' => 'completado']);
+        } elseif (!$completos && $proyecto->estado_validacion === 'completado') {
+            $proyecto->update(['estado_validacion' => 'pendiente']);
+        }
+
         return redirect()->route('proyectos.gestion')
             ->with('success', 'Proyecto actualizado con éxito.');
     }
