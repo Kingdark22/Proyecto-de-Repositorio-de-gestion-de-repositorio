@@ -23,6 +23,7 @@ class Proyecto extends RepositorioModel
         'fecha_actualizacion_estudiante',
         'creador_cedula',
         'comunidad_id',
+        'pry_personas_beneficiadas',
         'equipo_ref',
     ];
 

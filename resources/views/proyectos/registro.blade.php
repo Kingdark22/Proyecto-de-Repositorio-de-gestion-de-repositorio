@@ -99,15 +99,27 @@
                             @php
                                 $comNombre = optional($catalogosForm['comunidades'] ?? collect())->firstWhere('id', $datosForm['comunidad_id'] ?? 0);
                             @endphp
-                            @if($comNombre)
-                                <span style="font-weight:bold;">{{ $comNombre->nombre }}</span>
-                            @else
-                                <span style="color:#999;">(asignada automáticamente del grupo)</span>
-                            @endif
-                        </td>
-                    </tr>
-                    <tr>
-                        <td valign="top"><b>Resumen:</b></td>
+                                @if($comNombre)
+                                    <span style="font-weight:bold;">{{ $comNombre->nombre }}</span>
+                                @else
+                                    <span style="color:#999;">(asignada automáticamente del grupo)</span>
+                                @endif
+                            </td>
+                        </tr>
+                        <tr>
+                            <td width="20%"><b>Personas Beneficiadas:</b></td>
+                            <td colspan="3">
+                                @if($esProfesor)
+                                    <input type="number" name="personas_beneficiadas" 
+                                           value="{{ old('personas_beneficiadas', $datosForm['personas_beneficiadas'] ?? '') }}" 
+                                           style="width:100px;font-size:12px;" placeholder="0">
+                                @else
+                                    <span style="font-weight:bold;">{{ $datosForm['personas_beneficiadas'] ?? '0' }}</span>
+                                @endif
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top"><b>Resumen:</b></td>
                         <td colspan="3">
                             @if($soloLectura)
                                 <div style="padding:6px 0;font-size:12px;">{{ $datosForm['resumen'] ?? '(sin resumen)' }}</div>
