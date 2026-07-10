@@ -555,14 +555,14 @@ class ProyectoController extends Controller
             $request->input('cedula')
         );
 
-        $this->gestion->agregarInvolucradoAProyecto(
+        $pivotId = $this->gestion->agregarInvolucradoAProyecto(
             (int) $id,
             $involucrado->id,
             $request->input('roles', [])
         );
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'id' => $involucrado->id]);
+            return response()->json(['success' => true, 'id' => $involucrado->id, 'pivot_id' => $pivotId]);
         }
         return redirect()->route('proyectos.gestion.edit', $id)
             ->with('success', 'Involucrado creado y agregado al proyecto.');

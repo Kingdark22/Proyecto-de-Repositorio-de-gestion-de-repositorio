@@ -805,8 +805,69 @@ function agregarInvolucradoAlProyecto(proyectoId) {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'},
         body: JSON.stringify({ nombre, apellido, cedula, roles })
-    }).then(r => r.json()).then(() => {
-        location.reload();
+    }).then(r => r.json()).then(data => {
+        if (!data.success) {
+            showNotifyToast('error', 'Error al agregar el involucrado');
+            btn.disabled = false;
+            btn.textContent = 'Agregar';
+            return;
+        }
+
+        var emptyMsg = document.getElementById('inv-empty');
+        if (emptyMsg) emptyMsg.remove();
+
+        var tbody = document.getElementById('involucrados-tbody');
+        if (!tbody) {
+            var listDiv = document.getElementById('involucrados-list');
+            var table = document.createElement('table');
+            table.width = '100%';
+            table.border = '0';
+            table.setAttribute('cellpadding', '0');
+            table.setAttribute('cellspacing', '0');
+            table.style.cssText = 'font-size:12px;margin-bottom:10px;border-collapse:collapse;';
+            table.innerHTML =
+                '<thead><tr style="background:#f0f0f0;font-weight:bold;">' +
+                    '<th style="padding:5px 8px;text-align:left;">C\u00e9dula</th>' +
+                    '<th style="padding:5px 8px;text-align:left;">Nombre</th>' +
+                    '<th style="padding:5px 8px;text-align:left;">Roles</th>' +
+                    '<th style="padding:5px 8px;text-align:center;">Acci\u00f3n</th>' +
+                '</tr></thead>' +
+                '<tbody id="involucrados-tbody"></tbody>';
+            listDiv.appendChild(table);
+            tbody = document.getElementById('involucrados-tbody');
+        }
+
+        var rolesHtml = '';
+        var rolIds = Object.keys(invRolesPendientes);
+        for (var i = 0; i < rolIds.length; i++) {
+            var rolId = rolIds[i];
+            var rolName = invRolesPendientes[rolId];
+            rolesHtml += '<span id="rol-badge-' + data.id + '-' + rolId + '" style="background:#8b0000;color:#fff;padding:1px 6px;font-size:10px;white-space:nowrap;">' +
+                rolName +
+                '<button type="button" onclick="quitarRol(' + proyectoId + ', ' + data.pivot_id + ', ' + rolId + ', ' + data.id + ')" style="background:none;border:none;color:#ffcccc;cursor:pointer;font-size:12px;padding:0 0 0 3px;line-height:1;">\u00D7</button>' +
+            '</span>';
+        }
+
+        var tr = document.createElement('tr');
+        tr.id = 'inv-row-' + data.id;
+        tr.style.borderBottom = '1px solid #ddd';
+        tr.innerHTML = '<td style="padding:5px 8px;font-weight:bold;">' + cedula + '</td>' +
+            '<td style="padding:5px 8px;">' + nombre + ' ' + apellido + '</td>' +
+            '<td id="inv-roles-' + data.id + '" style="padding:5px 8px;">' +
+                '<div class="inv-roles" style="display:flex;flex-wrap:wrap;gap:3px;">' +
+                    rolesHtml +
+                '</div>' +
+            '</td>' +
+            '<td style="padding:5px 8px;text-align:center;">' +
+                '<button type="button" onclick="abrirRolesModal(' + proyectoId + ', ' + data.id + ', \'' + nombre + ' ' + apellido + '\')" style="background:#8b0000;color:#fff;border:none;border-radius:3px;padding:3px 10px;font-size:11px;cursor:pointer;">+ Roles</button>' +
+                '<button type="button" onclick="quitarInvolucrado(' + proyectoId + ', ' + data.id + ')" style="background:#dc3545;color:#fff;border:none;border-radius:3px;padding:3px 10px;font-size:11px;cursor:pointer;">Quitar</button>' +
+            '</td>';
+
+        tbody.appendChild(tr);
+        cerrarModalInvolucrado();
+        showNotifyToast('success', 'Involucrado agregado correctamente');
+        btn.disabled = false;
+        btn.textContent = 'Agregar';
     }).catch(() => {
         showNotifyToast('error', 'Error al agregar el involucrado');
         btn.disabled = false;
@@ -816,16 +877,33 @@ function agregarInvolucradoAlProyecto(proyectoId) {
 
 // ─── Quitar involucrado ──────────────────────────────────────────
 function quitarInvolucrado(proyectoId, invId) {
+    var row = document.getElementById('inv-row-' + invId);
+    var nombreCompleto = row ? row.cells[1].textContent.trim() : '';
+
     mostrarModalAccion({
         icon:'\u26A0\uFE0F',title:'Eliminar involucrado',
         message:'\u00bfEliminar este involucrado del proyecto?',
+        detailValue: nombreCompleto,
         confirmText:'S\u00ed, eliminar',
         confirmClass:'cm-btn-danger',
         onConfirm:function(){
             fetch('{{ route("proyectos.gestion.involucrados.quitar", ["PLACEHOLDER_PROY", "PLACEHOLDER_INV"]) }}'.replace('PLACEHOLDER_PROY', proyectoId).replace('PLACEHOLDER_INV', invId), {
                 method: 'DELETE',
                 headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'}
-            }).then(r => r.json()).then(() => location.reload());
+            }).then(r => r.json()).then(() => {
+                var row = document.getElementById('inv-row-' + invId);
+                if (row) row.remove();
+
+                var tbody = document.getElementById('involucrados-tbody');
+                if (tbody && tbody.children.length === 0) {
+                    var emptyDiv = document.createElement('div');
+                    emptyDiv.id = 'inv-empty';
+                    emptyDiv.style.cssText = 'font-size:11px;color:#999;margin-bottom:10px;';
+                    emptyDiv.textContent = 'No hay involucrados registrados en este proyecto.';
+                    document.getElementById('involucrados-list').appendChild(emptyDiv);
+                }
+                showNotifyToast('success', 'Involucrado eliminado del proyecto.');
+            });
         }
     });
 }
