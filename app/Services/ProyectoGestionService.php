@@ -256,7 +256,7 @@ class ProyectoGestionService
             'tipo_investigacion_id' => (string) ($item->tipo_investigacion_id ?? ''),
             'objetivo_investigacion_id' => (string) ($item->objetivo_investigacion_id ?? ''),
             'comunidad_id' => (string) $item->comunidad_id,
-            'personas_beneficiadas' => $item->pry_personas_beneficiadas,
+            'cantidad_beneficiados' => $item->pry_cantidad_beneficiados,
             'equipo_seccion_clave' => $item->equipo_ref ?? '',
             'filterLapsoEquipo' => $partes ? (string) $partes['lap_codigo'] : '',
             'filterProgramaEquipo' => $programaDerived !== null ? (string) $programaDerived : '',
@@ -286,7 +286,7 @@ class ProyectoGestionService
             'tipo_investigacion_id' => $datos['tipo_investigacion_id'] ?? null,
             'objetivo_investigacion_id' => $datos['objetivo_investigacion_id'] ?? null,
             'comunidad_id' => $datos['comunidad_id'],
-            'pry_personas_beneficiadas' => $datos['personas_beneficiadas'] ?? null,
+            'pry_cantidad_beneficiados' => $datos['cantidad_beneficiados'] ?? null,
             'equipo_ref' => $datos['equipo_seccion_clave'],
             'estado_validacion' => $editingId 
                 ? ($existing->estado_validacion ?? 'pendiente') 

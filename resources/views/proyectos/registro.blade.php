@@ -107,14 +107,14 @@
                             </td>
                         </tr>
                         <tr>
-                            <td width="20%"><b>Personas Beneficiadas:</b></td>
+                            <td width="20%"><b>Cantidad de Beneficiados:</b></td>
                             <td colspan="3">
                                 @if($esProfesor)
-                                    <input type="number" name="personas_beneficiadas" 
-                                           value="{{ old('personas_beneficiadas', $datosForm['personas_beneficiadas'] ?? '') }}" 
+                                    <input type="number" name="cantidad_beneficiados" 
+                                           value="{{ old('cantidad_beneficiados', $datosForm['cantidad_beneficiados'] ?? '') }}" 
                                            style="width:100px;font-size:12px;" placeholder="0">
                                 @else
-                                    <span style="font-weight:bold;">{{ $datosForm['personas_beneficiadas'] ?? '0' }}</span>
+                                    <span style="font-weight:bold;">{{ $datosForm['cantidad_beneficiados'] ?? '0' }}</span>
                                 @endif
                             </td>
                         </tr>
@@ -536,7 +536,7 @@
                 @unless($soloLectura)
                     <button type="submit" class="pgm-btn-save">{{ $modoActualizacion ? 'Subir documentos' : 'Guardar cambios' }}</button>
                     @if (!empty($canValidate) && $proyecto->estado_validacion === 'completado')
-                        <button type="button" class="cm-btn cm-btn-success cm-btn-sm" style="margin-left:10px;" onclick="mostrarModalAccion({icon:'\u2705',title:'Aprobar proyecto',message:'\u00bfAprueba este proyecto?',confirmText:'S\u00ed, aprobar',confirmClass:'cm-btn-success',onConfirm:function(){window.location='{{ route('proyectos.gestion.approve', $proyecto->id) }}'}})">Aprobar</button>
+                        <button type="button" class="cm-btn cm-btn-success cm-btn-sm" style="margin-left:10px;" onclick="mostrarModalAccion({icon:'\u2705',title:'Aprobar proyecto',message:'\u00bfAprueba este proyecto?',detailValue:'{{ $proyecto->titulo }}',confirmText:'S\u00ed, aprobar',confirmClass:'cm-btn-success',onConfirm:function(){window.location='{{ route('proyectos.gestion.approve', $proyecto->id) }}'}})">Aprobar</button>
                         <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" style="margin-left:5px;" onclick="abrirRechazar({{ $proyecto->id }})">Rechazar</button>
                     @endif
                 @endunless
