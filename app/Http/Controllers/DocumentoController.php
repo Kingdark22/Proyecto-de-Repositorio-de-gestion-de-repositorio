@@ -56,15 +56,17 @@ class DocumentoController extends Controller
                 $iW = imagesx($img);
                 $iH = imagesy($img);
 
-                $scale = min($iW * 0.5 / $mW, $iH * 0.5 / $mH, 1);
-                $nW = (int) ($mW * $scale);
-                $nH = (int) ($mH * $scale);
-                $marcaRedim = imagescale($marca, $nW, $nH);
-                if ($marcaRedim) {
-                    $x = (int) (($iW - $nW) / 2);
-                    $y = (int) (($iH - $nH) / 2);
-                    imagecopy($img, $marcaRedim, 0, 0, 0, 0, $nW, $nH);
-                    imagedestroy($marcaRedim);
+                if ($mW > 0 && $mH > 0) {
+                    $scale = min($iW * 0.5 / $mW, $iH * 0.5 / $mH, 1);
+                    $nW = (int) ($mW * $scale);
+                    $nH = (int) ($mH * $scale);
+                    $marcaRedim = imagescale($marca, $nW, $nH);
+                    if ($marcaRedim) {
+                        $x = (int) (($iW - $nW) / 2);
+                        $y = (int) (($iH - $nH) / 2);
+                        imagecopy($img, $marcaRedim, 0, 0, 0, 0, $nW, $nH);
+                        imagedestroy($marcaRedim);
+                    }
                 }
                 imagedestroy($marca);
             }

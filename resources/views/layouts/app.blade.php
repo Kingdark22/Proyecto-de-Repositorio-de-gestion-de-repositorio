@@ -865,6 +865,7 @@
             return form.reportValidity();
         }
         var _debounceTimers = {};
+        var _searchCache = {};
         function buscarConDebounce(el) {
             var form = el.closest('form') || document.getElementById('searchForm');
             var key = form.id || 'search';
@@ -876,7 +877,17 @@
                 var fd = new FormData(form);
                 fd.forEach(function(v, k) { url.searchParams.set(k, v); });
                 url.searchParams.set('page', '1');
-                fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+
+                // Caché: misma URL = misma respuesta (30s)
+                var urlStr = url.toString();
+                var cached = _searchCache[urlStr];
+                if (cached && (Date.now() - cached.ts < 30000)) {
+                    var oldResults = document.getElementById('searchResults');
+                    if (oldResults) oldResults.innerHTML = cached.html;
+                    return;
+                }
+
+                fetch(urlStr, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(function(r) { return r.text(); })
                     .then(function(html) {
                         var parser = new DOMParser();
@@ -884,10 +895,13 @@
                         var newResults = doc.getElementById('searchResults');
                         if (newResults) {
                             var oldResults = document.getElementById('searchResults');
-                            if (oldResults) oldResults.innerHTML = newResults.innerHTML;
+                            if (oldResults) {
+                                oldResults.innerHTML = newResults.innerHTML;
+                                _searchCache[urlStr] = { html: newResults.innerHTML, ts: Date.now() };
+                            }
                         }
                     });
-            }, 50);
+            }, 300);
         }
 
         // Eliminación vía AJAX con modal de confirmación visual

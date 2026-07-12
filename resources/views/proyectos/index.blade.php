@@ -182,22 +182,43 @@
                             function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
                             let timerProyectos;
                             let timerAutocomplete;
+                            let _proyectosSearchCache = {};
+
                             function buscarProyectos() {
                                 clearTimeout(timerProyectos);
                                 timerProyectos = setTimeout(function() {
-                                    document.querySelector('.filter-input').closest('form').submit();
-                                }, 400);
+                                    filtrarProyectos();
+                                }, 200);
                             }
+
                             document.getElementById('searchProjectInput').addEventListener('input', function() {
                                 var q = this.value.trim();
                                 var dropdown = document.getElementById('searchAutocomplete');
                                 clearTimeout(timerAutocomplete);
                                 if (q.length < 2) { dropdown.style.display = 'none'; return; }
+
+                                // Caché inmediata
+                                var cacheKey = q.toLowerCase();
+                                var cached = _proyectosSearchCache[cacheKey];
+                                if (cached && (Date.now() - cached.ts < 30000)) {
+                                    if (cached.html) {
+                                        dropdown.innerHTML = cached.html;
+                                        dropdown.style.display = 'block';
+                                    } else {
+                                        dropdown.style.display = 'none';
+                                    }
+                                    return;
+                                }
+
                                 timerAutocomplete = setTimeout(function() {
                                     fetch('{{ route("proyectos.gestion.buscar-ajax") }}?q=' + encodeURIComponent(q))
                                         .then(function(r) { return r.json(); })
                                         .then(function(data) {
-                                            if (!data.length) { dropdown.style.display = 'none'; return; }
+                                            if (!data.length) {
+                                                dropdown.style.display = 'none';
+                                                _proyectosSearchCache[cacheKey] = { html: null, ts: Date.now() };
+                                                return;
+                                            }
                                             var html = '';
                                             data.forEach(function(p) {
                                                 html += '<div class="autocomplete-item" data-id="' + escAttr(p.id) + '" style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #eee;font-size:12px;" onclick="irAProyecto(' + escAttr(p.id) + ')">';
@@ -207,9 +228,11 @@
                                             });
                                             dropdown.innerHTML = html;
                                             dropdown.style.display = 'block';
+                                            _proyectosSearchCache[cacheKey] = { html: html, ts: Date.now() };
                                         }).catch(function() {});
-                                }, 250);
+                                }, 200);
                             });
+
                             document.addEventListener('click', function(e) {
                                 if (!e.target.closest('#searchProjectInput') && !e.target.closest('#searchAutocomplete')) {
                                     document.getElementById('searchAutocomplete').style.display = 'none';
@@ -220,7 +243,7 @@
                             }
                         </script>
                         <td width="33%"><b>Estado:</b><br>
-                                <select name="estado" class="filter-select" style="width:95%;" onchange="this.form.submit()">
+                                <select name="estado" class="filter-select" id="filterEstado" style="width:95%;" onchange="filtrarProyectos()">
                                     <option value="">- Todos -</option>
                                     <option value="pendiente" {{ $filterEstado == 'pendiente' ? 'selected' : '' }}>En proceso</option>
                                     <option value="completado" {{ $filterEstado == 'completado' ? 'selected' : '' }}>Completado</option>
@@ -229,7 +252,7 @@
                                 </select>
                         </td>
                         <td width="34%"><b>Comunidad:</b><br>
-                            <select name="comunidad" class="filter-select" style="width:95%;" onchange="this.form.submit()">
+                            <select name="comunidad" class="filter-select" id="filterComunidad" style="width:95%;" onchange="filtrarProyectos()">
                                 <option value="">- Todas -</option>
                                 @foreach(($datosListado['comunidades'] ?? []) as $com)
                                     <option value="{{ $com->id }}" {{ $filterComunidad == $com->id ? 'selected' : '' }}>{{ $com->nombre }}</option>
@@ -241,59 +264,10 @@
                 <noscript><button type="submit" class="cm-btn cm-btn-sm">Buscar</button></noscript>
             </form>
 
-            @php $proyectos = $datosListado['proyectos'] ?? collect(); @endphp
-            <table width="100%" border="1" cellpadding="4" cellspacing="0"
-                style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px;">
-                <thead>
-                    <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
-                        <th width="25%">Título</th>
-                        <th width="20%">Comunidad / equipo</th>
-                        <th width="15%">Validación</th>
-                        <th width="35%">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($proyectos as $p)
-                        <tr style="background: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFF' }}; color: #000;" valign="top">
-                            <td style="padding:5px;font-weight:bold;">
-                                {{ $p->titulo }}
-                            </td>
-                            <td style="padding:5px;font-size:10px;">
-                                Equipo: {{ $p->equipo_resumen }}<br>
-                                Comunidad: {{ $p->comunidad->nombre ?? 'N/A' }}
-                            </td>
-                            <td align="center" style="padding:5px;">
-                                @if ($p->estado_validacion === 'pendiente')
-                                    <span style="color:#d4a017;font-weight:bold;">En proceso</span>
-                                @elseif($p->estado_validacion === 'completado')
-                                    <span style="color:#2e7d32;font-weight:bold;">Completado</span>
-                                @elseif($p->estado_validacion === 'rechazado')
-                                    <span style="color:#FF0000;font-weight:bold;" title="{{ $p->motivo_rechazo }}">Rechazado</span>
-                                @else
-                                    <span style="color:#008000;font-weight:bold;">Aprobado</span>
-                                @endif
-                            </td>
-                            <td align="center" style="padding:5px;">
-                                <div style="display:inline-flex;gap:4px;flex-wrap:wrap;justify-content:center;">
-                                    @if (!empty($canValidate) && $p->estado_validacion === 'completado' && !in_array($p->pry_codigo, $proyectosConDocumentosRechazados ?? []))
-                                        <button type="button" class="cm-btn cm-btn-success cm-btn-sm" onclick="mostrarModalAccion({icon:'\u2705',title:'Aprobar proyecto',message:'\u00bfAprueba este proyecto?',detailValue:'{{ $p->titulo }}',confirmText:'S\u00ed, aprobar',confirmClass:'cm-btn-success',onConfirm:function(){window.location='{{ route('proyectos.gestion.approve', $p->id) }}'}})">Aprobar</button>
-                                        <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" onclick="abrirRechazar({{ $p->id }})">Rechazar</button>
-                                    @endif
-                                    @if ($esAdmin || $esCoordinador || $esGestionador)
-                                        <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-secondary cm-btn-sm" style="background:#fff;border:2px solid #6c757d;color:#333;font-weight:600;">Ver</a>
-                                    @elseif ($p->estado_validacion !== 'aprobado')
-                                        <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                    @endforeach
-                    @if ($proyectos->isEmpty())
-                        <tr><td colspan="4" align="center" style="padding:20px;font-weight:bold;">No hay expedientes registrados</td></tr>
-                    @endif
-                </tbody>
-            </table>
-            <div style="margin-top:10px;">{{ $proyectos->links() }}</div>
+            <div id="listadoProyectos">
+                @include('proyectos._listado_tabla')
+            </div>
+            <div id="listadoPaginacion" style="margin-top:10px;">{{ ($datosListado['proyectos'] ?? collect())->links() }}</div>
         </fieldset>
     @endif
 
@@ -405,6 +379,30 @@
     </div>
 
     <script>
+    var _filtroProyectosTimer = null;
+    function filtrarProyectos() {
+        clearTimeout(_filtroProyectosTimer);
+        _filtroProyectosTimer = setTimeout(function() {
+            var search = (document.getElementById('searchProjectInput') || {}).value || '';
+            var estado = (document.getElementById('filterEstado') || {}).value || '';
+            var comunidad = (document.getElementById('filterComunidad') || {}).value || '';
+            var params = new URLSearchParams();
+            if (search) params.set('search', search);
+            if (estado) params.set('estado', estado);
+            if (comunidad) params.set('comunidad', comunidad);
+            params.set('ajax_listado', '1');
+            var url = '{{ route("proyectos.gestion") }}?' + params.toString();
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var target = document.getElementById('listadoProyectos');
+                    if (target && data.html) target.innerHTML = data.html;
+                    var pagTarget = document.getElementById('listadoPaginacion');
+                    if (pagTarget && data.paginacion) pagTarget.innerHTML = data.paginacion;
+                    else if (pagTarget) pagTarget.innerHTML = '';
+                });
+        }, 300);
+    }
     function abrirRechazar(id) {
         document.getElementById('rejectForm').action = '{{ route("proyectos.gestion.reject", "PLACEHOLDER") }}'.replace('PLACEHOLDER', id);
         document.getElementById('rejectModal').style.display = 'flex';
@@ -414,6 +412,8 @@
     }
     function abrirModalExcel() {
         limpiarSeleccionExcel();
+        var searchActual = (document.getElementById('searchProjectInput') || {}).value || '';
+        document.getElementById('excelSearch').value = searchActual;
         document.getElementById('excelModal').style.display = 'flex';
         cargarProgramas();
     }
@@ -505,48 +505,55 @@
                 });
             }).catch(function() {});
     }
-    // Autocomplete para búsqueda en modal excel — rápido con caché en memoria y AbortController
+    // Autocomplete para búsqueda en modal excel — multi-parámetro con caché en memoria y AbortController
     (function() {
         var input = document.getElementById('excelSearch');
         var dropdown = document.getElementById('excelSearchAutocomplete');
         var badge = document.getElementById('excelSearchBadge');
 
-        // Caché en memoria: { queryNormalizado: { html, data } }
         var cache = {};
-        var CACHE_TTL = 30000; // 30 segundos
+        var CACHE_TTL = 30000;
         var pendingController = null;
 
-        function queryKey(q) {
-            return q.toLowerCase().replace(/\s+/g, ' ').trim();
+        function queryKey(q, filters) {
+            return q.toLowerCase().replace(/\s+/g, ' ').trim() + '|' + JSON.stringify(filters);
         }
 
-        input.addEventListener('input', function() {
-            var q = this.value.trim();
+        function getActiveFilters() {
+            return {
+                comunidad: document.getElementById('excelComunidadSelect')?.value || '',
+                lapso: document.getElementById('excelLapsoSelect')?.value || '',
+                linea: document.getElementById('excelLineaSelect')?.value || '',
+                tipo_investigacion: document.getElementById('excelTipoInvSelect')?.value || '',
+                metodologia: document.getElementById('excelMetodologiaSelect')?.value || '',
+            };
+        }
+
+        function buscarProyectos() {
+            var q = input.value.trim();
             clearTimeout(window.excelSearchTimer);
             if (q.length < 2) { dropdown.style.display = 'none'; return; }
 
-            // Verificar caché inmediata
-            var key = queryKey(q);
+            var filters = getActiveFilters();
+            var key = queryKey(q, filters);
+
             var cached = cache[key];
             if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
-                if (cached.html) {
-                    dropdown.innerHTML = cached.html;
-                    dropdown.style.display = 'block';
-                } else {
-                    dropdown.style.display = 'none';
-                }
+                dropdown.innerHTML = cached.html || '';
+                dropdown.style.display = cached.html ? 'block' : 'none';
                 return;
             }
 
             window.excelSearchTimer = setTimeout(function() {
-                // Cancelar petición previa
-                if (pendingController) {
-                    pendingController.abort();
-                }
+                if (pendingController) pendingController.abort();
                 pendingController = new AbortController();
                 var signal = pendingController.signal;
 
-                var url = '{{ route("proyectos.gestion.buscar-ajax") }}?q=' + encodeURIComponent(q) + '&_=' + Date.now();
+                var url = '{{ route("proyectos.gestion.buscar-ajax") }}?q=' + encodeURIComponent(q);
+                Object.keys(filters).forEach(function(k) {
+                    if (filters[k]) url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(filters[k]);
+                });
+                url += '&_=' + Date.now();
 
                 fetch(url, { signal: signal })
                     .then(function(r) { return r.json(); })
@@ -568,23 +575,32 @@
                         });
                         dropdown.innerHTML = html;
                         dropdown.style.display = 'block';
-                        // Guardar en caché
                         cache[key] = { html: html, ts: Date.now() };
                     }).catch(function(err) {
                         if (err.name === 'AbortError') return;
                     });
-            }, 150); // Debounce reducido de 250ms a 150ms
+            }, 150);
+        }
+
+        input.addEventListener('input', buscarProyectos);
+
+        // Cuando cambia cualquier filtro, re-buscar si hay texto
+        ['excelLapsoSelect','excelComunidadSelect','excelLineaSelect','excelTipoInvSelect','excelMetodologiaSelect'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener('change', function() {
+                if (input.value.trim().length >= 2) {
+                    cache = {}; // Limpiar caché al cambiar filtros
+                    buscarProyectos();
+                }
+            });
         });
 
-        // Delegación de clics en el dropdown
         dropdown.addEventListener('click', function(e) {
             var item = e.target.closest('.excel-autocomplete-item');
             if (!item) return;
-            var title = item.dataset.title;
-            seleccionarProyectoExcel(title);
+            seleccionarProyectoExcel(item.dataset.title);
         });
 
-        // Hover con event delegation
         dropdown.addEventListener('mouseover', function(e) {
             var item = e.target.closest('.excel-autocomplete-item');
             if (item) item.style.background = '#f0f7ff';
@@ -594,7 +610,6 @@
             if (item) item.style.background = '#fff';
         });
 
-        // Helper: escape para atributos HTML
         function escAttr(str) {
             return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }

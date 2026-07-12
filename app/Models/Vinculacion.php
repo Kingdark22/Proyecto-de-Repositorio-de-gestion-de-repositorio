@@ -38,6 +38,6 @@ class Vinculacion extends RepositorioModel
 
     public function tituloVinculacion()
     {
-        return $this->belongsTo(TituloVinculacion::class, 'tiv_codigo', 'tiv_codigo');
+        return $this->belongsTo(TituloVinculacion::class, 'titulo_vinculacion_id', 'tiv_codigo');
     }
 }

@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\DB;
  */
 class ReporteDepositoService
 {
+    protected array $sedeCache = [];
+
     public function __construct(
         protected IntranetEquipoSeccionService $equipoSeccion,
         protected GrupoProyectoRepository $grupoRepo,
@@ -40,6 +42,10 @@ class ReporteDepositoService
         $programaFiltro    = isset($filtros['programa']) && $filtros['programa'] !== '' ? (int) $filtros['programa'] : null;
         $trayectoFiltro    = isset($filtros['trayecto']) && $filtros['trayecto'] !== '' ? $filtros['trayecto'] : null;
         $seccionFiltro     = isset($filtros['seccion']) && $filtros['seccion'] !== '' ? (int) $filtros['seccion'] : null;
+
+        // Pre-cargar involucrados en lote (evita N+1 en tutor/representante)
+        $proyectoIds = $proyectos->pluck('id')->filter()->values()->toArray();
+        $involucradosMap = $this->cargarInvolucradosEnLote($proyectoIds);
 
         $filas = [];
         $maxIntegrantes = 1;
@@ -82,8 +88,9 @@ class ReporteDepositoService
             }
 
             $integrantes = $this->resolverIntegrantes($proyecto);
-            $tutor = $this->resolverTutorAcademico($proyecto->id);
-            $representante = $this->resolverRepresentanteInstitucional($proyecto->id);
+            $inv = $involucradosMap[$proyecto->id] ?? ['tutor' => '', 'representante' => ''];
+            $tutor = $inv['tutor'];
+            $representante = $inv['representante'];
             $sede = $this->resolverSede($contexto);
             $lineaNombre = $proyecto->linea_investigacion?->nombre_investigacion ?? '';
             $localidad = $this->resolverLocalidadGeografica($proyecto);
@@ -158,20 +165,33 @@ class ReporteDepositoService
             ->where('estado_validacion', 'aprobado')
             ->where('estado_logico', true)
             ->when($search !== null, function ($q) use ($search) {
-                $termino = '%' . $search . '%';
-                $q->where(function ($q) use ($search, $termino) {
-                    // 1) Full-text search indexado (GIN index)
+                $q->where(function ($w) use ($search) {
+                    // Resumen del proyecto
                     try {
-                        $q->whereRaw(
-                            'to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)',
-                            [$search]
-                        );
+                        $w->whereRaw('to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)', [$search]);
                     } catch (\Throwable) {
-                        // Fallback a ILIKE
-                        $q->whereRaw('pry_resumen ILIKE ?', [$termino]);
+                        $w->orWhereRaw('pry_resumen ILIKE ?', ['%' . $search . '%']);
                     }
-                    // 2) También por equipo_ref
-                    $q->orWhereRaw('pry_direccion_logica ILIKE ?', [$termino]);
+                    // Nombre del grupo vía pry_direccion_logica
+                    $w->orWhereRaw('pry_direccion_logica ILIKE ?', ['%' . $search . '%']);
+                    $w->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo g WHERE g.grp_identificador = proyectos.pry_direccion_logica AND g.grp_nombre ILIKE ?)', ['%' . $search . '%']);
+                    $w->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo g WHERE g.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\') AND g.grp_nombre ILIKE ?)', ['%' . $search . '%']);
+                    // Comunidad
+                    $w->orWhereHas('comunidad', function ($qc) use ($search) {
+                        $qc->whereRaw('com_nombre ILIKE ?', ['%' . $search . '%']);
+                    });
+                    // Línea de investigación
+                    $w->orWhereHas('linea_investigacion', function ($ql) use ($search) {
+                        $ql->whereRaw('lin_nombre_investigacion ILIKE ?', ['%' . $search . '%']);
+                    });
+                    // Metodología
+                    $w->orWhereHas('metodologia', function ($qm) use ($search) {
+                        $qm->whereRaw('mei_nombre ILIKE ?', ['%' . $search . '%']);
+                    });
+                    // Tipo de investigación
+                    $w->orWhereHas('tipo_investigacion', function ($qt) use ($search) {
+                        $qt->whereRaw('tin_nombre ILIKE ?', ['%' . $search . '%']);
+                    });
                 });
             })
             ->when(($filtros['comunidad'] ?? '') !== '', fn ($q) => $q->where('comunidad_id', (int) $filtros['comunidad']))
@@ -297,6 +317,10 @@ class ReporteDepositoService
      */
     protected function obtenerSedeDeSeccion(int $secCodigo): array
     {
+        if (isset($this->sedeCache[$secCodigo])) {
+            return $this->sedeCache[$secCodigo];
+        }
+
         try {
             $conn = $this->equipoSeccion->academicConnection();
 
@@ -311,13 +335,15 @@ class ReporteDepositoService
                 ->first();
 
             if ($row) {
-                return [trim((string) $row->sed_nombre), trim((string) $row->sed_siglas)];
+                $this->sedeCache[$secCodigo] = [trim((string) $row->sed_nombre), trim((string) $row->sed_siglas)];
+                return $this->sedeCache[$secCodigo];
             }
         } catch (\Throwable) {
             // La columna sec_cod_sede o la tabla sede puede no existir en simulación
         }
 
-        return ['', ''];
+        $this->sedeCache[$secCodigo] = ['', ''];
+        return $this->sedeCache[$secCodigo];
     }
 
     /**
@@ -464,5 +490,60 @@ class ReporteDepositoService
         } catch (\Throwable) {
             return '';
         }
+    }
+
+    /**
+     * Carga todos los involucrados (tutor y representante) en una sola consulta
+     * para evitar N+1 queries por proyecto.
+     *
+     * @param  int[]  $proyectoIds
+     * @return array<int, array{tutor: string, representante: string}>
+     */
+    protected function cargarInvolucradosEnLote(array $proyectoIds): array
+    {
+        if (empty($proyectoIds)) {
+            return [];
+        }
+
+        $resultado = [];
+
+        try {
+            $conn = (string) config('dual_database.repositorio_connection', 'pgsql');
+
+            $rows = DB::connection($conn)
+                ->table('proyecto_involucrado as pi')
+                ->join('involucrados as i', 'i.id', '=', 'pi.involucrado_id')
+                ->join('involucrado_rol as ir', 'ir.proyecto_involucrado_id', '=', 'pi.id')
+                ->join('roles_involucrados as ri', 'ri.id', '=', 'ir.rol_id')
+                ->whereIn('pi.proyecto_id', $proyectoIds)
+                ->where(function ($q) {
+                    $q->whereRaw("LOWER(ri.nombre) LIKE ?", ['%tutor%'])
+                      ->orWhereRaw("LOWER(ri.nombre) LIKE ?", ['%representante%']);
+                })
+                ->select([
+                    'pi.proyecto_id',
+                    DB::raw("TRIM(i.nombre) as nombre"),
+                    DB::raw("TRIM(i.apellido) as apellido"),
+                    DB::raw("LOWER(ri.nombre) as rol_lower"),
+                ])
+                ->distinct()
+                ->get();
+
+            foreach ($rows as $row) {
+                $pid = (int) $row->proyecto_id;
+                if (!isset($resultado[$pid])) {
+                    $resultado[$pid] = ['tutor' => '', 'representante' => ''];
+                }
+                $nombre = trim(($row->nombre ?? '') . ' ' . ($row->apellido ?? ''));
+                if (str_contains($row->rol_lower ?? '', 'tutor') && $resultado[$pid]['tutor'] === '') {
+                    $resultado[$pid]['tutor'] = $nombre;
+                }
+                if (str_contains($row->rol_lower ?? '', 'representante') && $resultado[$pid]['representante'] === '') {
+                    $resultado[$pid]['representante'] = $nombre;
+                }
+            }
+        } catch (\Throwable) {}
+
+        return $resultado;
     }
 }

@@ -124,11 +124,34 @@ class ProyectoRepository
             ->where('pry_direccion_logica', '!=', '')
             ->when(($filtros['search'] ?? '') !== '', function ($q) use ($filtros) {
                 $s = $filtros['search'];
-                try {
-                    $q->whereRaw('to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)', [$s]);
-                } catch (\Throwable) {
-                    $q->whereRaw('pry_resumen ILIKE ?', ['%' . $s . '%']);
-                }
+                $q->where(function ($w) use ($s) {
+                    // Resumen del proyecto
+                    try {
+                        $w->whereRaw('to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)', [$s]);
+                    } catch (\Throwable) {
+                        $w->orWhereRaw('pry_resumen ILIKE ?', ['%' . $s . '%']);
+                    }
+                    // Nombre del grupo vía equipo_ref (identificador o grp_codigo)
+                    $w->orWhereRaw('pry_direccion_logica ILIKE ?', ['%' . $s . '%']);
+                    $w->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo g WHERE g.grp_identificador = proyectos.pry_direccion_logica AND g.grp_nombre ILIKE ?)', ['%' . $s . '%']);
+                    $w->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo g WHERE g.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\') AND g.grp_nombre ILIKE ?)', ['%' . $s . '%']);
+                    // Comunidad
+                    $w->orWhereHas('comunidad', function ($qc) use ($s) {
+                        $qc->whereRaw('com_nombre ILIKE ?', ['%' . $s . '%']);
+                    });
+                    // Línea de investigación
+                    $w->orWhereHas('linea_investigacion', function ($ql) use ($s) {
+                        $ql->whereRaw('lin_nombre_investigacion ILIKE ?', ['%' . $s . '%']);
+                    });
+                    // Metodología
+                    $w->orWhereHas('metodologia', function ($qm) use ($s) {
+                        $qm->whereRaw('mei_nombre ILIKE ?', ['%' . $s . '%']);
+                    });
+                    // Tipo de investigación
+                    $w->orWhereHas('tipo_investigacion', function ($qt) use ($s) {
+                        $qt->whereRaw('tin_nombre ILIKE ?', ['%' . $s . '%']);
+                    });
+                });
             })
             ->when(($filtros['estado'] ?? '') !== '', fn($q) => $q->where('estado_validacion', $filtros['estado']))
             ->when(($filtros['comunidad'] ?? '') !== '', fn($q) => $q->where('comunidad_id', $filtros['comunidad']))

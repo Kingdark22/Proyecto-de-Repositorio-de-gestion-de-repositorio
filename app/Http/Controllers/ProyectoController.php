@@ -125,6 +125,15 @@ class ProyectoController extends Controller
             });
         }
 
+        if ($request->ajax() && $request->get('ajax_listado')) {
+            $html = view('proyectos._listado_tabla', compact(
+                'datosListado', 'canValidate', 'esAdmin', 'esCoordinador', 'esGestionador',
+                'proyectosConDocumentosRechazados'
+            ))->render();
+            $paginacion = ($datosListado['proyectos'] ?? collect())->links()->render();
+            return response()->json(['html' => $html, 'paginacion' => $paginacion]);
+        }
+
         return view('proyectos.index', compact(
             'search', 'filterEstado', 'filterComunidad', 'filterLapso',
             'esProfesor', 'esAdmin', 'esGestionador', 'esCoordinador', 'esEstudianteLider',
@@ -415,13 +424,6 @@ class ProyectoController extends Controller
             ->with('success', 'Proyecto actualizado con éxito.');
     }
 
-    public function toggleStatus($id)
-    {
-        $this->gestion->alternarEstado((int) $id);
-        return redirect()->route('proyectos.gestion')
-            ->with('success', 'Estado del proyecto actualizado.');
-    }
-
     public function approve($id)
     {
         try {
@@ -487,21 +489,6 @@ class ProyectoController extends Controller
             return redirect()->route('proyectos.gestion')
                 ->with('error', $e->getMessage());
         }
-    }
-
-    public function destroy($id)
-    {
-        $user = auth()->user();
-        $proyecto = Proyecto::findOrFail($id);
-        $esAdmin = $this->userRoleService->roleMatches('administrador', $this->userRoleService->getActiveRole($user));
-
-        if ($esAdmin && $user->usu_cedula != $proyecto->creador_cedula) {
-            abort(403, 'No tienes permiso para eliminar este proyecto.');
-        }
-
-        $this->gestion->eliminar((int) $id);
-        return redirect()->route('proyectos.gestion')
-            ->with('success', 'Proyecto eliminado correctamente.');
     }
 
     public function registrarDesdeGrupo(Request $request, $grpCodigo)
@@ -786,13 +773,64 @@ class ProyectoController extends Controller
         $pnf     = $datos['pnfPredominante'] ?? '';
 
         // ── Post-procesar docente de proyecto ─────────────────────────────
-        // Construir un mapa pry_codigo => equipo_ref para matching correcto (evita índice contra índice)
+        // Construir un mapa pry_codigo => equipo_ref para matching correcto
         $proyectosEquipo = Proyecto::where('estado_validacion', 'aprobado')
             ->where('estado_logico', true)
             ->orderBy('id')
             ->select(['pry_codigo', 'pry_direccion_logica'])
             ->get()
             ->keyBy('pry_codigo');
+
+        // Pre-cargar todas las cédulas de creadores de grupos necesarias (evita N+1)
+        $equipoRefs = $proyectosEquipo->pluck('equipo_ref')->filter()->unique()->values()->toArray();
+        $creadoresMap = [];
+        if (!empty($equipoRefs)) {
+            try {
+                $gruposCreadores = \App\Models\GrupoProyectoModulo::whereIn('grp_identificador', $equipoRefs)
+                    ->whereNotNull('grp_creador_cedula')
+                    ->get(['grp_identificador', 'grp_creador_cedula']);
+                $cedulas = $gruposCreadores->pluck('grp_creador_cedula')->filter()->unique()->values()->toArray();
+                $usuariosMap = [];
+                if (!empty($cedulas)) {
+                    $usuariosMap = \App\Models\User::whereIn('usu_cedula', $cedulas)
+                        ->get(['usu_cedula', 'nombre', 'apellido'])
+                        ->keyBy(fn($u) => trim((string) $u->usu_cedula));
+                }
+                foreach ($gruposCreadores as $g) {
+                    $ced = trim((string) $g->grp_creador_cedula);
+                    $user = $usuariosMap[$ced] ?? null;
+                    $creadoresMap[$g->grp_identificador] = $user
+                        ? strtoupper(trim(($user->nombre ?? '') . ' ' . ($user->apellido ?? '')))
+                        : '';
+                }
+            } catch (\Throwable) {}
+        }
+
+        // Pre-cargar sedes necesarias (evita N+1)
+        $sedesMap = [];
+        $sedeRefs = [];
+        foreach ($filas as $fila) {
+            if (($fila['sede'] === '' || $fila['sede'] === '—') && isset($fila['pry_codigo'])) {
+                $proy = $proyectosEquipo[$fila['pry_codigo']] ?? null;
+                $equipoRef = $proy ? ($proy->equipo_ref ?? '') : '';
+                if ($equipoRef !== '' && preg_match('/^[A-Z]+-([A-Z]{2,4})\d+-\d+/', strtoupper($equipoRef), $m)) {
+                    $sedeRefs[$m[1]] = true;
+                }
+            }
+        }
+        if (!empty($sedeRefs)) {
+            try {
+                $academicConn = $this->equipoSeccion->academicConnection();
+                $sedeConn = $academicConn === 'intranet' ? 'simulacion' : $academicConn;
+                $sedesRows = DB::connection($sedeConn)->table('sede')
+                    ->whereIn('sed_siglas', array_keys($sedeRefs))
+                    ->get(['sed_siglas', 'sed_nombre']);
+                foreach ($sedesRows as $s) {
+                    $sedesMap[$s->sed_siglas] = strtoupper(trim($s->sed_nombre));
+                }
+            } catch (\Throwable) {}
+        }
+
         foreach ($filas as &$fila) {
             $pryCodigo = isset($fila['pry_codigo']) ? (int) $fila['pry_codigo'] : 0;
             $proy = $pryCodigo > 0 ? ($proyectosEquipo[$pryCodigo] ?? null) : null;
@@ -801,32 +839,12 @@ class ProyectoController extends Controller
             // Sede fallback desde equipo_ref
             if (($fila['sede'] === '' || $fila['sede'] === '—') && $equipoRef !== '') {
                 if (preg_match('/^[A-Z]+-([A-Z]{2,4})\d+-\d+/', strtoupper($equipoRef), $m)) {
-                    $sedSiglas = $m[1];
-                    try {
-                        $academicConn = $this->equipoSeccion->academicConnection();
-                        $sedeConn = $academicConn === 'intranet' ? 'simulacion' : $academicConn;
-                        $sedNombre = DB::connection($sedeConn)->table('sede')
-                            ->where('sed_siglas', $sedSiglas)
-                            ->value('sed_nombre') ?? $sedSiglas;
-                        $fila['sede'] = strtoupper($sedNombre);
-                    } catch (\Throwable) {
-                        $fila['sede'] = $sedSiglas;
-                    }
+                    $fila['sede'] = $sedesMap[$m[1]] ?? $m[1];
                 }
             }
 
-            // Docente de proyecto = quien creó el grupo de proyecto
-            $docente = '';
-            try {
-                $grupoCreador = \App\Models\GrupoProyectoModulo::where('grp_identificador', $equipoRef)->value('grp_creador_cedula');
-                if ($grupoCreador) {
-                    $creador = \App\Models\User::where('usu_cedula', trim((string) $grupoCreador))->first();
-                    if ($creador) {
-                        $docente = strtoupper(trim(($creador->nombre ?? '') . ' ' . ($creador->apellido ?? '')));
-                    }
-                }
-            } catch (\Throwable) {}
-            $fila['docente'] = $docente;
+            // Docente de proyecto = quien creó el grupo (ya pre-cargado)
+            $fila['docente'] = $creadoresMap[$equipoRef] ?? '';
         }
         unset($fila);
 
@@ -962,36 +980,94 @@ class ProyectoController extends Controller
             return response()->json([]);
         }
 
-        // Cache por 30 segundos para búsquedas repetidas rápidas
-        $cacheKey = 'proyectos_ajax_search_' . md5(strtolower(trim($search)));
+        // Filtros adicionales del modal de exportación
+        $filters = [
+            'comunidad'         => $request->query('comunidad', ''),
+            'lapso'             => $request->query('lapso', ''),
+            'linea'             => $request->query('linea', ''),
+            'tipo_investigacion' => $request->query('tipo_investigacion', ''),
+            'metodologia'       => $request->query('metodologia', ''),
+        ];
 
-        $results = \Illuminate\Support\Facades\Cache::remember($cacheKey, 15, function () use ($search) {
+        // Cache key incluye filtros
+        $cacheKey = 'proyectos_ajax_search_' . md5(json_encode([
+            'q' => strtolower(trim($search)),
+            'f' => $filters,
+        ]));
+
+        $results = \Illuminate\Support\Facades\Cache::remember($cacheKey, 15, function () use ($search, $filters) {
             $searchTrimmed = trim($search);
             $termino = '%' . $searchTrimmed . '%';
 
-            $proyectos = Proyecto::where('estado_logico', true)
+            $query = Proyecto::where('estado_validacion', 'aprobado')
+                ->where('estado_logico', true)
                 ->where(function ($q) use ($searchTrimmed, $termino) {
-                    // 1) Full-text search indexado (GIN index) — más rápido que ILIKE
+                    // Resumen del proyecto
                     try {
                         $q->whereRaw(
                             'to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)',
                             [$searchTrimmed]
                         );
                     } catch (\Throwable) {
-                        // Fallback a ILIKE con soporte de índice trigram
                         $q->whereRaw('pry_resumen ILIKE ?', [$termino]);
                     }
-
-                    // 2) También buscar por pry_direccion_logica (equipo_ref)
+                    // Nombre del grupo
                     $q->orWhereRaw('pry_direccion_logica ILIKE ?', [$termino]);
-
-                    // 3) También por pry_codigo exacto (útil para IDs)
+                    $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo g WHERE g.grp_identificador = proyectos.pry_direccion_logica AND g.grp_nombre ILIKE ?)', [$termino]);
+                    $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo g WHERE g.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\') AND g.grp_nombre ILIKE ?)', [$termino]);
+                    // Comunidad
+                    $q->orWhereHas('comunidad', function ($qc) use ($termino) {
+                        $qc->whereRaw('com_nombre ILIKE ?', [$termino]);
+                    });
+                    // Línea de investigación
+                    $q->orWhereHas('linea_investigacion', function ($ql) use ($termino) {
+                        $ql->whereRaw('lin_nombre_investigacion ILIKE ?', [$termino]);
+                    });
+                    // Metodología
+                    $q->orWhereHas('metodologia', function ($qm) use ($termino) {
+                        $qm->whereRaw('mei_nombre ILIKE ?', [$termino]);
+                    });
+                    // Tipo de investigación
+                    $q->orWhereHas('tipo_investigacion', function ($qt) use ($termino) {
+                        $qt->whereRaw('tin_nombre ILIKE ?', [$termino]);
+                    });
+                    // Código exacto
                     if (is_numeric($searchTrimmed)) {
                         $q->orWhere('pry_codigo', (int) $searchTrimmed);
                     }
-                })
-                ->orderBy('pry_codigo', 'desc')
-                ->limit(10)
+                });
+
+            // Aplicar filtros adicionales
+            if (($filters['comunidad'] ?? '') !== '') {
+                $query->where('comunidad_id', (int) $filters['comunidad']);
+            }
+            if (($filters['linea'] ?? '') !== '') {
+                $query->where('linea_investigacion_id', (int) $filters['linea']);
+            }
+            if (($filters['tipo_investigacion'] ?? '') !== '') {
+                $query->where('tipo_investigacion_id', (int) $filters['tipo_investigacion']);
+            }
+            if (($filters['metodologia'] ?? '') !== '') {
+                $query->where('metodologia_id', (int) $filters['metodologia']);
+            }
+
+            // Filtro por lapso: buscar en equipo_ref que contenga el lapso
+            if (($filters['lapso'] ?? '') !== '') {
+                $lapCodigo = (int) $filters['lapso'];
+                $query->where(function ($q) use ($lapCodigo) {
+                    $q->where('pry_direccion_logica', 'LIKE', "EQSEC:{$lapCodigo}:%")
+                      ->orWhereIn('pry_direccion_logica', function ($sub) use ($lapCodigo) {
+                          $sub->select('grp_identificador')
+                              ->from('grupo_proyecto_modulo')
+                              ->whereRaw("CAST(grp_contexto AS jsonb)->>'lap_codigo' = ?", [(string) $lapCodigo])
+                              ->where('estado_logico', true)
+                              ->whereNotNull('grp_identificador');
+                      });
+                });
+            }
+
+            $proyectos = $query->orderByDesc('pry_codigo')
+                ->limit(15)
                 ->get(['pry_codigo', 'pry_resumen', 'pry_direccion_logica']);
 
             $results = [];

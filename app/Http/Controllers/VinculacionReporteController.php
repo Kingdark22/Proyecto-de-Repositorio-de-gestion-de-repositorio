@@ -135,6 +135,111 @@ class VinculacionReporteController extends Controller
         $equipoSvc = app(IntranetEquipoSeccionService::class);
         $gestionSvc = app(ProyectoGestionService::class);
 
+        // ── Pre-cargar datos en lote (evita N+1) ──────────────────────────
+        $equipoRefs = $vinculaciones->pluck('proyecto.equipo_ref')->filter()->unique()->values()->toArray();
+        $proyectoIds = $vinculaciones->pluck('proyecto.pry_codigo')->filter()->unique()->values()->toArray();
+
+        // Pre-cargar sedes
+        $sedesMap = [];
+        $sedSiglasSet = [];
+        foreach ($equipoRefs as $ref) {
+            $partes = $equipoSvc->parsearClave($ref);
+            if ($partes) {
+                $ctx = $equipoSvc->etiquetasContexto($partes['lap_codigo'], $partes['sec_codigo'], null);
+                $siglas = $ctx['sed_siglas'] ?? '';
+                if ($siglas === '' && preg_match('/^[A-Z]+-([A-Z]{2,4})\d+-\d+/', strtoupper($ref), $m)) {
+                    $siglas = $m[1];
+                }
+                if ($siglas !== '') $sedSiglasSet[$siglas] = true;
+            }
+        }
+        if (!empty($sedSiglasSet)) {
+            try {
+                $academicConn = $equipoSvc->academicConnection();
+                $sedeConn = $academicConn === 'intranet' ? 'simulacion' : $academicConn;
+                $sedRows = DB::connection($sedeConn)->table('sede')
+                    ->whereIn('sed_siglas', array_keys($sedSiglasSet))
+                    ->get(['sed_siglas', 'sed_nombre']);
+                foreach ($sedRows as $s) {
+                    $sedesMap[$s->sed_siglas] = strtoupper($s->sed_nombre);
+                }
+            } catch (\Throwable) {}
+        }
+
+        // Pre-cargar docentes de secciones en lote (evita N+1)
+        $docentesMap = [];
+        $secCodesSet = [];
+        foreach ($equipoRefs as $ref) {
+            $partes = $equipoSvc->parsearClave($ref);
+            if ($partes && !isset($secCodesSet[$partes['sec_codigo']])) {
+                $secCodesSet[$partes['sec_codigo']] = true;
+            }
+        }
+        if (!empty($secCodesSet)) {
+            try {
+                $conn = DB::connection($equipoSvc->academicConnection());
+                $sudRows = $conn->table('seccion_unidad_docente as sud')
+                    ->join('persona as p', 'p.per_cedula', '=', 'sud.sud_ced_docente')
+                    ->whereIn('sud.sud_cod_seccion', array_keys($secCodesSet))
+                    ->select(['sud.sud_cod_seccion', 'p.per_nombres', 'p.per_apellidos'])
+                    ->get();
+                foreach ($sudRows as $r) {
+                    $docentesMap[$r->sud_cod_seccion] = strtoupper(trim($r->per_nombres . ' ' . $r->per_apellidos));
+                }
+            } catch (\Throwable) {}
+        }
+
+        // Pre-cargar involucrados (tutor y representante) en lote
+        $involucradosMap = [];
+        if (!empty($proyectoIds)) {
+            try {
+                $conn = (string) config('dual_database.repositorio_connection', 'pgsql');
+                $invRows = DB::connection($conn)
+                    ->table('proyecto_involucrado as pi')
+                    ->join('involucrados as i', 'i.id', '=', 'pi.involucrado_id')
+                    ->join('involucrado_rol as ir', 'ir.proyecto_involucrado_id', '=', 'pi.id')
+                    ->join('roles_involucrados as ri', 'ri.id', '=', 'ir.rol_id')
+                    ->whereIn('pi.proyecto_id', $proyectoIds)
+                    ->where(function ($q) {
+                        $q->whereRaw("LOWER(ri.nombre) LIKE ?", ['%tutor%'])
+                          ->orWhereRaw("LOWER(ri.nombre) LIKE ?", ['%representante%']);
+                    })
+                    ->select([
+                        'pi.proyecto_id',
+                        DB::raw("TRIM(i.nombre) as nombre"),
+                        DB::raw("TRIM(i.apellido) as apellido"),
+                        DB::raw("LOWER(ri.nombre) as rol_lower"),
+                    ])
+                    ->distinct()
+                    ->get();
+                foreach ($invRows as $row) {
+                    $pid = $row->proyecto_id;
+                    if (!isset($involucradosMap[$pid])) {
+                        $involucradosMap[$pid] = ['tutor' => '', 'representante' => ''];
+                    }
+                    $nombre = strtoupper(trim($row->nombre . ' ' . $row->apellido));
+                    if (str_contains($row->rol_lower, 'tutor') && $involucradosMap[$pid]['tutor'] === '') {
+                        $involucradosMap[$pid]['tutor'] = $nombre;
+                    }
+                    if (str_contains($row->rol_lower, 'representante') && $involucradosMap[$pid]['representante'] === '') {
+                        $involucradosMap[$pid]['representante'] = $nombre;
+                    }
+                }
+            } catch (\Throwable) {}
+        }
+
+        // Pre-cargar integrantes en lote
+        $integrantesMap = [];
+        foreach ($equipoRefs as $ref) {
+            if (!isset($integrantesMap[$ref])) {
+                try {
+                    $integrantesMap[$ref] = $equipoSvc->integrantes($ref);
+                } catch (\Throwable) {
+                    $integrantesMap[$ref] = collect();
+                }
+            }
+        }
+
         // ── Primera pasada: resolver datos y encontrar max integrantes ──
         $rows = [];
         $maxIntegrantes = 0;
@@ -154,64 +259,28 @@ class VinculacionReporteController extends Controller
                 );
             }
 
+            // Sede desde pre-carga
             $sedeNombre = '';
             $sedSiglas = $ctx['sed_siglas'] ?? '';
-
-            // Fallback: extraer sede directamente del equipo_ref (ej: PNFI-ACA11-131-1 → ACA)
             if ($sedSiglas === '' && preg_match('/^[A-Z]+-([A-Z]{2,4})\d+-\d+/', strtoupper($equipoRef), $m)) {
                 $sedSiglas = $m[1];
             }
+            $sedeNombre = $sedesMap[$sedSiglas] ?? $sedSiglas;
 
-            if ($sedSiglas !== '') {
-                try {
-                    $academicConn = $equipoSvc->academicConnection();
-                    $sedeConn = $academicConn === 'intranet' ? 'simulacion' : $academicConn;
-                    $sedeNombre = DB::connection($sedeConn)->table('sede')
-                        ->where('sed_siglas', $sedSiglas)
-                        ->value('sed_nombre') ?? $sedSiglas;
-                } catch (\Throwable $e) {
-                    $sedeNombre = $sedSiglas;
-                }
-            }
-
-            // Programa: nombre completo
+            // Programa
             $proNombre = $ctx['pro_nombre'] ?? '';
             $proSiglas = $ctx['pro_siglas'] ?? 'PNF';
             $programaInfo = $proNombre !== '' ? $proNombre : $proSiglas;
 
-            $docente = '';
-            if ($partes) {
-                try {
-                    $conn = DB::connection($equipoSvc->academicConnection());
-                    $sud = $conn->table('seccion_unidad_docente')
-                        ->where('sud_cod_seccion', $partes['sec_codigo'])
-                        ->first();
-                    if ($sud) {
-                        $prof = $conn->table('persona')
-                            ->where('per_cedula', $sud->sud_ced_docente)
-                            ->first();
-                        $docente = $prof ? strtoupper($prof->per_nombres . ' ' . $prof->per_apellidos) : '';
-                    }
-                } catch (\Throwable $e) {
-                    Log::error('Error obteniendo docente SUD: ' . $e->getMessage());
-                }
-            }
+            // Docente desde pre-carga
+            $docente = $partes ? ($docentesMap[$partes['sec_codigo']] ?? '') : '';
 
-            $tutor = ''; $representante = '';
-            try {
-                $involucrados = $gestionSvc->involucradosDelProyecto($p->pry_codigo);
-                foreach ($involucrados as $inv) {
-                    foreach ($inv['roles'] as $rol) {
-                        $rolNombre = strtoupper($rol['nombre']);
-                        if (str_contains($rolNombre, 'TUTOR')) $tutor = strtoupper($inv['nombre'] . ' ' . $inv['apellido']);
-                        if (str_contains($rolNombre, 'REPRESENTANTE')) $representante = strtoupper($inv['nombre'] . ' ' . $inv['apellido']);
-                    }
-                }
-            } catch (\Throwable $e) {
-                Log::error('Error obteniendo involucrados: ' . $e->getMessage());
-            }
+            // Tutor y representante desde pre-carga
+            $tutor = $involucradosMap[$p->pry_codigo]['tutor'] ?? '';
+            $representante = $involucradosMap[$p->pry_codigo]['representante'] ?? '';
 
-            $integrantes = $equipoSvc->integrantes($equipoRef);
+            // Integrantes desde pre-carga
+            $integrantes = $integrantesMap[$equipoRef] ?? collect();
             $totalInt = $integrantes->count();
             if ($totalInt > $maxIntegrantes) {
                 $maxIntegrantes = $totalInt;
@@ -349,18 +418,21 @@ class VinculacionReporteController extends Controller
 
     protected function proyectosEnLapso(int $lapCodigo): array
     {
-        $equipoSeccion = app(IntranetEquipoSeccionService::class);
-        $proyectos = Proyecto::where('estado_logico', true)->select('id', 'equipo_ref')->get();
-        $ids = [];
+        // Usar LIKE indexado sobre pry_direccion_logica para patrón EQSEC:{lapso}:*
+        $likePattern = 'EQSEC:' . $lapCodigo . ':%';
 
-        foreach ($proyectos as $p) {
-            if (!$p->equipo_ref) continue;
-            $partes = $equipoSeccion->parsearClave($p->equipo_ref);
-            if ($partes && ($partes['lap_codigo'] ?? null) === $lapCodigo) {
-                $ids[] = $p->id;
-            }
-        }
-
-        return $ids;
+        return Proyecto::where('estado_logico', true)
+            ->where(function ($q) use ($likePattern, $lapCodigo) {
+                $q->where('pry_direccion_logica', 'LIKE', $likePattern)
+                  ->orWhereIn('pry_direccion_logica', function ($sub) use ($lapCodigo) {
+                      $sub->select('grp_identificador')
+                          ->from('grupo_proyecto_modulo')
+                          ->whereRaw("CAST(grp_contexto AS jsonb)->>'lap_codigo' = ?", [(string) $lapCodigo])
+                          ->where('estado_logico', true)
+                          ->whereNotNull('grp_identificador');
+                  });
+            })
+            ->pluck('id')
+            ->toArray();
     }
 }

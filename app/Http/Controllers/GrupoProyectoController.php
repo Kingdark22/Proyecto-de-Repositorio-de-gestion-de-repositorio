@@ -75,6 +75,7 @@ class GrupoProyectoController extends Controller
         }
 
         // Secciones disponibles
+        $secCodigos = [];
         if ($isProfessor && $lapCodigo) {
             $secCodigos = $this->profesores->seccionesDelDocente(
                 trim((string) $user->usu_cedula),
@@ -91,10 +92,6 @@ class GrupoProyectoController extends Controller
         $filters = ['lapso' => $lapCodigo, 'programa' => $programaCodigo, 'busqueda' => $search];
 
         if ($isProfessor) {
-            $secCodigos = $this->profesores->seccionesDelDocente(
-                trim((string) $user->usu_cedula),
-                $lapCodigo,
-            );
             $filters['seccion'] = $secCodigos !== [] ? $secCodigos : [-1];
         } elseif ($activeRole === 'estudiante') {
             $filters['estudiante_cedula'] = trim((string) $user->usu_cedula);
@@ -109,6 +106,12 @@ class GrupoProyectoController extends Controller
             } catch (\Throwable $e) {
                 request()->session()->flash('error', 'Error: ' . $e->getMessage());
             }
+        }
+
+        // Si es profesor y no tiene grupos en el lapso actual, redirigir a crear grupo
+        if ($isProfessor && $lista->isEmpty() && $lapCodigo) {
+            return redirect()->route('grupos-proyecto.create')
+                ->with('info', 'No tienes grupos registrados en este lapso. Crea tu primer grupo para comenzar.');
         }
 
         // Obtener proyectos asociados a los grupos

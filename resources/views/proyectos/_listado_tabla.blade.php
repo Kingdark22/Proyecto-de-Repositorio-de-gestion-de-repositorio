@@ -1,0 +1,54 @@
+@php
+    $proyectos = $datosListado['proyectos'] ?? collect();
+@endphp
+<table width="100%" border="1" cellpadding="4" cellspacing="0"
+    style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px;">
+    <thead>
+        <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
+            <th width="25%">Título</th>
+            <th width="20%">Comunidad / equipo</th>
+            <th width="15%">Validación</th>
+            <th width="35%">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach ($proyectos as $p)
+            <tr style="background: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFF' }}; color: #000;" valign="top">
+                <td style="padding:5px;font-weight:bold;">
+                    {{ $p->titulo }}
+                </td>
+                <td style="padding:5px;font-size:10px;">
+                    Equipo: {{ $p->equipo_resumen }}<br>
+                    Comunidad: {{ $p->comunidad->nombre ?? 'N/A' }}
+                </td>
+                <td align="center" style="padding:5px;">
+                    @if ($p->estado_validacion === 'pendiente')
+                        <span style="color:#d4a017;font-weight:bold;">En proceso</span>
+                    @elseif($p->estado_validacion === 'completado')
+                        <span style="color:#2e7d32;font-weight:bold;">Completado</span>
+                    @elseif($p->estado_validacion === 'rechazado')
+                        <span style="color:#FF0000;font-weight:bold;" title="{{ $p->motivo_rechazo }}">Rechazado</span>
+                    @else
+                        <span style="color:#008000;font-weight:bold;">Aprobado</span>
+                    @endif
+                </td>
+                <td align="center" style="padding:5px;">
+                    <div style="display:inline-flex;gap:4px;flex-wrap:wrap;justify-content:center;">
+                        @if (!empty($canValidate) && $p->estado_validacion === 'completado' && !in_array($p->pry_codigo, $proyectosConDocumentosRechazados ?? []))
+                            <button type="button" class="cm-btn cm-btn-success cm-btn-sm" onclick="mostrarModalAccion({icon:'\u2705',title:'Aprobar proyecto',message:'\u00bfAprueba este proyecto?',detailValue:'{{ addslashes($p->titulo) }}',confirmText:'S\u00ed, aprobar',confirmClass:'cm-btn-success',onConfirm:function(){window.location='{{ route('proyectos.gestion.approve', $p->id) }}'}})">Aprobar</button>
+                            <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" onclick="abrirRechazar({{ $p->id }})">Rechazar</button>
+                        @endif
+                        @if (($esAdmin ?? false) || ($esCoordinador ?? false) || ($esGestionador ?? false))
+                            <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-secondary cm-btn-sm" style="background:#fff;border:2px solid #6c757d;color:#333;font-weight:600;">Ver</a>
+                        @elseif ($p->estado_validacion !== 'aprobado')
+                            <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
+                        @endif
+                    </div>
+                </td>
+            </tr>
+        @endforeach
+        @if ($proyectos->isEmpty())
+            <tr><td colspan="4" align="center" style="padding:20px;font-weight:bold;">No hay expedientes registrados</td></tr>
+        @endif
+    </tbody>
+</table>
