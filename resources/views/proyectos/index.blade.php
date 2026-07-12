@@ -223,7 +223,6 @@
                                             data.forEach(function(p) {
                                                 html += '<div class="autocomplete-item" data-id="' + escAttr(p.id) + '" style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #eee;font-size:12px;" onclick="irAProyecto(' + escAttr(p.id) + ')">';
                                                 html += '<strong>' + escHtml(p.title) + '</strong>';
-                                                if (p.resumen) html += '<br><span style="color:#666;font-size:10px;">' + escHtml(p.resumen) + '</span>';
                                                 html += '</div>';
                                             });
                                             dropdown.innerHTML = html;
@@ -566,11 +565,7 @@
                         var html = '';
                         data.forEach(function(p) {
                             html += '<div class="excel-autocomplete-item" data-id="' + p.id + '" data-title="' + escAttr(p.title) + '" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #e8e8e8;font-size:12px;">';
-                            html += '<div style="display:flex;align-items:center;gap:8px;">';
-                            html += '<span style="flex-shrink:0;width:6px;height:6px;border-radius:50%;background:#19692e;"></span>';
                             html += '<strong style="font-size:12px;color:#222;">' + escHtml(p.title) + '</strong>';
-                            html += '</div>';
-                            if (p.resumen) html += '<div style="color:#777;font-size:10px;margin-top:2px;padding-left:14px;">' + escHtml(p.resumen) + '</div>';
                             html += '</div>';
                         });
                         dropdown.innerHTML = html;
