@@ -237,7 +237,10 @@
                     @endif
 
                     <div style="margin-bottom:12px;display:flex;gap:10px;align-items:center;">
-                        <input wire:model.live.debounce.50ms="search" type="text" placeholder="Buscar proyecto por título, comunidad o cédula..." style="padding:8px 10px;border:2px solid #8b0000;border-radius:6px;font-size:14px;min-width:200px;flex:1;">
+                        <div style="position:relative;flex:1;min-width:200px;">
+                            <input wire:model.live.debounce.50ms="search" type="text" placeholder="Buscar proyecto por título..." id="vincSearchInput" autocomplete="off" oninput="buscarVinc()" style="width:100%;padding:8px 10px;border:2px solid #8b0000;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                            <div id="vincSearchAutocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;max-height:220px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
+                        </div>
                         <span style="font-size:13px;color:#555;">
                             <b>{{ $proyectos->total() ?? 0 }}</b> proyecto(s)
                         </span>
@@ -795,6 +798,62 @@
     @endif
 
     <script>
+        var _vincTimer = null;
+        var _vincCache = {};
+
+        function buscarVinc() {
+            clearTimeout(_vincTimer);
+            var input = document.getElementById('vincSearchInput');
+            var dropdown = document.getElementById('vincSearchAutocomplete');
+            var q = input.value.trim();
+
+            if (q.length < 2) { dropdown.style.display = 'none'; return; }
+
+            var cacheKey = q.toLowerCase();
+            if (_vincCache[cacheKey] && (Date.now() - _vincCache[cacheKey].ts < 30000)) {
+                if (_vincCache[cacheKey].html) {
+                    dropdown.innerHTML = _vincCache[cacheKey].html;
+                    dropdown.style.display = 'block';
+                } else {
+                    dropdown.style.display = 'none';
+                }
+                return;
+            }
+
+            _vincTimer = setTimeout(function() {
+                fetch('{{ route("proyectos.gestion.buscar-ajax") }}?q=' + encodeURIComponent(q))
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (!data.length) {
+                            dropdown.style.display = 'none';
+                            _vincCache[cacheKey] = { html: null, ts: Date.now() };
+                            return;
+                        }
+                        var html = '';
+                        data.forEach(function(p) {
+                            html += '<div class="vinc-autocomplete-item" style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #eee;font-size:12px;" onclick="seleccionarVinc(\'' + p.title.replace(/'/g, "\\'") + '\')">';
+                            html += '<strong>' + p.title + '</strong>';
+                            html += '</div>';
+                        });
+                        dropdown.innerHTML = html;
+                        dropdown.style.display = 'block';
+                        _vincCache[cacheKey] = { html: html, ts: Date.now() };
+                    }).catch(function() {});
+            }, 200);
+        }
+
+        function seleccionarVinc(title) {
+            var dropdown = document.getElementById('vincSearchAutocomplete');
+            dropdown.style.display = 'none';
+            @this.set('search', title);
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#vincSearchInput') && !e.target.closest('#vincSearchAutocomplete')) {
+                var d = document.getElementById('vincSearchAutocomplete');
+                if (d) d.style.display = 'none';
+            }
+        });
 
         window.addEventListener('descargar-pdf', event => {
             window.open(event.detail.url, '_blank');

@@ -684,6 +684,39 @@ class GrupoProyectoController extends Controller
     }
 
     /**
+     * AJAX: buscar grupos por nombre, código o identificador (autocompletado).
+     */
+    public function buscarAjax(Request $request)
+    {
+        $search = trim($request->query('q', ''));
+        if (mb_strlen($search) < 2) {
+            return response()->json([]);
+        }
+
+        $term = '%' . mb_strtolower($search) . '%';
+
+        $grupos = GrupoProyectoModulo::where('estado_logico', true)
+            ->where(function ($q) use ($term) {
+                $q->whereRaw('LOWER(grp_nombre) LIKE ?', [$term])
+                  ->orWhereRaw('LOWER(grp_identificador) LIKE ?', [$term]);
+            })
+            ->orderByDesc('grp_codigo')
+            ->limit(10)
+            ->get(['grp_codigo', 'grp_nombre', 'grp_identificador', 'grp_contexto']);
+
+        $results = [];
+        foreach ($grupos as $g) {
+            $results[] = [
+                'id'    => $g->grp_codigo,
+                'title' => $g->grp_nombre,
+                'code'  => $g->grp_identificador ?? '',
+            ];
+        }
+
+        return response()->json($results);
+    }
+
+    /**
      * Check if a group name is available globally (for real-time validation).
      */
     public function checkNombreDisponible(Request $request)

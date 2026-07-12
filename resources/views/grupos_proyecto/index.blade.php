@@ -121,7 +121,8 @@
                     <option value="{{ $s->sec_codigo }}" {{ $filterSeccion == $s->sec_codigo ? 'selected' : '' }}>{{ $s->sec_nombre }}</option>
                 @endforeach
             </select>
-            <input name="search" type="text" value="{{ $search }}" placeholder="Buscar nombre&hellip;" class="grp-filter-input" style="flex: 1; min-width: 200px;" oninput="buscarConDebounce(this)">
+            <input name="search" type="text" value="{{ $search }}" placeholder="Buscar nombre&hellip;" class="grp-filter-input" style="flex: 1; min-width: 200px; position:relative;" id="grpSearchInput" autocomplete="off" oninput="buscarGrupo()">
+            <div id="grpSearchAutocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;max-height:220px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
             <noscript><button type="submit" class="cm-btn cm-btn-sm">Buscar</button></noscript>
         </form>
         @if($isProfessor)
@@ -276,6 +277,59 @@
 
 @push('scripts')
 <script>
+var _grpTimer = null;
+var _grpCache = {};
+
+function buscarGrupo() {
+    clearTimeout(_grpTimer);
+    var input = document.getElementById('grpSearchInput');
+    var dropdown = document.getElementById('grpSearchAutocomplete');
+    var q = input.value.trim();
+
+    if (q.length < 2) { dropdown.style.display = 'none'; return; }
+
+    var cacheKey = q.toLowerCase();
+    if (_grpCache[cacheKey] && (Date.now() - _grpCache[cacheKey].ts < 30000)) {
+        if (_grpCache[cacheKey].html) {
+            dropdown.innerHTML = _grpCache[cacheKey].html;
+            dropdown.style.display = 'block';
+        } else {
+            dropdown.style.display = 'none';
+        }
+        return;
+    }
+
+    _grpTimer = setTimeout(function() {
+        fetch('{{ route("grupos-proyecto.api.buscar") }}?q=' + encodeURIComponent(q))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.length) {
+                    dropdown.style.display = 'none';
+                    _grpCache[cacheKey] = { html: null, ts: Date.now() };
+                    return;
+                }
+                var html = '';
+                data.forEach(function(g) {
+                    var label = g.title;
+                    if (g.code) label += ' <span style="color:#8b0000;font-size:10px;">(' + g.code + ')</span>';
+                    html += '<div class="grp-autocomplete-item" style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #eee;font-size:12px;" onclick="document.getElementById(\'grpSearchInput\').value=\'' + g.title.replace(/'/g, "\\'") + '\';document.getElementById(\'grpSearchAutocomplete\').style.display=\'none\';document.getElementById(\'filterForm\').submit();">';
+                    html += '<strong>' + label + '</strong>';
+                    html += '</div>';
+                });
+                dropdown.innerHTML = html;
+                dropdown.style.display = 'block';
+                _grpCache[cacheKey] = { html: html, ts: Date.now() };
+            }).catch(function() {});
+    }, 200);
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#grpSearchInput') && !e.target.closest('#grpSearchAutocomplete')) {
+        var d = document.getElementById('grpSearchAutocomplete');
+        if (d) d.style.display = 'none';
+    }
+});
+
 function abrirInfoGrupo(el) {
     var nombre = el.getAttribute('data-grp-nombre');
     var identificador = el.getAttribute('data-grp-identificador');

@@ -91,6 +91,8 @@ Route::middleware(['auth', 'active.role'])->group(function () {
             Route::get('/grupos-proyecto/api/trayectos/{lapso}/{programa}', 'getTrayectos')->name('grupos-proyecto.api.trayectos');
             // API endpoint para validar disponibilidad de nombre en tiempo real
             Route::get('/grupos-proyecto/api/check-nombre', 'checkNombreDisponible')->name('grupos-proyecto.api.check-nombre');
+            // AJAX endpoint para buscar grupos (autocompletado)
+            Route::get('/grupos-proyecto/api/buscar', 'buscarAjax')->name('grupos-proyecto.api.buscar');
             // AJAX endpoint para crear comunidad desde el formulario
             Route::post('/grupos-proyecto/api/crear-comunidad', 'crearComunidadAjax')->name('grupos-proyecto.api.crear-comunidad');
         });
