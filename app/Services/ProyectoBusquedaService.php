@@ -109,12 +109,8 @@ class ProyectoBusquedaService
         }
 
         $query = Proyecto::with([
-            'linea_investigacion',
-            'metodologia',
-            'tipo_investigacion',
-            'objetivo_investigacion',
             'comunidad',
-            'documentos',
+            'documentos.componente',
             'vinculaciones.tituloVinculacion',
             'vinculaciones.comunidad',
         ])
@@ -125,63 +121,63 @@ class ProyectoBusquedaService
         // ─── Búsqueda por texto libre en TODA la información del proyecto ───
         $termino = trim((string) ($filtros['search'] ?? ''));
         if ($termino !== '') {
-            // Unir grupo_proyecto_modulo para buscar también por nombre del grupo
-            $query->leftJoin('grupo_proyecto_modulo as gpm', function ($join) {
-                $join->on('proyectos.pry_direccion_logica', '=', 'gpm.grp_identificador')
-                     ->orWhereRaw('proyectos.pry_direccion_logica = \'EQGRP:\' || CAST(gpm.grp_codigo AS TEXT)');
-            });
+            $termino = '%' . $termino . '%';
+            $query->where(function (Builder $q) use ($termino) {
+                // ── Resumen ──
+                $q->whereRaw('proyectos.pry_resumen ILIKE ?', [$termino]);
 
-            $query->select('proyectos.*')
-                  ->where(function (Builder $q) use ($termino) {
-                // ── Campos directos del proyecto ──
-                $q->whereRaw('proyectos.pry_resumen ILIKE ?', ['%' . $termino . '%'])
-                  ->orWhere('proyectos.pry_direccion_logica', 'ILIKE', '%' . $termino . '%');
+                // ── Referencia equipo ──
+                $q->orWhereRaw('proyectos.pry_direccion_logica ILIKE ?', [$termino]);
 
-                // ── Nombre del grupo de proyecto (título) ──
-                $q->orWhere('gpm.grp_nombre', 'ILIKE', '%' . $termino . '%');
+                // ── Nombre del grupo ──
+                $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE gpm.grp_identificador = proyectos.pry_direccion_logica AND gpm.grp_nombre ILIKE ?)', [$termino]);
+                $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE gpm.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\') AND gpm.grp_nombre ILIKE ?)', [$termino]);
 
-                // ── Miembros del grupo (nombre, apellido, cédula) ──
-                $q->orWhereRaw('gpm.grp_miembros::text ILIKE ?', ['%' . $termino . '%']);
+                // ── Miembros del grupo ──
+                $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE gpm.grp_identificador = proyectos.pry_direccion_logica AND gpm.grp_miembros::text ILIKE ?)', [$termino]);
 
-                // ── Comunidad original ──
+                // ── Comunidad ──
                 $q->orWhereHas('comunidad', function (Builder $cq) use ($termino) {
-                    $cq->where('com_nombre', 'ILIKE', '%' . $termino . '%');
+                    $cq->whereRaw('com_nombre ILIKE ?', [$termino]);
                 });
 
                 // ── Línea de investigación ──
                 $q->orWhereHas('linea_investigacion', function (Builder $lq) use ($termino) {
-                    $lq->where('lin_nombre_investigacion', 'ILIKE', '%' . $termino . '%');
+                    $lq->whereRaw('lin_nombre_investigacion ILIKE ?', [$termino]);
                 });
 
                 // ── Metodología ──
                 $q->orWhereHas('metodologia', function (Builder $mq) use ($termino) {
-                    $mq->where('mei_nombre', 'ILIKE', '%' . $termino . '%');
+                    $mq->whereRaw('mei_nombre ILIKE ?', [$termino]);
                 });
 
                 // ── Tipo de investigación ──
                 $q->orWhereHas('tipo_investigacion', function (Builder $tq) use ($termino) {
-                    $tq->where('tin_nombre', 'ILIKE', '%' . $termino . '%');
+                    $tq->whereRaw('tin_nombre ILIKE ?', [$termino]);
                 });
 
                 // ── Objetivo de investigación ──
                 $q->orWhereHas('objetivo_investigacion', function (Builder $oq) use ($termino) {
-                    $oq->where('obi_nombre', 'ILIKE', '%' . $termino . '%');
+                    $oq->whereRaw('obi_nombre ILIKE ?', [$termino]);
                 });
 
                 // ── Vinculaciones – título ──
                 $q->orWhereHas('vinculaciones.tituloVinculacion', function (Builder $vq) use ($termino) {
-                    $vq->where('tiv_titulo', 'ILIKE', '%' . $termino . '%');
+                    $vq->whereRaw('tiv_titulo ILIKE ?', [$termino]);
                 });
 
                 // ── Vinculaciones – comunidad vinculada ──
                 $q->orWhereHas('vinculaciones.comunidad', function (Builder $vcq) use ($termino) {
-                    $vcq->where('com_nombre', 'ILIKE', '%' . $termino . '%');
+                    $vcq->whereRaw('com_nombre ILIKE ?', [$termino]);
                 });
 
                 // ── Documentos – nombre del componente ──
                 $q->orWhereHas('documentos.componente', function (Builder $dcq) use ($termino) {
-                    $dcq->where('comp_nombre', 'ILIKE', '%' . $termino . '%');
+                    $dcq->whereRaw('comp_nombre ILIKE ?', [$termino]);
                 });
+
+                // ── Docente (creador del grupo) ──
+                $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm JOIN usuario u ON u.usu_cedula = gpm.grp_creador_cedula LEFT JOIN persona p ON p.per_cedula = u.usu_cedula WHERE gpm.grp_identificador = proyectos.pry_direccion_logica AND (COALESCE(p.per_nombres, u.usu_nombre) ILIKE ? OR p.per_apellidos ILIKE ?))', [$termino, $termino]);
             });
         }
 
@@ -196,11 +192,6 @@ class ProyectoBusquedaService
         }
         if (! empty($filtros['metodologia'])) {
             $query->where('metodologia_id', (int) $filtros['metodologia']);
-        }
-
-        // Evitar duplicados cuando hay LEFT JOIN con grupo_proyecto_modulo
-        if ($termino !== '') {
-            $query->distinct();
         }
 
         return $query->latest('proyectos.created_at')->paginate(10, page: $page);

@@ -71,7 +71,7 @@
             <tr>
                 <td width="50%" colspan="2">
                     <b>Término (título o resumen):</b><br>
-                    <input wire:model.live.debounce.300ms="search" type="text" style="width: 98%;"
+                    <input wire:model.live.debounce.200ms="search" type="text" style="width: 98%;"
                         placeholder="Buscar por: título, resumen, comunidad, estudiantes...">
                 </td>
                 <td width="25%">
