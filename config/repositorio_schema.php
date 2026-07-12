@@ -13,7 +13,6 @@ return [
             'resumen'             => 'pry_resumen',
             'linea_investigacion_id' => 'lin_codigo',
             'metodologia_id' => 'mei_codigo',
-            'tipo_publicacion_id' => 'tpu_codigo',
             'tipo_investigacion_id' => 'tin_codigo',
             'estado_logico' => 'pry_estado_logico',
             'estado_validacion' => 'pry_estado_validacion',
@@ -25,6 +24,7 @@ return [
             'objetivo_investigacion_id' => 'obj_codigo',
             'comunidad_id' => 'com_codigo',
             'equipo_ref' => 'pry_direccion_logica',
+            'cantidad_beneficiados' => 'pry_cantidad_beneficiados',
         ],
         'values' => [
             'estado_validacion' => [
@@ -68,15 +68,6 @@ return [
         ],
     ],
 
-    'tipo_publicacions' => [
-        'primary_key' => 'tpu_codigo',
-        'columns' => [
-            'id' => 'tpu_codigo',
-            'nombre' => 'tpu_nombre',
-            'mencion_honorifica' => 'tpu_mencion_honorifica',
-            'estado_logico' => 'tpu_estado_logico',
-        ],
-    ],
 
     'metodologia_investigacions' => [
         'primary_key' => 'mei_codigo',

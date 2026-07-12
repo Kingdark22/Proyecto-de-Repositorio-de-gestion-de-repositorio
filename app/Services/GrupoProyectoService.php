@@ -190,7 +190,7 @@ class GrupoProyectoService
     public function obtenerPorClave(string $clave): ?object
     {
         // Try by identificador first
-        $row = $clave !== '' ? GrupoProyectoModulo::where('grp_identificador', $clave)->first() : null;
+        $row = $clave !== '' ? GrupoProyectoModulo::porIdentificador($clave) : null;
         if ($row) {
             return $this->enriquecerEtiquetasAcademicas($this->mapearFila($row));
         }
@@ -393,7 +393,7 @@ class GrupoProyectoService
         if ($identificador === '') {
             return null;
         }
-        $row = GrupoProyectoModulo::where('grp_identificador', $identificador)->first();
+        $row = GrupoProyectoModulo::porIdentificador($identificador);
         return $row ? $this->enriquecerEtiquetasAcademicas($this->mapearFila($row)) : null;
     }
 

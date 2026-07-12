@@ -13,7 +13,6 @@ class Proyecto extends RepositorioModel
         'resumen',
         'linea_investigacion_id',
         'metodologia_id',
-        'tipo_publicacion_id',
         'tipo_investigacion_id',
         'objetivo_investigacion_id',
         'estado_logico',
@@ -35,7 +34,7 @@ class Proyecto extends RepositorioModel
             return '(sin título)';
         }
         // Try as identificador first
-        $grupo = \App\Models\GrupoProyectoModulo::where('grp_identificador', $this->equipo_ref)->first();
+        $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($this->equipo_ref ?? '');
         if ($grupo) {
             return $grupo->grp_nombre;
         }
@@ -120,11 +119,6 @@ class Proyecto extends RepositorioModel
     public function metodologia()
     {
         return $this->belongsTo(MetodologiaInvestigacion::class, 'mei_codigo', 'mei_codigo');
-    }
-
-    public function tipo_publicacion()
-    {
-        return $this->belongsTo(TipoPublicacion::class, 'tpu_codigo', 'tpu_codigo');
     }
 
     public function tipo_investigacion()

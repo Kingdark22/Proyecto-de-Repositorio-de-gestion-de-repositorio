@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\GrupoProyectoModulo;
 use App\Models\Proyecto;
 use App\Services\NotificacionService;
 use App\Services\ProyectoGestionService;
@@ -36,6 +37,7 @@ class ProyectoController extends Controller
         $esProfesor = $this->userRoleService->roleMatches('profesor proyecto', $activeRole);
         $esGestionador = $this->userRoleService->roleMatches('gestionador', $activeRole);
         $esAdmin = $this->userRoleService->roleMatches('administrador', $activeRole);
+        $esCoordinador = $this->userRoleService->roleMatches('coordinador', $activeRole);
 
         $search = $request->get('search', '');
         $filterEstado = $request->get('estado', '');
@@ -43,9 +45,9 @@ class ProyectoController extends Controller
         $filterLapso = $request->get('lapso', '');
         $page = (int) $request->get('page', 1);
 
-        // Grupos del docente
+        // Grupos del docente (solo profesor proyecto)
         $gruposDocente = [];
-        if (in_array($activeRole, ['profesor proyecto', 'administrador', 'gestionador', 'coordinador'])) {
+        if ($esProfesor) {
             $filtrosGrupos = [];
             if ($filterLapso !== '') $filtrosGrupos['lapso'] = (int) $filterLapso;
             if (!in_array($activeRole, ['profesor proyecto'], true)) {
@@ -95,21 +97,43 @@ class ProyectoController extends Controller
             $programasFiltro = $this->equipoSeccion->programasEnLapso($lapsoFiltro);
         }
 
+        // Catálogos para filtros del modal de exportación
+        $catTtl = now()->addMinutes(10);
+        $comunidadesFiltro = Cache::remember('export_comunidades', $catTtl, fn() =>
+            \App\Models\Comunidad::orderBy('nombre')->get(['com_codigo', 'com_nombre'])
+        );
+        $lineasFiltro = Cache::remember('export_lineas', $catTtl, fn() =>
+            \App\Models\LineaInvestigacion::where('activo', true)->orderBy('nombre_investigacion')->get()
+        );
+        $tiposInvFiltro = Cache::remember('export_tipos_investigacion', $catTtl, fn() =>
+            \App\Models\TipoInvestigacion::where('estado_logico', true)->orderBy('nombre')->get()
+        );
+        $metodologiasFiltro = Cache::remember('export_metodologias', $catTtl, fn() =>
+            \App\Models\MetodologiaInvestigacion::where('estado_logico', true)->orderBy('nombre')->get()
+        );
+
         $canValidate = $user ? $this->gestion->usuarioPuedeValidar($user) : false;
         $proyectosLiderIds = $this->gestion->proyectosDondeEsMiembro($user);
 
-        $proyectosConDocumentosRechazados = \App\Models\ProyectoDocumento::where('pd_estado', 2)
-            ->distinct()
-            ->pluck('pry_codigo')
-            ->toArray();
+        $proyectosConDocumentosRechazados = [];
+        if ($canValidate) {
+            $proyectosConDocumentosRechazados = \Illuminate\Support\Facades\Cache::remember('proyectos_con_docs_rechazados', 60, function () {
+                return \App\Models\ProyectoDocumento::where('pd_estado', 2)
+                    ->distinct()
+                    ->pluck('pry_codigo')
+                    ->toArray();
+            });
+        }
 
         return view('proyectos.index', compact(
             'search', 'filterEstado', 'filterComunidad', 'filterLapso',
-            'esProfesor', 'esAdmin', 'esGestionador', 'esEstudianteLider',
+            'esProfesor', 'esAdmin', 'esGestionador', 'esCoordinador', 'esEstudianteLider',
             'gruposDocente', 'proyectosLider', 'proyectosLiderIds',
             'datosListado', 'mostrarListado', 'canValidate',
             'lapsosFiltro', 'programasFiltro', 'trayectosFiltro',
             'proyectosConDocumentosRechazados',
+            'comunidadesFiltro', 'lineasFiltro', 'tiposInvFiltro', 'metodologiasFiltro',
+
         ));
     }
 
@@ -120,18 +144,40 @@ class ProyectoController extends Controller
         $esProfesor = $this->userRoleService->roleMatches('profesor proyecto', $activeRole);
         $esGestionador = $this->userRoleService->roleMatches('gestionador', $activeRole);
         $esAdmin = $this->userRoleService->roleMatches('administrador', $activeRole);
+        $esCoordinador = $this->userRoleService->roleMatches('coordinador', $activeRole);
 
         $proyecto = Proyecto::findOrFail($id);
         $esMiembro = $this->gestion->usuarioEsMiembroDelProyecto($user, $proyecto);
-        $esCreador = $user && trim((string) $user->usu_cedula) === trim((string) $proyecto->creador_cedula);
         $esAdminEnSistema = $this->gestion->usuarioEsAdminEnSistema($user);
-        $esAdminProyectoAjeno = $esAdmin && !$esCreador;
-        $modoActualizacion = $esMiembro && !$esAdminEnSistema && !$esAdminProyectoAjeno;
-        $canValidate = $user ? $this->gestion->usuarioPuedeValidar($user) : false;
 
-        // Admin y Coordinador solo pueden ver proyectos en modo solo lectura
-        $adminPuedeEditar = false;
-        $esCoordinador = $this->userRoleService->roleMatches('coordinador', $activeRole);
+        // Verificar si el usuario es el profesor proyecto creador
+        $esProfesorCreador = false;
+        $usuarioCedula = trim((string) $user->usu_cedula);
+        $usuarioUsuNombre = trim((string) $user->usu_nombre);
+        $clave = $proyecto->equipo_ref ?? '';
+        if ($clave !== '' && $esProfesor) {
+            $grupo = GrupoProyectoModulo::porIdentificador($clave);
+            if ($grupo) {
+                $ctx = $grupo->grp_contexto;
+                $creadorUsu = trim((string) ($ctx['creador_usuario'] ?? ''));
+                $creadorCed = trim((string) ($ctx['creador_cedula'] ?? $grupo->grp_creador_cedula ?? ''));
+                // 1) Por usu_nombre (nuevo)
+                $matchUsu = $creadorUsu !== '' && $creadorUsu === $usuarioUsuNombre;
+                // 2) Fallback por cédula (legacy)
+                $matchCed = !$matchUsu && $creadorCed !== '' && $creadorCed === $usuarioCedula;
+                $esProfesorCreador = $matchUsu || $matchCed;
+            }
+        }
+
+        // Solo integrantes del equipo, profesor proyecto creador, o coordinador pueden acceder
+        if (!$esMiembro && !$esProfesorCreador && !$esCoordinador) {
+            return redirect()->route('proyectos.gestion')
+                ->with('error', 'No tienes permiso para acceder a este proyecto.');
+        }
+
+        $modoActualizacion = $esMiembro && !$esAdminEnSistema;
+        $canValidate = $esProfesorCreador;
+        $soloLectura = $esCoordinador;
 
         $datosForm = $this->gestion->cargarParaEdicion($id);
         $estadoForm = $this->buildEstadoFromDatos($datosForm);
@@ -151,8 +197,7 @@ class ProyectoController extends Controller
             'proyecto', 'datosForm', 'catalogosForm',
             'esProfesor', 'esGestionador', 'modoActualizacion',
             'involucradosProyecto', 'miembrosGrupo', 'clave',
-            'canValidate', 'esAdminProyectoAjeno', 'adminPuedeEditar', 'esAdmin', 'esCoordinador',
-            'esCreador', 'esMiembro',
+            'canValidate', 'esAdmin', 'esMiembro', 'soloLectura', 'esProfesorCreador', 'esCoordinador',
         ));
     }
 
@@ -165,14 +210,33 @@ class ProyectoController extends Controller
         $esProfesor = $this->userRoleService->roleMatches('profesor proyecto', $activeRole);
         $esAdmin = $this->userRoleService->roleMatches('administrador', $activeRole);
 
-        // Admin no puede actualizar proyectos
-        if ($esAdmin) {
-            return redirect()->route('proyectos.gestion')
-                ->with('error', 'El administrador no puede actualizar proyectos. Solo tiene permisos de lectura.');
-        }
-
         $esMiembro = $this->gestion->usuarioEsMiembroDelProyecto($user, $proyecto);
         $esAdminEnSistema = $this->gestion->usuarioEsAdminEnSistema($user);
+
+        // Verificar si el usuario es el profesor proyecto creador
+        $esProfesorCreador = false;
+        $usuarioCedula = trim((string) $user->usu_cedula);
+        $usuarioUsuNombre = trim((string) $user->usu_nombre);
+        $clave = $proyecto->equipo_ref ?? '';
+        if ($clave !== '' && $esProfesor) {
+            $grupo = GrupoProyectoModulo::porIdentificador($clave);
+            if ($grupo) {
+                $ctx = $grupo->grp_contexto;
+                $creadorUsu = trim((string) ($ctx['creador_usuario'] ?? ''));
+                $creadorCed = trim((string) ($ctx['creador_cedula'] ?? $grupo->grp_creador_cedula ?? ''));
+                // 1) Por usu_nombre (nuevo)
+                $matchUsu = $creadorUsu !== '' && $creadorUsu === $usuarioUsuNombre;
+                // 2) Fallback por cédula (legacy)
+                $matchCed = !$matchUsu && $creadorCed !== '' && $creadorCed === $usuarioCedula;
+                $esProfesorCreador = $matchUsu || $matchCed;
+            }
+        }
+
+        // Solo integrantes del equipo y profesor proyecto creador pueden actualizar
+        if (!$esMiembro && !$esProfesorCreador) {
+            return redirect()->route('proyectos.gestion')
+                ->with('error', 'No tienes permiso para modificar este proyecto.');
+        }
 
         $modoActualizacion = $esMiembro && !$esAdminEnSistema;
 
@@ -180,7 +244,6 @@ class ProyectoController extends Controller
             'resumen' => $request->input('resumen', $proyecto->resumen ?? ''),
             'linea_investigacion_id' => $request->input('linea_investigacion_id', $proyecto->linea_investigacion_id),
             'metodologia_id' => $request->input('metodologia_id', $proyecto->metodologia_id),
-            'tipo_publicacion_id' => $request->input('tipo_publicacion_id', $proyecto->tipo_publicacion_id),
             'tipo_investigacion_id' => $request->input('tipo_investigacion_id', $proyecto->tipo_investigacion_id),
             'objetivo_investigacion_id' => $request->input('objetivo_investigacion_id', $proyecto->objetivo_investigacion_id),
             'titulo' => $proyecto->titulo,
@@ -286,7 +349,6 @@ class ProyectoController extends Controller
                 'resumen' => 'resumen',
                 'linea_investigacion_id' => 'línea de investigación',
                 'metodologia_id' => 'metodología',
-                'tipo_publicacion_id' => 'tipo de publicación',
                 'tipo_investigacion_id' => 'tipo de investigación',
                 'objetivo_investigacion_id' => 'objetivo de investigación',
                 'comunidad_id' => 'comunidad',
@@ -326,7 +388,7 @@ class ProyectoController extends Controller
                 $cedulaProfesor = $proyecto->creador_cedula;
                 $clave = $proyecto->equipo_ref;
                 if ($clave) {
-                    $grupo = \App\Models\GrupoProyectoModulo::where('grp_identificador', $clave)->first();
+                    $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($clave);
                     if (!$grupo && str_starts_with($clave, 'EQGRP:')) {
                         $codigo = (int) substr($clave, 6);
                         $grupo = \App\Models\GrupoProyectoModulo::find($codigo);
@@ -373,7 +435,7 @@ class ProyectoController extends Controller
             if ($estadoAnterior === 'completado') {
                 try {
                     $proyecto->refresh();
-                    $grupo = \App\Models\GrupoProyectoModulo::where('grp_identificador', $proyecto->equipo_ref)->first();
+                    $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($proyecto->equipo_ref ?? '');
                     $cedulas = collect($grupo?->grp_miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
                     $this->notificacionService->notificarProyectoAprobado($proyecto, $cedulas);
                 } catch (\Throwable $e) {
@@ -406,7 +468,7 @@ class ProyectoController extends Controller
             // Notificar a estudiantes del proyecto rechazado
             try {
                 $proyecto = \App\Models\Proyecto::findOrFail($id);
-                $grupo = \App\Models\GrupoProyectoModulo::where('grp_identificador', $proyecto->equipo_ref)->first();
+                $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($proyecto->equipo_ref ?? '');
                 $cedulas = collect($grupo?->grp_miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
                 if (!empty($cedulas)) {
                     $this->notificacionService->notificarProyectoRechazado(
@@ -445,6 +507,38 @@ class ProyectoController extends Controller
     public function registrarDesdeGrupo(Request $request, $grpCodigo)
     {
         $user = auth()->user();
+        $activeRole = $this->userRoleService->getActiveRole($user);
+
+        $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($grpCodigo);
+        if (!$grupo) {
+            return redirect()->route('proyectos.gestion')
+                ->with('error', 'Grupo no encontrado.');
+        }
+
+        // Solo el profesor proyecto creador o miembros del equipo pueden crear proyecto desde el grupo
+        $esProfesorCreador = false;
+        $esMiembro = false;
+        $usuarioCedula = trim((string) $user->usu_cedula);
+        $usuarioUsuNombre = trim((string) $user->usu_nombre);
+        if ($activeRole === 'profesor proyecto') {
+            $ctx = $grupo->grp_contexto;
+            $creadorUsu = trim((string) ($ctx['creador_usuario'] ?? ''));
+            $creadorCed = trim((string) ($ctx['creador_cedula'] ?? $grupo->grp_creador_cedula ?? ''));
+            $matchUsu = $creadorUsu !== '' && $creadorUsu === $usuarioUsuNombre;
+            $matchCed = !$matchUsu && $creadorCed !== '' && $creadorCed === $usuarioCedula;
+            $esProfesorCreador = $matchUsu || $matchCed;
+        }
+        foreach (($grupo->grp_miembros ?? []) as $m) {
+            if (trim((string) ($m['cedula'] ?? '')) === $usuarioCedula) {
+                $esMiembro = true;
+                break;
+            }
+        }
+        if (!$esMiembro && !$esProfesorCreador) {
+            return redirect()->route('proyectos.gestion')
+                ->with('error', 'No tienes permiso para crear un proyecto desde este grupo.');
+        }
+
         $proyecto = $this->gestion->registrarProyectoDesdeGrupo((int) $grpCodigo, $user);
 
         if (!$proyecto) {
@@ -454,7 +548,7 @@ class ProyectoController extends Controller
 
         // Notificar a estudiantes del equipo
         try {
-            $grupo = \App\Models\GrupoProyectoModulo::where('grp_identificador', $proyecto->equipo_ref)->first();
+            $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($proyecto->equipo_ref ?? '');
             if ($grupo) {
                 $cedulas = collect($grupo->grp_miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
                 if (!empty($cedulas)) {
@@ -555,14 +649,31 @@ class ProyectoController extends Controller
             $request->input('cedula')
         );
 
-        $this->gestion->agregarInvolucradoAProyecto(
+        $pivotId = $this->gestion->agregarInvolucradoAProyecto(
             (int) $id,
             $involucrado->id,
             $request->input('roles', [])
         );
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'id' => $involucrado->id]);
+            $connection = (string) config('dual_database.repositorio_connection', 'pgsql');
+            $roleNames = DB::connection($connection)
+                ->table('roles_involucrados')
+                ->whereIn('id', $request->input('roles', []))
+                ->pluck('nombre', 'id');
+            $roles = [];
+            foreach ($request->input('roles', []) as $rolId) {
+                $roles[] = ['id' => (int) $rolId, 'nombre' => $roleNames->get($rolId, '')];
+            }
+            return response()->json([
+                'success' => true,
+                'id' => $involucrado->id,
+                'nombre' => $involucrado->nombre,
+                'apellido' => $involucrado->apellido,
+                'cedula' => $involucrado->cedula,
+                'pivot_id' => $pivotId,
+                'roles' => $roles,
+            ]);
         }
         return redirect()->route('proyectos.gestion.edit', $id)
             ->with('success', 'Involucrado creado y agregado al proyecto.');
@@ -645,7 +756,6 @@ class ProyectoController extends Controller
         $user = auth()->user();
         $activeRole = $this->userRoleService->getActiveRole($user);
 
-        // ── Filtro de lapso (opcional — si se envía, filtra por ese lapso) ──
         $lapsoCodigo = $request->get('lapso', '');
         $lapsoNombre = '';
         if ($lapsoCodigo !== '') {
@@ -657,49 +767,35 @@ class ProyectoController extends Controller
             } catch (\Throwable) {}
         }
 
-        // ── Detectar PNF del usuario ───────────────────────────────────────
-        $proSiglas = $request->get('pnf', '');
-        if ($proSiglas === '') {
-            // Intentar detectar PNF desde las secciones del usuario
-            try {
-                $proCodigos = app(\App\Services\IntranetProfessorService::class)
-                    ->programasDelDocente(trim($user->usu_cedula));
-
-                if (count($proCodigos) === 1) {
-                    // Un solo PNF → usarlo automáticamente
-                    $prog = \Illuminate\Support\Facades\DB::connection(
-                        app(\App\Services\IntranetEquipoSeccionService::class)->academicConnection()
-                    )->table('programa')->where('pro_codigo', $proCodigos[0])->first();
-                    if ($prog) {
-                        $proSiglas = trim($prog->pro_siglas ?? '');
-                    }
-                }
-            } catch (\Throwable) {}
-
-            // Si sigue vacío y el rol es admin/coordinador sin PNF definido, se exportan todos
-        }
-
         $filtros = [
-            'estado'       => $request->get('estado', ''),
-            'comunidad'    => $request->get('comunidad', ''),
-            'lapso_codigo' => $lapsoCodigo,
-            'pro_siglas'   => $proSiglas,
+            'search'            => $request->get('search', ''),
+            'comunidad'         => $request->get('comunidad', ''),
+            'lapso_codigo'      => $lapsoCodigo,
+            'programa'          => $request->get('programa', ''),
+            'trayecto'          => $request->get('trayecto', ''),
+            'seccion'           => $request->get('seccion', ''),
+            'linea'             => $request->get('linea', ''),
+            'tipo_investigacion' => $request->get('tipo_investigacion', ''),
+            'metodologia'       => $request->get('metodologia', ''),
         ];
 
         $datos   = $this->reporteDeposito->construirFilasReporte($filtros);
         $filas   = $datos['filas'];
         $maxInt  = $datos['maxIntegrantes'];
         $lapso   = $lapsoNombre ?: ($datos['lapsoMasActual'] ?? '');
-        $pnf     = $datos['pnfPredominante'] ?? ($proSiglas ?: '');
+        $pnf     = $datos['pnfPredominante'] ?? '';
 
-        // ── Sede fallback: extraer desde equipo_ref cuando la sede vino vacía ──
+        // ── Post-procesar docente de proyecto ─────────────────────────────
+        // Construir un mapa pry_codigo => equipo_ref para matching correcto (evita índice contra índice)
         $proyectosEquipo = Proyecto::where('estado_validacion', 'aprobado')
             ->where('estado_logico', true)
             ->orderBy('id')
             ->select(['pry_codigo', 'pry_direccion_logica'])
-            ->get();
-        foreach ($filas as $idx => &$fila) {
-            $proy = $proyectosEquipo[$idx] ?? null;
+            ->get()
+            ->keyBy('pry_codigo');
+        foreach ($filas as &$fila) {
+            $pryCodigo = isset($fila['pry_codigo']) ? (int) $fila['pry_codigo'] : 0;
+            $proy = $pryCodigo > 0 ? ($proyectosEquipo[$pryCodigo] ?? null) : null;
             $equipoRef = $proy ? ($proy->equipo_ref ?? '') : '';
 
             // Sede fallback desde equipo_ref
@@ -719,7 +815,7 @@ class ProyectoController extends Controller
                 }
             }
 
-            // Docente de proyecto = quien creó el grupo de proyecto (grp_creador_cedula)
+            // Docente de proyecto = quien creó el grupo de proyecto
             $docente = '';
             try {
                 $grupoCreador = \App\Models\GrupoProyectoModulo::where('grp_identificador', $equipoRef)->value('grp_creador_cedula');
@@ -737,11 +833,10 @@ class ProyectoController extends Controller
         $writer  = new SpreadsheetMlWriter();
         $writer->setTitle('Proyectos Sociotecnologicos');
 
-        // ── Calcular número total de columnas ──────────────────────────────
-        $colsFijas       = 10;
+        // ── Columnas: 11 fijas + (Integrantes x 2) ────────────────────────
+        $colsFijas       = 11;
         $colsIntegrantes = $maxInt * 2;
-        $colsFinales     = 3;
-        $totalCols       = $colsFijas + $colsIntegrantes + $colsFinales;
+        $totalCols       = $colsFijas + $colsIntegrantes;
 
         // ── Fila de título ─────────────────────────────────────────────────
         $tituloReporte = 'UPTP JUAN DE JESÚS MONTILLA — PROYECTOS SOCIOTECNOLÓGICOS';
@@ -750,56 +845,63 @@ class ProyectoController extends Controller
         }
         $writer->addMergedTitleRow($tituloReporte, $totalCols);
 
-        // ── Anchos de columna (puntos) ─────────────────────────────────────
+        // ── Anchos de columna ─────────────────────────────────────────────
         $widths = [
-            35,   // N°
-            150,  // Sede
-            200,  // PNF
-            100,  // Trayecto
-            100,  // Sección
-            130,  // Lapso
-            400,  // Título
-            250,  // Comunidad
-            200,  // Equipo
-            280,  // Docente
-        ];
-        for ($i = 0; $i < $maxInt; $i++) {
-            $widths[] = 280; // Nombre
-            $widths[] = 120; // Cédula
-        }
-        $widths[] = 280; // Tutor Académico
-        $widths[] = 110; // Cumplió Requisitos
-        $widths[] = 120; // Cant. Beneficiados
-
-        // ── Encabezados ───────────────────────────────────────────────────
-        $headers = [
-            'N°', 'Sede', 'Programa Nacional de Formación', 'Trayecto', 'Sección',
-            'Lapso Académico', 'Título del Proyecto', 'Comunidad', 'Nombre del Equipo',
-            'Docente de Proyecto',
+            150,  // SEDE
+            200,  // PROGRAMA NACIONAL DE FORMACIÓN
+            100,  // TRAYECTO
+            100,  // SEMESTRE
+            450,  // TÍTULO DE PROYECTO
+            300,  // RESUMEN O PRESENTACIÓN
+            200,  // LÍNEA DE INVESTIGACIÓN
+            280,  // DOCENTE DE PROYECTO
+            280,  // TUTOR ACADEMICO
+            280,  // REPRESENTANTE INSTITUCIONAL
         ];
         for ($i = 1; $i <= $maxInt; $i++) {
-            $headers[] = "Integrante {$i} – Nombre Completo";
-            $headers[] = "Integrante {$i} – Cédula";
+            $widths[] = 280; // INTEGRANTE Nº X – Nombre Completo
+            $widths[] = 120; // INTEGRANTE Nº X – Cédula
         }
-        $headers[] = 'Tutor Académico';
-        $headers[] = 'Cumplió Requisitos';
-        $headers[] = 'Cantidad de Beneficiados';
+        $widths[] = 300; // LOCALIDAD GEOGRAFICA
+        $widths[] = 120; // COMUNIDAD BENEFICIADA
+        $widths[] = 130; // RESULTADO DE LA SOCIALIZACIÓN
+
+        // ── Encabezados exactos del Excel ─────────────────────────────────
+        $headers = [
+            'SEDE',
+            'PROGRAMA NACIONAL DE FORMACIÓN',
+            'TRAYECTO',
+            'SEMESTRE',
+            'TÍTULO DE PROYECTO',
+            'RESUMEN O PRESENTACIÓN (NO MAS DE 150 PALABRAS)',
+            'LÍNEA DE INVESTIGACIÓN',
+            'DOCENTE DE PROYECTO',
+            'TUTOR ACADEMICO',
+            'REPRESENTANTE INSTITUCIONAL',
+        ];
+        for ($i = 1; $i <= $maxInt; $i++) {
+            $headers[] = "INTEGRANTE Nº {$i} – NOMBRE COMPLETO";
+            $headers[] = "INTEGRANTE Nº {$i} – CÉDULA DE IDENTIDAD";
+        }
+        $headers[] = 'LOCALIDAD GEOGRAFICA DONDE SE DESARROLLÓ EL PROYECTO';
+        $headers[] = 'COMUNIDAD BENEFICIADA';
+        $headers[] = 'RESULTADO DE LA SOCIALIZACIÓN';
 
         $writer->addRow($headers, isHeader: true, height: 35, widths: $widths);
 
         // ── Filas de datos ────────────────────────────────────────────────
         foreach ($filas as $fila) {
             $celdas = [
-                $fila['numero'],
                 $fila['sede'],
                 $fila['pnf'],
                 $fila['trayecto'],
-                $fila['seccion'],
-                $fila['lapso'],
+                $fila['semestre'],
                 $fila['titulo'],
-                $fila['comunidad'],
-                $fila['equipo'],
+                $fila['resumen'],
+                $fila['linea_investigacion'],
                 $fila['docente'] ?? '',
+                $fila['tutor_academico'],
+                $fila['representante_institucional'],
             ];
 
             $integrantes = $fila['integrantes'];
@@ -808,19 +910,103 @@ class ProyectoController extends Controller
                 $celdas[] = $integrantes[$i]['cedula'] ?? '';
             }
 
-            $celdas[] = $fila['tutor_academico'];
-            $celdas[] = $fila['cumplio_requisitos'];
-            $celdas[] = $fila['cant_beneficiados'];
+            $celdas[] = $fila['localidad_geografica'];
+            $celdas[] = $fila['comunidad_beneficiada'];
+            $celdas[] = $fila['resultado_socializacion'];
 
             $writer->addRow($celdas, wrap: true, height: 45);
         }
 
-        // ── Generar nombre de archivo ──────────────────────────────────────
+        // ── Nombre de archivo ─────────────────────────────────────────────
         $partesPnf   = $pnf   !== '' ? ' ' . mb_strtoupper($pnf)   : '';
         $partesLapso = $lapso !== '' ? ' ' . mb_strtoupper($lapso) : (' ' . now()->format('Y'));
-        $filename = 'DEPOSITO PROYECTOS' . $partesPnf . $partesLapso . '.xls';
+        $filename = 'PROYECTOS SOCIOTECNOLÓGICOS' . $partesPnf . $partesLapso . '.xls';
 
         return $writer->download($filename);
+    }
+
+    public function exportProgramas($lapso)
+    {
+        try {
+            return response()->json($this->equipoSeccion->programasEnLapso((int) $lapso)->values());
+        } catch (\Throwable $e) {
+            return response()->json([]);
+        }
+    }
+
+    public function exportTrayectos($lapso)
+    {
+        try {
+            $programa = request()->query('programa') ? (int) request()->query('programa') : null;
+            return response()->json($this->equipoSeccion->trayectosEnLapso((int) $lapso, $programa)->values());
+        } catch (\Throwable $e) {
+            return response()->json([]);
+        }
+    }
+
+    public function exportSecciones($lapso)
+    {
+        try {
+            $programa = request()->query('programa') ? (int) request()->query('programa') : null;
+            $trayecto = request()->query('trayecto') ? (int) request()->query('trayecto') : null;
+            return response()->json($this->equipoSeccion->seccionesEnLapso((int) $lapso, $programa, $trayecto)->values());
+        } catch (\Throwable $e) {
+            return response()->json([]);
+        }
+    }
+
+    public function buscarProyectosAjax(Request $request)
+    {
+        $search = $request->query('q', '');
+        if (strlen($search) < 2) {
+            return response()->json([]);
+        }
+
+        // Cache por 30 segundos para búsquedas repetidas rápidas
+        $cacheKey = 'proyectos_ajax_search_' . md5(strtolower(trim($search)));
+
+        $results = \Illuminate\Support\Facades\Cache::remember($cacheKey, 15, function () use ($search) {
+            $searchTrimmed = trim($search);
+            $termino = '%' . $searchTrimmed . '%';
+
+            $proyectos = Proyecto::where('estado_logico', true)
+                ->where(function ($q) use ($searchTrimmed, $termino) {
+                    // 1) Full-text search indexado (GIN index) — más rápido que ILIKE
+                    try {
+                        $q->whereRaw(
+                            'to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)',
+                            [$searchTrimmed]
+                        );
+                    } catch (\Throwable) {
+                        // Fallback a ILIKE con soporte de índice trigram
+                        $q->whereRaw('pry_resumen ILIKE ?', [$termino]);
+                    }
+
+                    // 2) También buscar por pry_direccion_logica (equipo_ref)
+                    $q->orWhereRaw('pry_direccion_logica ILIKE ?', [$termino]);
+
+                    // 3) También por pry_codigo exacto (útil para IDs)
+                    if (is_numeric($searchTrimmed)) {
+                        $q->orWhere('pry_codigo', (int) $searchTrimmed);
+                    }
+                })
+                ->orderBy('pry_codigo', 'desc')
+                ->limit(10)
+                ->get(['pry_codigo', 'pry_resumen', 'pry_direccion_logica']);
+
+            $results = [];
+            foreach ($proyectos as $p) {
+                $results[] = [
+                    'id'      => (int) $p->pry_codigo,
+                    'title'   => $p->titulo,
+                    'resumen' => mb_substr(strip_tags($p->resumen ?? ''), 0, 100),
+                ];
+            }
+
+            return $results;
+        });
+
+        return response()->json($results);
     }
 
     public function actualizarEstadoDocumento(Request $request, $id)
@@ -862,7 +1048,7 @@ class ProyectoController extends Controller
             $proyecto = $proyectoId ? \App\Models\Proyecto::find($proyectoId) : null;
 
             if ($proyecto) {
-                $grupo = \App\Models\GrupoProyectoModulo::where('grp_identificador', $proyecto->equipo_ref)->first();
+                $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($proyecto->equipo_ref ?? '');
                 $cedulas = collect($grupo?->grp_miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
 
                 if ($nuevoEstado == 1) {
@@ -965,7 +1151,6 @@ class ProyectoController extends Controller
             'resumen' => $datos['resumen'] ?? '',
             'linea_investigacion_id' => $datos['linea_investigacion_id'] ?? '',
             'metodologia_id' => $datos['metodologia_id'] ?? '',
-            'tipo_publicacion_id' => $datos['tipo_publicacion_id'] ?? '',
             'tipo_investigacion_id' => $datos['tipo_investigacion_id'] ?? '',
             'objetivo_investigacion_id' => $datos['objetivo_investigacion_id'] ?? '',
             'comunidad_id' => $datos['comunidad_id'] ?? '',

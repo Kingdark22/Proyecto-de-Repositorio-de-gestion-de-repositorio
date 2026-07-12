@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Helpers\DbHelper;
+use App\Models\Comunidad;
 use App\Models\Proyecto;
 use App\Repositories\GrupoProyectoRepository;
 use Illuminate\Support\Collection;
@@ -29,7 +29,7 @@ class ReporteDepositoService
      * Construye un array de filas para el reporte Excel.
      * Cada fila es un array asociativo con claves normalizadas.
      *
-     * @param  array<string, mixed>  $filtros  (estado, comunidad, lapso_codigo, pro_siglas)
+     * @param  array<string, mixed>  $filtros  (search, comunidad, lapso_codigo, pro_siglas, programa, trayecto, seccion, linea, tipo_investigacion, metodologia)
      * @return array{maxIntegrantes: int, filas: list<array<string, mixed>>, lapsoMasActual: string, pnfPredominante: string}
      */
     public function construirFilasReporte(array $filtros = []): array
@@ -37,11 +37,13 @@ class ReporteDepositoService
         $proyectos = $this->obtenerProyectos($filtros);
         $lapsoFiltroCodigo = isset($filtros['lapso_codigo']) && $filtros['lapso_codigo'] !== '' ? (int) $filtros['lapso_codigo'] : null;
         $pnfFiltroSiglas   = isset($filtros['pro_siglas']) && $filtros['pro_siglas'] !== '' ? mb_strtoupper(trim($filtros['pro_siglas'])) : null;
+        $programaFiltro    = isset($filtros['programa']) && $filtros['programa'] !== '' ? (int) $filtros['programa'] : null;
+        $trayectoFiltro    = isset($filtros['trayecto']) && $filtros['trayecto'] !== '' ? $filtros['trayecto'] : null;
+        $seccionFiltro     = isset($filtros['seccion']) && $filtros['seccion'] !== '' ? (int) $filtros['seccion'] : null;
 
         $filas = [];
-        $maxIntegrantes = 1; // mínimo 1 para que siempre haya al menos una columna
+        $maxIntegrantes = 1;
 
-        // Para construir el nombre del archivo con el lapso más actual y PNF
         $lapsoMasActual   = '';
         $lapsoCodigoMax   = 0;
         $pnfConteo        = [];
@@ -61,9 +63,30 @@ class ReporteDepositoService
                 continue;
             }
 
+            // ── Filtrar por programa (pro_codigo) ─────────────────────────
+            $proCodigo = (int) ($contexto['pro_codigo'] ?? 0);
+            if ($programaFiltro !== null && $proCodigo !== $programaFiltro) {
+                continue;
+            }
+
+            // ── Filtrar por trayecto ──────────────────────────────────────
+            $traCodigo = $contexto['tra_codigo'] ?? null;
+            if ($trayectoFiltro !== null && (string) $traCodigo !== (string) $trayectoFiltro) {
+                continue;
+            }
+
+            // ── Filtrar por sección ───────────────────────────────────────
+            $secCodigo = (int) ($contexto['sec_codigo'] ?? 0);
+            if ($seccionFiltro !== null && $secCodigo !== $seccionFiltro) {
+                continue;
+            }
+
             $integrantes = $this->resolverIntegrantes($proyecto);
             $tutor = $this->resolverTutorAcademico($proyecto->id);
+            $representante = $this->resolverRepresentanteInstitucional($proyecto->id);
             $sede = $this->resolverSede($contexto);
+            $lineaNombre = $proyecto->linea_investigacion?->nombre_investigacion ?? '';
+            $localidad = $this->resolverLocalidadGeografica($proyecto);
 
             $maxIntegrantes = max($maxIntegrantes, count($integrantes));
 
@@ -83,30 +106,31 @@ class ReporteDepositoService
             $proSiglas = $contexto['pro_siglas'] ?? '';
 
             $filas[] = [
-                'numero'            => count($filas) + 1,
-                'sede'              => $sede,
-                'pnf'               => $proNombre !== '' ? $proNombre : $proSiglas,
-                'trayecto'          => $contexto['trayecto_nombre'] ?? '',
-                'seccion'           => $contexto['sec_nombre'] ?? '',
-                'lapso'             => $contexto['lap_nombre'] ?? '',
-                'titulo'            => $proyecto->titulo ?? '',
-                'comunidad'         => $proyecto->comunidad?->nombre ?? '',
-                'equipo'            => $contexto['nombre_equipo'] ?? '',
-                'integrantes'       => $integrantes,
-                'tutor_academico'   => $tutor,
-                'cumplio_requisitos' => $this->etiquetaCumplimiento($proyecto),
-                'cant_beneficiados' => $proyecto->pry_cantidad_beneficiados ?? '',
+                'pry_codigo'               => $proyecto->pry_codigo,
+                'numero'                   => count($filas) + 1,
+                'sede'                     => $sede,
+                'pnf'                      => $proNombre !== '' ? $proNombre : $proSiglas,
+                'trayecto'                 => $contexto['trayecto_nombre'] ?? '',
+                'semestre'                 => $contexto['semestre_nombre'] ?? '',
+                'titulo'                   => $proyecto->titulo ?? '',
+                'resumen'                  => $proyecto->resumen ?? '',
+                'linea_investigacion'      => $lineaNombre,
+                'docente'                  => '',
+                'tutor_academico'          => $tutor,
+                'representante_institucional' => $representante,
+                'integrantes'              => $integrantes,
+                'localidad_geografica'     => $localidad,
+                'comunidad_beneficiada'    => $proyecto->comunidad?->nombre ?? '',
+                'resultado_socializacion'  => 'Aprobado',
             ];
         }
 
-        // PNF con mayor número de proyectos en el conjunto
         $pnfPredominante = '';
         if (!empty($pnfConteo)) {
             arsort($pnfConteo);
             $pnfPredominante = (string) array_key_first($pnfConteo);
         }
 
-        // Si se filtró por PNF, usarlo como predominante
         if ($pnfFiltroSiglas !== null) {
             $pnfPredominante = $pnfFiltroSiglas;
         }
@@ -124,14 +148,36 @@ class ReporteDepositoService
     // ─────────────────────────────────────────────────────────────
 
     /**
-     * Obtiene todos los proyectos respetando los filtros del sistema.
+     * Obtiene los proyectos respetando los filtros del sistema.
      */
     protected function obtenerProyectos(array $filtros): Collection
     {
-        return Proyecto::with(['comunidad'])
+        $search = isset($filtros['search']) && $filtros['search'] !== '' ? trim($filtros['search']) : null;
+
+        return Proyecto::with(['comunidad', 'linea_investigacion', 'comunidad.direccion.municipio.estado'])
             ->where('estado_validacion', 'aprobado')
             ->where('estado_logico', true)
-            ->when(($filtros['comunidad'] ?? '') !== '', fn ($q) => $q->where('comunidad_id', $filtros['comunidad']))
+            ->when($search !== null, function ($q) use ($search) {
+                $termino = '%' . $search . '%';
+                $q->where(function ($q) use ($search, $termino) {
+                    // 1) Full-text search indexado (GIN index)
+                    try {
+                        $q->whereRaw(
+                            'to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)',
+                            [$search]
+                        );
+                    } catch (\Throwable) {
+                        // Fallback a ILIKE
+                        $q->whereRaw('pry_resumen ILIKE ?', [$termino]);
+                    }
+                    // 2) También por equipo_ref
+                    $q->orWhereRaw('pry_direccion_logica ILIKE ?', [$termino]);
+                });
+            })
+            ->when(($filtros['comunidad'] ?? '') !== '', fn ($q) => $q->where('comunidad_id', (int) $filtros['comunidad']))
+            ->when(($filtros['linea'] ?? '') !== '', fn ($q) => $q->where('linea_investigacion_id', (int) $filtros['linea']))
+            ->when(($filtros['tipo_investigacion'] ?? '') !== '', fn ($q) => $q->where('tipo_investigacion_id', (int) $filtros['tipo_investigacion']))
+            ->when(($filtros['metodologia'] ?? '') !== '', fn ($q) => $q->where('metodologia_id', (int) $filtros['metodologia']))
             ->orderBy('id')
             ->get();
     }
@@ -151,8 +197,10 @@ class ReporteDepositoService
             'sec_nombre'      => '',
             'pro_siglas'      => '',
             'pro_nombre'      => '',
+            'pro_codigo'      => null,
             'tra_codigo'      => null,
             'trayecto_nombre' => '',
+            'semestre_nombre' => '',
             'sed_nombre'      => '',
             'sed_siglas'      => '',
             'sec_codigo'      => null,
@@ -170,7 +218,7 @@ class ReporteDepositoService
         // Try lookup by identificador or EQGRP: id
         $grupo = null;
         if (!str_starts_with($clave, 'EQSEC:')) {
-            $grupo = \App\Models\GrupoProyectoModulo::where('grp_identificador', $clave)->first();
+            $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($clave);
         }
         if (!$grupo) {
             $partes = $gruposSvc->parsearClave($clave);
@@ -196,7 +244,10 @@ class ReporteDepositoService
                     'sec_nombre'      => trim((string) ($ctx['sec_nombre'] ?? '')),
                     'pro_siglas'      => trim((string) ($ctx['pro_siglas'] ?? '')),
                     'pro_nombre'      => trim((string) ($ctx['pro_nombre'] ?? '')),
+                    'pro_codigo'      => isset($ctx['pro_codigo']) ? (int) $ctx['pro_codigo'] : null,
+                    'tra_codigo'      => isset($ctx['tra_codigo']) ? (int) $ctx['tra_codigo'] : null,
                     'trayecto_nombre' => trim((string) ($ctx['trayecto_nombre'] ?? $ctx['tra_nombre'] ?? '')),
+                    'semestre_nombre' => trim((string) ($ctx['semestre_nombre'] ?? $ctx['sem_nombre'] ?? '')),
                     'sed_nombre'      => $sedNombre,
                     'sed_siglas'      => $sedSiglas,
                     'sec_codigo'      => $secCodigo > 0 ? $secCodigo : null,
@@ -221,7 +272,10 @@ class ReporteDepositoService
                 'sec_nombre'      => $etiquetas['sec_nombre'] ?? '',
                 'pro_siglas'      => $etiquetas['pro_siglas'] ?? '',
                 'pro_nombre'      => $etiquetas['pro_nombre'] ?? '',
+                'pro_codigo'      => $etiquetas['pro_codigo'] ?? null,
+                'tra_codigo'      => $etiquetas['tra_codigo'] ?? null,
                 'trayecto_nombre' => $etiquetas['trayecto_nombre'] ?? '',
+                'semestre_nombre' => $etiquetas['semestre_nombre'] ?? '',
                 'sed_nombre'      => $sedNombre,
                 'sed_siglas'      => $sedSiglas,
                 'sec_codigo'      => $secCodigo,
@@ -341,12 +395,74 @@ class ReporteDepositoService
     }
 
     /**
-     * Indica si el estudiante cumplió con los requisitos del registro del proyecto.
-     * Retorna "Sí" si el estudiante completó y subió los documentos del proyecto
-     * (actualizado_por_estudiante = true), "—" en caso contrario.
+     * Busca el representante institucional entre los involucrados del proyecto.
+     * Se considera representante quien tenga un rol cuyo nombre contenga "representante" (case-insensitive).
      */
-    protected function etiquetaCumplimiento(Proyecto $proyecto): string
+    protected function resolverRepresentanteInstitucional(int $proyectoId): string
     {
-        return ($proyecto->actualizado_por_estudiante ?? false) ? 'Sí' : '—';
+        try {
+            $conn = (string) config('dual_database.repositorio_connection', 'pgsql');
+
+            $rows = DB::connection($conn)
+                ->table('proyecto_involucrado as pi')
+                ->join('involucrados as i', 'i.id', '=', 'pi.involucrado_id')
+                ->join('involucrado_rol as ir', 'ir.proyecto_involucrado_id', '=', 'pi.id')
+                ->join('roles_involucrados as ri', 'ri.id', '=', 'ir.rol_id')
+                ->where('pi.proyecto_id', $proyectoId)
+                ->whereRaw("LOWER(ri.nombre) LIKE ?", ['%representante%'])
+                ->select([
+                    DB::raw("TRIM(i.nombre) as nombre"),
+                    DB::raw("TRIM(i.apellido) as apellido"),
+                    DB::raw("TRIM(i.cedula) as cedula"),
+                ])
+                ->distinct()
+                ->get();
+
+            if ($rows->isEmpty()) {
+                return '';
+            }
+
+            return $rows->map(fn ($r) => trim(($r->nombre ?? '') . ' ' . ($r->apellido ?? '')))->implode(', ');
+        } catch (\Throwable) {
+            return '';
+        }
+    }
+
+    /**
+     * Resuelve la localidad geográfica donde se desarrolló el proyecto
+     * a partir de la comunidad asociada: Estado, Municipio, Dirección.
+     */
+    protected function resolverLocalidadGeografica(Proyecto $proyecto): string
+    {
+        try {
+            $comunidad = $proyecto->comunidad;
+            if (!$comunidad) {
+                return '';
+            }
+
+            $direccion = $comunidad->direccion;
+            if (!$direccion) {
+                return '';
+            }
+
+            $municipio = $direccion->municipio;
+            $estado = $municipio?->estado;
+
+            $partes = [];
+            if ($estado) {
+                $partes[] = trim($estado->est_nombre ?? '');
+            }
+            if ($municipio) {
+                $partes[] = trim($municipio->mun_nombre ?? '');
+            }
+            $calle = trim($direccion->dir_calle ?? '');
+            if ($calle !== '') {
+                $partes[] = $calle;
+            }
+
+            return !empty($partes) ? implode(', ', $partes) : '';
+        } catch (\Throwable) {
+            return '';
+        }
     }
 }

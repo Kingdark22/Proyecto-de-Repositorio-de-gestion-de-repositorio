@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ProyectoRepository
 {
-    protected array $relaciones = ['tipo_publicacion', 'linea_investigacion', 'comunidad', 'metodologia', 'tipo_investigacion', 'documentos.componente'];
+    protected array $relaciones = ['linea_investigacion', 'comunidad', 'metodologia', 'tipo_investigacion', 'documentos.componente'];
 
     public function find(int $id): ?Proyecto
     {

@@ -37,8 +37,9 @@ class NotificacionService
             $query = Proyecto::whereIn('estado_validacion', ['completado']);
             $query2 = Proyecto::where('estado_validacion', 'pendiente')->where('actualizado_por_estudiante', true);
 
+            $cedula = trim($user->usu_cedula);
+
             if ($isTeacher) {
-                $cedula = trim($user->usu_cedula);
                 $gruposCreados = app(GrupoProyectoService::class)->listar(['creador' => $cedula]);
                 $clavesCreador = $gruposCreados->pluck('clave')->filter()->values()->toArray();
 
@@ -46,7 +47,10 @@ class NotificacionService
                     $query->whereIn('pry_direccion_logica', $clavesCreador);
                     $query2->whereIn('pry_direccion_logica', $clavesCreador);
                 } else {
-                    return [];
+                    // Sin grupos creados: no mostrar proyectos ajenos,
+                    // pero continuar para que las notificaciones por sección se ejecuten
+                    $query->whereRaw('1 = 0');
+                    $query2->whereRaw('1 = 0');
                 }
             }
 
@@ -71,6 +75,57 @@ class NotificacionService
                     'url' => route('proyectos.gestion.edit', $p->id),
                     'proyecto_id' => $p->id,
                 ];
+            }
+        }
+
+        // ─── Notificaciones por sección: estudiantes sin equipo (solo profesor proyecto) ───
+        if ($isTeacher) {
+            try {
+                $profesorSvc = app(\App\Services\IntranetProfessorService::class);
+                $lapCodigo = $profesorSvc->lapsoVigenteCodigo();
+                if ($lapCodigo) {
+                    $equipoSvc = app(\App\Services\IntranetEquipoSeccionService::class);
+                    $cedula = trim($user->usu_cedula);
+
+                    $secCodigos = $profesorSvc->seccionesDelDocente($cedula, $lapCodigo);
+                    $seccionesInfo = $equipoSvc->seccionesEnLapso($lapCodigo)
+                        ->whereIn('sec_codigo', $secCodigos)
+                        ->keyBy('sec_codigo');
+
+                    if (!empty($secCodigos)) {
+                        $cedulasEnGrupos = $this->grupoRepo->cedulasOcupadasEnLapso($lapCodigo);
+                        $cedulasEnGruposIndex = array_flip($cedulasEnGrupos);
+
+                        foreach ($secCodigos as $sec) {
+                            $clave = $equipoSvc->construirClave($lapCodigo, $sec);
+                            $integrantes = $equipoSvc->integrantes($clave);
+                            $sinGrupo = [];
+
+                            foreach ($integrantes as $est) {
+                                $c = trim($est->cedula ?? '');
+                                if ($c !== '' && !isset($cedulasEnGruposIndex[$c])) {
+                                    $sinGrupo[$c] = true;
+                                }
+                            }
+
+                            $totalSinGrupo = count($sinGrupo);
+                            if ($totalSinGrupo > 0) {
+                                $secInfo = $seccionesInfo->get($sec);
+                                $secNombre = $secInfo->sec_nombre ?? "Sección {$sec}";
+                                $plural = $totalSinGrupo > 1 ? 'n' : '';
+                                $sEst = $totalSinGrupo > 1 ? 's' : '';
+                                $notificaciones[] = [
+                                    'type' => 'info',
+                                    'title' => "Estudiantes sin equipo — Sección {$secNombre}",
+                                    'mensaje' => "Falta{$plural} {$totalSinGrupo} estudiante{$sEst} de la sección {$secNombre} por integrar a un equipo de proyecto.",
+                                    'url' => route('grupos-proyecto.create'),
+                                ];
+                            }
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Error notificando estudiantes sin grupo: ' . $e->getMessage());
             }
         } elseif ($isStudent) {
             $cedula = trim($user->usu_cedula);
@@ -138,7 +193,8 @@ class NotificacionService
             $proyectosRechazados = $this->proyectoRepo->rechazados();
             
             // 2.5 Documentos rechazados que necesitan correcciones
-            $documentosRechazados = \App\Models\ProyectoDocumento::where('pd_estado', 2)
+            $documentosRechazados = \App\Models\ProyectoDocumento::with(['proyecto', 'componente'])
+                ->where('pd_estado', 2)
                 ->whereNotNull('pd_observacion')
                 ->get();
 
@@ -179,6 +235,27 @@ class NotificacionService
                         'type' => 'danger',
                         'title' => 'Documento rechazado',
                         'mensaje' => 'El documento "' . ($doc->componente->nombre ?? 'Desconocido') . '" del proyecto "' . $p->titulo . '" fue rechazado. Motivo: ' . $doc->pd_observacion,
+                        'url' => route('proyectos.gestion', ['edit' => $p->id]),
+                        'proyecto_id' => $p->id,
+                    ];
+                }
+            }
+
+            // 2.75 Documentos aceptados (últimos 7 días)
+            $documentosAceptados = \App\Models\ProyectoDocumento::with(['proyecto', 'componente'])
+                ->where('pd_estado', 1)
+                ->where('updated_at', '>=', now()->subDays(7))
+                ->get();
+
+            $proyectosAceptDocs = $documentosAceptados->map(fn($d) => $d->proyecto)->filter()->unique('id');
+            $gruposCacheAcept = $this->precargarGruposProyecto($proyectosAceptDocs, $gruposSvc);
+            foreach ($documentosAceptados as $doc) {
+                $p = $doc->proyecto;
+                if ($p && $this->esMiembroDelProyecto($p, $cedula, $gruposSvc, $gruposCacheAcept)) {
+                    $notificaciones[] = [
+                        'type' => 'success',
+                        'title' => 'Documento aceptado',
+                        'mensaje' => 'El documento "' . ($doc->componente->nombre ?? 'Desconocido') . '" del proyecto "' . $p->titulo . '" fue aceptado por el profesor.',
                         'url' => route('proyectos.gestion', ['edit' => $p->id]),
                         'proyecto_id' => $p->id,
                     ];
@@ -460,7 +537,7 @@ class NotificacionService
 
         // Try as identificador first
         if (!str_starts_with($clave, 'EQGRP:') && !str_starts_with($clave, 'EQSEC:')) {
-            $grupo = GrupoProyectoModulo::where('grp_identificador', $clave)->first();
+            $grupo = GrupoProyectoModulo::porIdentificador($clave);
         }
 
         if (!$grupo) {

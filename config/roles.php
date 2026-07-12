@@ -49,8 +49,11 @@ return [
     |--------------------------------------------------------------------------
     */
     'usu_cod_rol_map' => [
-        1 => 'administrador',
-        2 => 'coordinador',
+        1  => 'administrador',
+        2  => 'coordinador',
+        3  => 'profesor proyecto',
+        4  => 'estudiante',
+        22 => 'administrador',
     ],
 
     'session_key' => 'active_role',

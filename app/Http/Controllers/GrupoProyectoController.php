@@ -151,7 +151,8 @@ class GrupoProyectoController extends Controller
             'lapsos', 'programas', 'secciones',
             'filterLapso', 'filterPrograma', 'filterSeccion', 'search',
             'tablaOk', 'isProfessor', 'esAdmin', 'esCoordinador', 'proyectoPorClave', 'creadorNombres',
-        ))->with('userCedula', trim((string) $user->usu_cedula));
+        ))->with('userCedula', trim((string) $user->usu_cedula))
+          ->with('userUsuNombre', trim((string) $user->usu_nombre));
     }
 
     /**
@@ -162,21 +163,18 @@ class GrupoProyectoController extends Controller
         $user = auth()->user();
         $activeRole = app(UserRoleService::class)->getActiveRole($user);
         $isProfessor = $activeRole === 'profesor proyecto';
-        $esCoordinador = $activeRole === 'coordinador';
 
-        // Admin no puede crear grupos de proyecto
-        if ($activeRole === 'administrador') {
+        // Solo profesor proyecto puede crear grupos
+        if ($activeRole !== 'profesor proyecto') {
             return redirect()->route('grupos-proyecto.index')
-                ->with('error', 'El administrador no puede crear grupos de proyecto. Esta función es del profesor.');
+                ->with('error', 'Solo el profesor de proyecto puede crear grupos.');
         }
 
         Log::info('create: rol='.($activeRole ?? 'null').', isProfessor='.($isProfessor ? 'true' : 'false').', cedula='.$user->usu_cedula);
 
         $tablaOk = $this->grupos->tablaDisponible();
-        // Coordinador ve todos los lapsos (incluyendo viejos); profesor solo los activos
-        $lapsos = $esCoordinador
-            ? $this->profesores->todosLosLapsos()
-            : $this->profesores->lapsosActivos();
+        // Solo profesor proyecto puede crear grupos, solo ve lapsos activos
+        $lapsos = $this->profesores->lapsosActivos();
 
         // Comunidades para el select
         $comunidades = Cache::remember('grupos_comunidades_form', 3600, fn () =>
@@ -202,7 +200,7 @@ class GrupoProyectoController extends Controller
 
         return view('grupos_proyecto.form', compact(
             'lapsos', 'comunidades', 'estados',
-            'tablaOk', 'isProfessor', 'esCoordinador', 'lapsoPreseleccionado',
+            'tablaOk', 'isProfessor', 'lapsoPreseleccionado',
         ))->with('grupo', null);
     }
 
@@ -214,10 +212,10 @@ class GrupoProyectoController extends Controller
         $user = auth()->user();
         $activeRole = app(UserRoleService::class)->getActiveRole($user);
 
-        // Admin no puede crear grupos de proyecto
-        if ($activeRole === 'administrador') {
+        // Solo profesor proyecto puede crear grupos
+        if ($activeRole !== 'profesor proyecto') {
             return redirect()->route('grupos-proyecto.index')
-                ->with('error', 'El administrador no puede crear grupos de proyecto. Esta función es del profesor.');
+                ->with('error', 'Solo el profesor de proyecto puede crear grupos.');
         }
 
         $validated = $request->validate([
@@ -312,8 +310,32 @@ class GrupoProyectoController extends Controller
             Log::warning("Error notificando nuevo grupo: " . $e->getMessage());
         }
 
+        // ─── Recordatorio: estudiantes de la misma sección sin equipo ───
+        $mensajeAdicional = '';
+        try {
+            $claveSeccion = $this->equipos->construirClave($lapCodigo, $secCodigo);
+            $estudiantesSeccion = $this->equipos->integrantes($claveSeccion);
+            $cedulasOcupadas = $this->grupos->cedulasOcupadasEnLapso($lapCodigo);
+            $cedulasOcupadasIndex = array_flip($cedulasOcupadas);
+
+            $sinGrupo = 0;
+            foreach ($estudiantesSeccion as $est) {
+                $c = trim($est->cedula ?? '');
+                if ($c !== '' && !isset($cedulasOcupadasIndex[$c])) {
+                    $sinGrupo++;
+                }
+            }
+
+            if ($sinGrupo > 0) {
+                $secNombre = $etiquetas['sec_nombre'] ?? $secCodigo;
+                $mensajeAdicional = " Además, {$sinGrupo} estudiante(s) de la sección {$secNombre} aún no están en ningún equipo.";
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Error calculando estudiantes sin grupo: ' . $e->getMessage());
+        }
+
         return redirect()->route('grupos-proyecto.index')
-            ->with('success', 'Grupo registrado correctamente.');
+            ->with('success', 'Grupo registrado correctamente.' . $mensajeAdicional);
     }
 
     /**
@@ -325,10 +347,10 @@ class GrupoProyectoController extends Controller
         $activeRole = app(UserRoleService::class)->getActiveRole($user);
         $isProfessor = $activeRole === 'profesor proyecto';
 
-        // Admin no puede editar grupos de proyecto
-        if ($activeRole === 'administrador') {
+        // Solo profesor proyecto puede editar grupos
+        if ($activeRole !== 'profesor proyecto') {
             return redirect()->route('grupos-proyecto.index')
-                ->with('error', 'El administrador no puede editar grupos de proyecto. Esta función es del profesor.');
+                ->with('error', 'Solo el profesor de proyecto puede editar grupos.');
         }
 
         $tablaOk = $this->grupos->tablaDisponible();
@@ -340,8 +362,10 @@ class GrupoProyectoController extends Controller
                 ->with('error', 'Grupo no encontrado.');
         }
 
-        // Solo el creador puede editar
-        if (trim((string) $grupo->creador_cedula) !== trim((string) $user->usu_cedula)) {
+        // Solo el creador (identificado por usu_nombre) puede editar
+        $creadorUsu = trim((string) ($grupo->creador_usuario ?? ''));
+        $usuNombre = trim((string) $user->usu_nombre);
+        if ($creadorUsu !== '' && $creadorUsu !== $usuNombre) {
             return redirect()->route('grupos-proyecto.index')
                 ->with('error', 'No tienes permiso para editar este grupo.');
         }
@@ -377,10 +401,10 @@ class GrupoProyectoController extends Controller
         $user = auth()->user();
         $activeRole = app(UserRoleService::class)->getActiveRole($user);
 
-        // Admin no puede actualizar grupos de proyecto
-        if ($activeRole === 'administrador') {
+        // Solo profesor proyecto puede actualizar grupos
+        if ($activeRole !== 'profesor proyecto') {
             return redirect()->route('grupos-proyecto.index')
-                ->with('error', 'El administrador no puede actualizar grupos de proyecto. Solo tiene permisos de lectura.');
+                ->with('error', 'Solo el profesor de proyecto puede actualizar grupos.');
         }
 
         $grpCodigo = (int) $id;
@@ -390,8 +414,10 @@ class GrupoProyectoController extends Controller
                 ->with('error', 'Grupo no encontrado.');
         }
 
-        // Solo el creador puede actualizar
-        if (trim((string) $grupo->creador_cedula) !== trim((string) $user->usu_cedula)) {
+        // Solo el creador (identificado por usu_nombre) puede actualizar
+        $creadorUsu = trim((string) ($grupo->creador_usuario ?? ''));
+        $usuNombre = trim((string) $user->usu_nombre);
+        if ($creadorUsu !== '' && $creadorUsu !== $usuNombre) {
             return redirect()->route('grupos-proyecto.index')
                 ->with('error', 'No tienes permiso para actualizar este grupo.');
         }
@@ -498,6 +524,17 @@ class GrupoProyectoController extends Controller
     public function destroy(Request $request, $id)
     {
         $user = auth()->user();
+        $activeRole = app(UserRoleService::class)->getActiveRole($user);
+
+        // Solo profesor proyecto puede eliminar grupos
+        if ($activeRole !== 'profesor proyecto') {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Solo el profesor de proyecto puede eliminar grupos.']);
+            }
+            return redirect()->route('grupos-proyecto.index')
+                ->with('error', 'Solo el profesor de proyecto puede eliminar grupos.');
+        }
+
         $grpCodigo = (int) $id;
         $grupo = $this->grupos->obtener($grpCodigo);
 
@@ -509,8 +546,10 @@ class GrupoProyectoController extends Controller
                 ->with('error', 'Grupo no encontrado.');
         }
 
-        // Solo el creador puede eliminar
-        if (trim((string) $grupo->creador_cedula) !== trim((string) $user->usu_cedula)) {
+        // Solo el creador (identificado por usu_nombre) puede eliminar
+        $creadorUsu = trim((string) ($grupo->creador_usuario ?? ''));
+        $usuNombre = trim((string) $user->usu_nombre);
+        if ($creadorUsu !== '' && $creadorUsu !== $usuNombre) {
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => 'No tienes permiso para eliminar este grupo.']);
             }

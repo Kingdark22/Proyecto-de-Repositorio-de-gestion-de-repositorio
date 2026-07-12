@@ -529,7 +529,6 @@ class VinculacionManager extends Component
             'comunidad.direccion.municipio.estado',
             'linea_investigacion',
             'metodologia',
-            'tipo_publicacion',
             'tipo_investigacion',
             'objetivo_investigacion',
             'documentos.componente',
@@ -662,7 +661,6 @@ class VinculacionManager extends Component
                           ->orWhereHas('comunidad', fn($cq) => $cq->whereRaw('com_nombre ILIKE ?', [$term]))
                           ->orWhereHas('linea_investigacion', fn($cq) => $cq->whereRaw('lin_nombre_investigacion ILIKE ?', [$term]))
                           ->orWhereHas('metodologia', fn($cq) => $cq->whereRaw('mei_nombre ILIKE ?', [$term]))
-                          ->orWhereHas('tipo_publicacion', fn($cq) => $cq->whereRaw('tpu_nombre ILIKE ?', [$term]))
                           ->orWhereHas('tipo_investigacion', fn($cq) => $cq->whereRaw('tin_nombre ILIKE ?', [$term]))
                           ->orWhereHas('objetivo_investigacion', fn($cq) => $cq->whereRaw('obi_nombre::text ILIKE ?', [$term]));
                     });

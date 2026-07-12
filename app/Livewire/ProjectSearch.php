@@ -26,8 +26,6 @@ class ProjectSearch extends Component
 
     public string $lineaFilter = '';
 
-    public string $tipoPublicacionFilter = '';
-
     public string $tipoInvestigacionFilter = '';
 
     public string $metodologiaFilter = '';
@@ -101,11 +99,6 @@ class ProjectSearch extends Component
         $this->resetPage();
     }
 
-    public function updatingTipoPublicacionFilter(): void
-    {
-        $this->resetPage();
-    }
-
     public function updatingTipoInvestigacionFilter(): void
     {
         $this->resetPage();
@@ -125,7 +118,6 @@ class ProjectSearch extends Component
         $this->seccionFilter = '';
         $this->comunidadFilter = '';
         $this->lineaFilter = '';
-        $this->tipoPublicacionFilter = '';
         $this->tipoInvestigacionFilter = '';
         $this->metodologiaFilter = '';
         $this->resetPage();
@@ -163,8 +155,7 @@ class ProjectSearch extends Component
             'seccion' => $this->seccionFilter !== '' ? (int) $this->seccionFilter : null,
             'comunidad' => $this->comunidadFilter !== '' ? (int) $this->comunidadFilter : null,
             'linea' => $this->lineaFilter !== '' ? (int) $this->lineaFilter : null,
-            'tipo_publicacion' => $this->tipoPublicacionFilter !== '' ? (int) $this->tipoPublicacionFilter : null,
-            'tipo_investigacion' => $this->tipoInvestigacionFilter !== '' ? (int) $this->tipoInvestigacionFilter : null,
+             'tipo_investigacion' => $this->tipoInvestigacionFilter !== '' ? (int) $this->tipoInvestigacionFilter : null,
             'metodologia' => $this->metodologiaFilter !== '' ? (int) $this->metodologiaFilter : null,
         ], fn ($v) => $v !== null && $v !== '');
     }

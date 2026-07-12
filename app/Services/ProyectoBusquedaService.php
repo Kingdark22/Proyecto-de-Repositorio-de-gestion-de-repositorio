@@ -8,11 +8,11 @@ use App\Models\LineaInvestigacion;
 use App\Models\MetodologiaInvestigacion;
 use App\Models\Proyecto;
 use App\Models\TipoInvestigacion;
-use App\Models\TipoPublicacion;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator as PaginatorInstance;
 use Illuminate\Support\Facades\Cache;
+
 class ProyectoBusquedaService
 {
     public function __construct(
@@ -29,7 +29,6 @@ class ProyectoBusquedaService
      *     seccion?: int|null,
      *     comunidad?: int|null,
      *     linea?: int|null,
-     *     tipo_publicacion?: int|null,
      *     tipo_investigacion?: int|null,
      *     metodologia?: int|null,
      * }  $filtros
@@ -64,7 +63,6 @@ class ProyectoBusquedaService
             'seccionesDesdeGrupos' => $lapCodigo ? $this->seccionesDesdeGrupos($lapCodigo, $programaCodigo, $trayectoCodigo) : collect(),
             'comunidades' => Cache::remember('busqueda_comunidades', $catTtl, fn() => Comunidad::orderBy('nombre')->get()),
             'lineas' => app(ModuloRepositorioService::class)->lineasInvestigacionActivas(),
-            'tipos_publicacion' => Cache::remember('busqueda_tipos_publicacion', $catTtl, fn() => TipoPublicacion::where('estado_logico', true)->orderBy('nombre')->get()),
             'tipos_investigacion' => Cache::remember('busqueda_tipos_investigacion', $catTtl, fn() => TipoInvestigacion::where('estado_logico', true)->orderBy('nombre')->get()),
             'metodologias' => Cache::remember('busqueda_metodologias', $catTtl, fn() => MetodologiaInvestigacion::where('estado_logico', true)->orderBy('nombre')->get()),
         ];
@@ -73,7 +71,6 @@ class ProyectoBusquedaService
     public function proyectoDetalle(int $id): ?Proyecto
     {
         return Proyecto::with([
-            'tipo_publicacion',
             'linea_investigacion',
             'metodologia',
             'tipo_investigacion',
@@ -96,7 +93,6 @@ class ProyectoBusquedaService
      *     seccion?: int|null,
      *     comunidad?: int|null,
      *     linea?: int|null,
-     *     tipo_publicacion?: int|null,
      *     tipo_investigacion?: int|null,
      *     metodologia?: int|null,
      * }  $filtros
@@ -113,25 +109,78 @@ class ProyectoBusquedaService
         }
 
         $query = Proyecto::with([
-            'tipo_publicacion',
             'linea_investigacion',
+            'metodologia',
+            'tipo_investigacion',
+            'objetivo_investigacion',
             'comunidad',
             'documentos',
             'vinculaciones.tituloVinculacion',
-            'vinculaciones.comunidad'
+            'vinculaciones.comunidad',
         ])
             ->visiblesPublico();
 
         $this->aplicarFiltroEquipo($query, $equipoFiltro);
 
+        // ─── Búsqueda por texto libre en TODA la información del proyecto ───
         $termino = trim((string) ($filtros['search'] ?? ''));
         if ($termino !== '') {
-            $query->where(function (Builder $q) use ($termino) {
-                $q->whereRaw('pry_resumen ILIKE ?', ['%'.$termino.'%'])
-                  ->orWhere('equipo_ref', 'ILIKE', '%'.$termino.'%')
-                  ->orWhere('pry_direccion_logica', 'ILIKE', '%'.$termino.'%');
+            // Unir grupo_proyecto_modulo para buscar también por nombre del grupo
+            $query->leftJoin('grupo_proyecto_modulo as gpm', function ($join) {
+                $join->on('proyectos.pry_direccion_logica', '=', 'gpm.grp_identificador')
+                     ->orWhereRaw('proyectos.pry_direccion_logica = \'EQGRP:\' || CAST(gpm.grp_codigo AS TEXT)');
+            });
+
+            $query->select('proyectos.*')
+                  ->where(function (Builder $q) use ($termino) {
+                // ── Campos directos del proyecto ──
+                $q->whereRaw('proyectos.pry_resumen ILIKE ?', ['%' . $termino . '%'])
+                  ->orWhere('proyectos.pry_direccion_logica', 'ILIKE', '%' . $termino . '%');
+
+                // ── Nombre del grupo de proyecto (título) ──
+                $q->orWhere('gpm.grp_nombre', 'ILIKE', '%' . $termino . '%');
+
+                // ── Miembros del grupo (nombre, apellido, cédula) ──
+                $q->orWhereRaw('gpm.grp_miembros::text ILIKE ?', ['%' . $termino . '%']);
+
+                // ── Comunidad original ──
                 $q->orWhereHas('comunidad', function (Builder $cq) use ($termino) {
-                    $cq->where('nombre', 'ILIKE', '%'.$termino.'%');
+                    $cq->where('com_nombre', 'ILIKE', '%' . $termino . '%');
+                });
+
+                // ── Línea de investigación ──
+                $q->orWhereHas('linea_investigacion', function (Builder $lq) use ($termino) {
+                    $lq->where('lin_nombre_investigacion', 'ILIKE', '%' . $termino . '%');
+                });
+
+                // ── Metodología ──
+                $q->orWhereHas('metodologia', function (Builder $mq) use ($termino) {
+                    $mq->where('mei_nombre', 'ILIKE', '%' . $termino . '%');
+                });
+
+                // ── Tipo de investigación ──
+                $q->orWhereHas('tipo_investigacion', function (Builder $tq) use ($termino) {
+                    $tq->where('tin_nombre', 'ILIKE', '%' . $termino . '%');
+                });
+
+                // ── Objetivo de investigación ──
+                $q->orWhereHas('objetivo_investigacion', function (Builder $oq) use ($termino) {
+                    $oq->where('obi_nombre', 'ILIKE', '%' . $termino . '%');
+                });
+
+                // ── Vinculaciones – título ──
+                $q->orWhereHas('vinculaciones.tituloVinculacion', function (Builder $vq) use ($termino) {
+                    $vq->where('tiv_titulo', 'ILIKE', '%' . $termino . '%');
+                });
+
+                // ── Vinculaciones – comunidad vinculada ──
+                $q->orWhereHas('vinculaciones.comunidad', function (Builder $vcq) use ($termino) {
+                    $vcq->where('com_nombre', 'ILIKE', '%' . $termino . '%');
+                });
+
+                // ── Documentos – nombre del componente ──
+                $q->orWhereHas('documentos.componente', function (Builder $dcq) use ($termino) {
+                    $dcq->where('comp_nombre', 'ILIKE', '%' . $termino . '%');
                 });
             });
         }
@@ -142,9 +191,6 @@ class ProyectoBusquedaService
         if (! empty($filtros['linea'])) {
             $query->where('linea_investigacion_id', (int) $filtros['linea']);
         }
-        if (! empty($filtros['tipo_publicacion'])) {
-            $query->where('tipo_publicacion_id', (int) $filtros['tipo_publicacion']);
-        }
         if (! empty($filtros['tipo_investigacion'])) {
             $query->where('tipo_investigacion_id', (int) $filtros['tipo_investigacion']);
         }
@@ -152,7 +198,12 @@ class ProyectoBusquedaService
             $query->where('metodologia_id', (int) $filtros['metodologia']);
         }
 
-        return $query->latest()->paginate(10, page: $page);
+        // Evitar duplicados cuando hay LEFT JOIN con grupo_proyecto_modulo
+        if ($termino !== '') {
+            $query->distinct();
+        }
+
+        return $query->latest('proyectos.created_at')->paginate(10, page: $page);
     }
 
     /**
@@ -266,7 +317,7 @@ class ProyectoBusquedaService
         match ($equipoFiltro['tipo']) {
             'exacto' => $query->where('equipo_ref', $equipoFiltro['valor']),
             'lista' => $query->whereIn('equipo_ref', $equipoFiltro['valor']),
-            'prefijo' => $query->where('equipo_ref', 'ILIKE', $equipoFiltro['valor'].'%'),
+            'prefijo' => $query->where('equipo_ref', 'ILIKE', $equipoFiltro['valor'] . '%'),
             default => null,
         };
     }

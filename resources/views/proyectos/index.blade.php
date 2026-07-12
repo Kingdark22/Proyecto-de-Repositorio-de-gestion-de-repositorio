@@ -25,6 +25,8 @@
     .filter-select, .filter-input { height: 30px; padding: 3px 6px; font-size: 11px; border: 1px solid #ccc; border-radius: 4px; }
     .filter-select { min-width: 130px; }
     .filter-input { width: 150px; }
+    .autocomplete-item:hover { background: #f0f7ff; }
+    .autocomplete-item:last-child { border-bottom: none; }
 </style>
 @endpush
 
@@ -70,12 +72,7 @@
                             </td>
                             <td align="center" style="padding:5px;">
                                 @if ($esAdmin)
-                                    {{-- Admin solo ve enlace de solo lectura --}}
-                                    @if ($g->tiene_proyecto)
-                                        <a href="{{ route('proyectos.gestion.edit', $g->proyecto_id) }}" class="cm-btn cm-btn-secondary cm-btn-sm" style="background:#fff;border:2px solid #6c757d;color:#333;font-weight:600;">Ver</a>
-                                    @else
-                                        <span style="color:#999;font-size:10px;">Sin proyecto</span>
-                                    @endif
+                                    <span style="color:#999;font-size:10px;">{{ $g->tiene_proyecto ? 'Tiene proyecto' : 'Sin proyecto' }}</span>
                                 @else
                                     @if ($g->tiene_proyecto)
                                         @if ($g->proyecto_estado_validacion !== 'aprobado')
@@ -176,16 +173,50 @@
             <form method="GET" action="{{ route('proyectos.gestion') }}" style="margin-bottom:8px;">
                 <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size:11px;">
                     <tr>
-                        <td width="33%"><b>Título:</b><br>
-                            <input name="search" type="text" value="{{ $search }}" class="filter-input" style="width:95%;" placeholder="Buscar..." oninput="buscarProyectos()">
+                        <td width="33%" style="position:relative;"><b>Título:</b><br>
+                            <input name="search" type="text" value="{{ $search }}" class="filter-input" id="searchProjectInput" style="width:95%;" placeholder="Buscar..." autocomplete="off" oninput="buscarProyectos()">
+                            <div id="searchAutocomplete" style="display:none;position:absolute;top:100%;left:0;right:5%;background:#fff;border:1px solid #ccc;border-radius:4px;max-height:220px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
                         </td>
                         <script>
+                            function escAttr(str) { return String(str).replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+                            function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
                             let timerProyectos;
+                            let timerAutocomplete;
                             function buscarProyectos() {
                                 clearTimeout(timerProyectos);
                                 timerProyectos = setTimeout(function() {
                                     document.querySelector('.filter-input').closest('form').submit();
                                 }, 400);
+                            }
+                            document.getElementById('searchProjectInput').addEventListener('input', function() {
+                                var q = this.value.trim();
+                                var dropdown = document.getElementById('searchAutocomplete');
+                                clearTimeout(timerAutocomplete);
+                                if (q.length < 2) { dropdown.style.display = 'none'; return; }
+                                timerAutocomplete = setTimeout(function() {
+                                    fetch('{{ route("proyectos.gestion.buscar-ajax") }}?q=' + encodeURIComponent(q))
+                                        .then(function(r) { return r.json(); })
+                                        .then(function(data) {
+                                            if (!data.length) { dropdown.style.display = 'none'; return; }
+                                            var html = '';
+                                            data.forEach(function(p) {
+                                                html += '<div class="autocomplete-item" data-id="' + escAttr(p.id) + '" style="padding:6px 10px;cursor:pointer;border-bottom:1px solid #eee;font-size:12px;" onclick="irAProyecto(' + escAttr(p.id) + ')">';
+                                                html += '<strong>' + escHtml(p.title) + '</strong>';
+                                                if (p.resumen) html += '<br><span style="color:#666;font-size:10px;">' + escHtml(p.resumen) + '</span>';
+                                                html += '</div>';
+                                            });
+                                            dropdown.innerHTML = html;
+                                            dropdown.style.display = 'block';
+                                        }).catch(function() {});
+                                }, 250);
+                            });
+                            document.addEventListener('click', function(e) {
+                                if (!e.target.closest('#searchProjectInput') && !e.target.closest('#searchAutocomplete')) {
+                                    document.getElementById('searchAutocomplete').style.display = 'none';
+                                }
+                            });
+                            function irAProyecto(id) {
+                                window.location.href = '{{ url("proyectos/gestion") }}/' + id + '/edit';
                             }
                         </script>
                         <td width="33%"><b>Estado:</b><br>
@@ -248,7 +279,7 @@
                                         <button type="button" class="cm-btn cm-btn-success cm-btn-sm" onclick="mostrarModalAccion({icon:'\u2705',title:'Aprobar proyecto',message:'\u00bfAprueba este proyecto?',detailValue:'{{ $p->titulo }}',confirmText:'S\u00ed, aprobar',confirmClass:'cm-btn-success',onConfirm:function(){window.location='{{ route('proyectos.gestion.approve', $p->id) }}'}})">Aprobar</button>
                                         <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" onclick="abrirRechazar({{ $p->id }})">Rechazar</button>
                                     @endif
-                                    @if ($esAdmin)
+                                    @if ($esAdmin || $esCoordinador || $esGestionador)
                                         <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-secondary cm-btn-sm" style="background:#fff;border:2px solid #6c757d;color:#333;font-weight:600;">Ver</a>
                                     @elseif ($p->estado_validacion !== 'aprobado')
                                         <a href="{{ route('proyectos.gestion.edit', $p->id) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
@@ -266,20 +297,94 @@
         </fieldset>
     @endif
 
-    {{-- MODAL EXPORTAR EXCEL --}}
+    {{-- MODAL EXPORTAR EXCEL — MULTI-FILTRO --}}
     <div id="excelModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarModalExcel()">
-        <div style="background:#fff;border-radius:8px;padding:25px;max-width:500px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+        <div style="background:#fff;border-radius:8px;padding:25px;max-width:680px;width:94%;box-shadow:0 8px 32px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto;">
             <h3 style="margin:0 0 15px;font-weight:bold;font-size:17px;color:#000;">Exportar a Excel</h3>
-            <p style="font-size:13px;color:#555;margin-bottom:14px;">Seleccione el lapso académico para el reporte:</p>
-            <select id="excelLapsoSelect" style="width:100%;padding:10px 8px;border:1px solid #999;border-radius:4px;font-size:14px;box-sizing:border-box;background:#fff;">
-                <option value="">- Todos los lapsos -</option>
-                @foreach($lapsosFiltro as $lap)
-                    <option value="{{ $lap->lap_codigo }}">{{ $lap->lap_nombre }}</option>
-                @endforeach
-            </select>
-            <div style="margin-top:20px;text-align:center;display:flex;gap:12px;justify-content:center;">
-                <button type="button" class="cm-btn cm-btn-success" onclick="descargarExcel()" style="padding:8px 20px;font-size:14px;">Descargar</button>
-                <button type="button" class="cm-btn cm-btn-secondary" onclick="cerrarModalExcel()" style="padding:8px 20px;font-size:14px;">Cancelar</button>
+            <p style="font-size:12px;color:#555;margin-bottom:14px;">Filtros disponibles para la exportación (solo proyectos aprobados):</p>
+            <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size:11px;">
+                <tr>
+                    <td width="50%" style="position:relative;"><b>Búsqueda:</b><br>                            <input type="text" id="excelSearch" placeholder="Buscar por título, resumen o equipo..." autocomplete="off"
+                            style="width:96%;padding:6px;border:1px solid #999;border-radius:4px;font-size:12px;box-sizing:border-box;">
+                        <div id="excelSearchAutocomplete" style="display:none;position:absolute;top:100%;left:0;right:4%;background:#fff;border:1px solid #ccc;border-radius:6px;max-height:220px;overflow-y:auto;z-index:10000;box-shadow:0 4px 16px rgba(0,0,0,0.18);margin-top:2px;"></div>
+                        <div id="excelSearchBadge" style="display:none;margin-top:5px;padding:4px 10px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:4px;font-size:11px;color:#2e7d32;align-items:center;gap:4px;"></div>
+                    </td>
+                    <td width="50%"><b>Lapso académico:</b><br>
+                        <select id="excelLapsoSelect" onchange="cargarProgramas()"
+                            style="width:96%;padding:6px;border:1px solid #999;border-radius:4px;font-size:12px;background:#fff;box-sizing:border-box;">
+                            <option value="">- Todos -</option>
+                            @foreach($lapsosFiltro as $lap)
+                                <option value="{{ $lap->lap_codigo }}">{{ $lap->lap_nombre }}</option>
+                            @endforeach
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td><b>Programa (PNF):</b><br>
+                        <select id="excelProgramaSelect" onchange="cargarTrayectos()"
+                            style="width:96%;padding:6px;border:1px solid #999;border-radius:4px;font-size:12px;background:#fff;box-sizing:border-box;">
+                            <option value="">- Todos -</option>
+                        </select>
+                    </td>
+                    <td><b>Trayecto:</b><br>
+                        <select id="excelTrayectoSelect" onchange="cargarSecciones()"
+                            style="width:96%;padding:6px;border:1px solid #999;border-radius:4px;font-size:12px;background:#fff;box-sizing:border-box;">
+                            <option value="">- Todos -</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td><b>Sección:</b><br>
+                        <select id="excelSeccionSelect"
+                            style="width:96%;padding:6px;border:1px solid #999;border-radius:4px;font-size:12px;background:#fff;box-sizing:border-box;">
+                            <option value="">- Todas -</option>
+                        </select>
+                    </td>
+                    <td><b>Comunidad:</b><br>
+                        <select id="excelComunidadSelect"
+                            style="width:96%;padding:6px;border:1px solid #999;border-radius:4px;font-size:12px;background:#fff;box-sizing:border-box;">
+                            <option value="">- Todas -</option>
+                            @foreach($comunidadesFiltro as $com)
+                                <option value="{{ $com->com_codigo }}">{{ $com->nombre }}</option>
+                            @endforeach
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td><b>Línea de investigación:</b><br>
+                        <select id="excelLineaSelect"
+                            style="width:96%;padding:6px;border:1px solid #999;border-radius:4px;font-size:12px;background:#fff;box-sizing:border-box;">
+                            <option value="">- Todas -</option>
+                            @foreach($lineasFiltro as $lin)
+                                <option value="{{ $lin->id }}">{{ $lin->nombre_investigacion }}</option>
+                            @endforeach
+                        </select>
+                    </td>
+                    <td><b>Tipo de investigación:</b><br>
+                        <select id="excelTipoInvSelect"
+                            style="width:96%;padding:6px;border:1px solid #999;border-radius:4px;font-size:12px;background:#fff;box-sizing:border-box;">
+                            <option value="">- Todos -</option>
+                            @foreach($tiposInvFiltro as $tin)
+                                <option value="{{ $tin->id }}">{{ $tin->nombre }}</option>
+                            @endforeach
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2"><b>Metodología:</b><br>
+                        <select id="excelMetodologiaSelect"
+                            style="width:48%;padding:6px;border:1px solid #999;border-radius:4px;font-size:12px;background:#fff;box-sizing:border-box;">
+                            <option value="">- Todas -</option>
+                            @foreach($metodologiasFiltro as $met)
+                                <option value="{{ $met->id }}">{{ $met->nombre }}</option>
+                            @endforeach
+                        </select>
+                    </td>
+                </tr>
+            </table>
+            <div style="margin-top:18px;text-align:center;display:flex;gap:12px;justify-content:center;">
+                <button type="button" class="cm-btn cm-btn-success" onclick="descargarExcel()" style="padding:8px 24px;font-size:14px;">Descargar</button>
+                <button type="button" class="cm-btn cm-btn-secondary" onclick="cerrarModalExcel()" style="padding:8px 24px;font-size:14px;">Cancelar</button>
             </div>
         </div>
     </div>
@@ -308,16 +413,250 @@
         document.getElementById('rejectModal').style.display = 'none';
     }
     function abrirModalExcel() {
+        limpiarSeleccionExcel();
         document.getElementById('excelModal').style.display = 'flex';
+        cargarProgramas();
     }
     function cerrarModalExcel() {
         document.getElementById('excelModal').style.display = 'none';
     }
-    function descargarExcel() {
+
+    var progBase = '{{ route("proyectos.gestion.export-programs", ["lapso" => "REPLACE_LAPSO"]) }}';
+    var traBase = '{{ route("proyectos.gestion.export-trayectos", ["lapso" => "REPLACE_LAPSO"]) }}';
+    var secBase = '{{ route("proyectos.gestion.export-secciones", ["lapso" => "REPLACE_LAPSO"]) }}';
+
+    function cargarProgramas() {
         var lapso = document.getElementById('excelLapsoSelect').value;
+        var progSel = document.getElementById('excelProgramaSelect');
+        var traSel = document.getElementById('excelTrayectoSelect');
+        var secSel = document.getElementById('excelSeccionSelect');
+
+        traSel.innerHTML = '<option value="">- Todos -</option>';
+        secSel.innerHTML = '<option value="">- Todas -</option>';
+
+        if (!lapso) {
+            progSel.innerHTML = '<option value="">- Todos -</option>';
+            return;
+        }
+
+        fetch(progBase.replace('REPLACE_LAPSO', encodeURIComponent(lapso)))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                progSel.innerHTML = '<option value="">- Todos -</option>';
+                data.forEach(function(p) {
+                    progSel.innerHTML += '<option value="' + p.pro_codigo + '">' + (p.pro_siglas || p.pro_nombre) + '</option>';
+                });
+                cargarTrayectos();
+            }).catch(function() {});
+    }
+
+    function cargarTrayectos() {
+        var lapso = document.getElementById('excelLapsoSelect').value;
+        var programa = document.getElementById('excelProgramaSelect').value;
+        var traSel = document.getElementById('excelTrayectoSelect');
+        var secSel = document.getElementById('excelSeccionSelect');
+
+        secSel.innerHTML = '<option value="">- Todas -</option>';
+
+        if (!lapso) {
+            traSel.innerHTML = '<option value="">- Todos -</option>';
+            return;
+        }
+
+        var url = traBase.replace('REPLACE_LAPSO', encodeURIComponent(lapso));
+        if (programa) {
+            url += '?programa=' + encodeURIComponent(programa);
+        }
+
+        fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                traSel.innerHTML = '<option value="">- Todos -</option>';
+                data.forEach(function(t) {
+                    traSel.innerHTML += '<option value="' + t.tra_codigo + '">' + t.tra_nombre + '</option>';
+                });
+                cargarSecciones();
+            }).catch(function() {});
+    }
+
+    function cargarSecciones() {
+        var lapso = document.getElementById('excelLapsoSelect').value;
+        var programa = document.getElementById('excelProgramaSelect').value;
+        var trayecto = document.getElementById('excelTrayectoSelect').value;
+        var secSel = document.getElementById('excelSeccionSelect');
+
+        if (!lapso) {
+            secSel.innerHTML = '<option value="">- Todas -</option>';
+            return;
+        }
+
+        var url = secBase.replace('REPLACE_LAPSO', encodeURIComponent(lapso));
+        var params = [];
+        if (programa) params.push('programa=' + encodeURIComponent(programa));
+        if (trayecto) params.push('trayecto=' + encodeURIComponent(trayecto));
+        if (params.length) url += '?' + params.join('&');
+
+        fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                secSel.innerHTML = '<option value="">- Todas -</option>';
+                data.forEach(function(s) {
+                    secSel.innerHTML += '<option value="' + s.sec_codigo + '">Secc. ' + s.sec_nombre + '</option>';
+                });
+            }).catch(function() {});
+    }
+    // Autocomplete para búsqueda en modal excel — rápido con caché en memoria y AbortController
+    (function() {
+        var input = document.getElementById('excelSearch');
+        var dropdown = document.getElementById('excelSearchAutocomplete');
+        var badge = document.getElementById('excelSearchBadge');
+
+        // Caché en memoria: { queryNormalizado: { html, data } }
+        var cache = {};
+        var CACHE_TTL = 30000; // 30 segundos
+        var pendingController = null;
+
+        function queryKey(q) {
+            return q.toLowerCase().replace(/\s+/g, ' ').trim();
+        }
+
+        input.addEventListener('input', function() {
+            var q = this.value.trim();
+            clearTimeout(window.excelSearchTimer);
+            if (q.length < 2) { dropdown.style.display = 'none'; return; }
+
+            // Verificar caché inmediata
+            var key = queryKey(q);
+            var cached = cache[key];
+            if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
+                if (cached.html) {
+                    dropdown.innerHTML = cached.html;
+                    dropdown.style.display = 'block';
+                } else {
+                    dropdown.style.display = 'none';
+                }
+                return;
+            }
+
+            window.excelSearchTimer = setTimeout(function() {
+                // Cancelar petición previa
+                if (pendingController) {
+                    pendingController.abort();
+                }
+                pendingController = new AbortController();
+                var signal = pendingController.signal;
+
+                var url = '{{ route("proyectos.gestion.buscar-ajax") }}?q=' + encodeURIComponent(q) + '&_=' + Date.now();
+
+                fetch(url, { signal: signal })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (!data.length) {
+                            dropdown.style.display = 'none';
+                            cache[key] = { html: null, ts: Date.now() };
+                            return;
+                        }
+                        var html = '';
+                        data.forEach(function(p) {
+                            html += '<div class="excel-autocomplete-item" data-id="' + p.id + '" data-title="' + escAttr(p.title) + '" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #e8e8e8;font-size:12px;">';
+                            html += '<div style="display:flex;align-items:center;gap:8px;">';
+                            html += '<span style="flex-shrink:0;width:6px;height:6px;border-radius:50%;background:#19692e;"></span>';
+                            html += '<strong style="font-size:12px;color:#222;">' + escHtml(p.title) + '</strong>';
+                            html += '</div>';
+                            if (p.resumen) html += '<div style="color:#777;font-size:10px;margin-top:2px;padding-left:14px;">' + escHtml(p.resumen) + '</div>';
+                            html += '</div>';
+                        });
+                        dropdown.innerHTML = html;
+                        dropdown.style.display = 'block';
+                        // Guardar en caché
+                        cache[key] = { html: html, ts: Date.now() };
+                    }).catch(function(err) {
+                        if (err.name === 'AbortError') return;
+                    });
+            }, 150); // Debounce reducido de 250ms a 150ms
+        });
+
+        // Delegación de clics en el dropdown
+        dropdown.addEventListener('click', function(e) {
+            var item = e.target.closest('.excel-autocomplete-item');
+            if (!item) return;
+            var title = item.dataset.title;
+            seleccionarProyectoExcel(title);
+        });
+
+        // Hover con event delegation
+        dropdown.addEventListener('mouseover', function(e) {
+            var item = e.target.closest('.excel-autocomplete-item');
+            if (item) item.style.background = '#f0f7ff';
+        });
+        dropdown.addEventListener('mouseout', function(e) {
+            var item = e.target.closest('.excel-autocomplete-item');
+            if (item) item.style.background = '#fff';
+        });
+
+        // Helper: escape para atributos HTML
+        function escAttr(str) {
+            return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+    })();
+
+    function seleccionarProyectoExcel(title) {
+        var input = document.getElementById('excelSearch');
+        var badge = document.getElementById('excelSearchBadge');
+        input.value = title;
+        // Mostrar badge de selección
+        badge.style.display = 'inline-flex';
+        badge.innerHTML = 'Buscar por: <strong>' + escHtml(title) + '</strong> <span class="excel-badge-clear" style="margin-left:6px;cursor:pointer;font-weight:bold;color:#c62828;" onclick="limpiarSeleccionExcel()">&times;</span>';
+        document.getElementById('excelSearchAutocomplete').style.display = 'none';
+    }
+
+    function limpiarSeleccionExcel() {
+        var input = document.getElementById('excelSearch');
+        input.value = '';
+        document.getElementById('excelSearchBadge').style.display = 'none';
+        document.getElementById('excelSearchAutocomplete').style.display = 'none';
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#excelSearch') && !e.target.closest('#excelSearchAutocomplete')) {
+            var d = document.getElementById('excelSearchAutocomplete');
+            if (d) d.style.display = 'none';
+        }
+    });
+
+    // Limpiar selección si el usuario escribe manualmente
+    document.getElementById('excelSearch').addEventListener('keydown', function() {
+        if (this.value.trim()) {
+            document.getElementById('excelSearchBadge').style.display = 'none';
+        }
+    });
+
+    function escHtml(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function descargarExcel() {
+        var params = [];
+        var campos = [
+            { id: 'excelSearch', key: 'search' },
+            { id: 'excelLapsoSelect', key: 'lapso' },
+            { id: 'excelProgramaSelect', key: 'programa' },
+            { id: 'excelTrayectoSelect', key: 'trayecto' },
+            { id: 'excelSeccionSelect', key: 'seccion' },
+            { id: 'excelComunidadSelect', key: 'comunidad' },
+            { id: 'excelLineaSelect', key: 'linea' },
+            { id: 'excelTipoInvSelect', key: 'tipo_investigacion' },
+            { id: 'excelMetodologiaSelect', key: 'metodologia' },
+        ];
+        campos.forEach(function(c) {
+            var val = document.getElementById(c.id).value;
+            if (val) {
+                params.push(encodeURIComponent(c.key) + '=' + encodeURIComponent(val));
+            }
+        });
         var url = '{{ route("proyectos.gestion.exportar-excel") }}';
-        if (lapso) {
-            url += '?lapso=' + encodeURIComponent(lapso);
+        if (params.length > 0) {
+            url += '?' + params.join('&');
         }
         window.open(url, '_blank');
         cerrarModalExcel();

@@ -72,7 +72,7 @@
                 <td width="50%" colspan="2">
                     <b>Término (título o resumen):</b><br>
                     <input wire:model.live.debounce.300ms="search" type="text" style="width: 98%;"
-                        placeholder="Palabras clave...">
+                        placeholder="Buscar por: título, resumen, comunidad, estudiantes...">
                 </td>
                 <td width="25%">
                     <b>Lapso académico:</b><br>
@@ -135,15 +135,6 @@
                 </td>
             </tr>
             <tr>
-                <td width="33%">
-                    <b>Tipo de publicación:</b><br>
-                    <select wire:model.live="tipoPublicacionFilter" style="width: 95%;">
-                        <option value="">- Todos -</option>
-                        @foreach ($tipos_publicacion as $tp)
-                            <option value="{{ $tp->id }}">{{ $tp->nombre }}</option>
-                        @endforeach
-                    </select>
-                </td>
                 <td width="33%">
                     <b>Tipo de investigación:</b><br>
                     <select wire:model.live="tipoInvestigacionFilter" style="width: 95%;">
@@ -218,14 +209,16 @@
                         <td style="padding: 5px; font-size: 10px;">{{ Str::limit($p->resumen, 100) }}</td>
                         <td align="center" style="padding: 5px;">
                             <a href="#" wire:click.prevent="openDetails({{ $p->id }})"
-                                style="color:#0000EE; font-weight:bold;">Ver detalles</a>
+                                style="display:inline-block;background:#8b0000;color:#fff;padding:3px 14px;border-radius:4px;font-size:11px;font-weight:600;text-decoration:none;">Ver detalles</a>
                             @php $srchDocs = $p->documentos; @endphp
                             @if ($srchDocs->isNotEmpty())
-                                <br><span style="font-size:9px; color:#666;">Docs:</span>
-                                @foreach ($srchDocs as $doc)
-                                    <a href="{{ route('documentos.view', $doc->pd_codigo) }}"
-                                        style="color:#0000EE; font-size:10px;">{{ $doc->componente?->nombre ?? 'Doc' }}</a>@if (!$loop->last), @endif
-                                @endforeach
+                                <div style="margin-top:6px;border-top:1px solid #ddd;padding-top:5px;">
+                                    <div style="font-size:9px;color:#666;margin-bottom:3px;">Documentos:</div>
+                                    @foreach ($srchDocs as $doc)
+                                        <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank"
+                                            style="display:inline-block;background:#f5f5f5;border:1px solid #ddd;border-radius:3px;padding:1px 7px;margin:1px;font-size:10px;color:#333;text-decoration:none;">{{ $doc->componente?->nombre ?? 'Doc' }}</a>
+                                    @endforeach
+                                </div>
                             @endif
                         </td>
                     </tr>
@@ -309,8 +302,6 @@
                     <legend style="font-weight: bold; font-size: 11px;">Ficha t&eacute;cnica</legend>
                     <table width="100%" cellpadding="3" cellspacing="0" style="font-size: 11px;">
                         <tr>
-                            <td width="25%"><b>Publicaci&oacute;n:</b></td>
-                            <td width="25%">{{ $selectedProject->tipo_publicacion?->nombre ?? 'N/D' }}</td>
                             <td width="25%"><b>Investigaci&oacute;n:</b></td>
                             <td width="25%">{{ $selectedProject->tipo_investigacion?->nombre ?? 'N/D' }}</td>
                         </tr>
@@ -345,8 +336,8 @@
                                         @endif
                                     </td>
                                     <td width="20%" align="center" style="padding: 4px;">
-                                        <a href="{{ route('documentos.view', $doc->pd_codigo) }}"
-                                            style="color: #0000EE;">Ver</a>
+                                        <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank"
+                                            style="display:inline-block;background:#8b0000;color:#fff;padding:2px 12px;border-radius:3px;font-size:10px;text-decoration:none;">Ver</a>
                                     </td>
                                 </tr>
                             @endforeach

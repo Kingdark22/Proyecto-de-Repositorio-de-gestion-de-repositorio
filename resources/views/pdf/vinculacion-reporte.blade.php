@@ -274,7 +274,7 @@
                                 @php
                                     $extras = [];
                                     if ($p->linea_investigacion) $extras[] = 'Linea: ' . ($p->linea_investigacion->nombre_investigacion ?? '');
-                                    if ($p->tipo_publicacion)    $extras[] = 'Pub.: ' . ($p->tipo_publicacion->nombre ?? '');
+
                                     if ($p->creador_cedula)      $extras[] = 'Creador C.I.: ' . $p->creador_cedula;
                                 @endphp
                                 @if(!empty($extras))

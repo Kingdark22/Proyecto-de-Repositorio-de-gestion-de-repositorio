@@ -106,18 +106,20 @@
                                 @endif
                             </td>
                         </tr>
+                        @if($esProfesor || $soloLectura)
                         <tr>
                             <td width="20%"><b>Cantidad de Beneficiados:</b></td>
                             <td colspan="3">
-                                @if($esProfesor)
-                                    <input type="number" name="cantidad_beneficiados" 
-                                           value="{{ old('cantidad_beneficiados', $datosForm['cantidad_beneficiados'] ?? '') }}" 
-                                           style="width:100px;font-size:12px;" placeholder="0">
+                                @if($soloLectura || !$esProfesor)
+                                    <span style="font-weight:bold;font-size:14px;">{{ $datosForm['cantidad_beneficiados'] ?? 'N/A' }}</span>
                                 @else
-                                    <span style="font-weight:bold;">{{ $datosForm['cantidad_beneficiados'] ?? '0' }}</span>
+                                <input type="number" name="cantidad_beneficiados" 
+                                       value="{{ old('cantidad_beneficiados', $datosForm['cantidad_beneficiados'] ?? '') }}" 
+                                       style="width:100px;font-size:12px;" placeholder="0">
                                 @endif
                             </td>
                         </tr>
+                        @endif
                         <tr>
                             <td valign="top"><b>Resumen:</b></td>
                         <td colspan="3">
@@ -216,7 +218,7 @@
             </fieldset>
             @endif
 
-{{-- == INVOLUCRADOS (solo profesor/admin/coordinador/gestionador) == --}}
+{{-- == INVOLUCRADOS (solo profesor proyecto creador) == --}}
             @php
                 $puedeGestionarInvolucrados = $esProfesor || $esGestionador;
                 $puedeGestionarInvolucrados = $puedeGestionarInvolucrados || !empty($canValidate);
@@ -362,12 +364,9 @@
             @php
                 $componentesDisp = $catalogosForm['componentes_disp'] ?? collect();
                 $docsExistentes = $datosForm['archivos_actuales'] ?? [];
-                $tieneDocumentosSubidos = !empty($docsExistentes);
             @endphp
 
-            {{-- Para profesor: solo muestra documentos si el estudiante ya subió alguno --}}
-            {{-- Para otros: siempre muestra la sección --}}
-            @if(!$esProfesor || ($esProfesor && $tieneDocumentosSubidos))
+            {{-- Mostrar componentes a todos los usuarios que tengan acceso al formulario --}}
             <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
                 <legend style="font-weight: bold; font-size: 12px;">
                     Documentos del proyecto por componente
@@ -393,8 +392,32 @@
                             </td>
                             <td width="45%">
                                 @if(!$esProfesor)
-                                    {{-- File upload para no-profesores (estudiante) --}}
+                                    @if($docActual)
+                                        @php
+                                            $estadoEst = $docActual['estado'] ?? 0;
+                                            $obsEst = $docActual['observacion'] ?? '';
+                                        @endphp
+                                        <div id="doc-status-{{ $docActual['id'] }}" style="font-size:11px;margin-bottom:4px;">
+                                            @if($estadoEst == 1)
+                                                <span style="color:#28a745;font-weight:bold;">✓ Aceptado</span>
+                                            @elseif($estadoEst == 2)
+                                                <span style="color:#dc3545;font-weight:bold;">✗ Rechazado</span>
+                                                @if($obsEst)
+                                                    <div style="font-size:10px;color:#666;margin-top:2px;"><i>Motivo:</i> {{ $obsEst }}</div>
+                                                @endif
+                                                @unless($soloLectura)
+                                                <div style="font-size:10px;color:#8b0000;margin-top:3px;">⬆ Suba un nuevo documento corregido para revisión.</div>
+                                                @endunless
+                                            @else
+                                                <span style="color:#666;">Pendiente de revisión</span>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <div style="font-size:11px;color:#999;margin-bottom:4px;">Pendiente de carga</div>
+                                    @endif
+                                    @unless($soloLectura)
                                     <input type="file" name="documentos[{{ $comp->id }}]" accept="{{ $acceptStr }}" style="width:100%;font-size:11px;">
+                                    @endunless
                                     @error('documentos.' . $comp->id)<br><span class="validation-error">{{ $message }}</span>@enderror
                                 @else
                                     {{-- Para profesor: mostrar mensaje según si hay documento o no --}}
@@ -403,13 +426,13 @@
                                             $estado = $docActual['estado'] ?? 0;
                                             $obs = $docActual['observacion'] ?? '';
                                         @endphp
-                                        <div style="font-size:11px;">
+                                        <div id="doc-status-{{ $docActual['id'] }}" style="font-size:11px;">
                                             @if($estado == 1)
                                                 <span style="color: #28a745; font-weight: bold;">✓ Aceptado</span>
                                             @elseif($estado == 2)
                                                 <span style="color: #dc3545; font-weight: bold;">✗ Rechazado</span>
                                                 @if($obs)
-                                                    <div style="font-size:10px; color:#666; margin-top:2px;"><i>Motivo:</i> {{ $obs }}</div>
+                                                    <div id="doc-obs-{{ $docActual['id'] }}" style="font-size:10px; color:#666; margin-top:2px;"><i>Motivo:</i> {{ $obs }}</div>
                                                 @endif
                                             @else
                                                 <span style="color: #666;">Pendiente de revisión</span>
@@ -422,14 +445,16 @@
                             </td>
                             <td width="30%">
                                 @if($docActual)
-                                    <a href="{{ route('documentos.serve', $docActual['id']) }}" target="_blank" class="simple-link">Ver {{ $comp->nombre }}</a>
+                                    <a href="{{ route('documentos.serve', ['path' => $docActual['path']]) }}" target="_blank" class="simple-link">Ver {{ $comp->nombre }}</a>
                                     
-                                    @if($esProfesor && ($docActual['estado'] ?? 0) == 0)
-                                        <div style="margin-top:5px;display:flex;gap:5px;">
-                                            <button type="button" onclick="actualizarDoc({{ $docActual['id'] ?? 0 }}, 1)" class="cm-btn cm-btn-success cm-btn-sm" style="padding:2px 6px;">Aceptar</button>
-                                            <button type="button" onclick="abrirModalRechazo({{ $docActual['id'] ?? 0 }})" class="cm-btn cm-btn-danger cm-btn-sm" style="padding:2px 6px;">Rechazar</button>
-                                        </div>
-                                    @endif
+                                    <div id="doc-actions-{{ $docActual['id'] }}">
+                                        @if($esProfesor && ($docActual['estado'] ?? 0) == 0)
+                                            <div style="margin-top:5px;display:flex;gap:5px;">
+                                                <button type="button" onclick="actualizarDoc({{ $docActual['id'] ?? 0 }}, 1)" class="cm-btn cm-btn-success cm-btn-sm" style="padding:2px 6px;">Aceptar</button>
+                                                <button type="button" onclick="abrirModalRechazo({{ $docActual['id'] ?? 0 }})" class="cm-btn cm-btn-danger cm-btn-sm" style="padding:2px 6px;">Rechazar</button>
+                                            </div>
+                                        @endif
+                                    </div>
                                 @else
                                     <span style="color:#999;font-size:10px;">Sin documento</span>
                                 @endif
@@ -445,7 +470,6 @@
                     </div>
                 @endif
             </fieldset>
-            @endif
 
 
 
@@ -573,8 +597,22 @@ function actualizarDoc(id, estado, observacion = '') {
         headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
         body: JSON.stringify({ estado, observacion })
     }).then(r => r.json()).then(data => {
-        if (data.success) location.reload();
-        else alert(data.message);
+        if (data.success) {
+            var statusDiv = document.getElementById('doc-status-' + id);
+            var actionsDiv = document.getElementById('doc-actions-' + id);
+            if (statusDiv) {
+                if (estado == 1) {
+                    statusDiv.innerHTML = '<span style="color:#28a745;font-weight:bold;">\u2713 Aceptado</span>';
+                    showNotifyToast('success', 'Documento aceptado correctamente.');
+                } else if (estado == 2) {
+                    statusDiv.innerHTML = '<span style="color:#dc3545;font-weight:bold;">\u2717 Rechazado</span><div style="font-size:10px;color:#666;margin-top:2px;"><i>Motivo:</i> ' + observacion.replace(/</g, '&lt;') + '</div>';
+                    showNotifyToast('info', 'Documento rechazado.');
+                }
+            }
+            if (actionsDiv) actionsDiv.innerHTML = '';
+        } else {
+            alert(data.message);
+        }
     });
 }
 
@@ -805,9 +843,43 @@ function agregarInvolucradoAlProyecto(proyectoId) {
         method: 'POST',
         headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json'},
         body: JSON.stringify({ nombre, apellido, cedula, roles })
-    }).then(r => r.json()).then(() => {
-        location.reload();
-    }).catch(() => {
+    }).then(r => r.json()).then(data => {
+        var list = document.getElementById('involucrados-list');
+        var emptyDiv = document.getElementById('inv-empty');
+        var tbody = document.getElementById('involucrados-tbody');
+
+        if (!tbody) {
+            if (emptyDiv) emptyDiv.remove();
+            var table = document.createElement('table');
+            table.width = '100%';
+            table.border = '0';
+            table.cellPadding = '0';
+            table.cellSpacing = '0';
+            table.style.cssText = 'font-size:12px;margin-bottom:10px;border-collapse:collapse;';
+            table.innerHTML = '<thead><tr style="background:#f0f0f0;font-weight:bold;"><th style="padding:5px 8px;text-align:left;">C\u00e9dula</th><th style="padding:5px 8px;text-align:left;">Nombre</th><th style="padding:5px 8px;text-align:left;">Roles</th><th style="padding:5px 8px;text-align:center;">Acci\u00f3n</th></tr></thead><tbody id="involucrados-tbody"></tbody>';
+            list.insertBefore(table, list.firstChild);
+            tbody = document.getElementById('involucrados-tbody');
+        } else if (emptyDiv) {
+            emptyDiv.remove();
+        }
+
+        var rolesHtml = '';
+        data.roles.forEach(function(rol) {
+            rolesHtml += '<span id="rol-badge-' + data.id + '-' + rol.id + '" style="background:#8b0000;color:#fff;padding:1px 6px;font-size:10px;white-space:nowrap;">' + rol.nombre + '<button type="button" onclick="quitarRol(' + proyectoId + ', ' + data.pivot_id + ', ' + rol.id + ', ' + data.id + ')" style="background:none;border:none;color:#ffcccc;cursor:pointer;font-size:12px;padding:0 0 0 3px;line-height:1;">\u00d7</button></span>';
+        });
+
+        var nameSafe = (data.nombre + ' ' + data.apellido).replace(/'/g, "\\'");
+        var tr = document.createElement('tr');
+        tr.id = 'inv-row-' + data.id;
+        tr.style.borderBottom = '1px solid #ddd';
+        tr.innerHTML = '<td style="padding:5px 8px;font-weight:bold;">' + data.cedula + '</td><td style="padding:5px 8px;">' + data.nombre + ' ' + data.apellido + '</td><td id="inv-roles-' + data.id + '" style="padding:5px 8px;"><div class="inv-roles" style="display:flex;flex-wrap:wrap;gap:3px;">' + rolesHtml + '</div></td><td style="padding:5px 8px;text-align:center;"><button type="button" onclick="abrirRolesModal(' + proyectoId + ', ' + data.id + ', \'' + nameSafe + '\')" style="background:#8b0000;color:#fff;border:none;border-radius:3px;padding:3px 10px;font-size:11px;cursor:pointer;">+ Roles</button> <button type="button" onclick="quitarInvolucrado(' + proyectoId + ', ' + data.id + ')" style="background:#dc3545;color:#fff;border:none;border-radius:3px;padding:3px 10px;font-size:11px;cursor:pointer;">Quitar</button></td>';
+        tbody.appendChild(tr);
+
+        cerrarModalInvolucrado();
+        showNotifyToast('success', 'Involucrado agregado correctamente.');
+        btn.disabled = false;
+        btn.textContent = 'Agregar';
+    }).catch(function() {
         showNotifyToast('error', 'Error al agregar el involucrado');
         btn.disabled = false;
         btn.textContent = 'Agregar';

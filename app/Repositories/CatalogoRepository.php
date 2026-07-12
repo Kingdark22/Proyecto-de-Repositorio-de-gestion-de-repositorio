@@ -9,7 +9,6 @@ use App\Models\LineaInvestigacion;
 use App\Models\MetodologiaInvestigacion;
 use App\Models\ObjetivoInvestigacion;
 use App\Models\TipoInvestigacion;
-use App\Models\TipoPublicacion;
 use App\Helpers\DualDatabase;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -27,7 +26,6 @@ class CatalogoRepository
         return [
             'lineas' => Cache::remember('gestion_cat_lineas', $ttl, fn() => $this->lineasActivas()),
             'metodologias' => Cache::remember('gestion_cat_metodologias', $ttl, fn() => $this->metodologiasActivas()),
-            'tipos_publicacion' => Cache::remember('gestion_cat_tipos_publicacion', $ttl, fn() => $this->tiposPublicacionActivos()),
             'tipos_investigacion' => Cache::remember('gestion_cat_tipos_investigacion', $ttl, fn() => $this->tiposInvestigacionActivos()),
             'objetivos_investigacion' => Cache::remember('gestion_cat_objetivos_investigacion', $ttl, fn() => $this->objetivosInvestigacionActivos()),
             'lapsos' => Cache::remember('gestion_cat_lapsos', $ttl, fn() => $this->lapsosActivos()),
@@ -40,7 +38,6 @@ class CatalogoRepository
         $keys = [
             'gestion_cat_lineas',
             'gestion_cat_metodologias',
-            'gestion_cat_tipos_publicacion',
             'gestion_cat_tipos_investigacion',
             'gestion_cat_objetivos_investigacion',
             'gestion_cat_lapsos',
@@ -65,11 +62,6 @@ class CatalogoRepository
     public function metodologiasActivas(): Collection
     {
         return MetodologiaInvestigacion::where('estado_logico', true)->get();
-    }
-
-    public function tiposPublicacionActivos(): Collection
-    {
-        return TipoPublicacion::where('estado_logico', true)->get();
     }
 
     public function tiposInvestigacionActivos(): Collection
@@ -301,9 +293,6 @@ class CatalogoRepository
         }
         if (($datos['metodologias'] ?? collect())->isEmpty()) {
             $faltantes[] = 'metodologías';
-        }
-        if (($datos['tipos_publicacion'] ?? collect())->isEmpty()) {
-            $faltantes[] = 'tipos de publicación';
         }
         if (($datos['tipos_investigacion'] ?? collect())->isEmpty()) {
             $faltantes[] = 'tipos de investigación';

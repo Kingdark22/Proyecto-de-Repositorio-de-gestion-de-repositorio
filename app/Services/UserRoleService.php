@@ -93,6 +93,7 @@ class UserRoleService
         $roles = [];
 
         try {
+            // 1. Rol desde usu_cod_rol (tabla usuario + rol)
             $query = DB::connection($conn)
                 ->table('usuario')
                 ->whereRaw('TRIM(usu_cedula) = ?', [$cedula]);
@@ -107,75 +108,83 @@ class UserRoleService
                 $nombre = trim((string) ($userExt->usu_nombre ?? ''));
                 if ($nombre === 'PROGRAMADOR' || $nombre === 'admin') {
                     $roles['administrador'] = $this->label('administrador');
+                    goto after_detection;
                 }
 
-                // usu_cod_rol puede no existir en la BD de simulación (simulacion_sogac no tiene esa columna)
                 $codRol = $userExt->usu_cod_rol ?? null;
                 $mapped = config('roles.usu_cod_rol_map', []);
                 if ($codRol !== null) {
                     if (isset($mapped[(int) $codRol])) {
                         $slug = $mapped[(int) $codRol];
                         $roles[$slug] = $this->label($slug);
-                    } else {
-                        // Intentar mapear dinámicamente según la tabla rol
-                        try {
-                            $rolRow = DB::connection($conn)
-                                ->table('rol')
-                                ->where('rol_codigo', $codRol)
-                                ->first();
-                            if ($rolRow) {
-                                $rolNombre = strtolower(trim($rolRow->rol_nombre));
-                                if (str_contains($rolNombre, 'coordinador')) {
-                                    $roles['coordinador'] = $this->label('coordinador');
-                                } else if (str_contains($rolNombre, 'docente') || str_contains($rolNombre, 'profesor')) {
-                                    $roles['profesor proyecto'] = $this->label('profesor proyecto');
-                                } else if (str_contains($rolNombre, 'administrador') || str_contains($rolNombre, 'admin')) {
-                                    $roles['administrador'] = $this->label('administrador');
-                                }
+                        goto after_detection;
+                    }
+
+                    try {
+                        $rolRow = DB::connection($conn)
+                            ->table('rol')
+                            ->where('rol_codigo', $codRol)
+                            ->first();
+                        if ($rolRow) {
+                            $rolNombre = strtolower(trim($rolRow->rol_nombre));
+                            if (str_contains($rolNombre, 'coordinador')) {
+                                $roles['coordinador'] = $this->label('coordinador');
+                                goto after_detection;
+                            } else if (str_contains($rolNombre, 'docente') || str_contains($rolNombre, 'profesor')) {
+                                $roles['profesor proyecto'] = $this->label('profesor proyecto');
+                                goto after_detection;
+                            } else if (str_contains($rolNombre, 'administrador') || str_contains($rolNombre, 'admin')) {
+                                $roles['administrador'] = $this->label('administrador');
+                                goto after_detection;
+                            } else if (!str_contains($rolNombre, 'estudiante')) {
+                                $roles['coordinador'] = $this->label('coordinador');
+                                goto after_detection;
                             }
-                        } catch (\Throwable $e) {
-                            // Ignorar si la tabla rol no está disponible
                         }
+                    } catch (\Throwable $e) {
+                        // Ignorar si la tabla rol no está disponible
                     }
                 }
             }
 
-            if (DB::connection($conn)->table('estudiante')->whereRaw('TRIM(est_cedula) = ?', [$cedula])->exists()) {
-                $roles['estudiante'] = $this->label('estudiante');
-            }
-
+            // 2. Profesor proyecto (asociado a la unidad curricular de proyecto)
             try {
                 if (app(IntranetProfessorService::class)->esProfesorProyectoVigente($cedula)) {
                     $roles['profesor proyecto'] = $this->label('profesor proyecto');
-
-                    // Auto-habilitar al profesor en el módulo si aplica
-                    try {
-                        app(IntranetProfessorService::class)->autoHabilitarProfesorEnModulo($cedula);
-                    } catch (\Throwable $e) {
-                        \Illuminate\Support\Facades\Log::warning('Auto-habilitar profesor falló: ' . $e->getMessage());
-                    }
+                    app(IntranetProfessorService::class)->autoHabilitarProfesorEnModulo($cedula);
+                    goto after_detection;
                 }
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('Error detectando rol profesor proyecto: ' . $e->getMessage());
             }
 
-            // Detectar docentes académicos generales con asignación activa en el lapso vigente
-            if (!isset($roles['profesor proyecto'])) {
-                try {
-                    $esDocente = app(IntranetProfessorService::class)->esDocenteVigente($cedula);
-
-                    if ($esDocente) {
-                        $roles['docente'] = $this->label('docente');
-                    }
-                } catch (\Throwable $e) {
-                    \App\Helpers\DbHelper::handleQueryError($e);
-                    \Illuminate\Support\Facades\Log::warning('Error detectando docente académico: ' . $e->getMessage());
+            // 3. Docente académico general (no asociado a proyecto)
+            try {
+                if (app(IntranetProfessorService::class)->esDocenteVigente($cedula)) {
+                    $roles['docente'] = $this->label('docente');
+                    goto after_detection;
                 }
+            } catch (\Throwable $e) {
+                \App\Helpers\DbHelper::handleQueryError($e);
+                \Illuminate\Support\Facades\Log::warning('Error detectando docente académico: ' . $e->getMessage());
             }
+
+            // 4. Último fallback: estudiante
+            try {
+                if (DB::connection($conn)->table('estudiante')->whereRaw('TRIM(est_cedula) = ?', [$cedula])->exists()) {
+                    $roles['estudiante'] = $this->label('estudiante');
+                }
+            } catch (\Throwable $e) {
+                \App\Helpers\DbHelper::handleQueryError($e);
+                \Illuminate\Support\Facades\Log::warning('Error detectando estudiante: ' . $e->getMessage());
+            }
+
         } catch (\Throwable $e) {
             \App\Helpers\DbHelper::handleQueryError($e);
             \Illuminate\Support\Facades\Log::warning('Error detectando roles desde intranet: ' . $e->getMessage());
         }
+
+        after_detection:
 
         // Roles locales del sistema (tablas usuarios_externos y rol_externo)
         $localConn = (string) config('dual_database.repositorio_connection', 'pgsql');
@@ -293,11 +302,10 @@ class UserRoleService
 
             $this->clearCache();
 
-            // Exportar contexto y rol al seleccionar
+            // Exportar contexto a simulación (sin sobreescribir roles individuales)
             $mirror = app(IntranetSimulationMirrorService::class);
             if ($mirror->shouldMirrorFromIntranet()) {
                 $mirror->mirrorUserContext($user->usu_cedula);
-                $mirror->updateSimulationUserRole($user->usu_cedula, $role);
             }
 
             return true;
@@ -316,11 +324,10 @@ class UserRoleService
         $this->clearCache();
         $this->clearPersistentCache($user->usu_cedula);
 
-        // Exportar contexto y rol al seleccionar
+        // Exportar contexto a simulación (sin sobreescribir roles individuales)
         $mirror = app(IntranetSimulationMirrorService::class);
         if ($mirror->shouldMirrorFromIntranet()) {
             $mirror->mirrorUserContext($user->usu_cedula);
-            $mirror->updateSimulationUserRole($user->usu_cedula, $role);
         }
 
         return true;

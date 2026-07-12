@@ -653,10 +653,6 @@
                             <td style="font-weight:bold;color:#555;padding:2px 4px;">Objetivo de investigación:</td>
                             <td style="padding:2px 4px;">{{ $proyectoDetalle->objetivo_investigacion->nombre ?? 'N/A' }}</td>
                         </tr>
-                        <tr>
-                            <td style="font-weight:bold;color:#555;padding:2px 4px;">Tipo de publicación:</td>
-                            <td style="padding:2px 4px;">{{ $proyectoDetalle->tipo_publicacion->nombre ?? 'N/A' }}</td>
-                        </tr>
                     </table>
                 </fieldset>
 

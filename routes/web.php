@@ -5,7 +5,6 @@ use App\Http\Controllers\MagicLoginController;
 use App\Http\Controllers\MetodologiaInvestigacionController;
 use App\Http\Controllers\ObjetivoInvestigacionController;
 use App\Http\Controllers\TipoInvestigacionController;
-use App\Http\Controllers\TipoPublicacionController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -50,7 +49,6 @@ Route::middleware(['auth', 'active.role'])->group(function () {
         Route::get('/tipos-investigacion', [TipoInvestigacionController::class, 'index'])->name('tipos-investigacion');
         Route::get('/objetivos-investigacion', [ObjetivoInvestigacionController::class, 'index'])->name('objetivos-investigacion');
         Route::get('/metodologia-investigacion', [MetodologiaInvestigacionController::class, 'index'])->name('metodologia-investigacion');
-        Route::get('/tipos-publicacion', [TipoPublicacionController::class, 'index'])->name('tipos-publicacion');
     });
 
     Route::redirect('/lapsos-academicos', '/dashboard')->name('lapsos-academicos');
@@ -73,7 +71,6 @@ Route::middleware(['auth', 'active.role'])->group(function () {
         Route::get('/comunidades/check-email', [\App\Http\Controllers\ComunidadController::class, 'checkEmail'])->name('comunidades.check-email');
         Route::get('/comunidades/check-rif', [\App\Http\Controllers\ComunidadController::class, 'checkRif'])->name('comunidades.check-rif');
         Route::get('/componentes/check-nombre', [\App\Http\Controllers\ComponenteController::class, 'checkNombre'])->name('componentes.check-nombre');
-        Route::get('/tipos-publicacion/check-nombre', [\App\Http\Controllers\TipoPublicacionController::class, 'checkNombre'])->name('tipos-publicacion.check-nombre');
         Route::get('/tipos-investigacion/check-nombre', [\App\Http\Controllers\TipoInvestigacionController::class, 'checkNombre'])->name('tipos-investigacion.check-nombre');
         Route::get('/objetivos-investigacion/check-nombre', [\App\Http\Controllers\ObjetivoInvestigacionController::class, 'checkNombre'])->name('objetivos-investigacion.check-nombre');
         Route::get('/metodologia-investigacion/check-nombre', [\App\Http\Controllers\MetodologiaInvestigacionController::class, 'checkNombre'])->name('metodologia-investigacion.check-nombre');
@@ -115,7 +112,22 @@ Route::middleware(['auth', 'active.role'])->group(function () {
         ->middleware('auth')
         ->middleware('role:administrador,coordinador');
 
+    // API para cascading del modal de exportación
+    Route::get('/proyectos/gestion/export-programas/{lapso}', [\App\Http\Controllers\ProyectoController::class, 'exportProgramas'])
+        ->name('proyectos.gestion.export-programs')
+        ->middleware('auth')
+        ->middleware('role:administrador,coordinador');
+    Route::get('/proyectos/gestion/export-trayectos/{lapso}', [\App\Http\Controllers\ProyectoController::class, 'exportTrayectos'])
+        ->name('proyectos.gestion.export-trayectos')
+        ->middleware('auth')
+        ->middleware('role:administrador,coordinador');
+    Route::get('/proyectos/gestion/export-secciones/{lapso}', [\App\Http\Controllers\ProyectoController::class, 'exportSecciones'])
+        ->name('proyectos.gestion.export-secciones')
+        ->middleware('auth')
+        ->middleware('role:administrador,coordinador');
+
     Route::middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador,docente')->group(function () {
+        Route::get('/proyectos/gestion/buscar-ajax', [\App\Http\Controllers\ProyectoController::class, 'buscarProyectosAjax'])->name('proyectos.gestion.buscar-ajax');
         Route::get('/proyectos/gestion/desde-grupo/{grpCodigo}', [\App\Http\Controllers\ProyectoController::class, 'registrarDesdeGrupo'])->name('proyectos.gestion.desde-grupo');
         // Involucrados AJAX
         Route::get('/proyectos/gestion/{id}/involucrados/buscar', [\App\Http\Controllers\ProyectoController::class, 'buscarInvolucrados'])->name('proyectos.gestion.involucrados.buscar');
@@ -157,18 +169,6 @@ Route::middleware(['auth', 'active.role'])->group(function () {
             // Vinculación múltiple: seleccionar componentes y vincular a PNF + Trayectos
             Route::get('/configuracion/componentes/vinculacion', 'vinculacionGlobal')->name('componentes.vinculacion');
             Route::post('/configuracion/componentes/vinculacion/guardar', 'vinculacionStore')->name('componentes.vinculacion.guardar');
-        });
-    });
-
-    // === Rutas MVC Tipo Publicación ===
-    Route::controller(TipoPublicacionController::class)->group(function () {
-        Route::post('/tipos-publicacion', 'store')->name('tipos-publicacion.store')->middleware('role:administrador,coordinador,gestionador,profesor proyecto,estudiante,docente');
-        Route::middleware('role:administrador,coordinador,gestionador')->group(function () {
-            Route::get('/tipos-publicacion/crear', 'create')->name('tipos-publicacion.create');
-            Route::get('/tipos-publicacion/{id}/editar', 'edit')->name('tipos-publicacion.edit');
-            Route::put('/tipos-publicacion/{id}', 'update')->name('tipos-publicacion.update');
-            Route::get('/tipos-publicacion/{id}/toggle', 'toggleStatus')->name('tipos-publicacion.toggle');
-            Route::delete('/tipos-publicacion/{id}', 'destroy')->name('tipos-publicacion.destroy');
         });
     });
 

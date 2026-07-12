@@ -20,7 +20,7 @@ return [
     | Clave primaria por tabla (columna física en ambas BDs).
     */
     'primary_keys' => [
-        'usuario' => 'usu_cedula',
+        'usuario' => 'usu_nombre',
         'persona' => 'per_cedula',
         'estudiante' => 'est_cedula',
         'lapso_academico' => 'lap_codigo',

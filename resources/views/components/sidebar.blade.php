@@ -63,7 +63,7 @@ $notificacionesCount = count($notificacionesList);
                 <div class="legacy-submenu">
                     <a href="{{ route('proyectos.buscar') }}"
                         class="{{ request()->routeIs('proyectos.buscar') ? 'active-sub' : '' }}">Explorar proyectos</a>
-                    @if ($nav['canRegisterProject'] || $nav['canValidateProjects'])
+                    @if ($nav['canRegisterProject'] || $nav['canValidateProjects'] || ($nav['isCoordinator'] ?? false))
                     <a href="{{ route('proyectos.gestion') }}"
                         class="{{ request()->routeIs('proyectos.gestion', 'proyectos.crear', 'validaciones.index') ? 'active-sub' : '' }}">Depósito de proyectos</a>
                     @endif

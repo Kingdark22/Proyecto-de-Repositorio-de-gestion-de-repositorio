@@ -24,7 +24,6 @@ class VinculacionReporteController extends Controller
             'proyecto.linea_investigacion',
             'proyecto.metodologia',
             'proyecto.tipo_investigacion',
-            'proyecto.tipo_publicacion',
             'proyecto.objetivo_investigacion',
             'proyecto.comunidad',
             'comunidad',

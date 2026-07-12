@@ -32,5 +32,29 @@ class GrupoProyectoModulo extends RepositorioModel
         'updated_at' => 'datetime',
     ];
 
-    // Puedes añadir relaciones o scopes aquí si es necesario más adelante
+        public static function porIdentificador(string $identificador): ?self
+    {
+        return \Illuminate\Support\Facades\Cache::remember("grp:idf:{$identificador}", 300, function () use ($identificador) {
+            return static::where('grp_identificador', $identificador)->first();
+        });
+    }
+
+    public static function forgetIdentificador(string $identificador): void
+    {
+        \Illuminate\Support\Facades\Cache::forget("grp:idf:{$identificador}");
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(function ($grupo) {
+            if ($grupo->grp_identificador) {
+                static::forgetIdentificador($grupo->grp_identificador);
+            }
+        });
+        static::deleted(function ($grupo) {
+            if ($grupo->grp_identificador) {
+                static::forgetIdentificador($grupo->grp_identificador);
+            }
+        });
+    }
 }

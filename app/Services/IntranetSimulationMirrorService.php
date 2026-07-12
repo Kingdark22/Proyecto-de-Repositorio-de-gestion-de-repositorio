@@ -44,8 +44,25 @@ class IntranetSimulationMirrorService
 
     public function shouldMirrorFromIntranet(): bool
     {
-        return $this->enabled()
-            && DbHelper::intranetAvailable();
+        if (! $this->enabled()) {
+            return false;
+        }
+
+        if (DbHelper::intranetAvailable()) {
+            return true;
+        }
+
+        // Fallback: si el socket check falló pero PDO funciona, igual intentamos el mirror
+        if (! config('database.connections.intranet.enabled', true)) {
+            return false;
+        }
+        try {
+            $pdo = DB::connection('intranet')->getPdo();
+            $pdo->query('SELECT 1')->fetch();
+            return true;
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     /**
@@ -230,11 +247,15 @@ class IntranetSimulationMirrorService
         //       y mirrorDocenteAssignments, en el orden correcto (seccion después de malla/lapso).
 
         // 5-6. Estudiante (needs persona, programa) y Usuario (needs persona)
-        $usuario = User::on($intranet)
+        $usuarios = User::on($intranet)
             ->where('usu_cedula', $cedula)
-            ->first();
-        if ($usuario) {
-            $total += $this->mirrorRows('usuario', [$usuario]);
+            ->get();
+        if ($usuarios->isNotEmpty()) {
+            $sim = $this->simulationConnection();
+            DB::connection($sim)->table('usuario')
+                ->whereRaw('TRIM(usu_cedula) = ?', [trim($cedula)])
+                ->delete();
+            $total += $this->mirrorRows('usuario', $usuarios);
         }
 
         $estudiante = Estudiante::on($intranet)
@@ -520,8 +541,6 @@ class IntranetSimulationMirrorService
      * o columnas que existen en intranet pero causan conflictos en simulación.
      */
     protected const EXCLUDED_COLUMNS = [
-        // usuario: simulacion tiene usu_codigo como serial PK, intranet lo incluye como columna regular
-        'usuario' => ['usu_codigo'],
     ];
 
     /**

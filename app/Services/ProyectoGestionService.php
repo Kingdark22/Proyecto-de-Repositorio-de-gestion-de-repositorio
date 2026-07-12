@@ -252,7 +252,6 @@ class ProyectoGestionService
             'resumen' => $item->resumen,
             'linea_investigacion_id' => (string) ($item->linea_investigacion_id ?? ''),
             'metodologia_id' => (string) ($item->metodologia_id ?? ''),
-            'tipo_publicacion_id' => (string) ($item->tipo_publicacion_id ?? ''),
             'tipo_investigacion_id' => (string) ($item->tipo_investigacion_id ?? ''),
             'objetivo_investigacion_id' => (string) ($item->objetivo_investigacion_id ?? ''),
             'comunidad_id' => (string) $item->comunidad_id,
@@ -282,7 +281,6 @@ class ProyectoGestionService
             'resumen' => $datos['resumen'] ?? '',
             'linea_investigacion_id' => $datos['linea_investigacion_id'] ?? null,
             'metodologia_id' => $datos['metodologia_id'] ?? null,
-            'tipo_publicacion_id' => $datos['tipo_publicacion_id'] ?? null,
             'tipo_investigacion_id' => $datos['tipo_investigacion_id'] ?? null,
             'objetivo_investigacion_id' => $datos['objetivo_investigacion_id'] ?? null,
             'comunidad_id' => $datos['comunidad_id'],
@@ -494,7 +492,7 @@ class ProyectoGestionService
         $grupo = null;
         if (!str_starts_with($clave, 'EQGRP:') && !str_starts_with($clave, 'EQSEC:')) {
             $grupo = $this->grupoRepo->find(
-                optional(GrupoProyectoModulo::where('grp_identificador', $clave)->first())->grp_codigo ?? 0
+                optional(GrupoProyectoModulo::porIdentificador($clave))->grp_codigo ?? 0
             );
         }
 
@@ -583,7 +581,6 @@ class ProyectoGestionService
 
             'linea_investigacion_id' => ['nullable', Rule::exists('\App\Models\LineaInvestigacion', (new \App\Models\LineaInvestigacion())->getKeyName())],
             'metodologia_id' => ['nullable', Rule::exists('\App\Models\MetodologiaInvestigacion', (new \App\Models\MetodologiaInvestigacion())->getKeyName())],
-            'tipo_publicacion_id' => ['nullable', Rule::exists('\App\Models\TipoPublicacion', (new \App\Models\TipoPublicacion())->getKeyName())],
             'tipo_investigacion_id' => ['nullable', Rule::exists('\App\Models\TipoInvestigacion', (new \App\Models\TipoInvestigacion())->getKeyName())],
             'objetivo_investigacion_id' => ['nullable', Rule::exists('\App\Models\ObjetivoInvestigacion', (new \App\Models\ObjetivoInvestigacion())->getKeyName())],
             'comunidad_id' => ['required', Rule::exists('\App\Models\Comunidad', (new \App\Models\Comunidad())->getKeyName())],

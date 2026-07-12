@@ -18,7 +18,6 @@ class Comunidad extends RepositorioModel
         'correo',
         'numero_telefono',
         'direccion_id',
-        'anio',
     ];
 
     public function direccion()
