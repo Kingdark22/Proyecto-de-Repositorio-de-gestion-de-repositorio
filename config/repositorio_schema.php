@@ -144,16 +144,6 @@ return [
         ],
     ],
 
-    'departamento' => [
-        'primary_key' => 'dep_codigo',
-        'columns' => [
-            'id'               => 'dep_codigo',
-            'nombre'           => 'dep_nombre',
-            'cargo'            => 'dep_cargo',
-            'uex_codigo'       => 'dep_uex_codigo',
-        ],
-    ],
-
     // ---------------------------------------------------------------
     // Módulo Roles del Sistema (Tablas del usuario)
     // ---------------------------------------------------------------
