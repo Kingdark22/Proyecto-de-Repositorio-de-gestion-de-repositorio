@@ -151,7 +151,7 @@
 
                     <div style="margin-bottom:12px;display:flex;gap:10px;align-items:center;">
                         <div style="position:relative;flex:1;min-width:200px;">
-                            <input wire:model.live.debounce.50ms="search" type="text" placeholder="Buscar proyecto por titulo, resumen, linea, comunidad..." id="vincSearchInput" autocomplete="off" oninput="buscarVinc()" style="width:100%;padding:8px 10px;border:2px solid #8b0000;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                            <input wire:model.live.debounce.50ms="search" type="text" placeholder="Buscar proyecto por titulo..." id="vincSearchInput" autocomplete="off" oninput="buscarVinc()" style="width:100%;padding:8px 10px;border:2px solid #8b0000;border-radius:6px;font-size:14px;box-sizing:border-box;">
                             <div id="vincSearchAutocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;max-height:220px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
                         </div>
                         <span style="font-size:13px;color:#555;">
@@ -172,71 +172,40 @@
                     </div>
 
                     @if($proyectos && $proyectos->isNotEmpty())
-                        <div style="max-height:55vh;overflow-y:auto;">
-                            @foreach($proyectos as $proy)
-                                @php
-                                    $rowNum = ($proyectos->currentPage() - 1) * $proyectos->perPage() + $loop->iteration;
-                                    $isSelected = in_array($proy->id, $selectedProjects);
-                                @endphp
-                                <div wire:click="toggleProject({{ $proy->id }})" style="border:{{ $isSelected ? '2px solid #8b0000' : '1px solid #ccc' }};border-radius:6px;padding:10px 12px;margin-bottom:8px;cursor:pointer;background:{{ $isSelected ? '#fce4e4' : '#fff' }};{{ $isSelected ? 'box-shadow:0 0 0 1px #8b0000;' : '' }}">
-                                    {{-- Header --}}
-                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                                        <input type="checkbox" wire:model.live="selectedProjects" value="{{ $proy->id }}" class="sel-checkbox" onclick="event.stopPropagation()" style="width:16px;height:16px;">
-                                        <span style="background:#8bb2b7;color:#000;border-radius:3px;padding:1px 6px;font-size:10px;font-weight:bold;">{{ $rowNum }}</span>
-                                        <div style="flex:1;font-weight:bold;font-size:13px;">{{ $proy->titulo ?? 'N/A' }}</div>
-                                        <button type="button" wire:click.stop="verDetalle({{ $proy->id }})" class="cm-btn cm-btn-secondary cm-btn-sm" style="font-size:10px;padding:3px 8px;">Ver detalle</button>
-                                    </div>
-
-                                    {{-- Info del proyecto en 2 columnas --}}
-                                    <table style="width:100%;font-size:11px;border-collapse:collapse;">
-                                        <tr>
-                                            <td style="width:50%;vertical-align:top;padding:2px 8px 2px 24px;">
-                                                <b>Resumen:</b> {{ \Illuminate\Support\Str::limit(strip_tags($proy->resumen ?? ''), 200) }}
-                                            </td>
-                                            <td style="width:50%;vertical-align:top;padding:2px 8px 2px 4px;">
-                                                @if($proy->equipo_ref)
-                                                    <b>Equipo:</b> {{ $proy->equipo_resumen ?? $proy->equipo_ref }}<br>
-                                                @endif
-                                                @if($proy->creador_cedula)
-                                                    <b>Creador C.I.:</b> {{ $proy->creador_cedula }}<br>
-                                                @endif
-                                                @if($proy->pry_cantidad_beneficiados)
-                                                    <b>Beneficiarios:</b> {{ $proy->pry_cantidad_beneficiados }}
-                                                @endif
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td style="vertical-align:top;padding:2px 8px 2px 24px;">
-                                                <b>Linea:</b> {{ $proy->linea_investigacion->nombre_investigacion ?? '-' }}<br>
-                                                <b>Metodologia:</b> {{ $proy->metodologia->nombre ?? '-' }}
-                                            </td>
-                                            <td style="vertical-align:top;padding:2px 8px 2px 4px;">
-                                                <b>Tipo:</b> {{ $proy->tipo_investigacion->nombre ?? '-' }}<br>
-                                                <b>Objetivo:</b> {{ $proy->objetivo_investigacion->nombre ?? '-' }}
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td style="vertical-align:top;padding:2px 8px 2px 24px;">
-                                                <b>Comunidad:</b> {{ $proy->comunidad->nombre ?? '-' }}
-                                                @if($proy->comunidad?->rif) ({{ $proy->comunidad->rif }})@endif
-                                                @if($proy->comunidad?->direccion)
-                                                    <br><span style="font-size:10px;color:#555;">
-                                                        {{ $proy->comunidad->direccion->dir_calle ?? '' }}
-                                                        {{ $proy->comunidad->direccion->municipio?->mun_nombre ? ', ' . $proy->comunidad->direccion->municipio->mun_nombre : '' }}
-                                                        {{ $proy->comunidad->direccion->municipio?->estado?->est_nombre ? ', ' . $proy->comunidad->direccion->municipio->estado->est_nombre : '' }}
-                                                    </span>
-                                                @endif
-                                            </td>
-                                            <td style="vertical-align:top;padding:2px 8px 2px 4px;">
-                                                @if($proy->documentos->isNotEmpty())
-                                                    <b>Documentos:</b> {{ $proy->documentos->count() }} archivo(s)
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    </table>
-                                </div>
-                            @endforeach
-                        </div>
+                        <table width="100%" border="1" cellpadding="6" cellspacing="0"
+                            style="border-collapse:collapse;border-color:#ccc;font-size:12px;">
+                            <thead>
+                                <tr style="background:#8bb2b7;color:#000;font-weight:bold;">
+                                    <th width="4%" style="padding:8px 4px;text-align:center;">&nbsp;</th>
+                                    <th width="5%" style="padding:8px 4px;">N&deg;</th>
+                                    <th width="40%" style="padding:8px 4px;">Proyecto</th>
+                                    <th width="25%" style="padding:8px 4px;">Comunidad</th>
+                                    <th width="16%" style="padding:8px 4px;">Detalle</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($proyectos as $proy)
+                                    @php
+                                        $rowNum = ($proyectos->currentPage() - 1) * $proyectos->perPage() + $loop->iteration;
+                                        $isSelected = in_array($proy->id, $selectedProjects);
+                                    @endphp
+                                    <tr style="background:{{ $isSelected ? '#fce4e4' : ($loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFF') }};{{ $isSelected ? 'outline:2px solid #8b0000;outline-offset:-2px;' : '' }}" valign="top" class="sel-row" wire:click="toggleProject({{ $proy->id }})">
+                                        <td align="center" style="padding:6px 4px;" onclick="event.stopPropagation()">
+                                            <input type="checkbox" wire:model.live="selectedProjects" value="{{ $proy->id }}" class="sel-checkbox">
+                                        </td>
+                                        <td align="center" style="padding:6px 4px;">{{ $rowNum }}</td>
+                                        <td style="font-weight:bold;padding:6px 4px;">
+                                            <div>{{ $proy->titulo ?? 'N/A' }}</div>
+                                            <div style="font-size:10px;color:#888;margin-top:1px;">{{ $proy->equipo_ref ?? '' }}</div>
+                                        </td>
+                                        <td style="padding:6px 4px;">{{ $proy->comunidad->nombre ?? '-' }}</td>
+                                        <td align="center" style="padding:6px 4px;">
+                                            <button type="button" wire:click.stop="verDetalle({{ $proy->id }})" class="cm-btn cm-btn-secondary cm-btn-sm" style="font-size:11px;">Ver</button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                         <div style="margin-top:10px;">{{ $proyectos->links() }}</div>
                     @else
                         <p style="color:#666;font-style:italic;padding:10px;">No hay proyectos aprobados.</p>

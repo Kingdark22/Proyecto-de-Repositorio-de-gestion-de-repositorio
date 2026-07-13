@@ -619,7 +619,7 @@ class VinculacionManager extends Component
             $proyectosPaginados = null;
 
             if ($this->mostrarWizard) {
-                $query = Proyecto::with('comunidad.direccion.municipio.estado', 'linea_investigacion', 'metodologia', 'tipo_investigacion', 'objetivo_investigacion', 'documentos.componente', 'vinculaciones.tituloVinculacion', 'vinculaciones.comunidad')
+                $query = Proyecto::with('comunidad', 'linea_investigacion', 'metodologia', 'tipo_investigacion', 'objetivo_investigacion', 'vinculaciones.tituloVinculacion', 'vinculaciones.comunidad')
                     ->where('estado_validacion', 'aprobado')
                     ->where('estado_logico', true);
 
