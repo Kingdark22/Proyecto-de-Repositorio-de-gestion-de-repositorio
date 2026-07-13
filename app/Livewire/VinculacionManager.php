@@ -37,20 +37,21 @@ class VinculacionManager extends Component
     public array $lapsosReporte = [];
     public array $titulosReporte = [];
 
-
-
-    // Título seleccionado
-    public string $tituloSeleccionado = '';
-    public string $nuevoTitulo = '';
-    public array $titulosDisponibles = [];
-
-    // Comunidad seleccionada
+    // Comunidad seleccionada (Paso 1)
     public string $comunidadId = '';
     public ?Comunidad $comunidadSeleccionada = null;
 
-    // Proyectos seleccionados
+    // Proyectos seleccionados (Paso 2)
     public array $selectedProjects = [];
     public bool $selectAll = false;
+
+    // Asignación de títulos por proyecto (Paso 3)
+    public array $proyectosTitulos = [];
+    public string $nuevoTituloProyecto = '';
+    public int $proyectoNuevoTitulo = 0;
+
+    // Títulos disponibles
+    public array $titulosDisponibles = [];
 
     // Modal comunidad
     public bool $mostrarModalComunidad = false;
@@ -116,18 +117,40 @@ class VinculacionManager extends Component
     public function siguientePaso(): void
     {
         if ($this->pasoActual === 1) {
-            if ($this->tituloSeleccionado === '') {
-                $this->safeDispatch('error', 'Debe seleccionar o crear un título de vinculación.');
-                return;
-            }
-            if ($this->tituloSeleccionado === 'nuevo' && trim($this->nuevoTitulo) === '') {
-                $this->safeDispatch('error', 'Escriba un nombre para el nuevo título.');
+            if ($this->comunidadId === '') {
+                $this->safeDispatch('error', 'Debe seleccionar o crear una comunidad.');
                 return;
             }
         }
         if ($this->pasoActual === 2) {
-            if ($this->comunidadId === '') {
-                $this->safeDispatch('error', 'Debe seleccionar o crear una comunidad.');
+            if (empty($this->selectedProjects)) {
+                $this->safeDispatch('error', 'Seleccione al menos un proyecto.');
+                return;
+            }
+            // Inicializar asignación de títulos para proyectos nuevos
+            foreach ($this->selectedProjects as $pid) {
+                if (!isset($this->proyectosTitulos[$pid])) {
+                    $this->proyectosTitulos[$pid] = '';
+                }
+            }
+            // Limpiar títulos de proyectos que ya no están seleccionados
+            foreach (array_keys($this->proyectosTitulos) as $pid) {
+                if (!in_array($pid, $this->selectedProjects)) {
+                    unset($this->proyectosTitulos[$pid]);
+                }
+            }
+        }
+        if ($this->pasoActual === 3) {
+            // Validar que todos los proyectos tengan título asignado
+            $sinTitulo = [];
+            foreach ($this->selectedProjects as $pid) {
+                $tid = $this->proyectosTitulos[$pid] ?? '';
+                if ($tid === '' || $tid === 'nuevo_' . $pid) {
+                    $sinTitulo[] = $pid;
+                }
+            }
+            if (!empty($sinTitulo)) {
+                $this->safeDispatch('error', 'Asigne un título a todos los proyectos seleccionados.');
                 return;
             }
         }
@@ -335,13 +358,6 @@ class VinculacionManager extends Component
 
     // ─── Título ───────────────────────────────────────────────
 
-    public function updatedTituloSeleccionado(): void
-    {
-        if ($this->tituloSeleccionado !== 'nuevo') {
-            $this->nuevoTitulo = '';
-        }
-    }
-
     public function updatedComunidadId(): void
     {
         if ($this->comunidadId !== '') {
@@ -418,55 +434,8 @@ class VinculacionManager extends Component
 
     public function guardarVinculacion(): void
     {
-        $rules = [
-            'selectedProjects' => 'required|array|min:1',
-            'tituloSeleccionado' => 'required|string',
-        ];
-        $messages = [
-            'selectedProjects.required' => 'Seleccione al menos un proyecto.',
-            'selectedProjects.min' => 'Seleccione al menos un proyecto.',
-            'tituloSeleccionado.required' => 'Seleccione o cree un título de vinculación.',
-        ];
-        $attributes = [
-            'selectedProjects' => 'proyectos seleccionados',
-            'tituloSeleccionado' => 'título de vinculación',
-        ];
-
-        if ($this->tituloSeleccionado === 'nuevo') {
-            $rules['nuevoTitulo'] = 'required|string|min:3|max:255';
-            $messages['nuevoTitulo.required'] = 'Escriba el nombre del nuevo título.';
-            $messages['nuevoTitulo.min'] = 'El título debe tener al menos 3 caracteres.';
-            $messages['nuevoTitulo.max'] = 'El título no puede exceder 255 caracteres.';
-            $attributes['nuevoTitulo'] = 'nuevo título';
-        }
-
-        $this->validate($rules, $messages, $attributes);
-
-        $tituloId = null;
-        $tituloTexto = '';
-
-        if ($this->tituloSeleccionado === 'nuevo') {
-            $tituloTexto = strtoupper(trim($this->nuevoTitulo));
-            // Búsqueda case-insensitive para evitar duplicados por capitalización
-            $existing = TituloVinculacion::whereRaw('UPPER(tiv_titulo) = ?', [$tituloTexto])
-                ->where('tiv_estado_logico', true)
-                ->first();
-            if ($existing) {
-                $tituloId = $existing->id;
-            } else {
-                $tv = TituloVinculacion::create(['tiv_titulo' => $tituloTexto]);
-                $tituloId = $tv->id;
-                // Recargar títulos disponibles para el wizard
-                $this->cargarTitulos();
-            }
-        } elseif ($this->tituloSeleccionado !== '') {
-            $tituloId = (int) $this->tituloSeleccionado;
-            $tv = TituloVinculacion::find($tituloId);
-            $tituloTexto = strtoupper($tv?->titulo ?? '');
-        }
-
-        if (!$tituloId) {
-            $this->safeDispatch('error', 'Seleccione o cree un título de vinculación.');
+        if (empty($this->selectedProjects)) {
+            $this->safeDispatch('error', 'Seleccione al menos un proyecto.');
             return;
         }
 
@@ -474,7 +443,40 @@ class VinculacionManager extends Component
 
         $creadas = 0;
         $actualizadas = 0;
+        $titulosUsados = [];
+
         foreach ($this->selectedProjects as $pid) {
+            $tituloValor = $this->proyectosTitulos[$pid] ?? '';
+
+            if ($tituloValor === '' || $tituloValor === 'nuevo_' . $pid) {
+                continue;
+            }
+
+            // Crear título nuevo si es necesario
+            $tituloId = null;
+            if (str_starts_with($tituloValor, 'nuevo_')) {
+                $nombreTitulo = strtoupper(trim($this->nuevoTituloProyecto));
+                if ($nombreTitulo === '') continue;
+
+                $existing = TituloVinculacion::whereRaw('UPPER(tiv_titulo) = ?', [$nombreTitulo])
+                    ->where('tiv_estado_logico', true)
+                    ->first();
+                if ($existing) {
+                    $tituloId = $existing->id;
+                } else {
+                    $tv = TituloVinculacion::create(['tiv_titulo' => $nombreTitulo]);
+                    $tituloId = $tv->id;
+                    $this->cargarTitulos();
+                }
+            } else {
+                $tituloId = (int) $tituloValor;
+            }
+
+            if (!$tituloId) continue;
+
+            $tv = TituloVinculacion::find($tituloId);
+            $titulosUsados[] = $tv?->titulo ?? '';
+
             $existe = Vinculacion::where('proyecto_id', $pid)->first();
             if ($existe) {
                 $existe->update([
@@ -482,22 +484,25 @@ class VinculacionManager extends Component
                     'com_codigo' => $comCodigo,
                 ]);
                 $actualizadas++;
-                continue;
+            } else {
+                Vinculacion::create([
+                    'proyecto_id' => $pid,
+                    'titulo_vinculacion_id' => $tituloId,
+                    'com_codigo' => $comCodigo,
+                    'tipo' => 'Vinculación',
+                ]);
+                $creadas++;
             }
-            Vinculacion::create([
-                'proyecto_id' => $pid,
-                'titulo_vinculacion_id' => $tituloId,
-                'com_codigo' => $comCodigo,
-                'tipo' => 'Vinculación',
-            ]);
-            $creadas++;
         }
 
+        $titulosUnicos = array_unique(array_filter($titulosUsados));
         $msg = "{$creadas} vinculación(es) creada(s)";
         if ($actualizadas > 0) {
             $msg .= " y {$actualizadas} actualizada(s)";
         }
-        $msg .= " para «{$tituloTexto}».";
+        if (!empty($titulosUnicos)) {
+            $msg .= " — Títulos: " . implode(', ', $titulosUnicos);
+        }
         $this->safeDispatch('success', $msg);
         $this->cerrarWizard();
         $this->cargarTitulos();
@@ -509,8 +514,53 @@ class VinculacionManager extends Component
         $this->selectAll = false;
         $this->comunidadId = '';
         $this->comunidadSeleccionada = null;
-        $this->tituloSeleccionado = '';
-        $this->nuevoTitulo = '';
+        $this->proyectosTitulos = [];
+        $this->nuevoTituloProyecto = '';
+        $this->proyectoNuevoTitulo = 0;
+        $this->search = '';
+    }
+
+    public function asignarTituloProyecto(int $proyectoId, string $tituloId): void
+    {
+        $this->proyectosTitulos[$proyectoId] = $tituloId;
+    }
+
+    public function abrirCreacionTitulo(int $proyectoId): void
+    {
+        $this->proyectoNuevoTitulo = $proyectoId;
+        $this->nuevoTituloProyecto = '';
+        $this->proyectosTitulos[$proyectoId] = 'nuevo_' . $proyectoId;
+    }
+
+    public function cancelarCreacionTitulo(int $proyectoId): void
+    {
+        $this->proyectoNuevoTitulo = 0;
+        $this->nuevoTituloProyecto = '';
+        $this->proyectosTitulos[$proyectoId] = '';
+    }
+
+    public function guardarNuevoTitulo(int $proyectoId): void
+    {
+        $nombre = strtoupper(trim($this->nuevoTituloProyecto));
+        if (mb_strlen($nombre) < 3) {
+            $this->safeDispatch('error', 'El título debe tener al menos 3 caracteres.');
+            return;
+        }
+
+        $existing = TituloVinculacion::whereRaw('UPPER(tiv_titulo) = ?', [$nombre])
+            ->where('tiv_estado_logico', true)
+            ->first();
+
+        if ($existing) {
+            $this->proyectosTitulos[$proyectoId] = $existing->id;
+        } else {
+            $tv = TituloVinculacion::create(['tiv_titulo' => $nombre]);
+            $this->cargarTitulos();
+            $this->proyectosTitulos[$proyectoId] = $tv->id;
+        }
+
+        $this->proyectoNuevoTitulo = 0;
+        $this->nuevoTituloProyecto = '';
     }
 
     // ─── Quitar vinculación ───────────────────────────────────
