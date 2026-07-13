@@ -533,7 +533,7 @@ class ProyectoController extends Controller
                 ->with('error', 'No tienes permiso para crear un proyecto desde este grupo.');
         }
 
-        $proyecto = $this->gestion->registrarProyectoDesdeGrupo((int) $grpCodigo, $user);
+        $proyecto = $this->gestion->registrarProyectoDesdeGrupo((int) $grupo->grp_codigo, $user);
 
         if (!$proyecto) {
             return redirect()->route('proyectos.gestion')
