@@ -483,13 +483,6 @@ class VinculacionManager extends Component
         $this->search = '';
     }
 
-    // ─── Título ───────────────────────────────────────────────
-
-    public function seleccionarTitulo(string $tituloId): void
-    {
-        $this->tituloSeleccionado = $tituloId;
-    }
-
     // ─── Quitar vinculación ───────────────────────────────────
 
     public function quitarVinculacion(int $vinCodigo): void

@@ -221,17 +221,17 @@
                                 <div style="flex:1;">
                                     <div style="font-weight:bold;font-size:16px;">{{ $titulosDisponibles[(int)$tituloSeleccionado] ?? '' }}</div>
                                 </div>
-                                <button type="button" wire:click="seleccionarTitulo('')" class="cm-btn cm-btn-secondary" style="font-size:13px;padding:8px 16px;">Cambiar</button>
+                                <button type="button" wire:click="$set('tituloSeleccionado', '')" class="cm-btn cm-btn-secondary" style="font-size:13px;padding:8px 16px;">Cambiar</button>
                             </div>
                         </div>
                     @else
                         <div style="margin-bottom:12px;">
-                            <select wire:change="seleccionarTitulo($event.target.value)" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:15px;box-sizing:border-box;background:#fff;">
+                            <select wire:model.live="tituloSeleccionado" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:15px;box-sizing:border-box;background:#fff;">
                                 <option value="">Seleccione un título...</option>
                                 @foreach($titulosDisponibles as $tid => $ttitulo)
-                                    <option value="{{ $tid }}" @selected($tituloSeleccionado === (string)$tid)>{{ $ttitulo }}</option>
+                                    <option value="{{ $tid }}">{{ $ttitulo }}</option>
                                 @endforeach
-                                <option value="nuevo" @selected($tituloSeleccionado === 'nuevo')>[ + Crear nuevo título ]</option>
+                                <option value="nuevo">[ + Crear nuevo título ]</option>
                             </select>
                         </div>
 
