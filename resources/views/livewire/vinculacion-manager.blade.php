@@ -120,7 +120,7 @@
 
                 {{-- Indicador de pasos --}}
                 <div class="paso-indicator">
-                    @foreach([1 => 'Comunidad', 2 => 'Proyectos', 3 => 'Asignar Títulos', 4 => 'Confirmar'] as $num => $label)
+                    @foreach([1 => 'Proyectos', 2 => 'Título', 3 => 'Comunidad', 4 => 'Confirmar'] as $num => $label)
                         <div class="paso-step" style="flex-direction:column;">
                             <div class="paso-circle {{ $pasoActual == $num ? 'active' : '' }} {{ $pasoActual > $num ? 'done' : '' }}">
                                 @if($pasoActual > $num) &#10003; @else {{ $num }} @endif
@@ -135,52 +135,9 @@
 
                 <hr style="border:none;border-top:1px solid #e0e0e0;margin:0 0 16px 0;">
 
-                {{-- PASO 1: COMUNIDAD --}}
+                {{-- PASO 1: PROYECTOS --}}
                 @if($pasoActual === 1)
-                    <h4 style="margin:0 0 16px 0;font-size:15px;color:#333;">Paso 1: Seleccionar Comunidad</h4>
-
-                    @if($comunidadSeleccionada)
-                        <div style="background:#e8f5e9;border:2px solid #198754;border-radius:8px;padding:16px;margin-bottom:12px;">
-                            <div style="display:flex;align-items:center;gap:12px;">
-                                <div style="width:40px;height:40px;border-radius:50%;background:#198754;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">&#10003;</div>
-                                <div style="flex:1;">
-                                    <div style="font-weight:bold;font-size:16px;">{{ $comunidadSeleccionada->nombre }}</div>
-                                    @if($comunidadSeleccionada->rif)
-                                        <div style="font-size:13px;color:#555;">RIF: {{ $comunidadSeleccionada->rif }}</div>
-                                    @endif
-                                </div>
-                                <button type="button" wire:click="quitarComunidad" class="cm-btn cm-btn-secondary" style="font-size:13px;padding:8px 16px;">Cambiar</button>
-                            </div>
-                        </div>
-                    @else
-                        <div style="margin-bottom:12px;">
-                            <select wire:model.live="comunidadId" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:15px;box-sizing:border-box;background:#fff;">
-                                <option value="">Seleccione una comunidad...</option>
-                                @foreach(($comunidades ?? collect()) as $com)
-                                    <option value="{{ $com->id }}">{{ $com->nombre }} @if($com->rif)({{ $com->rif }})@endif</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div style="text-align:center;margin:8px 0;">
-                            <button type="button" wire:click="abrirModalComunidad" class="cm-btn cm-btn-primary" style="font-size:13px;padding:8px 20px;">+ Crear nueva comunidad</button>
-                        </div>
-                    @endif
-                @endif
-
-                {{-- PASO 2: PROYECTOS --}}
-                @if($pasoActual === 2)
-                    <h4 style="margin:0 0 16px 0;font-size:15px;color:#333;">Paso 2: Seleccionar Proyectos</h4>
-
-                    {{-- Comunidad seleccionada (summary) --}}
-                    @if($comunidadSeleccionada)
-                        <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:13px;">
-                            <div style="display:flex;align-items:center;gap:4px;">
-                                <span style="font-weight:bold;color:#198754;">Comunidad:</span>
-                                <span style="color:#333;">{{ $comunidadSeleccionada->nombre }}</span>
-                                <button type="button" wire:click="pasoEspecifico(1)" style="background:none;border:none;color:#8b0000;text-decoration:underline;cursor:pointer;font-size:12px;margin-left:4px;">Cambiar</button>
-                            </div>
-                        </div>
-                    @endif
+                    <h4 style="margin:0 0 16px 0;font-size:15px;color:#333;">Paso 1: Seleccionar Proyectos</h4>
 
                     <div style="margin-bottom:12px;display:flex;gap:10px;align-items:center;">
                         <div style="position:relative;flex:1;min-width:200px;">
@@ -245,74 +202,110 @@
                     @endif
                 @endif
 
-                {{-- PASO 3: ASIGNAR TÍTULOS --}}
-                @if($pasoActual === 3)
-                    <h4 style="margin:0 0 16px 0;font-size:15px;color:#333;">Paso 3: Asignar Títulos a Cada Proyecto</h4>
+                {{-- PASO 2: TÍTULO --}}
+                @if($pasoActual === 2)
+                    <h4 style="margin:0 0 16px 0;font-size:15px;color:#333;">Paso 2: Seleccionar T&iacute;tulo</h4>
 
-                    {{-- Resumen --}}
-                    <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:13px;">
+                    <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:13px;">
+                        <span style="font-weight:bold;color:#198754;">Proyectos:</span>
+                        <span style="color:#333;">{{ count($selectedProjects) }} seleccionado(s)</span>
+                        <button type="button" wire:click="pasoEspecifico(1)" style="background:none;border:none;color:#8b0000;text-decoration:underline;cursor:pointer;font-size:12px;margin-left:4px;">Cambiar</button>
+                    </div>
+
+                    <p style="font-size:12px;color:#666;margin-bottom:10px;">Seleccione un título existente o cree uno nuevo. Este título se aplicará a todos los proyectos seleccionados.</p>
+
+                    @if($tituloSeleccionado !== '' && $tituloSeleccionado !== 'nuevo')
+                        <div style="background:#e8f5e9;border:2px solid #198754;border-radius:8px;padding:16px;margin-bottom:12px;">
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <div style="width:40px;height:40px;border-radius:50%;background:#198754;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">&#10003;</div>
+                                <div style="flex:1;">
+                                    <div style="font-weight:bold;font-size:16px;">{{ $titulosDisponibles[(int)$tituloSeleccionado] ?? '' }}</div>
+                                </div>
+                                <button type="button" wire:click="seleccionarTitulo('')" class="cm-btn cm-btn-secondary" style="font-size:13px;padding:8px 16px;">Cambiar</button>
+                            </div>
+                        </div>
+                    @else
+                        <div style="margin-bottom:12px;">
+                            <select wire:change="seleccionarTitulo($event.target.value)" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:15px;box-sizing:border-box;background:#fff;">
+                                <option value="">Seleccione un título...</option>
+                                @foreach($titulosDisponibles as $tid => $ttitulo)
+                                    <option value="{{ $tid }}" @selected($tituloSeleccionado === (string)$tid)>{{ $ttitulo }}</option>
+                                @endforeach
+                                <option value="nuevo" @selected($tituloSeleccionado === 'nuevo')>[ + Crear nuevo título ]</option>
+                            </select>
+                        </div>
+
+                        @if($tituloSeleccionado === 'nuevo')
+                            <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:6px;padding:12px;margin-top:8px;">
+                                <label style="font-size:12px;font-weight:bold;color:#555;display:block;margin-bottom:6px;">Nombre del nuevo título:</label>
+                                <div style="display:flex;gap:8px;">
+                                    <input type="text" wire:model.live="nuevoTitulo" placeholder="Escriba el nombre del título..." style="flex:1;padding:8px 10px;border:1px solid #8b0000;border-radius:4px;font-size:13px;text-transform:uppercase;">
+                                </div>
+                                @error('nuevoTitulo') <span style="font-size:11px;color:#c62828;">{{ $message }}</span> @enderror
+                            </div>
+                        @endif
+                    @endif
+                @endif
+
+                {{-- PASO 3: COMUNIDAD (OPCIONAL) --}}
+                @if($pasoActual === 3)
+                    <h4 style="margin:0 0 16px 0;font-size:15px;color:#333;">Paso 3: Comunidad (Opcional)</h4>
+
+                    <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:13px;">
                         <div style="display:flex;align-items:center;gap:4px;">
-                            <span style="font-weight:bold;color:#198754;">Comunidad:</span>
-                            <span style="color:#333;">{{ $comunidadSeleccionada->nombre ?? 'N/A' }}</span>
+                            <span style="font-weight:bold;color:#198754;">Proyectos:</span>
+                            <span style="color:#333;">{{ count($selectedProjects) }} seleccionado(s)</span>
                             <button type="button" wire:click="pasoEspecifico(1)" style="background:none;border:none;color:#8b0000;text-decoration:underline;cursor:pointer;font-size:12px;margin-left:4px;">Cambiar</button>
                         </div>
                         <div style="display:flex;align-items:center;gap:4px;margin-top:4px;">
-                            <span style="font-weight:bold;color:#e65100;">Proyectos:</span>
-                            <span style="color:#333;">{{ count($selectedProjects) }} seleccionado(s)</span>
+                            <span style="font-weight:bold;color:#e65100;">T&iacute;tulo:</span>
+                            <span style="color:#333;">{{ $tituloSeleccionado === 'nuevo' ? ($nuevoTitulo ?: 'Nuevo título') : ($titulosDisponibles[(int)$tituloSeleccionado] ?? 'N/A') }}</span>
                             <button type="button" wire:click="pasoEspecifico(2)" style="background:none;border:none;color:#8b0000;text-decoration:underline;cursor:pointer;font-size:12px;margin-left:4px;">Cambiar</button>
                         </div>
                     </div>
 
-                    <p style="font-size:12px;color:#666;margin-bottom:10px;">Asigne un título de vinculación a cada proyecto. Puede usar títulos existentes o crear nuevos.</p>
+                    <p style="font-size:12px;color:#666;margin-bottom:10px;">Opcionalmente seleccione una comunidad. Si no selecciona ninguna, la vinculación se guardará sin comunidad.</p>
 
-                    <div style="max-height:50vh;overflow-y:auto;">
-                        @php
-                            $proyectosCompletos = \App\Models\Proyecto::whereIn('id', $selectedProjects)
-                                ->with('comunidad')
-                                ->get()
-                                ->keyBy('id');
-                        @endphp
-                        @foreach($selectedProjects as $pid)
-                            @php $proy = $proyectosCompletos->get($pid); @endphp
-                            @if($proy)
-                            <div style="border:1px solid #ddd;border-radius:6px;padding:10px 12px;margin-bottom:8px;background:{{ ($proyectosTitulos[$pid] ?? '') !== '' ? '#f1f8e9' : '#fff' }};">
-                                <div style="display:flex;align-items:center;gap:10px;">
-                                    <div style="flex:1;">
-                                        <div style="font-weight:bold;font-size:13px;">{{ $proy->titulo ?? 'N/A' }}</div>
-                                        <div style="font-size:10px;color:#888;">{{ $proy->equipo_ref ?? '' }}</div>
-                                    </div>
-                                    <div style="flex:1;">
-                                        @if(($proyectosTitulos[$pid] ?? '') === 'nuevo_' . $pid)
-                                            <div style="display:flex;gap:6px;align-items:center;">
-                                                <input type="text" wire:model.live="nuevoTituloProyecto" placeholder="Nombre del nuevo título..." style="flex:1;padding:6px 8px;border:1px solid #8b0000;border-radius:4px;font-size:12px;">
-                                                <button type="button" wire:click="guardarNuevoTitulo({{ $pid }})" style="background:#198754;color:#fff;border:none;border-radius:4px;padding:6px 10px;font-size:11px;cursor:pointer;">OK</button>
-                                                <button type="button" wire:click="cancelarCreacionTitulo({{ $pid }})" style="background:#ccc;color:#333;border:none;border-radius:4px;padding:6px 10px;font-size:11px;cursor:pointer;">X</button>
-                                            </div>
-                                        @else
-                                            <select wire:model.live="proyectosTitulos.{{ $pid }}" wire:change="asignarTituloProyecto({{ $pid }}, $event.target.value)" style="width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:12px;background:#fff;">
-                                                <option value="">-- Seleccionar título --</option>
-                                                @foreach($titulosDisponibles as $tid => $ttitulo)
-                                                    <option value="{{ $tid }}">{{ $ttitulo }}</option>
-                                                @endforeach
-                                                <option value="nuevo_{{ $pid }}">[ + Crear nuevo título ]</option>
-                                            </select>
-                                        @endif
-                                    </div>
+                    @if($comunidadSeleccionada)
+                        <div style="background:#e8f5e9;border:2px solid #198754;border-radius:8px;padding:16px;margin-bottom:12px;">
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <div style="width:40px;height:40px;border-radius:50%;background:#198754;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">&#10003;</div>
+                                <div style="flex:1;">
+                                    <div style="font-weight:bold;font-size:16px;">{{ $comunidadSeleccionada->nombre }}</div>
+                                    @if($comunidadSeleccionada->rif)
+                                        <div style="font-size:13px;color:#555;">RIF: {{ $comunidadSeleccionada->rif }}</div>
+                                    @endif
                                 </div>
+                                <button type="button" wire:click="quitarComunidad" class="cm-btn cm-btn-secondary" style="font-size:13px;padding:8px 16px;">Cambiar</button>
                             </div>
-                            @endif
-                        @endforeach
-                    </div>
+                        </div>
+                    @else
+                        <div style="margin-bottom:12px;">
+                            <select wire:model.live="comunidadId" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:15px;box-sizing:border-box;background:#fff;">
+                                <option value="">Sin comunidad (opcional)...</option>
+                                @foreach(($comunidades ?? collect()) as $com)
+                                    <option value="{{ $com->id }}">{{ $com->nombre }} @if($com->rif)({{ $com->rif }})@endif</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div style="text-align:center;margin:8px 0;">
+                            <button type="button" wire:click="abrirModalComunidad" class="cm-btn cm-btn-primary" style="font-size:13px;padding:8px 20px;">+ Crear nueva comunidad</button>
+                        </div>
+                    @endif
                 @endif
 
                 {{-- PASO 4: CONFIRMAR --}}
                 @if($pasoActual === 4)
-                    <h4 style="margin:0 0 16px 0;font-size:15px;color:#333;">Paso 4: Confirmar Vinculación</h4>
+                    <h4 style="margin:0 0 16px 0;font-size:15px;color:#333;">Paso 4: Confirmar Vinculaci&oacute;n</h4>
                     <div style="background:#f9f9f9;border:1px solid #e0e0e0;border-radius:8px;padding:16px;margin-bottom:16px;">
                         <table style="font-size:14px;border-collapse:separate;border-spacing:0 10px;">
                             <tr>
+                                <td style="font-weight:bold;color:#555;padding-right:20px;">T&iacute;tulo:</td>
+                                <td><span style="font-weight:bold;">{{ $tituloSeleccionado === 'nuevo' ? ($nuevoTitulo ?: 'Nuevo título') : ($titulosDisponibles[(int)$tituloSeleccionado] ?? 'N/A') }}</span></td>
+                            </tr>
+                            <tr>
                                 <td style="font-weight:bold;color:#555;padding-right:20px;">Comunidad:</td>
-                                <td><span style="font-weight:bold;">{{ $comunidadSeleccionada?->nombre ?? 'N/A' }}</span></td>
+                                <td><span style="font-weight:bold;">{{ $comunidadSeleccionada?->nombre ?? 'Sin comunidad' }}</span></td>
                             </tr>
                             <tr>
                                 <td style="font-weight:bold;color:#555;padding-right:20px;">Proyectos a vincular:</td>
@@ -325,15 +318,10 @@
                                     $proyConfirm = \App\Models\Proyecto::whereIn('id', $selectedProjects)->get()->keyBy('id');
                                 @endphp
                                 @foreach($selectedProjects as $pid)
-                                    @php
-                                        $p = $proyConfirm->get($pid);
-                                        $tid = $proyectosTitulos[$pid] ?? '';
-                                        $tituloNombre = $titulosDisponibles[(int)$tid] ?? ($tid === 'nuevo_' . $pid ? 'Nuevo título' : 'Sin título');
-                                    @endphp
+                                    @php $p = $proyConfirm->get($pid); @endphp
                                     @if($p)
                                         <span style="display:inline-block;background:#fff;border:1px solid #c8e6c9;border-radius:4px;padding:3px 8px;margin:2px;">
                                             {{ $p->titulo ?? 'ID:'.$pid }}
-                                            <span style="color:#8b0000;font-weight:bold;">&rarr; {{ $tituloNombre }}</span>
                                         </span>
                                     @endif
                                 @endforeach
@@ -356,7 +344,7 @@
                         @if($pasoActual < 4)
                             <button type="button" wire:click="siguientePaso" class="cm-btn cm-btn-success" style="font-size:14px;padding:8px 24px;">Siguiente &rarr;</button>
                         @else
-                            <button type="button" wire:click="guardarVinculacion" class="cm-btn cm-btn-success" style="font-size:14px;padding:8px 24px;">Guardar Vinculación</button>
+                            <button type="button" wire:click="guardarVinculacion" class="cm-btn cm-btn-success" style="font-size:14px;padding:8px 24px;">Guardar Vinculaci&oacute;n</button>
                         @endif
                     </div>
                 </div>
