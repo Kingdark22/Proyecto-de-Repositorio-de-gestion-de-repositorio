@@ -138,6 +138,12 @@ class VinculacionManager extends Component
                 }
             }
         }
+        if ($this->pasoActual === 3) {
+            if (!$this->comunidadSeleccionada && $this->comunidadId === '') {
+                $this->safeDispatch('error', 'Debe seleccionar una comunidad.');
+                return;
+            }
+        }
         if ($this->pasoActual < 4) {
             $this->pasoActual++;
         }
@@ -631,11 +637,15 @@ class VinculacionManager extends Component
                           ->orWhereRaw('pry_direccion_logica ILIKE ?', [$term])
                           ->orWhereRaw('pry_motivo_rechazo ILIKE ?', [$term])
                           ->orWhereRaw('pry_creador_cedula ILIKE ?', [$term])
+                          ->orWhereRaw('pry_cantidad_beneficiados::text ILIKE ?', [$term])
                           ->orWhereHas('comunidad', fn($cq) => $cq->whereRaw('com_nombre ILIKE ?', [$term]))
                           ->orWhereHas('linea_investigacion', fn($cq) => $cq->whereRaw('lin_nombre_investigacion ILIKE ?', [$term]))
                           ->orWhereHas('metodologia', fn($cq) => $cq->whereRaw('mei_nombre ILIKE ?', [$term]))
                           ->orWhereHas('tipo_investigacion', fn($cq) => $cq->whereRaw('tin_nombre ILIKE ?', [$term]))
-                          ->orWhereHas('objetivo_investigacion', fn($cq) => $cq->whereRaw('obi_nombre::text ILIKE ?', [$term]));
+                          ->orWhereHas('objetivo_investigacion', fn($cq) => $cq->whereRaw('obi_nombre::text ILIKE ?', [$term]))
+                          ->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE gpm.grp_identificador = proyectos.pry_direccion_logica AND gpm.grp_nombre ILIKE ?)', [$term])
+                          ->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE gpm.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\') AND gpm.grp_nombre ILIKE ?)', [$term])
+                          ->orWhereRaw('EXISTS (SELECT 1 FROM proyecto_involucrado pi JOIN involucrados i ON i.id = pi.involucrado_id WHERE pi.proyecto_id = proyectos.pry_codigo AND (i.nombre ILIKE ? OR i.apellido ILIKE ?))', [$term, $term]);
                     });
                 }
 
@@ -667,19 +677,41 @@ class VinculacionManager extends Component
 
             if (trim($this->busquedaListado) !== '') {
                 $term = strtolower(trim($this->busquedaListado));
-                $vinculacionesPorProyecto = $vinculacionesPorProyecto->filter(function ($grupo) use ($term) {
+                $equipoService = app(\App\Services\IntranetEquipoSeccionService::class);
+
+                $vinculacionesPorProyecto = $vinculacionesPorProyecto->filter(function ($grupo) use ($term, $equipoService) {
                     $proyecto = $grupo->first()->proyecto;
                     $tituloProyecto = strtolower($proyecto->titulo ?? '');
                     $equipoRef = strtolower($proyecto->equipo_ref ?? '');
+                    $resumen = strtolower($proyecto->resumen ?? '');
+                    $creador = strtolower($proyecto->creador_cedula ?? '');
                     $titulos = $grupo->pluck('titulo')->map(fn($t) => strtolower($t))->toArray();
                     $comunidades = $grupo->pluck('comunidad.nombre')->filter()->map(fn($c) => strtolower($c))->toArray();
                     $lapso = strtolower($grupo->first()->lapso_nombre ?? '');
 
+                    $linea = strtolower($proyecto->linea_investigacion->lin_nombre_investigacion ?? '');
+                    $metodologia = strtolower($proyecto->metodologia->mei_nombre ?? '');
+                    $tipo = strtolower($proyecto->tipo_investigacion->tin_nombre ?? '');
+                    $objetivo = strtolower($proyecto->objetivo_investigacion->obi_nombre ?? '');
+
+                    $integrantes = $equipoService->integrantes($proyecto->equipo_ref ?? '');
+                    $tieneIntegrante = $integrantes->contains(function ($i) use ($term) {
+                        return str_contains(strtolower($i->nombre ?? ''), $term)
+                            || str_contains(strtolower($i->apellido ?? ''), $term);
+                    });
+
                     return str_contains($tituloProyecto, $term)
                         || str_contains($equipoRef, $term)
+                        || str_contains($resumen, $term)
+                        || str_contains($creador, $term)
                         || $lapso !== '' && str_contains($lapso, $term)
                         || collect($titulos)->contains(fn($t) => str_contains($t, $term))
-                        || collect($comunidades)->contains(fn($c) => str_contains($c, $term));
+                        || collect($comunidades)->contains(fn($c) => str_contains($c, $term))
+                        || str_contains($linea, $term)
+                        || str_contains($metodologia, $term)
+                        || str_contains($tipo, $term)
+                        || str_contains($objetivo, $term)
+                        || $tieneIntegrante;
                 });
             }
 

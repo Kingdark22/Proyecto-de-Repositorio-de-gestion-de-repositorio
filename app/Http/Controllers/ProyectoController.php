@@ -178,15 +178,15 @@ class ProyectoController extends Controller
             }
         }
 
-        // Solo integrantes del equipo, profesor proyecto creador, o coordinador pueden acceder
-        if (!$esMiembro && !$esProfesorCreador && !$esCoordinador) {
+        // Solo integrantes del equipo, profesor proyecto creador, coordinador o administrador pueden acceder
+        if (!$esMiembro && !$esProfesorCreador && !$esCoordinador && !$esAdmin) {
             return redirect()->route('proyectos.gestion')
                 ->with('error', 'No tienes permiso para acceder a este proyecto.');
         }
 
         $modoActualizacion = $esMiembro && !$esAdminEnSistema;
         $canValidate = $esProfesorCreador;
-        $soloLectura = $esCoordinador;
+        $soloLectura = $esCoordinador || $esAdmin;
 
         $datosForm = $this->gestion->cargarParaEdicion($id);
         $estadoForm = $this->buildEstadoFromDatos($datosForm);
@@ -218,6 +218,7 @@ class ProyectoController extends Controller
         $activeRole = $this->userRoleService->getActiveRole($user);
         $esProfesor = $this->userRoleService->roleMatches('profesor proyecto', $activeRole);
         $esAdmin = $this->userRoleService->roleMatches('administrador', $activeRole);
+        $esCoordinador = $this->userRoleService->roleMatches('coordinador', $activeRole);
 
         $esMiembro = $this->gestion->usuarioEsMiembroDelProyecto($user, $proyecto);
         $esAdminEnSistema = $this->gestion->usuarioEsAdminEnSistema($user);
@@ -239,6 +240,12 @@ class ProyectoController extends Controller
                 $matchCed = !$matchUsu && $creadorCed !== '' && $creadorCed === $usuarioCedula;
                 $esProfesorCreador = $matchUsu || $matchCed;
             }
+        }
+
+        // Admin y coordinador no pueden modificar proyectos
+        if ($esAdmin || $esCoordinador) {
+            return redirect()->route('proyectos.gestion')
+                ->with('error', 'No tienes permiso para modificar este proyecto.');
         }
 
         // Solo integrantes del equipo y profesor proyecto creador pueden actualizar
@@ -585,6 +592,12 @@ class ProyectoController extends Controller
 
     public function agregarInvolucrado(Request $request, $id)
     {
+        if ($this->esSupervisorLectura()) {
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => 'No tienes permiso.'], 403)
+                : redirect()->route('proyectos.gestion')->with('error', 'No tienes permiso.');
+        }
+
         $request->validate([
             'involucrado_id' => 'required|integer',
             'roles' => 'required|array|min:1',
@@ -613,6 +626,12 @@ class ProyectoController extends Controller
 
     public function crearInvolucrado(Request $request, $id)
     {
+        if ($this->esSupervisorLectura()) {
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => 'No tienes permiso.'], 403)
+                : redirect()->route('proyectos.gestion')->with('error', 'No tienes permiso.');
+        }
+
         $request->validate([
             'nombre' => 'required|min:2|max:255',
             'apellido' => 'required|min:2|max:255',
@@ -668,6 +687,12 @@ class ProyectoController extends Controller
 
     public function quitarInvolucrado(Request $request, $id, $invId)
     {
+        if ($this->esSupervisorLectura()) {
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => 'No tienes permiso.'], 403)
+                : redirect()->route('proyectos.gestion')->with('error', 'No tienes permiso.');
+        }
+
         $this->gestion->quitarInvolucradoDeProyecto((int) $id, (int) $invId);
 
         if ($request->wantsJson()) {
@@ -679,6 +704,12 @@ class ProyectoController extends Controller
 
     public function agregarRolInvolucrado(Request $request, $id, $invId)
     {
+        if ($this->esSupervisorLectura()) {
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => 'No tienes permiso.'], 403)
+                : redirect()->route('proyectos.gestion')->with('error', 'No tienes permiso.');
+        }
+
         $request->validate([
             'rol_id' => 'required|integer',
         ], [
@@ -703,6 +734,12 @@ class ProyectoController extends Controller
 
     public function quitarRolInvolucrado(Request $request, $id, $pivotId, $rolId)
     {
+        if ($this->esSupervisorLectura()) {
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => 'No tienes permiso.'], 403)
+                : redirect()->route('proyectos.gestion')->with('error', 'No tienes permiso.');
+        }
+
         $this->gestion->quitarRolDeInvolucrado((int) $pivotId, (int) $rolId);
 
         if ($request->wantsJson()) {
@@ -714,6 +751,12 @@ class ProyectoController extends Controller
 
     public function crearRol(Request $request)
     {
+        if ($this->esSupervisorLectura()) {
+            return $request->wantsJson()
+                ? response()->json(['success' => false, 'message' => 'No tienes permiso.'], 403)
+                : back()->with('error', 'No tienes permiso.');
+        }
+
         $request->validate([
             'nombre' => 'required|min:2|max:255',
         ], [
@@ -1089,9 +1132,7 @@ class ProyectoController extends Controller
     {
         $user = auth()->user();
         $activeRole = $this->userRoleService->getActiveRole($user);
-        if (!$this->userRoleService->roleMatches('profesor proyecto', $activeRole) && 
-            !$this->userRoleService->roleMatches('administrador', $activeRole) &&
-            !$this->userRoleService->roleMatches('coordinador', $activeRole) &&
+        if (!$this->userRoleService->roleMatches('profesor proyecto', $activeRole) &&
             !$this->userRoleService->roleMatches('gestionador', $activeRole)) {
             return response()->json(['success' => false, 'message' => 'No tiene permisos.'], 403);
         }
@@ -1247,5 +1288,14 @@ class ProyectoController extends Controller
         } catch (\Throwable) {
             $miembros = [];
         }
+    }
+
+    protected function esSupervisorLectura(): bool
+    {
+        $user = auth()->user();
+        if (!$user) return false;
+        $activeRole = $this->userRoleService->getActiveRole($user);
+        return $this->userRoleService->roleMatches('administrador', $activeRole)
+            || $this->userRoleService->roleMatches('coordinador', $activeRole);
     }
 }

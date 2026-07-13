@@ -81,10 +81,10 @@
                                 $rowNum++;
                                 $proyecto = $grupo->first()->proyecto;
                                 $titulos = $grupo->pluck('titulo')->filter()->unique()->values()->toArray();
-                                $comunidades = $grupo->pluck('comunidad.nombre')->filter()->unique()->values()->toArray();
+                                $comunidadesNombres = $grupo->pluck('comunidad.nombre')->filter()->unique()->values()->toArray();
                                 $lapso = $grupo->first()->lapso_nombre ?? '';
                                 $countTitulos = count($titulos);
-                                $countComunidades = count($comunidades);
+                                $countComunidades = count($comunidadesNombres);
                                 $maxShow = 3;
                             @endphp
                             <tr style="background:{{ $rowNum % 2 == 0 ? '#E0E0E0' : '#FFF' }};" valign="top">
@@ -100,7 +100,7 @@
                                 </td>
                                 <td style="padding:6px 4px;font-size:11px;">{{ $lapso }}</td>
                                 <td style="padding:6px 4px;">
-                                    @foreach(array_slice($comunidades, 0, $maxShow) as $c)
+                                    @foreach(array_slice($comunidadesNombres, 0, $maxShow) as $c)
                                         <span style="display:inline-block;background:#198754;color:#fff;border-radius:3px;padding:1px 6px;font-size:10px;margin:1px 0;">{{ $c }}</span>
                                     @endforeach
                                     @if($countComunidades > $maxShow)
@@ -155,10 +155,10 @@
                             <div id="vincSearchAutocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;max-height:220px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
                         </div>
                         <span style="font-size:13px;color:#555;">
-                            <b>{{ $proyectos->total() ?? 0 }}</b> proyecto(s)
+                            <b>{{ optional($proyectos)->total() ?? 0 }}</b> proyecto(s)
                         </span>
                         <button type="button" wire:click="toggleSelectAll" style="background:none;border:1px solid #8b0000;color:#8b0000;border-radius:4px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap;" onmouseover="this.style.background='#8b0000';this.style.color='#fff'" onmouseout="this.style.background='';this.style.color='#8b0000'">
-                            @if(count($selectedProjects) > 0 && count($selectedProjects) >= ($proyectos->total() ?? 0))
+                            @if(count($selectedProjects) > 0 && count($selectedProjects) >= (optional($proyectos)->total() ?? 0))
                                 Deseleccionar todo
                             @else
                                 Seleccionar todo
@@ -274,7 +274,7 @@
                         </div>
                     </div>
 
-                    <p style="font-size:12px;color:#666;margin-bottom:10px;">Opcionalmente seleccione una comunidad. Si no selecciona ninguna, la vinculación se guardará sin comunidad.</p>
+                    <p style="font-size:12px;color:#666;margin-bottom:10px;">Seleccione una comunidad para continuar.</p>
 
                     @if($comunidadSeleccionada)
                         <div style="background:#e8f5e9;border:2px solid #198754;border-radius:8px;padding:16px;margin-bottom:12px;">
@@ -292,7 +292,7 @@
                     @else
                         <div style="margin-bottom:12px;">
                             <select wire:model.live="comunidadId" style="width:100%;padding:10px 12px;border:2px solid #8b0000;border-radius:6px;font-size:15px;box-sizing:border-box;background:#fff;">
-                                <option value="">Sin comunidad (opcional)...</option>
+                                <option value="">Seleccione una comunidad...</option>
                                 @foreach(($comunidades ?? collect()) as $com)
                                     <option value="{{ $com->id }}">{{ $com->nombre }} @if($com->rif)({{ $com->rif }})@endif</option>
                                 @endforeach
@@ -701,9 +701,15 @@
                             <td style="padding:2px 4px;">{{ $proyectoDetalle->equipo_ref ?? 'N/A' }}</td>
                         </tr>
                         <tr>
-                            <td style="font-weight:bold;color:#555;padding:2px 4px;">Creador (cédula):</td>
+                            <td width="28%" style="font-weight:bold;color:#555;padding:2px 4px;">Creador (cédula):</td>
                             <td style="padding:2px 4px;">{{ $proyectoDetalle->creador_cedula ?? 'N/A' }}</td>
                         </tr>
+                        @if($proyectoDetalle->pry_cantidad_beneficiados)
+                        <tr>
+                            <td style="font-weight:bold;color:#555;padding:2px 4px;">Beneficiados:</td>
+                            <td style="padding:2px 4px;">{{ $proyectoDetalle->pry_cantidad_beneficiados }}</td>
+                        </tr>
+                        @endif
                         @if($proyectoDetalle->fecha_actualizacion_estudiante)
                         <tr>
                             <td style="font-weight:bold;color:#555;padding:2px 4px;">Últ. actualización:</td>
@@ -754,7 +760,7 @@
                                         <td style="padding:5px 8px;font-weight:bold;">{{ $doc->componente->nombre ?? 'Documento' }}</td>
                                         <td style="padding:5px 8px;">
                                             @if($doc->pd_archivo_path)
-                                                <span style="font-size:10px;color:#555;">{{ basename($doc->pd_archivo_path) }}</span>
+                                                <a href="{{ route('documentos.serve', $doc->pd_archivo_path) }}" target="_blank" style="display:inline-block;background:#0d6efd;color:#fff;border-radius:4px;padding:3px 12px;font-size:10px;text-decoration:none;font-weight:600;">Ver</a>
                                             @else
                                                 <span style="color:#999;">Sin archivo</span>
                                             @endif

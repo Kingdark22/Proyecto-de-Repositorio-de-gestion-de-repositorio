@@ -888,17 +888,8 @@ class ProyectoGestionService
             return false;
         }
 
-        // Admin CAN validate all projects
-        if ($this->usuarioEsAdminEnSistema($user)) {
-            return true;
-        }
-
         $userRoleService = app(UserRoleService::class);
         $activeRole = $userRoleService->getActiveRole($user);
-
-        if ($userRoleService->roleMatches('coordinador', $activeRole)) {
-            return true;
-        }
 
         if ($userRoleService->roleMatches('profesor proyecto', $activeRole)) {
             $clavesDocente = $this->clavesEquipoFiltroValidacion($user);

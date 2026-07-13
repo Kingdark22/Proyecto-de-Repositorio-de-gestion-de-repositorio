@@ -57,7 +57,7 @@ class NavigationMenu
             'canManageCatalogs'    => $this->roles->userHasRole($user, 'administrador', 'coordinador', 'gestionador'),
             'canManageComponents'  => $this->roles->userHasRole($user, 'administrador', 'coordinador', 'gestionador'),
             'canValidateProjects'  => false,
-            'canRegisterProject'   => $this->roles->userHasRole($user, 'administrador', 'gestionador')
+            'canRegisterProject'   => $this->roles->userHasRole($user, 'gestionador')
                 || ($this->roles->userHasRole($user, 'estudiante') && $user->puedeRegistrarProyecto()),
             'canManageSystemConfig'=> $this->roles->userHasRole($user, 'administrador', 'coordinador', 'gestionador'),
             'pendingUpdatesCount'    => $pendingUpdatesCount,
