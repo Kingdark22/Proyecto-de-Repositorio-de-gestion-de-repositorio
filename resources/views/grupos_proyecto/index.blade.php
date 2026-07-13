@@ -205,7 +205,7 @@
                                     {{-- Actualizar va al formulario de registro del proyecto --}}
                                     @if(!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado')
                                     <button type="button" class="cm-btn cm-btn-success cm-btn-xs"
-                                        onclick="window.location='{{ $tieneProyecto ? route('proyectos.gestion.edit', $proyecto->id) : route('proyectos.gestion.desde-grupo', $g->identificador ?: $g->grp_codigo) }}'"
+                                        onclick="window.location='{{ $tieneProyecto ? route('proyectos.gestion.edit', $proyecto->id) : route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}'"
                                         title="Ir al formulario de proyecto">Actualizar</button>
                                     @endif
                                     @if(trim($g->creador_usuario ?? '') === trim($userUsuNombre) && (!$tieneProyecto || ($proyecto?->estado_validacion ?? '') !== 'aprobado'))

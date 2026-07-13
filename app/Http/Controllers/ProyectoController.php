@@ -505,6 +505,9 @@ class ProyectoController extends Controller
 
         $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($grpCodigo);
         if (!$grupo) {
+            $grupo = app(\App\Services\GrupoProyectoService::class)->obtener((int) $grpCodigo);
+        }
+        if (!$grupo) {
             return redirect()->route('proyectos.gestion')
                 ->with('error', 'Grupo no encontrado.');
         }
