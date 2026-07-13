@@ -52,9 +52,16 @@
         </div>
 
         {{-- ─── VINCULACIONES EXISTENTES ─── --}}
-        @if($vinculacionesPorProyecto->isEmpty())
+        @if($vinculacionesPorProyecto->isEmpty() && trim($busquedaListado) === '')
             <p style="color:#666; font-style:italic; padding: 10px;">No hay vinculaciones registradas.</p>
         @else
+            <div style="margin-bottom:10px;display:flex;gap:10px;align-items:center;">
+                <input wire:model.live.debounce.300ms="busquedaListado" type="text" placeholder="Buscar por proyecto, titulo, comunidad o lapso..." style="flex:1;padding:8px 10px;border:2px solid #8b0000;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                @if(trim($busquedaListado) !== '')
+                    <button type="button" wire:click="$set('busquedaListado', '')" style="background:none;border:1px solid #8b0000;color:#8b0000;border-radius:4px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap;">Limpiar</button>
+                @endif
+                <span style="font-size:12px;color:#555;">{{ $vinculacionesPorProyecto->count() }} resultado(s)</span>
+            </div>
             <div style="margin-top:10px;">
                 <table width="100%" style="font-size:12px;border-collapse:collapse;">
                     <thead>
@@ -109,6 +116,9 @@
                         @endforeach
                     </tbody>
                 </table>
+                @if($vinculacionesPorProyecto->isEmpty() && trim($busquedaListado) !== '')
+                    <p style="color:#666;font-style:italic;padding:10px;text-align:center;">No se encontraron resultados para "{{ $busquedaListado }}".</p>
+                @endif
             </div>
         @endif
     </fieldset>

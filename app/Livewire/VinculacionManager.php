@@ -25,6 +25,9 @@ class VinculacionManager extends Component
 
     public string $search = '';
 
+    // Búsqueda del listado
+    public string $busquedaListado = '';
+
     // Wizard
     public bool $mostrarWizard = false;
     public int $pasoActual = 1;
@@ -661,6 +664,24 @@ class VinculacionManager extends Component
 
             $vinculacionesPorProyecto = $todasVinculaciones
                 ->groupBy(fn($v) => $v->proyecto_id);
+
+            if (trim($this->busquedaListado) !== '') {
+                $term = strtolower(trim($this->busquedaListado));
+                $vinculacionesPorProyecto = $vinculacionesPorProyecto->filter(function ($grupo) use ($term) {
+                    $proyecto = $grupo->first()->proyecto;
+                    $tituloProyecto = strtolower($proyecto->titulo ?? '');
+                    $equipoRef = strtolower($proyecto->equipo_ref ?? '');
+                    $titulos = $grupo->pluck('titulo')->map(fn($t) => strtolower($t))->toArray();
+                    $comunidades = $grupo->pluck('comunidad.nombre')->filter()->map(fn($c) => strtolower($c))->toArray();
+                    $lapso = strtolower($grupo->first()->lapso_nombre ?? '');
+
+                    return str_contains($tituloProyecto, $term)
+                        || str_contains($equipoRef, $term)
+                        || $lapso !== '' && str_contains($lapso, $term)
+                        || collect($titulos)->contains(fn($t) => str_contains($t, $term))
+                        || collect($comunidades)->contains(fn($c) => str_contains($c, $term));
+                });
+            }
 
             $comunidades = Comunidad::orderBy('com_nombre')->get();
 
