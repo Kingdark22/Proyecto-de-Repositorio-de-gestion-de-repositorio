@@ -52,7 +52,7 @@
         </div>
 
         {{-- ─── VINCULACIONES EXISTENTES ─── --}}
-        @if($vinculacionesAgrupadas->isEmpty())
+        @if($vinculacionesPorProyecto->isEmpty())
             <p style="color:#666; font-style:italic; padding: 10px;">No hay vinculaciones registradas.</p>
         @else
             <div style="margin-top:10px;">
@@ -60,33 +60,52 @@
                     <thead>
                         <tr style="background:#8bb2b7;color:#000;font-weight:bold;">
                             <th width="4%" style="padding:8px 4px;text-align:center;">N&deg;</th>
-                            <th width="25%" style="padding:8px 4px;">Proyecto</th>
-                            <th width="15%" style="padding:8px 4px;">Título vinculación</th>
-                            <th width="12%" style="padding:8px 4px;">Sede</th>
-                            <th width="7%" style="padding:8px 4px;">Lapso</th>
-                            <th width="15%" style="padding:8px 4px;">Comunidad</th>
-                            <th width="10%" style="padding:8px 4px;">Acción</th>
+                            <th width="30%" style="padding:8px 4px;">Proyecto</th>
+                            <th width="25%" style="padding:8px 4px;">T&iacute;tulos vinculados</th>
+                            <th width="12%" style="padding:8px 4px;">Lapso</th>
+                            <th width="22%" style="padding:8px 4px;">Comunidades</th>
+                            <th width="7%" style="padding:8px 4px;">Acci&oacute;n</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($vinculacionesAgrupadas as $grupoKey => $grupo)
-                            @foreach($grupo as $idx => $v)
-                                @php
-                                    $vSede = $v->sede ?? '';
-                                    $vLapso = $v->lapso_nombre ?? '';
-                                @endphp
-                                <tr style="background:{{ ($loop->parent->iteration + $idx) % 2 == 0 ? '#E0E0E0' : '#FFF' }};" valign="top">
-                                    <td align="center" style="padding:6px 4px;">{{ $loop->parent->iteration }}</td>
-                                    <td style="font-weight:bold;padding:6px 4px;">{{ $v->proyecto->titulo ?? 'N/A' }}</td>
-                                    <td style="padding:6px 4px;">{{ $v->titulo }}</td>
-                                    <td style="padding:6px 4px;font-size:11px;">{{ $vSede }}</td>
-                                    <td style="padding:6px 4px;font-size:11px;">{{ $vLapso }}</td>
-                                    <td style="padding:6px 4px;">{{ $v->comunidad?->nombre ?? '-' }}</td>
-                                    <td align="center" style="padding:6px 4px;">
-                                        <button type="button" wire:click="quitarVinculacion({{ $v->proyecto_id }})" style="background:none;border:1px solid #c62828;color:#c62828;border-radius:4px;padding:3px 10px;font-size:11px;cursor:pointer;font-weight:600;" onmouseover="this.style.background='#c62828';this.style.color='#fff'" onmouseout="this.style.background='';this.style.color='#c62828'">Quitar</button>
-                                    </td>
-                                </tr>
-                            @endforeach
+                        @php $rowNum = 0; @endphp
+                        @foreach($vinculacionesPorProyecto as $pid => $grupo)
+                            @php
+                                $rowNum++;
+                                $proyecto = $grupo->first()->proyecto;
+                                $titulos = $grupo->pluck('titulo')->filter()->unique()->values()->toArray();
+                                $comunidades = $grupo->pluck('comunidad.nombre')->filter()->unique()->values()->toArray();
+                                $lapso = $grupo->first()->lapso_nombre ?? '';
+                                $countTitulos = count($titulos);
+                                $countComunidades = count($comunidades);
+                                $maxShow = 3;
+                            @endphp
+                            <tr style="background:{{ $rowNum % 2 == 0 ? '#E0E0E0' : '#FFF' }};" valign="top">
+                                <td align="center" style="padding:6px 4px;">{{ $rowNum }}</td>
+                                <td style="font-weight:bold;padding:6px 4px;">{{ $proyecto->titulo ?? 'N/A' }}</td>
+                                <td style="padding:6px 4px;">
+                                    @foreach(array_slice($titulos, 0, $maxShow) as $t)
+                                        <span style="display:inline-block;background:#0d6efd;color:#fff;border-radius:3px;padding:1px 6px;font-size:10px;margin:1px 0;">{{ $t }}</span>
+                                    @endforeach
+                                    @if($countTitulos > $maxShow)
+                                        <span style="display:inline-block;background:#6c757d;color:#fff;border-radius:3px;padding:1px 6px;font-size:10px;margin:1px 0;">+{{ $countTitulos - $maxShow }}</span>
+                                    @endif
+                                </td>
+                                <td style="padding:6px 4px;font-size:11px;">{{ $lapso }}</td>
+                                <td style="padding:6px 4px;">
+                                    @foreach(array_slice($comunidades, 0, $maxShow) as $c)
+                                        <span style="display:inline-block;background:#198754;color:#fff;border-radius:3px;padding:1px 6px;font-size:10px;margin:1px 0;">{{ $c }}</span>
+                                    @endforeach
+                                    @if($countComunidades > $maxShow)
+                                        <span style="display:inline-block;background:#6c757d;color:#fff;border-radius:3px;padding:1px 6px;font-size:10px;margin:1px 0;">+{{ $countComunidades - $maxShow }}</span>
+                                    @endif
+                                </td>
+                                <td align="center" style="padding:6px 4px;">
+                                    @foreach($grupo as $v)
+                                        <button type="button" wire:click="quitarVinculacion({{ $v->vin_codigo }})" style="background:none;border:1px solid #c62828;color:#c62828;border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;font-weight:600;margin:1px 0;display:block;width:100%;" onmouseover="this.style.background='#c62828';this.style.color='#fff'" onmouseout="this.style.background='';this.style.color='#c62828'">Quitar {{ $loop->iteration }}</button>
+                                    @endforeach
+                                </td>
+                            </tr>
                         @endforeach
                     </tbody>
                 </table>

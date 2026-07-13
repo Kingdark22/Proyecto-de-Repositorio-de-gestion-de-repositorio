@@ -442,7 +442,6 @@ class VinculacionManager extends Component
         $comCodigo = $this->comunidadId !== '' ? (int) $this->comunidadId : null;
 
         $creadas = 0;
-        $actualizadas = 0;
         $titulosUsados = [];
 
         foreach ($this->selectedProjects as $pid) {
@@ -452,7 +451,6 @@ class VinculacionManager extends Component
                 continue;
             }
 
-            // Crear título nuevo si es necesario
             $tituloId = null;
             if (str_starts_with($tituloValor, 'nuevo_')) {
                 $nombreTitulo = strtoupper(trim($this->nuevoTituloProyecto));
@@ -477,29 +475,17 @@ class VinculacionManager extends Component
             $tv = TituloVinculacion::find($tituloId);
             $titulosUsados[] = $tv?->titulo ?? '';
 
-            $existe = Vinculacion::where('proyecto_id', $pid)->first();
-            if ($existe) {
-                $existe->update([
-                    'titulo_vinculacion_id' => $tituloId,
-                    'com_codigo' => $comCodigo,
-                ]);
-                $actualizadas++;
-            } else {
-                Vinculacion::create([
-                    'proyecto_id' => $pid,
-                    'titulo_vinculacion_id' => $tituloId,
-                    'com_codigo' => $comCodigo,
-                    'tipo' => 'Vinculación',
-                ]);
-                $creadas++;
-            }
+            Vinculacion::create([
+                'proyecto_id' => $pid,
+                'titulo_vinculacion_id' => $tituloId,
+                'com_codigo' => $comCodigo,
+                'tipo' => 'Vinculación',
+            ]);
+            $creadas++;
         }
 
         $titulosUnicos = array_unique(array_filter($titulosUsados));
         $msg = "{$creadas} vinculación(es) creada(s)";
-        if ($actualizadas > 0) {
-            $msg .= " y {$actualizadas} actualizada(s)";
-        }
         if (!empty($titulosUnicos)) {
             $msg .= " — Títulos: " . implode(', ', $titulosUnicos);
         }
@@ -565,9 +551,9 @@ class VinculacionManager extends Component
 
     // ─── Quitar vinculación ───────────────────────────────────
 
-    public function quitarVinculacion(int $proyectoId): void
+    public function quitarVinculacion(int $vinCodigo): void
     {
-        Vinculacion::where('proyecto_id', $proyectoId)->delete();
+        Vinculacion::where('vin_codigo', $vinCodigo)->delete();
         $this->safeDispatch('success', 'Vinculación eliminada.');
     }
 
@@ -727,13 +713,11 @@ class VinculacionManager extends Component
 
             foreach ($todasVinculaciones as $v) {
                 $p = $v->proyecto;
-                $v->sede = '';
                 $v->lapso_nombre = '';
                 if ($p && $p->equipo_ref) {
                     $partes = $equipoSvc->parsearClave($p->equipo_ref);
                     if ($partes) {
                         $ctx = $equipoSvc->etiquetasContexto($partes['lap_codigo'], $partes['sec_codigo']);
-                        $v->sede = $ctx['sed_siglas'] ?? '';
                         if (!empty($ctx['lap_nombre'])) {
                             $v->lapso_nombre = $ctx['lap_nombre'];
                         }
@@ -741,8 +725,8 @@ class VinculacionManager extends Component
                 }
             }
 
-            $vinculacionesAgrupadas = $todasVinculaciones
-                ->groupBy(fn($v) => $v->titulo . '|' . ($v->comunidad?->nombre ?? 'sin-comunidad'));
+            $vinculacionesPorProyecto = $todasVinculaciones
+                ->groupBy(fn($v) => $v->proyecto_id);
 
             $comunidades = Comunidad::orderBy('com_nombre')->get();
 
@@ -752,13 +736,13 @@ class VinculacionManager extends Component
 
             return view('livewire.vinculacion-manager', [
                 'proyectos' => $proyectosPaginados,
-                'vinculacionesAgrupadas' => $vinculacionesAgrupadas,
+                'vinculacionesPorProyecto' => $vinculacionesPorProyecto,
                 'comunidades' => $comunidades,
             ]);
         } catch (\Throwable $e) {
             return view('livewire.vinculacion-manager', [
                 'proyectos' => null,
-                'vinculacionesAgrupadas' => collect(),
+                'vinculacionesPorProyecto' => collect(),
                 'comunidades' => collect(),
             ]);
         }
