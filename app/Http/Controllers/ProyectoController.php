@@ -512,20 +512,24 @@ class ProyectoController extends Controller
                 ->with('error', 'Grupo no encontrado.');
         }
 
+        // Normalizar grupo: puede venir de porIdentificador (Model) o de obtener (stdClass)
+        $esModelo = $grupo instanceof \App\Models\GrupoProyectoModulo;
+        $ctx = $esModelo ? ($grupo->grp_contexto ?? []) : [];
+        $miembros = $esModelo ? ($grupo->grp_miembros ?? []) : ($grupo->miembros ?? []);
+
         // Solo el profesor proyecto creador o miembros del equipo pueden crear proyecto desde el grupo
         $esProfesorCreador = false;
         $esMiembro = false;
         $usuarioCedula = trim((string) $user->usu_cedula);
         $usuarioUsuNombre = trim((string) $user->usu_nombre);
         if ($activeRole === 'profesor proyecto') {
-            $ctx = $grupo->grp_contexto;
-            $creadorUsu = trim((string) ($ctx['creador_usuario'] ?? ''));
-            $creadorCed = trim((string) ($ctx['creador_cedula'] ?? $grupo->grp_creador_cedula ?? ''));
+            $creadorUsu = trim((string) ($ctx['creador_usuario'] ?? $grupo->creador_usuario ?? ''));
+            $creadorCed = trim((string) ($ctx['creador_cedula'] ?? $grupo->creador_cedula ?? ''));
             $matchUsu = $creadorUsu !== '' && $creadorUsu === $usuarioUsuNombre;
             $matchCed = !$matchUsu && $creadorCed !== '' && $creadorCed === $usuarioCedula;
             $esProfesorCreador = $matchUsu || $matchCed;
         }
-        foreach (($grupo->grp_miembros ?? []) as $m) {
+        foreach (($miembros) as $m) {
             if (trim((string) ($m['cedula'] ?? '')) === $usuarioCedula) {
                 $esMiembro = true;
                 break;
