@@ -172,15 +172,20 @@
                     </div>
 
                     @if($proyectos && $proyectos->isNotEmpty())
+                        <div style="max-height:55vh;overflow-y:auto;">
                         <table width="100%" border="1" cellpadding="6" cellspacing="0"
                             style="border-collapse:collapse;border-color:#ccc;font-size:12px;">
-                            <thead>
+                            <thead style="position:sticky;top:0;z-index:1;">
                                 <tr style="background:#8bb2b7;color:#000;font-weight:bold;">
-                                    <th width="4%" style="padding:8px 4px;text-align:center;">&nbsp;</th>
-                                    <th width="5%" style="padding:8px 4px;">N&deg;</th>
-                                    <th width="40%" style="padding:8px 4px;">Proyecto</th>
-                                    <th width="25%" style="padding:8px 4px;">Comunidad</th>
-                                    <th width="16%" style="padding:8px 4px;">Detalle</th>
+                                    <th width="3%" style="padding:6px 4px;text-align:center;">&nbsp;</th>
+                                    <th width="3%" style="padding:6px 4px;">N&deg;</th>
+                                    <th width="18%" style="padding:6px 4px;">Proyecto</th>
+                                    <th width="22%" style="padding:6px 4px;">Resumen</th>
+                                    <th width="12%" style="padding:6px 4px;">L&iacute;nea</th>
+                                    <th width="12%" style="padding:6px 4px;">Metodolog&iacute;a</th>
+                                    <th width="12%" style="padding:6px 4px;">Comunidad</th>
+                                    <th width="10%" style="padding:6px 4px;">Equipo</th>
+                                    <th width="6%" style="padding:6px 4px;">Acci&oacute;n</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -194,18 +199,24 @@
                                             <input type="checkbox" wire:model.live="selectedProjects" value="{{ $proy->id }}" class="sel-checkbox">
                                         </td>
                                         <td align="center" style="padding:6px 4px;">{{ $rowNum }}</td>
-                                        <td style="font-weight:bold;padding:6px 4px;">
+                                        <td style="font-weight:bold;padding:6px 4px;font-size:11px;">
                                             <div>{{ $proy->titulo ?? 'N/A' }}</div>
-                                            <div style="font-size:10px;color:#888;margin-top:1px;">{{ $proy->equipo_ref ?? '' }}</div>
                                         </td>
-                                        <td style="padding:6px 4px;">{{ $proy->comunidad->nombre ?? '-' }}</td>
+                                        <td style="padding:6px 4px;font-size:10px;color:#333;">
+                                            {{ \Illuminate\Support\Str::limit(strip_tags($proy->resumen ?? ''), 120) }}
+                                        </td>
+                                        <td style="padding:6px 4px;font-size:10px;">{{ $proy->linea_investigacion->nombre_investigacion ?? '-' }}</td>
+                                        <td style="padding:6px 4px;font-size:10px;">{{ $proy->metodologia->nombre ?? '-' }}</td>
+                                        <td style="padding:6px 4px;font-size:10px;">{{ $proy->comunidad->nombre ?? '-' }}</td>
+                                        <td style="padding:6px 4px;font-size:10px;color:#555;">{{ $proy->equipo_ref ?? '-' }}</td>
                                         <td align="center" style="padding:6px 4px;">
-                                            <button type="button" wire:click="verDetalle({{ $proy->id }})" class="cm-btn cm-btn-secondary cm-btn-sm" style="font-size:11px;">Ver</button>
+                                            <button type="button" wire:click.stop="verDetalle({{ $proy->id }})" class="cm-btn cm-btn-secondary cm-btn-sm" style="font-size:10px;padding:3px 8px;">Ver</button>
                                         </td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
+                        </div>
                         <div style="margin-top:10px;">{{ $proyectos->links() }}</div>
                     @else
                         <p style="color:#666;font-style:italic;padding:10px;">No hay proyectos aprobados.</p>
