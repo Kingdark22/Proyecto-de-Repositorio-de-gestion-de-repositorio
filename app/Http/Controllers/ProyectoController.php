@@ -815,39 +815,13 @@ class ProyectoController extends Controller
         $lapso   = $lapsoNombre ?: ($datos['lapsoMasActual'] ?? '');
         $pnf     = $datos['pnfPredominante'] ?? '';
 
-        // ── Post-procesar docente de proyecto ─────────────────────────────
-        // Construir un mapa pry_codigo => equipo_ref para matching correcto
+        // ── Post-procesar sede fallback ────────────────────────────────────
         $proyectosEquipo = Proyecto::where('estado_validacion', 'aprobado')
             ->where('estado_logico', true)
             ->orderBy('id')
             ->select(['pry_codigo', 'pry_direccion_logica'])
             ->get()
             ->keyBy('pry_codigo');
-
-        // Pre-cargar todas las cédulas de creadores de grupos necesarias (evita N+1)
-        $equipoRefs = $proyectosEquipo->pluck('equipo_ref')->filter()->unique()->values()->toArray();
-        $creadoresMap = [];
-        if (!empty($equipoRefs)) {
-            try {
-                $gruposCreadores = \App\Models\GrupoProyectoModulo::whereIn('grp_identificador', $equipoRefs)
-                    ->whereNotNull('grp_creador_cedula')
-                    ->get(['grp_identificador', 'grp_creador_cedula']);
-                $cedulas = $gruposCreadores->pluck('grp_creador_cedula')->filter()->unique()->values()->toArray();
-                $usuariosMap = [];
-                if (!empty($cedulas)) {
-                    $usuariosMap = \App\Models\User::whereIn('usu_cedula', $cedulas)
-                        ->get(['usu_cedula', 'nombre', 'apellido'])
-                        ->keyBy(fn($u) => trim((string) $u->usu_cedula));
-                }
-                foreach ($gruposCreadores as $g) {
-                    $ced = trim((string) $g->grp_creador_cedula);
-                    $user = $usuariosMap[$ced] ?? null;
-                    $creadoresMap[$g->grp_identificador] = $user
-                        ? strtoupper(trim(($user->nombre ?? '') . ' ' . ($user->apellido ?? '')))
-                        : '';
-                }
-            } catch (\Throwable) {}
-        }
 
         // Pre-cargar sedes necesarias (evita N+1)
         $sedesMap = [];
@@ -886,8 +860,6 @@ class ProyectoController extends Controller
                 }
             }
 
-            // Docente de proyecto = quien creó el grupo (ya pre-cargado)
-            $fila['docente'] = $creadoresMap[$equipoRef] ?? '';
         }
         unset($fila);
 

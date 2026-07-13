@@ -47,6 +47,10 @@ class ReporteDepositoService
         $proyectoIds = $proyectos->pluck('id')->filter()->values()->toArray();
         $involucradosMap = $this->cargarInvolucradosEnLote($proyectoIds);
 
+        // Resolver docentes (profesores creadores del proyecto) en lote
+        $cedulas = $proyectos->pluck('creador_cedula')->filter()->unique()->values()->toArray();
+        $docentesMap = $this->resolverDocentesEnLote($cedulas);
+
         $filas = [];
         $maxIntegrantes = 1;
 
@@ -122,12 +126,12 @@ class ReporteDepositoService
                 'titulo'                   => $proyecto->titulo ?? '',
                 'resumen'                  => $proyecto->resumen ?? '',
                 'linea_investigacion'      => $lineaNombre,
-                'docente'                  => '',
+                'docente'                  => $docentesMap[$proyecto->creador_cedula] ?? '',
                 'tutor_academico'          => $tutor,
                 'representante_institucional' => $representante,
                 'integrantes'              => $integrantes,
                 'localidad_geografica'     => $localidad,
-                'comunidad_beneficiada'    => $proyecto->comunidad?->nombre ?? '',
+                'comunidad_beneficiada'    => $proyecto->cantidad_beneficiados ?? '',
                 'resultado_socializacion'  => 'Aprobado',
             ];
         }
@@ -543,6 +547,36 @@ class ReporteDepositoService
                 }
             }
         } catch (\Throwable) {}
+
+        return $resultado;
+    }
+
+    /**
+     * Resuelve los nombres de los docentes (profesores creadores) desde pry_creador_cedula.
+     *
+     * @param  string[]  $cedulas
+     * @return array<string, string>
+     */
+    protected function resolverDocentesEnLote(array $cedulas): array
+    {
+        if (empty($cedulas)) {
+            return [];
+        }
+
+        $resultado = [];
+
+        try {
+            $rows = \App\Models\User::whereIn('usu_cedula', $cedulas)->get();
+
+            foreach ($rows as $user) {
+                $cedula = trim($user->usu_cedula);
+                $nombre = trim($user->nombre ?? '');
+                $apellido = trim($user->apellido ?? '');
+                $resultado[$cedula] = $nombre . ($apellido !== '' ? ' ' . $apellido : '');
+            }
+        } catch (\Throwable) {
+            // Si falla la consulta dejar docentes vacíos
+        }
 
         return $resultado;
     }
