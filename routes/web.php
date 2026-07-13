@@ -14,7 +14,6 @@ Route::get('/', function () {
 });
 
 Route::redirect('/repositorio', '/proyectos/buscar')->name('repositorio')->middleware(['auth', 'active.role']);
-Route::redirect('/publicaciones/publico', '/proyectos/buscar')->name('publicaciones.publico')->middleware(['auth', 'active.role']);
 
 Route::get('/magic-login', [MagicLoginController::class, 'login'])->name('magic-login');
 Route::middleware('auth')->group(function () {
@@ -142,7 +141,6 @@ Route::middleware(['auth', 'active.role'])->group(function () {
         Route::delete('/proyectos/gestion/{id}/involucrados/roles/{pivotId}/{rolId}', [\App\Http\Controllers\ProyectoController::class, 'quitarRolInvolucrado'])->name('proyectos.gestion.involucrados.roles.quitar');
         Route::post('/proyectos/gestion/involucrados/roles/crear', [\App\Http\Controllers\ProyectoController::class, 'crearRol'])->name('proyectos.gestion.involucrados.roles.crear');
     });
-    Route::view('/publicaciones', 'publicaciones.index')->name('publicaciones.index')->middleware('role:gestionador');
 
     Route::view('/vinculacion', 'vinculacion.index')->name('vinculacion.index')->middleware('role:gestionador');
     Route::get('/vinculacion/reporte-pdf', [\App\Http\Controllers\VinculacionReporteController::class, 'reportePdf'])->name('vinculacion.reporte-pdf')->middleware('auth');

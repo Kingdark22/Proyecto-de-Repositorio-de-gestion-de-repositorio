@@ -167,20 +167,6 @@ return [
         ],
     ],
 
-    // ---------------------------------------------------------------
-    // Módulo Publicaciones
-    // ---------------------------------------------------------------
-
-    'proyectos_publicados' => [
-        'primary_key' => 'pub_codigo',
-        'columns' => [
-            'id'           => 'pub_codigo',
-            'proyecto_id'  => 'pry_codigo',
-            'archivo_path' => 'pub_archivo_path',
-            'estado'       => 'pub_estado',
-        ],
-    ],
-
     'vinculaciones' => [
         'primary_key' => 'vin_codigo',
         'columns' => [

@@ -60,7 +60,6 @@ class NavigationMenu
             'canRegisterProject'   => $this->roles->userHasRole($user, 'administrador', 'gestionador')
                 || ($this->roles->userHasRole($user, 'estudiante') && $user->puedeRegistrarProyecto()),
             'canManageSystemConfig'=> $this->roles->userHasRole($user, 'administrador', 'coordinador', 'gestionador'),
-            'canViewPublicaciones'   => $this->roles->userHasRole($user, 'gestionador'),
             'pendingUpdatesCount'    => $pendingUpdatesCount,
         ];
 
@@ -84,7 +83,6 @@ class NavigationMenu
             'canViewAcademic', 'canViewComunes', 'canManageCatalogs',
             'canManageComponents', 'canValidateProjects', 'canRegisterProject',
             'canManageSystemConfig', 'canManageCoordinators',
-            'canViewPublicaciones',
         ], false);
     }
 }

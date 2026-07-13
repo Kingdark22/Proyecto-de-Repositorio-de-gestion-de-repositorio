@@ -99,21 +99,6 @@ $notificacionesCount = count($notificacionesList);
             </li>
             @endif
 
-            @if ($nav['canViewPublicaciones'] ?? false)
-            <li>
-                <div class="legacy-menu-item has-submenu">
-                    Publicaciones
-                    <div class="arrow-icon"></div>
-                </div>
-                <div class="legacy-submenu">
-                    <a href="{{ route('publicaciones.index') }}"
-                        class="{{ request()->routeIs('publicaciones.index') ? 'active-sub' : '' }}">
-                        Proyectos Publicados
-                    </a>
-                </div>
-            </li>
-            @endif
-
             <li>
                 <form method="POST" action="{{ route('logout') }}" style="margin:0;">
                     @csrf
