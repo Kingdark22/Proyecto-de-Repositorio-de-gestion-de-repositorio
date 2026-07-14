@@ -104,13 +104,9 @@ class ComunidadController extends Controller
 
         $correo = trim($validated['correo'] ?? '');
         if ($correo !== '') {
-            $resultado = $correoService->validarCompleto($correo);
+            $resultado = $correoService->validarCompleto($correo, false);
             if (!$resultado['valido']) {
                 return back()->withErrors(['correo' => $resultado['error'] ?? 'Correo inválido.'])->withInput();
-            }
-            $resultado2 = $correoService->validarCompleto($correo, true);
-            if (!$resultado2['valido']) {
-                return back()->withErrors(['correo' => $resultado2['error'] ?? 'El dominio del correo no existe.'])->withInput();
             }
         }
 
@@ -223,13 +219,9 @@ class ComunidadController extends Controller
 
         $correo = trim($validated['correo'] ?? '');
         if ($correo !== '') {
-            $resultado = $correoService->validarCompleto($correo);
+            $resultado = $correoService->validarCompleto($correo, false);
             if (!$resultado['valido']) {
                 return back()->withErrors(['correo' => $resultado['error'] ?? 'Correo inválido.'])->withInput();
-            }
-            $resultado2 = $correoService->validarCompleto($correo, true);
-            if (!$resultado2['valido']) {
-                return back()->withErrors(['correo' => $resultado2['error'] ?? 'El dominio del correo no existe.'])->withInput();
             }
         }
 
@@ -307,7 +299,7 @@ class ComunidadController extends Controller
             return response()->json(['valido' => false, 'error' => null, 'errores' => []]);
         }
 
-        $resultado = $correoService->validarCompleto($correo, true);
+        $resultado = $correoService->validarCompleto($correo, false);
 
         return response()->json($resultado);
     }
