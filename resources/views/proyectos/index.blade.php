@@ -1,7 +1,7 @@
 @extends('layouts.app')
+@section('title', 'Depósito de Proyecto')
 
-@section('title', 'Gestión de Proyectos')
-@section('header', 'Gestión de Proyectos')
+@section('header', 'Depósito de Proyecto')
 
 @push('styles')
 <style>

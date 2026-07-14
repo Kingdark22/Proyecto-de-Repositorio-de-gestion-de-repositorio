@@ -275,9 +275,6 @@ class ComponenteController extends Controller
         foreach ($componenteIds as $compCodigo) {
             $compCodigo = (int) $compCodigo;
 
-            // Eliminar asignaciones existentes de este componente
-            ComponentePrograma::where('comp_codigo', $compCodigo)->delete();
-
             foreach ($pnfsActivos as $proCodigo => $activo) {
                 if ((int) $activo !== 1) continue;
                 $proCodigo = (int) $proCodigo;
@@ -286,12 +283,20 @@ class ComponenteController extends Controller
                 foreach ($trayectos as $traCodigo => $selected) {
                     if ((int) $selected !== 1) continue;
 
-                    ComponentePrograma::create([
-                        'comp_codigo' => $compCodigo,
-                        'pro_codigo' => $proCodigo,
-                        'tra_codigo' => (string) $traCodigo,
-                    ]);
-                    $totalVinculaciones++;
+                    // Solo crear si no existe ya (evita duplicados y conserva vinculaciones previas)
+                    $existe = ComponentePrograma::where('comp_codigo', $compCodigo)
+                        ->where('pro_codigo', $proCodigo)
+                        ->where('tra_codigo', (string) $traCodigo)
+                        ->exists();
+
+                    if (!$existe) {
+                        ComponentePrograma::create([
+                            'comp_codigo' => $compCodigo,
+                            'pro_codigo' => $proCodigo,
+                            'tra_codigo' => (string) $traCodigo,
+                        ]);
+                        $totalVinculaciones++;
+                    }
                 }
             }
         }
