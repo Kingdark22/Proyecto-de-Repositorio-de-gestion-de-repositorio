@@ -222,7 +222,7 @@ class GrupoProyectoController extends Controller
         }
 
         $validated = $request->validate([
-            'nombre' => 'required|string|max:120',
+            'nombre' => 'required|string|min:3|max:120',
             'lapso' => 'required|integer|min:1',
             'programa' => 'nullable|integer',
             'seccion' => 'required|integer|min:1',
@@ -230,6 +230,7 @@ class GrupoProyectoController extends Controller
             'miembros' => 'required|string', // JSON string of members
         ], [
             'nombre.required' => 'Indique un nombre para el equipo.',
+            'nombre.min' => 'El nombre del equipo debe tener al menos 3 caracteres.',
             'lapso.required' => 'Seleccione el lapso académico.',
             'programa.integer' => 'El programa seleccionado no es válido.',
             'seccion.required' => 'Seleccione la sección del PNF.',
@@ -433,7 +434,7 @@ class GrupoProyectoController extends Controller
         }
 
         $validated = $request->validate([
-            'nombre' => 'required|string|max:120',
+            'nombre' => 'required|string|min:3|max:120',
             'lapso' => 'required|integer|min:1',
             'programa' => 'nullable|integer',
             'seccion' => 'required|integer|min:1',
@@ -441,6 +442,7 @@ class GrupoProyectoController extends Controller
             'miembros' => 'required|string',
         ], [
             'nombre.required' => 'Indique un nombre para el equipo/grupo.',
+            'nombre.min' => 'El nombre del equipo debe tener al menos 3 caracteres.',
             'lapso.required' => 'Seleccione el lapso académico.',
             'programa.integer' => 'El programa seleccionado no es válido.',
             'seccion.required' => 'Seleccione la sección del PNF.',
