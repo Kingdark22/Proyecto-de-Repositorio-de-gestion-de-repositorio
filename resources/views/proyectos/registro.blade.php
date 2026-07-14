@@ -627,6 +627,7 @@ function confirmarRechazoDoc() {
         return;
     }
     actualizarDoc(id, 2, obs);
+    cerrarModalRechazo();
 }
 </script>
 @push('scripts')
