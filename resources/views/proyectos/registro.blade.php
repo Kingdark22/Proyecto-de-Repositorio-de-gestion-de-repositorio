@@ -137,7 +137,7 @@
             </fieldset>
 
             {{-- == CLASIFICACIÓN == --}}
-            @if(!$soloLectura)
+            @if(!$modoActualizacion || $soloLectura)
             <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
                 <legend style="font-weight: bold; font-size: 12px;">Clasificación del proyecto</legend>
                 <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px;">

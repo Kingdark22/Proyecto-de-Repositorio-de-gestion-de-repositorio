@@ -264,7 +264,7 @@
                         <div style="font-size:12px;color:#333;line-height:1.5;text-align:justify;">{{ $selectedProject->resumen ?: 'Sin resumen disponible.' }}</div>
                         @if($selectedProject->pry_cantidad_beneficiados)
                         <div style="margin-top:6px;padding:6px 10px;background:#f0faf0;border:1px solid #c8e6c9;border-radius:4px;display:inline-block;">
-                            <b>Beneficiados:</b> <span style="font-size:18px;font-weight:bold;color:#198754;">{{ $selectedProject->pry_cantidad_beneficiados }}</span>
+                            <b>Cantidad de beneficiado:</b> <span style="font-size:18px;font-weight:bold;color:#198754;">{{ $selectedProject->pry_cantidad_beneficiados }}</span>
                         </div>
                         @endif
                     </div>
