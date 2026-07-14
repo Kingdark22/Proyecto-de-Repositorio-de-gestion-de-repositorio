@@ -370,9 +370,6 @@
             <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
                 <legend style="font-weight: bold; font-size: 12px;">
                     Documentos del proyecto por componente
-                    @if($componentesDisp->isNotEmpty())
-                        <span style="font-weight:normal;font-size:10px;color:#666;"> ({{ $componentesDisp->count() }} componente(s))</span>
-                    @endif
                 </legend>
 
                 @if($componentesDisp->isNotEmpty())

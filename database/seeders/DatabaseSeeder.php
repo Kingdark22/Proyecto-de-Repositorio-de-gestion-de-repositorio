@@ -67,5 +67,7 @@ class DatabaseSeeder extends Seeder
 
         \App\Models\Comunidad::create(['nombre' => 'Comunidad Las Brisas']);
         \App\Models\Comunidad::create(['nombre' => 'Comunidad El Centro']);
+
+        $this->call(LineaInvestigacionSeeder::class);
     }
 }
