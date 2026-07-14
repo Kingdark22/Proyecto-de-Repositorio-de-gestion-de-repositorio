@@ -96,65 +96,6 @@
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Listado de proyectos institucionales</legend>
 
-            {{-- Equipos del profesor (dentro del mismo fieldset) --}}
-            @if (!empty($gruposDocente))
-                <div style="margin-bottom:12px;">
-                    <div style="font-size:12px;font-weight:bold;color:#2e7d32;margin-bottom:5px;">Equipos disponibles para registrar proyecto</div>
-                    <table width="100%" border="1" cellpadding="4" cellspacing="0"
-                        style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px;">
-                        <thead>
-                            <tr style="background-color: #a5d6a7; color: #000; text-align: center; font-weight: bold;">
-                                <th width="25%">Nombre del equipo</th>
-                                <th width="15%">PNF / Sección</th>
-                                <th width="10%">Integrantes</th>
-                                <th width="25%">Proyecto</th>
-                                <th width="25%">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($gruposDocente as $g)
-                                @php $g = (object) $g; @endphp
-                                <tr style="background: {{ $loop->iteration % 2 == 0 ? '#E8F5E9' : '#FFF' }};" valign="top">
-                                    <td style="padding:5px;font-weight:bold;">{{ $g->nombre }}</td>
-                                    <td style="padding:5px;font-size:10px;">
-                                        {{ $g->pro_siglas ?? '' }}@if($g->sec_nombre) · Secc. {{ $g->sec_nombre }}@endif
-                                    </td>
-                                    <td align="center" style="padding:5px;">{{ $g->integrantes }}</td>
-                                    <td align="center" style="padding:5px;">
-                                        @if ($g->tiene_proyecto)
-                                            @if ($g->proyecto_estado_validacion === 'aprobado')
-                                                <span style="color:#008000;font-weight:bold;">Aprobado</span>
-                                            @elseif($g->proyecto_estado_validacion === 'rechazado')
-                                                <span style="color:#FF0000;font-weight:bold;">Rechazado</span>
-                                            @else
-                                                <span style="color:#d4a017;font-weight:bold;">En proceso</span>
-                                            @endif
-                                        @else
-                                            <span style="color:#999;">Sin proyecto</span>
-                                        @endif
-                                    </td>
-                                    <td align="center" style="padding:5px;">
-                                        @if ($esAdmin)
-                                            <span style="color:#999;font-size:10px;">{{ $g->tiene_proyecto ? 'Tiene proyecto' : 'Sin proyecto' }}</span>
-                                        @else
-                                            @if ($g->tiene_proyecto)
-                                                @if ($g->proyecto_estado_validacion !== 'aprobado')
-                                                    <a href="{{ route('proyectos.gestion.edit', $g->proyecto_id) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
-                                                @else
-                                                    <span style="color:#008000;font-weight:bold;font-size:10px;">Aprobado</span>
-                                                @endif
-                                            @else
-                                                <a href="{{ route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
-                                            @endif
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
-
             {{-- Botón Exportar Excel (solo administrador y coordinador) --}}
             @php
                 $activeRoleExport = app(\App\Services\UserRoleService::class)->getActiveRole(auth()->user());
@@ -410,7 +351,7 @@
         document.getElementById('rejectModal').style.display = 'none';
     }
     function abrirModalExcel() {
-        limpiarSeleccionExcel();
+        limpiarBusquedaExcel();
         var searchActual = (document.getElementById('searchProjectInput') || {}).value || '';
         document.getElementById('excelSearch').value = searchActual;
         document.getElementById('excelModal').style.display = 'flex';
@@ -504,7 +445,7 @@
                 });
             }).catch(function() {});
     }
-    // Autocomplete para búsqueda en modal excel — multi-parámetro con caché en memoria y AbortController
+    // Autocomplete para búsqueda en modal excel — vista previa de resultados
     (function() {
         var input = document.getElementById('excelSearch');
         var dropdown = document.getElementById('excelSearchAutocomplete');
@@ -531,7 +472,7 @@
         function buscarProyectos() {
             var q = input.value.trim();
             clearTimeout(window.excelSearchTimer);
-            if (q.length < 2) { dropdown.style.display = 'none'; return; }
+            if (q.length < 2) { dropdown.style.display = 'none'; badge.style.display = 'none'; return; }
 
             var filters = getActiveFilters();
             var key = queryKey(q, filters);
@@ -540,6 +481,7 @@
             if (cached && (Date.now() - cached.ts < CACHE_TTL)) {
                 dropdown.innerHTML = cached.html || '';
                 dropdown.style.display = cached.html ? 'block' : 'none';
+                mostrarBadgeResultados(cached.count);
                 return;
             }
 
@@ -559,22 +501,32 @@
                     .then(function(data) {
                         if (!data.length) {
                             dropdown.style.display = 'none';
-                            cache[key] = { html: null, ts: Date.now() };
+                            badge.style.display = 'none';
+                            cache[key] = { html: null, count: 0, ts: Date.now() };
                             return;
                         }
-                        var html = '';
+                        var html = '<div style="padding:6px 12px;background:#f5f5f5;font-size:11px;color:#666;border-bottom:1px solid #ddd;">' + data.length + ' resultado(s)</div>';
                         data.forEach(function(p) {
-                            html += '<div class="excel-autocomplete-item" data-id="' + p.id + '" data-title="' + escAttr(p.title) + '" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #e8e8e8;font-size:12px;">';
+                            html += '<div class="excel-autocomplete-item" style="padding:8px 12px;border-bottom:1px solid #e8e8e8;font-size:12px;">';
                             html += '<strong style="font-size:12px;color:#222;">' + escHtml(p.title) + '</strong>';
+                            html += '<div style="font-size:11px;color:#666;margin-top:2px;">' + escHtml(p.resumen || '') + '</div>';
                             html += '</div>';
                         });
                         dropdown.innerHTML = html;
                         dropdown.style.display = 'block';
-                        cache[key] = { html: html, ts: Date.now() };
+                        mostrarBadgeResultados(data.length);
+                        cache[key] = { html: html, count: data.length, ts: Date.now() };
                     }).catch(function(err) {
                         if (err.name === 'AbortError') return;
                     });
             }, 150);
+        }
+
+        function mostrarBadgeResultados(count) {
+            var q = input.value.trim();
+            if (q.length < 2) { badge.style.display = 'none'; return; }
+            badge.style.display = 'inline-flex';
+            badge.innerHTML = '<strong>' + escHtml(q) + '</strong> — ' + count + ' resultado(s) <span class="excel-badge-clear" style="margin-left:6px;cursor:pointer;font-weight:bold;color:#c62828;" onclick="limpiarBusquedaExcel()">&times;</span>';
         }
 
         input.addEventListener('input', buscarProyectos);
@@ -590,11 +542,7 @@
             });
         });
 
-        dropdown.addEventListener('click', function(e) {
-            var item = e.target.closest('.excel-autocomplete-item');
-            if (!item) return;
-            seleccionarProyectoExcel(item.dataset.title);
-        });
+        // Sin click para seleccionar — solo vista previa de resultados
 
         dropdown.addEventListener('mouseover', function(e) {
             var item = e.target.closest('.excel-autocomplete-item');
@@ -610,17 +558,7 @@
         }
     })();
 
-    function seleccionarProyectoExcel(title) {
-        var input = document.getElementById('excelSearch');
-        var badge = document.getElementById('excelSearchBadge');
-        input.value = title;
-        // Mostrar badge de selección
-        badge.style.display = 'inline-flex';
-        badge.innerHTML = 'Buscar por: <strong>' + escHtml(title) + '</strong> <span class="excel-badge-clear" style="margin-left:6px;cursor:pointer;font-weight:bold;color:#c62828;" onclick="limpiarSeleccionExcel()">&times;</span>';
-        document.getElementById('excelSearchAutocomplete').style.display = 'none';
-    }
-
-    function limpiarSeleccionExcel() {
+    function limpiarBusquedaExcel() {
         var input = document.getElementById('excelSearch');
         input.value = '';
         document.getElementById('excelSearchBadge').style.display = 'none';

@@ -169,32 +169,53 @@ class ReporteDepositoService
             ->where('estado_validacion', 'aprobado')
             ->where('estado_logico', true)
             ->when($search !== null, function ($q) use ($search) {
-                $q->where(function ($w) use ($search) {
+                $termino = '%' . $search . '%';
+                $q->where(function ($w) use ($search, $termino) {
                     // Resumen del proyecto
                     try {
                         $w->whereRaw('to_tsvector(\'spanish\', coalesce(pry_resumen, \'\')) @@ plainto_tsquery(\'spanish\', ?)', [$search]);
                     } catch (\Throwable) {
-                        $w->orWhereRaw('pry_resumen ILIKE ?', ['%' . $search . '%']);
+                        $w->whereRaw('pry_resumen ILIKE ?', [$termino]);
                     }
-                    // Nombre del grupo vía pry_direccion_logica
-                    $w->orWhereRaw('pry_direccion_logica ILIKE ?', ['%' . $search . '%']);
-                    $w->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo g WHERE g.grp_identificador = proyectos.pry_direccion_logica AND g.grp_nombre ILIKE ?)', ['%' . $search . '%']);
-                    $w->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo g WHERE g.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\') AND g.grp_nombre ILIKE ?)', ['%' . $search . '%']);
+                    // Referencia equipo
+                    $w->orWhereRaw('pry_direccion_logica ILIKE ?', [$termino]);
+                    // Nombre del grupo
+                    $w->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE (gpm.grp_identificador = proyectos.pry_direccion_logica OR gpm.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\')) AND gpm.grp_nombre ILIKE ?)', [$termino]);
+                    // Miembros del grupo
+                    $w->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE (gpm.grp_identificador = proyectos.pry_direccion_logica OR gpm.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\')) AND gpm.grp_miembros::text ILIKE ?)', [$termino]);
+                    // Profesor del grupo
+                    $w->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE (gpm.grp_identificador = proyectos.pry_direccion_logica OR gpm.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\')) AND (gpm.grp_creador_cedula::text ILIKE ? OR gpm.grp_contexto::text ILIKE ?))', [$termino, $termino]);
                     // Comunidad
-                    $w->orWhereHas('comunidad', function ($qc) use ($search) {
-                        $qc->whereRaw('com_nombre ILIKE ?', ['%' . $search . '%']);
+                    $w->orWhereHas('comunidad', function ($qc) use ($termino) {
+                        $qc->whereRaw('com_nombre ILIKE ?', [$termino]);
                     });
                     // Línea de investigación
-                    $w->orWhereHas('linea_investigacion', function ($ql) use ($search) {
-                        $ql->whereRaw('lin_nombre_investigacion ILIKE ?', ['%' . $search . '%']);
+                    $w->orWhereHas('linea_investigacion', function ($ql) use ($termino) {
+                        $ql->whereRaw('lin_nombre_investigacion ILIKE ?', [$termino]);
                     });
                     // Metodología
-                    $w->orWhereHas('metodologia', function ($qm) use ($search) {
-                        $qm->whereRaw('mei_nombre ILIKE ?', ['%' . $search . '%']);
+                    $w->orWhereHas('metodologia', function ($qm) use ($termino) {
+                        $qm->whereRaw('mei_nombre ILIKE ?', [$termino]);
                     });
                     // Tipo de investigación
-                    $w->orWhereHas('tipo_investigacion', function ($qt) use ($search) {
-                        $qt->whereRaw('tin_nombre ILIKE ?', ['%' . $search . '%']);
+                    $w->orWhereHas('tipo_investigacion', function ($qt) use ($termino) {
+                        $qt->whereRaw('tin_nombre ILIKE ?', [$termino]);
+                    });
+                    // Objetivo de investigación
+                    $w->orWhereHas('objetivo_investigacion', function ($oq) use ($termino) {
+                        $oq->whereRaw('obi_nombre ILIKE ?', [$termino]);
+                    });
+                    // Vinculaciones – título
+                    $w->orWhereHas('vinculaciones.tituloVinculacion', function ($vq) use ($termino) {
+                        $vq->whereRaw('tiv_titulo ILIKE ?', [$termino]);
+                    });
+                    // Vinculaciones – comunidad vinculada
+                    $w->orWhereHas('vinculaciones.comunidad', function ($vcq) use ($termino) {
+                        $vcq->whereRaw('com_nombre ILIKE ?', [$termino]);
+                    });
+                    // Documentos – nombre del componente
+                    $w->orWhereHas('documentos.componente', function ($dcq) use ($termino) {
+                        $dcq->whereRaw('comp_nombre ILIKE ?', [$termino]);
                     });
                 });
             })

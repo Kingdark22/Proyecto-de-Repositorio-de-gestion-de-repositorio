@@ -70,7 +70,7 @@ class ProyectoBusquedaService
 
     public function proyectoDetalle(int $id): ?Proyecto
     {
-        return Proyecto::with([
+        $proyecto = Proyecto::with([
             'linea_investigacion',
             'metodologia',
             'tipo_investigacion',
@@ -82,6 +82,13 @@ class ProyectoBusquedaService
         ])
             ->visiblesPublico()
             ->find($id);
+
+        if ($proyecto && $proyecto->equipo_ref) {
+            $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($proyecto->equipo_ref);
+            $proyecto->setRelation('grupoDetalle', $grupo);
+        }
+
+        return $proyecto;
     }
 
     /**
@@ -130,11 +137,13 @@ class ProyectoBusquedaService
                 $q->orWhereRaw('proyectos.pry_direccion_logica ILIKE ?', [$termino]);
 
                 // ── Nombre del grupo ──
-                $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE gpm.grp_identificador = proyectos.pry_direccion_logica AND gpm.grp_nombre ILIKE ?)', [$termino]);
-                $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE gpm.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\') AND gpm.grp_nombre ILIKE ?)', [$termino]);
+                $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE (gpm.grp_identificador = proyectos.pry_direccion_logica OR gpm.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\')) AND gpm.grp_nombre ILIKE ?)', [$termino]);
 
-                // ── Miembros del grupo ──
-                $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE gpm.grp_identificador = proyectos.pry_direccion_logica AND gpm.grp_miembros::text ILIKE ?)', [$termino]);
+                // ── Miembros del grupo (grp_miembros: nombre, apellido, cedula) ──
+                $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE (gpm.grp_identificador = proyectos.pry_direccion_logica OR gpm.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\')) AND gpm.grp_miembros::text ILIKE ?)', [$termino]);
+
+                // ── Profesor (creador del grupo por cédula y nombre en contexto) ──
+                $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE (gpm.grp_identificador = proyectos.pry_direccion_logica OR gpm.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\')) AND (gpm.grp_creador_cedula::text ILIKE ? OR gpm.grp_contexto::text ILIKE ?))', [$termino, $termino]);
 
                 // ── Comunidad ──
                 $q->orWhereHas('comunidad', function (Builder $cq) use ($termino) {
@@ -175,9 +184,6 @@ class ProyectoBusquedaService
                 $q->orWhereHas('documentos.componente', function (Builder $dcq) use ($termino) {
                     $dcq->whereRaw('comp_nombre ILIKE ?', [$termino]);
                 });
-
-                // ── Docente (creador del grupo) ──
-                $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm JOIN usuario u ON u.usu_cedula = gpm.grp_creador_cedula LEFT JOIN persona p ON p.per_cedula = u.usu_cedula WHERE gpm.grp_identificador = proyectos.pry_direccion_logica AND (COALESCE(p.per_nombres, u.usu_nombre) ILIKE ? OR p.per_apellidos ILIKE ?))', [$termino, $termino]);
             });
         }
 
@@ -213,81 +219,23 @@ class ProyectoBusquedaService
         $programa = $filtros['programa'] ?? null;
         $trayecto = $filtros['trayecto'] ?? null;
 
-        if ($seccion && $lap) {
-            return [
-                'tipo' => 'exacto',
-                'valor' => $this->equipoSeccion->construirClave((int) $lap, (int) $seccion),
-            ];
+        if (! $lap && ! $seccion && ! $programa && ! $trayecto) {
+            return 'todos';
         }
 
-        if ($programa || $trayecto) {
-            if (! $lap) {
-                return 'todos';
-            }
+        try {
+            $grupos = app(\App\Services\GrupoProyectoService::class)->listar(array_filter([
+                'lapso' => $lap ? (int) $lap : null,
+                'programa' => $programa ? (int) $programa : null,
+                'seccion' => $seccion ? (int) $seccion : null,
+                'trayecto' => $trayecto ? (int) $trayecto : null,
+            ], fn ($v) => $v !== null));
 
-            $secciones = $this->intranet->seccionesEnLapso(
-                (int) $lap,
-                $programa ? (int) $programa : null,
-                $trayecto ? (int) $trayecto : null
-            );
-
-            if ($secciones->isEmpty()) {
-                return 'sin_resultados';
-            }
-
-            $claves = $secciones
-                ->map(fn ($sec) => $this->equipoSeccion->construirClave((int) $lap, (int) $sec->sec_codigo))
-                ->unique()
-                ->values()
-                ->all();
-
-            // Incluir también grupos registrados para este lapso/programa
-            try {
-                $grupos = app(\App\Services\GrupoProyectoService::class)->listar([
-                    'lapso' => (int) $lap,
-                    'programa' => $programa ? (int) $programa : null,
-                    'seccion' => $seccion ? (int) $seccion : null,
-                ]);
-                $clavesGrupos = $grupos
-                    ->pluck('clave')
-
-                    ->values()
-                    ->all();
-                $claves = array_unique(array_merge($claves, $clavesGrupos));
-            } catch (\Throwable) {
-                // Si falla la consulta de grupos, continuar solo con las secciones
-            }
-
-            return ['tipo' => 'lista', 'valor' => $claves];
+            $claves = $grupos->pluck('clave')->values()->all();
+            return empty($claves) ? 'sin_resultados' : ['tipo' => 'lista', 'valor' => $claves];
+        } catch (\Throwable) {
+            return 'todos';
         }
-
-        if ($lap) {
-            // Construir lista combinada: EQSEC para cada sección + EQGRP para cada grupo en este lapso
-            $secciones = $this->intranet->seccionesEnLapso((int) $lap);
-            $claves = $secciones
-                ->map(fn ($sec) => $this->equipoSeccion->construirClave((int) $lap, (int) $sec->sec_codigo))
-                ->unique()
-                ->values()
-                ->all();
-
-            try {
-                $grupos = app(\App\Services\GrupoProyectoService::class)->listar([
-                    'lapso' => (int) $lap,
-                ]);
-                $clavesGrupos = $grupos
-                    ->pluck('clave')
-
-                    ->values()
-                    ->all();
-                $claves = array_unique(array_merge($claves, $clavesGrupos));
-            } catch (\Throwable) {
-                // Si falla la consulta de grupos, continuar solo con las secciones
-            }
-
-            return ['tipo' => 'lista', 'valor' => $claves];
-        }
-
-        return 'todos';
     }
 
     /**
