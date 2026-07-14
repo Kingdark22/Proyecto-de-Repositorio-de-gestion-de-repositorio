@@ -279,10 +279,10 @@ class ProyectoGestionService
 
         $payload = [
             'resumen' => $datos['resumen'] ?? '',
-            'linea_investigacion_id' => $datos['linea_investigacion_id'] ?? null,
-            'metodologia_id' => $datos['metodologia_id'] ?? null,
-            'tipo_investigacion_id' => $datos['tipo_investigacion_id'] ?? null,
-            'objetivo_investigacion_id' => $datos['objetivo_investigacion_id'] ?? null,
+            'linea_investigacion_id' => !empty($datos['linea_investigacion_id']) ? $datos['linea_investigacion_id'] : null,
+            'metodologia_id' => !empty($datos['metodologia_id']) ? $datos['metodologia_id'] : null,
+            'tipo_investigacion_id' => !empty($datos['tipo_investigacion_id']) ? $datos['tipo_investigacion_id'] : null,
+            'objetivo_investigacion_id' => !empty($datos['objetivo_investigacion_id']) ? $datos['objetivo_investigacion_id'] : null,
             'comunidad_id' => $datos['comunidad_id'],
             'pry_cantidad_beneficiados' => $datos['cantidad_beneficiados'] ?? null,
             'equipo_ref' => $datos['equipo_seccion_clave'],

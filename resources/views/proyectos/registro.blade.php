@@ -137,7 +137,7 @@
             </fieldset>
 
             {{-- == CLASIFICACIÓN == --}}
-            @if(!$modoActualizacion || $soloLectura)
+            @if(!$soloLectura)
             <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
                 <legend style="font-weight: bold; font-size: 12px;">Clasificación del proyecto</legend>
                 <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px;">
@@ -366,13 +366,13 @@
                 $docsExistentes = $datosForm['archivos_actuales'] ?? [];
             @endphp
 
-            {{-- Mostrar componentes a todos los usuarios que tengan acceso al formulario --}}
+            {{-- Mostrar componentes solo si hay documentos subidos, o el estudiante ya guardó el proyecto --}}
+            @if($componentesDisp->isNotEmpty() && ($soloLectura || (!$esProfesor && $proyecto->exists) || ($esProfesor && !empty($docsExistentes))))
             <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
                 <legend style="font-weight: bold; font-size: 12px;">
                     Documentos del proyecto por componente
                 </legend>
 
-                @if($componentesDisp->isNotEmpty())
                 <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 12px;">
                     @foreach($componentesDisp as $comp)
                         @php
@@ -459,14 +459,8 @@
                         </tr>
                     @endforeach
                 </table>
-                @else
-                    <div style="padding:12px;background:#fff8e1;border:1px solid #ffe082;border-radius:4px;font-size:11px;color:#6d4c00;">
-                        <b>⚠ No hay componentes configurados para este programa.</b><br>
-                        Un administrador debe ir a <b>Configuración &gt; Componentes</b> y crear los
-                        componentes documentales asociados al programa correspondiente.
-                    </div>
-                @endif
             </fieldset>
+            @endif
 
 
 

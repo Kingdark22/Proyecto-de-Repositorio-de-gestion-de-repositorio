@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Helpers\DualDatabase;
 use App\Models\LineaInvestigacion;
+use App\Repositories\CatalogoRepository;
 use App\Services\UnicidadNombreService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -73,6 +74,8 @@ class LineaInvestigacionController extends Controller
             'descripcion' => trim($validated['descripcion']),
             'activo' => true,
         ]);
+
+        app(CatalogoRepository::class)->invalidarCatalogos();
 
         return redirect()->route('lineas-investigacion')
             ->with('success', 'Línea de Investigación registrada con éxito.');
