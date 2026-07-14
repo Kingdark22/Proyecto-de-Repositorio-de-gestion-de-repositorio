@@ -88,21 +88,11 @@
             @else
                 <div style="display:flex;flex-wrap:wrap;gap:8px;">
                     @foreach($componentes as $comp)
-                        @php
-                            $asigsComp = $asignaciones->where('comp_codigo', $comp->id);
-                        @endphp
-                        <label class="comp-label" style="{{ $asigsComp->isNotEmpty() ? 'background:#e8f5e9;border-color:#198754;' : '' }}">
+                        <label class="comp-label">
                             <input type="checkbox" name="componente_ids[]" value="{{ $comp->id }}"
                                 class="comp-checkbox"
                                 onchange="toggleComponenteLabel(this)">
-                            <span>
-                                <b>{{ $comp->nombre }}</b>
-                                @if($asigsComp->isNotEmpty())
-                                    <span style="font-size:10px;color:#666;display:block;">
-                                        ({{ $asigsComp->count() }} vinculacione{{ $asigsComp->count() === 1 ? 's' : 's' }})
-                                    </span>
-                                @endif
-                            </span>
+                            <b>{{ $comp->nombre }}</b>
                         </label>
                     @endforeach
                 </div>
@@ -146,21 +136,19 @@
                                 </td>
                                 <td align="center">
                                     <input type="hidden" name="pnf_activo[{{ $proCodigo }}]" value="0">
-                                    <input type="checkbox"
-                                        name="pnf_activo[{{ $proCodigo }}]"
-                                        value="1"
-                                        {{ $row['activo'] ? 'checked' : '' }}
-                                        onchange="togglePnfTrayectos(this, 'pnf_{{ $proCodigo }}')"
-                                        style="width:18px;height:18px;cursor:pointer;">
+                                <input type="checkbox"
+                                    name="pnf_activo[{{ $proCodigo }}]"
+                                    value="1"
+                                    onchange="togglePnfTrayectos(this, 'pnf_{{ $proCodigo }}')"
+                                    style="width:18px;height:18px;cursor:pointer;">
                                 </td>
                                 <td style="padding: 6px;" id="pnf_{{ $proCodigo }}_trayectos">
-                                    <div style="display:flex;flex-wrap:wrap;gap:6px;{{ !$row['activo'] ? 'opacity:0.5;' : '' }}">
+                                    <div style="display:flex;flex-wrap:wrap;gap:6px;">
                                         @foreach($row['trayectos'] ?? [] as $traCodigo => $traData)
                                             <label style="display:flex;align-items:center;gap:4px;background:#f8f8f8;border:1px solid #ddd;border-radius:5px;padding:4px 8px;cursor:pointer;font-size:11px;">
                                                 <input type="checkbox"
                                                     name="tra_selected[{{ $proCodigo }}][{{ $traCodigo }}]"
                                                     value="1"
-                                                    {{ $traData['selected'] ?? false ? 'checked' : '' }}
                                                     class="tra-{{ $proCodigo }}"
                                                     onchange="actualizarActivoPnf({{ $proCodigo }})"
                                                     style="cursor:pointer;">

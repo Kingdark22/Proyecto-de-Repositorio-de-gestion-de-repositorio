@@ -5,25 +5,6 @@
 
 @push('styles')
 <style>
-    .grp-btn {
-        border: 1px solid #777;
-        background: #fff;
-        color: #222;
-        padding: 0.65rem 1rem;
-        border-radius: 0.45rem;
-        font-size: 0.92rem;
-        cursor: pointer;
-        transition: all 0.18s ease;
-        min-width: 120px;
-    }
-    .grp-btn:hover {
-        background: #f3f3f3;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-    }
-    .grp-btn-primary { background: #198754; color: #fff; border-color: #166f43; }
-    .grp-btn-primary:hover { background: #146c43; }
-    .grp-btn-danger { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
 
     .cm-btn {
         display: inline-flex;
@@ -132,21 +113,21 @@
 
     {{-- Listado --}}
     <div id="searchResults">
-        <fieldset style="border: 2px solid #8b0000; padding: 8px; min-width: 0; width: 100%; box-sizing: border-box;">
-            <legend style="font-weight: bold;">Grupos de proyecto registrados</legend>
+        <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
+            <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Grupos de proyecto registrados</legend>
             <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 10px;">
-                <table width="100%" border="1" cellpadding="4" style="font-size: 11px; border-collapse: collapse; min-width: 780px;">
+                <table width="100%" border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; min-width: 780px;">
                     <thead>
-                        <tr style="background: #8bb2b7;">
-                            <th>Nombre</th>
-                            <th>Código</th>
-                            <th>PNF</th>
-                            <th>Sección</th>
-                            <th>Lapso</th>
-                            <th>Integrantes</th>
-                            <th>Proyecto</th>
-                            <th>Creador</th>
-                            <th>Acciones</th>
+                        <tr style="background-color: #8bb2b7; color: #000; font-weight: bold; text-align: center;">
+                            <th style="padding: 5px;">Nombre</th>
+                            <th style="padding: 5px;">Código</th>
+                            <th style="padding: 5px;">PNF</th>
+                            <th style="padding: 5px;">Sección</th>
+                            <th style="padding: 5px;">Lapso</th>
+                            <th style="padding: 5px;">Integrantes</th>
+                            <th style="padding: 5px;">Proyecto</th>
+                            <th style="padding: 5px;">Creador</th>
+                            <th style="padding: 5px;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -158,7 +139,7 @@
                                 $colorMap = ['aprobado' => '#008000', 'rechazado' => '#FF0000', 'completado' => '#2e7d32', 'pendiente' => '#d4a017'];
                                 $labelMap = ['aprobado' => 'Aprobado', 'rechazado' => 'Rechazado', 'completado' => 'Completado', 'pendiente' => 'En proceso'];
                             @endphp
-                            <tr>
+                            <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }}; color: #000;">
                                 <td>
                                     <a href="#" onclick="return false;"
                                        style="cursor:pointer; font-weight:bold; color:#333;"

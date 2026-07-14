@@ -1,6 +1,5 @@
 @php
     $proyectos = $datosListado['proyectos'] ?? collect();
-    $gruposList = $gruposDocente ?? [];
 @endphp
 <table width="100%" border="1" cellpadding="4" cellspacing="0"
     style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px;">
@@ -15,46 +14,6 @@
     </thead>
     <tbody>
         @php $combinedRow = 1; @endphp
-        @foreach ($gruposList as $g)
-            @php $g = (object) $g; @endphp
-            @if($g->tiene_proyecto ?? false) @continue @endif
-            <tr style="background: {{ $combinedRow % 2 == 0 ? '#E0E0E0' : '#FFF' }}; color: #000;" valign="top">
-                <td align="center" style="padding:5px;font-weight:bold;">{{ $combinedRow++ }}</td>
-                <td style="padding:5px;font-weight:bold;">{{ $g->nombre }}</td>
-                <td style="padding:5px;font-size:10px;">
-                    PNF: {{ $g->pro_siglas ?? 'N/A' }}@if($g->sec_nombre) &middot; Secc. {{ $g->sec_nombre }}@endif<br>
-                    <b>Integrantes:</b> {{ $g->integrantes }}
-                </td>
-                <td align="center" style="padding:5px;">
-                    @if ($g->tiene_proyecto)
-                        @if ($g->proyecto_estado_validacion === 'aprobado')
-                            <span style="color:#008000;font-weight:bold;">Aprobado</span>
-                        @elseif($g->proyecto_estado_validacion === 'rechazado')
-                            <span style="color:#FF0000;font-weight:bold;">Rechazado</span>
-                        @else
-                            <span style="color:#d4a017;font-weight:bold;">En proceso</span>
-                        @endif
-                    @else
-                        <span style="color:#999;">Sin proyecto</span>
-                    @endif
-                </td>
-                <td align="center" style="padding:5px;">
-                    @if ($esAdmin ?? false)
-                        <span style="color:#999;font-size:10px;">{{ $g->tiene_proyecto ? 'Tiene proyecto' : 'Sin proyecto' }}</span>
-                    @else
-                        @if ($g->tiene_proyecto)
-                            @if ($g->proyecto_estado_validacion !== 'aprobado')
-                                <a href="{{ route('proyectos.gestion.edit', $g->proyecto_id) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
-                            @else
-                                <span style="color:#008000;font-weight:bold;font-size:10px;">Aprobado</span>
-                            @endif
-                        @else
-                            <a href="{{ route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
-                        @endif
-                    @endif
-                </td>
-            </tr>
-        @endforeach
         @foreach ($proyectos as $p)
             <tr style="background: {{ $combinedRow % 2 == 0 ? '#E0E0E0' : '#FFF' }}; color: #000;" valign="top">
                 <td align="center" style="padding:5px;font-weight:bold;">{{ $combinedRow++ }}</td>

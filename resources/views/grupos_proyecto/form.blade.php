@@ -135,12 +135,13 @@
                         <b>Nombre del equipo:</b> <span style="color:#c82333;">*</span><br>
                         <input type="text" name="nombre" id="nombreInput"
                             value="{{ old('nombre', $grupo->nombre ?? '') }}"
-                            class="grp-filter-input" style="width:100%;" maxlength="120" required
+                            class="grp-filter-input" style="width:100%;" maxlength="120" minlength="3" required
                             placeholder="Ej: Equipo Alpha, Proyecto Web"
                             data-check-url="{{ route('grupos-proyecto.api.check-nombre') }}"
                             data-exclude="{{ $grupo->grp_codigo ?? '' }}"
                             oninput="validarNombreDisponible(this)">
                         <span id="nombreStatus" class="status-indicator"></span>
+                        @error('nombre')<span style="color:#dc3545;font-size:10px;">{{ $message }}</span>@enderror
                     </td>
                     @if (isset($grupo) && ($grupo->identificador ?? ''))
                     <td width="30%" style="vertical-align: top;">
@@ -930,6 +931,13 @@ document.getElementById('grupoForm').addEventListener('submit', function(e) {
     if (!comunidadId.value) {
         e.preventDefault();
         showNotifyToast('warning', 'Debe seleccionar una comunidad.');
+        return;
+    }
+
+    var nombreVal = document.getElementById('nombreInput').value.trim();
+    if (nombreVal.length < 3) {
+        e.preventDefault();
+        showNotifyToast('warning', 'El nombre del equipo debe tener al menos 3 caracteres.');
         return;
     }
 
