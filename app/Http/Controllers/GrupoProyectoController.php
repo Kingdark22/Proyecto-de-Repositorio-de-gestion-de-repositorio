@@ -739,7 +739,7 @@ class GrupoProyectoController extends Controller
     public function crearComunidadAjax(Request $request)
     {
         $validated = $request->validate([
-            'nombre' => 'required|string|max:255',
+            'nombre' => 'required|string|min:3|max:255',
             'rif_letra' => 'nullable|string|max:1',
             'rif_numero' => 'nullable|string|max:9',
             'correo' => 'nullable|email|max:150',
