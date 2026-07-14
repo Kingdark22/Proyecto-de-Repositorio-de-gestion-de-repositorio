@@ -52,16 +52,27 @@ class MetodologiaInvestigacionController extends Controller
         );
 
         if (!$disponible) {
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'error' => 'Este nombre ya está en uso.'], 422);
+            }
             return back()->withErrors(['nombre' => 'Este nombre ya está en uso.'])->withInput();
         }
 
-        MetodologiaInvestigacion::guardar([
+        $modelo = MetodologiaInvestigacion::guardar([
             'nombre' => $nombre,
             'descripcion' => trim($validated['descripcion']),
             'estado_logico' => true,
         ]);
 
         app(CatalogoRepository::class)->invalidarCatalogos();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'id' => $modelo->getKey(),
+                'nombre' => $modelo->nombre,
+            ]);
+        }
 
         return redirect()->route('metodologia-investigacion')
             ->with('success', 'Metodología registrada con éxito.');

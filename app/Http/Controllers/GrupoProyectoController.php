@@ -777,8 +777,8 @@ class GrupoProyectoController extends Controller
 
         // Validar RIF si se proporcionó
         $rifCompleto = null;
-        $rifNumero = $request->input('rif_numero', '');
-        if ($rifNumero !== '' && strlen($rifNumero) >= 9) {
+        $rifNumero = $request->input('rif_numero');
+        if ($rifNumero && strlen($rifNumero) >= 9) {
             $rifLetra = $request->input('rif_letra', 'J');
             $rifService = app(ValidacionRifService::class);
             $digito = $rifService->calcularDigito($rifLetra, $rifNumero);
@@ -789,8 +789,8 @@ class GrupoProyectoController extends Controller
         }
 
         // Validar correo si se proporcionó
-        $correo = $request->input('correo', '');
-        if ($correo !== '') {
+        $correo = $request->input('correo');
+        if ($correo) {
             $correoService = app(ValidacionCorreoService::class);
             $resultado = $correoService->validarCompleto($correo, true);
             if (! $resultado['valido']) {
@@ -801,9 +801,9 @@ class GrupoProyectoController extends Controller
         $gestion = app(ComunidadGestionService::class);
         $payload = [
             'nombre' => $request->input('nombre'),
-            'correo' => $correo ?: null,
-            'prefijo_telefono' => $request->input('prefijo_telefono', ''),
-            'numero_telefono' => $request->input('numero_telefono', ''),
+            'correo' => $correo,
+            'prefijo_telefono' => $request->input('prefijo_telefono'),
+            'numero_telefono' => $request->input('numero_telefono'),
             'estado_id' => $request->input('estado_id'),
             'municipio_id' => $request->input('municipio_id'),
             'dir_nombre' => $request->input('dir_nombre'),

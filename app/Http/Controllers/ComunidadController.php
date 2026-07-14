@@ -12,6 +12,7 @@ use App\Services\ValidacionCorreoService;
 use App\Services\ValidacionRifService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ComunidadController extends Controller
 {
@@ -129,6 +130,9 @@ class ComunidadController extends Controller
 
         $this->gestion->guardar(null, $payload);
 
+        Cache::forget('grupos_comunidades_form');
+        Cache::forget('gestion_comunidades_ordenadas');
+
         return redirect()->route('comunidades.index')
             ->with('success', 'Comunidad registrada con éxito.');
     }
@@ -245,6 +249,9 @@ class ComunidadController extends Controller
 
         $this->gestion->guardar($id, $payload);
 
+        Cache::forget('grupos_comunidades_form');
+        Cache::forget('gestion_comunidades_ordenadas');
+
         return redirect()->route('comunidades.index')
             ->with('success', 'Comunidad actualizada con éxito.');
     }
@@ -252,6 +259,9 @@ class ComunidadController extends Controller
     public function destroy(Request $request, $id)
     {
         $this->gestion->eliminar($id);
+
+        Cache::forget('grupos_comunidades_form');
+        Cache::forget('gestion_comunidades_ordenadas');
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'Comunidad eliminada correctamente.']);

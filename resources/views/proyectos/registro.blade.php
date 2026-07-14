@@ -1000,9 +1000,16 @@ function asignarRolConNombre(proyectoId, invId, rolId, rolNombre) {
 }
 
 function quitarRol(proyectoId, pivotId, rolId, invId) {
+    var row = document.getElementById('inv-row-' + invId);
+    var nombreCompleto = row ? row.cells[1].textContent.trim() : 'Desconocido';
+    var badge = document.getElementById('rol-badge-' + invId + '-' + rolId);
+    var rolNombre = badge ? badge.childNodes[0].textContent.trim() : 'Rol desconocido';
     mostrarModalAccion({
         icon:'\u26A0\uFE0F',title:'Quitar rol',
         message:'\u00bfQuitar este rol del involucrado?',
+        detailLabel:'Involucrado',
+        detailValue:nombreCompleto,
+        hint:'Rol a quitar: ' + rolNombre,
         confirmText:'S\u00ed, quitar',
         confirmClass:'cm-btn-danger',
         onConfirm:function(){
@@ -1086,6 +1093,13 @@ function cerrarModalCatalogo() {
     if (status) status.style.display = 'none';
 }
 
+const catalogoSelectMap = {
+    linea: 'linea_investigacion_id',
+    metodologia: 'metodologia_id',
+    tipo_investigacion: 'tipo_investigacion_id',
+    objetivo_investigacion: 'objetivo_investigacion_id'
+};
+
 function guardarCatalogo() {
     const tipo = document.getElementById('modal-catalogo-tipo').value;
     const cfg = catalogoConfig[tipo];
@@ -1116,7 +1130,6 @@ function guardarCatalogo() {
     const desc = document.getElementById('modal-catalogo-descripcion').value.trim();
     if (desc) data.descripcion = desc;
 
-    // Línea requiere area_de_investigacion y programa_id
     if (tipo === 'linea') {
         data.area_de_investigacion = nombre.length > 100 ? nombre.substring(0, 100) : nombre;
         const progInput = document.querySelector('[name="programa_id_derived"]');
@@ -1133,16 +1146,33 @@ function guardarCatalogo() {
 
     fetch(cfg.ruta, {
         method: 'POST',
-        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-        body: new URLSearchParams(data)
-    }).then(r => {
-        if (r.redirected || r.ok) {
-            location.reload();
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+        body: JSON.stringify(data)
+    })
+    .then(r => {
+        if (!r.ok) { return r.json().then(e => { throw new Error(e.error || 'Error al guardar'); }); }
+        return r.json();
+    })
+    .then(result => {
+        if (result.success) {
+            const selectName = catalogoSelectMap[tipo];
+            const select = document.querySelector(`select[name="${selectName}"]`);
+            if (select) {
+                const opt = document.createElement('option');
+                opt.value = result.id;
+                opt.textContent = result.nombre;
+                select.appendChild(opt);
+                select.value = result.id;
+                select.dispatchEvent(new Event('change'));
+            }
+            cerrarModalCatalogo();
+            showNotifyToast('success', cfg.titulo + ' registrada con éxito.');
         } else {
-            throw new Error('Error al guardar');
+            throw new Error(result.error || 'Error al guardar');
         }
-    }).catch(e => {
-        document.getElementById('modal-catalogo-error').textContent = 'Error al guardar. Intente de nuevo.';
+    })
+    .catch(e => {
+        document.getElementById('modal-catalogo-error').textContent = e.message || 'Error al guardar. Intente de nuevo.';
         document.getElementById('modal-catalogo-error').style.display = 'block';
         btn.disabled = false;
         btn.textContent = 'Guardar';
