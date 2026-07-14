@@ -91,65 +91,7 @@
         </fieldset>
     @endif
 
-    {{-- EQUIPOS DISPONIBLES (profesor proyecto) --}}
-    @if ($esProfesor && count($gruposDocente) > 0)
-        <fieldset style="border: 2px solid #2e7d32; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
-            <legend style="color: #2e7d32; font-weight: bold; font-style: italic; padding: 0 5px;">Equipos disponibles para registrar proyecto</legend>
-            <table width="100%" border="1" cellpadding="4" cellspacing="0"
-                style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px;">
-                <thead>
-                    <tr style="background-color: #a5d6a7; color: #000; font-weight: bold;">
-                        <th width="4%">N&deg;</th>
-                        <th width="26%">Nombre</th>
-                        <th width="22%">Detalles del equipo</th>
-                        <th width="14%">Estado</th>
-                        <th width="34%">Acci&oacute;n</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @php $equipoRow = 1; @endphp
-                    @foreach ($gruposDocente as $g)
-                        @php $g = (object) $g; @endphp
-                        @if($g->tiene_proyecto ?? false) @continue @endif
-                        <tr style="background: {{ $equipoRow % 2 == 0 ? '#E8F5E9' : '#FFF' }};" valign="top">
-                            <td align="center" style="padding:5px;font-weight:bold;">{{ $equipoRow++ }}</td>
-                            <td style="padding:5px;font-weight:bold;">{{ $g->nombre }}</td>
-                            <td style="padding:5px;font-size:10px;">
-                                PNF: {{ $g->pro_siglas ?? 'N/A' }}@if($g->sec_nombre) &middot; Secc. {{ $g->sec_nombre }}@endif<br>
-                                <b>Integrantes:</b> {{ $g->integrantes }}
-                            </td>
-                            <td align="center" style="padding:5px;">
-                                @if ($g->tiene_proyecto)
-                                    @if ($g->proyecto_estado_validacion === 'aprobado')
-                                        <span style="color:#008000;font-weight:bold;">Aprobado</span>
-                                    @elseif($g->proyecto_estado_validacion === 'rechazado')
-                                        <span style="color:#FF0000;font-weight:bold;">Rechazado</span>
-                                    @else
-                                        <span style="color:#d4a017;font-weight:bold;">En proceso</span>
-                                    @endif
-                                @else
-                                    <span style="color:#999;">Sin proyecto</span>
-                                @endif
-                            </td>
-                            <td align="center" style="padding:5px;">
-                                @if ($g->tiene_proyecto)
-                                    @if ($g->proyecto_estado_validacion !== 'aprobado')
-                                        <a href="{{ route('proyectos.gestion.edit', $g->proyecto_id) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
-                                    @else
-                                        <span style="color:#008000;font-weight:bold;font-size:10px;">Aprobado</span>
-                                    @endif
-                                @else
-                                    <a href="{{ route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </fieldset>
-    @endif
-
-    {{-- LISTADO GENERAL (admin/coordinador/gestionador) --}}
+    {{-- LISTADO GENERAL --}}
     @if ($mostrarListado)
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Listado de proyectos institucionales</legend>
