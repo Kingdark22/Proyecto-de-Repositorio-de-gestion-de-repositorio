@@ -1,5 +1,9 @@
 @php
     $proyectos = $datosListado['proyectos'] ?? collect();
+    $gruposSinProyecto = collect($gruposDocente ?? [])
+        ->map(function($g) { return (object) $g; })
+        ->filter(function($g) { return !($g->tiene_proyecto ?? false); })
+        ->values();
 @endphp
 <table width="100%" border="1" cellpadding="4" cellspacing="0"
     style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px;">
@@ -14,14 +18,30 @@
     </thead>
     <tbody>
         @php $combinedRow = 1; @endphp
+        @foreach ($gruposSinProyecto as $g)
+            <tr style="background: {{ $combinedRow % 2 == 0 ? '#E0E0E0' : '#FFF' }};" valign="top">
+                <td align="center" style="padding:5px;font-weight:bold;">{{ $combinedRow++ }}</td>
+                <td style="padding:5px;font-weight:bold;">{{ $g->nombre }}</td>
+                <td style="padding:5px;font-size:10px;">
+                    PNF: {{ $g->pro_siglas ?? 'N/A' }}@if($g->sec_nombre) &middot; Secc. {{ $g->sec_nombre }}@endif<br>
+                    <b>Integrantes:</b> {{ $g->integrantes }}
+                </td>
+                <td align="center" style="padding:5px;">
+                    <span style="color:#999;">Sin proyecto</span>
+                </td>
+                <td align="center" style="padding:5px;">
+                    <a href="{{ route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
+                </td>
+            </tr>
+        @endforeach
         @foreach ($proyectos as $p)
             <tr style="background: {{ $combinedRow % 2 == 0 ? '#E0E0E0' : '#FFF' }}; color: #000;" valign="top">
                 <td align="center" style="padding:5px;font-weight:bold;">{{ $combinedRow++ }}</td>
-                <td style="padding:5px;font-weight:bold;">
-                    {{ $p->titulo }}
+                <td style="padding:5px;">
+                    <span style="font-weight:bold;">{{ $p->titulo }}</span><br>
+                    <span style="font-size:10px;color:#555;">Equipo: {{ $p->equipo_resumen }}</span>
                 </td>
                 <td style="padding:5px;font-size:10px;">
-                    Equipo: {{ $p->equipo_resumen }}<br>
                     Comunidad: {{ $p->comunidad->nombre ?? 'N/A' }}
                 </td>
                 <td align="center" style="padding:5px;">

@@ -113,10 +113,10 @@
 
     {{-- Listado --}}
     <div id="searchResults">
-        <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
+        <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0; overflow: hidden;">
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Grupos de proyecto registrados</legend>
             <div style="width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 10px;">
-                <table width="100%" border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; min-width: 780px;">
+                <table width="100%" border="1" cellpadding="4" cellspacing="0" style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; min-width: 700px;">
                     <thead>
                         <tr style="background-color: #8bb2b7; color: #000; font-weight: bold; text-align: center;">
                             <th style="padding: 5px;">Nombre</th>

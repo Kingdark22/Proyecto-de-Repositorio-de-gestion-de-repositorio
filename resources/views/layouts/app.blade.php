@@ -849,7 +849,8 @@
                 if (data.valido) {
                     span.style.color = '#28a745'; span.textContent = '✓ RIF válido';
                     el.dataset.rifOk = 'true';
-                    if (digitoSpan) digitoSpan.textContent = data.digito;
+                    var digitoText = el.dataset.digitoValidText || data.digito;
+                    if (digitoSpan) digitoSpan.textContent = digitoText;
                 } else {
                     span.style.color = '#dc3545'; span.textContent = '✗ ' + (data.error || 'RIF inválido');
                     el.dataset.rifOk = 'false';

@@ -272,7 +272,7 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                 <div class="grp-field" style="grid-column:span 2;">
                     <label>Nombre de la comunidad <span style="color:#c82333;">*</span></label>
-                    <input type="text" id="comNombre" placeholder="Nombre completo" style="width:100%;max-width:100%;" oninput="validarNombre(this)">
+                    <input type="text" id="comNombre" placeholder="Nombre completo" style="width:100%;max-width:100%;" minlength="3">
                     <span id="comNombreStatus" class="status-indicator"></span>
                 </div>
 
@@ -292,10 +292,11 @@
                             data-check-url="{{ route('comunidades.check-rif') }}"
                             data-status-span="comRifStatus"
                             data-digito-span="comRifDigito"
+                            data-digito-valid-text="✓"
                             data-select-id="comRifLetra"
-                            oninput="this.value=this.value.replace(/\D/g,''); validarRif(this)">
-                        <span style="font-size:16px;">-</span>
-                        <span id="comRifDigito" style="font-weight:bold;font-size:16px;min-width:16px;">?</span>
+                            oninput="this.value=this.value.replace(/\D/g,''); validarRif(this); toggleRifDigito(this)">
+                        <span id="comRifSep2" style="font-size:16px;display:none;">-</span>
+                        <span id="comRifDigito" style="font-weight:bold;font-size:16px;min-width:16px;display:none;">?</span>
                     </div>
                     <span id="comRifStatus" class="status-indicator"></span>
                 </div>
@@ -679,9 +680,14 @@ function validarNombreDisponible(input) {
     clearTimeout(nombreTimeout);
     var statusEl = document.getElementById('nombreStatus');
     var nombre = input.value.trim();
-    if (nombre.length < 2) {
+    if (nombre.length === 0) {
         statusEl.textContent = '';
         statusEl.className = 'status-indicator';
+        return;
+    }
+    if (nombre.length < 3) {
+        statusEl.textContent = 'Debe tener al menos 3 caracteres';
+        statusEl.className = 'status-indicator status-err';
         return;
     }
     var baseUrl = input.getAttribute('data-check-url');
@@ -811,14 +817,30 @@ document.getElementById('comEstado').addEventListener('change', function() {
         });
 });
 
+// ========== Community modal: RIF digito toggle ==========
+function toggleRifDigito(input) {
+    var sep2 = document.getElementById('comRifSep2');
+    var digito = document.getElementById('comRifDigito');
+    if (!sep2 || !digito) return;
+    var show = input.value.trim().length > 0;
+    sep2.style.display = show ? 'inline' : 'none';
+    digito.style.display = show ? 'inline' : 'none';
+}
+
 // ========== Community modal: nombre availability (client-side vs cache) ==========
 var comNombreTimeout = null;
 document.getElementById('comNombre').addEventListener('input', function() {
     clearTimeout(comNombreTimeout);
     var nombre = this.value.trim();
     var statusEl = document.getElementById('comNombreStatus');
-    if (nombre.length < 3) {
+    if (nombre.length === 0) {
         statusEl.textContent = '';
+        statusEl.className = 'status-indicator';
+        return;
+    }
+    if (nombre.length < 3) {
+        statusEl.textContent = 'Debe tener al menos 3 caracteres';
+        statusEl.className = 'status-indicator status-err';
         return;
     }
     comNombreTimeout = setTimeout(function() {
@@ -847,6 +869,7 @@ function guardarComunidadAjax() {
     var direccion = document.getElementById('comDireccion').value.trim();
 
     if (!nombre) { showModalError('El nombre es obligatorio.'); return; }
+    if (nombre.length < 3) { showModalError('El nombre debe tener al menos 3 caracteres.'); return; }
     if (!estado) { showModalError('Seleccione un estado.'); return; }
     if (!municipio) { showModalError('Seleccione un municipio.'); return; }
     if (!direccion) { showModalError('La dirección es obligatoria.'); return; }
