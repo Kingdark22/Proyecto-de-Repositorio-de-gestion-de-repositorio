@@ -365,8 +365,10 @@ class VinculacionManager extends Component
             $this->selectedProjects = [];
             return;
         }
+        $vinculadosIds = Vinculacion::pluck('proyecto_id')->filter()->values()->toArray();
         $query = Proyecto::where('estado_validacion', 'aprobado')
-            ->where('estado_logico', true);
+            ->where('estado_logico', true)
+            ->whereKeyNot($vinculadosIds);
         if ($this->search !== '') {
             $term = '%' . trim($this->search) . '%';
             $query->where(function ($q) use ($term) {
@@ -406,8 +408,10 @@ class VinculacionManager extends Component
 
     protected function selectedProjectsCount(): int
     {
+        $vinculadosIds = Vinculacion::pluck('proyecto_id')->filter()->values()->toArray();
         $query = Proyecto::where('estado_validacion', 'aprobado')
-            ->where('estado_logico', true);
+            ->where('estado_logico', true)
+            ->whereKeyNot($vinculadosIds);
         if ($this->search !== '') {
             $term = '%' . trim($this->search) . '%';
             $query->where(function ($q) use ($term) {
@@ -625,9 +629,11 @@ class VinculacionManager extends Component
             $proyectosPaginados = null;
 
             if ($this->mostrarWizard) {
+                $vinculadosIds = Vinculacion::pluck('proyecto_id')->filter()->values()->toArray();
                 $query = Proyecto::with('comunidad', 'linea_investigacion', 'metodologia', 'tipo_investigacion', 'objetivo_investigacion', 'vinculaciones.tituloVinculacion', 'vinculaciones.comunidad')
                     ->where('estado_validacion', 'aprobado')
-                    ->where('estado_logico', true);
+                    ->where('estado_logico', true)
+                    ->whereKeyNot($vinculadosIds);
 
                 if ($this->search !== '') {
                     $search = trim($this->search);

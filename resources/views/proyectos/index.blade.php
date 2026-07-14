@@ -33,65 +33,6 @@
 @section('content')
 
 
-    {{-- GRUPOS DEL DOCENTE (profesor/admin) --}}
-    @if (!empty($gruposDocente))
-        <fieldset style="border: 2px solid #2e7d32; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
-            <legend style="color: #2e7d32; font-weight: bold; font-style: italic; padding: 0 5px;">Equipos disponibles para registrar proyecto</legend>
-            <table width="100%" border="1" cellpadding="4" cellspacing="0"
-                style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px;">
-                <thead>
-                    <tr style="background-color: #a5d6a7; color: #000; text-align: center; font-weight: bold;">
-                        <th width="25%">Nombre del equipo</th>
-                        <th width="15%">PNF / Sección</th>
-                        <th width="10%">Integrantes</th>
-                        <th width="25%">Proyecto</th>
-                        <th width="25%">Acción</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($gruposDocente as $g)
-                        @php $g = (object) $g; @endphp
-                        <tr style="background: {{ $loop->iteration % 2 == 0 ? '#E8F5E9' : '#FFF' }};" valign="top">
-                            <td style="padding:5px;font-weight:bold;">{{ $g->nombre }}</td>
-                            <td style="padding:5px;font-size:10px;">
-                                {{ $g->pro_siglas ?? '' }}@if($g->sec_nombre) · Secc. {{ $g->sec_nombre }}@endif
-                            </td>
-                            <td align="center" style="padding:5px;">{{ $g->integrantes }}</td>
-                            <td align="center" style="padding:5px;">
-                                @if ($g->tiene_proyecto)
-                                    @if ($g->proyecto_estado_validacion === 'aprobado')
-                                        <span style="color:#008000;font-weight:bold;">Aprobado</span>
-                                    @elseif($g->proyecto_estado_validacion === 'rechazado')
-                                        <span style="color:#FF0000;font-weight:bold;">Rechazado</span>
-                                    @else
-                                        <span style="color:#d4a017;font-weight:bold;">En proceso</span>
-                                    @endif
-                                @else
-                                    <span style="color:#999;">Sin proyecto</span>
-                                @endif
-                            </td>
-                            <td align="center" style="padding:5px;">
-                                @if ($esAdmin)
-                                    <span style="color:#999;font-size:10px;">{{ $g->tiene_proyecto ? 'Tiene proyecto' : 'Sin proyecto' }}</span>
-                                @else
-                                    @if ($g->tiene_proyecto)
-                                        @if ($g->proyecto_estado_validacion !== 'aprobado')
-                                            <a href="{{ route('proyectos.gestion.edit', $g->proyecto_id) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
-                                        @else
-                                            <span style="color:#008000;font-weight:bold;font-size:10px;">Aprobado</span>
-                                        @endif
-                                    @else
-                                        <a href="{{ route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
-                                    @endif
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </fieldset>
-    @endif
-
     {{-- PROYECTOS LÍDER (estudiante) --}}
     @if ($esEstudianteLider)
         <fieldset style="border: 2px solid #2e7d32; border-radius: 6px; padding: 10px; margin-bottom: 15px;">
@@ -154,6 +95,65 @@
     @if ($mostrarListado)
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
             <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Listado de proyectos institucionales</legend>
+
+            {{-- Equipos del profesor (dentro del mismo fieldset) --}}
+            @if (!empty($gruposDocente))
+                <div style="margin-bottom:12px;">
+                    <div style="font-size:12px;font-weight:bold;color:#2e7d32;margin-bottom:5px;">Equipos disponibles para registrar proyecto</div>
+                    <table width="100%" border="1" cellpadding="4" cellspacing="0"
+                        style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px;">
+                        <thead>
+                            <tr style="background-color: #a5d6a7; color: #000; text-align: center; font-weight: bold;">
+                                <th width="25%">Nombre del equipo</th>
+                                <th width="15%">PNF / Sección</th>
+                                <th width="10%">Integrantes</th>
+                                <th width="25%">Proyecto</th>
+                                <th width="25%">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($gruposDocente as $g)
+                                @php $g = (object) $g; @endphp
+                                <tr style="background: {{ $loop->iteration % 2 == 0 ? '#E8F5E9' : '#FFF' }};" valign="top">
+                                    <td style="padding:5px;font-weight:bold;">{{ $g->nombre }}</td>
+                                    <td style="padding:5px;font-size:10px;">
+                                        {{ $g->pro_siglas ?? '' }}@if($g->sec_nombre) · Secc. {{ $g->sec_nombre }}@endif
+                                    </td>
+                                    <td align="center" style="padding:5px;">{{ $g->integrantes }}</td>
+                                    <td align="center" style="padding:5px;">
+                                        @if ($g->tiene_proyecto)
+                                            @if ($g->proyecto_estado_validacion === 'aprobado')
+                                                <span style="color:#008000;font-weight:bold;">Aprobado</span>
+                                            @elseif($g->proyecto_estado_validacion === 'rechazado')
+                                                <span style="color:#FF0000;font-weight:bold;">Rechazado</span>
+                                            @else
+                                                <span style="color:#d4a017;font-weight:bold;">En proceso</span>
+                                            @endif
+                                        @else
+                                            <span style="color:#999;">Sin proyecto</span>
+                                        @endif
+                                    </td>
+                                    <td align="center" style="padding:5px;">
+                                        @if ($esAdmin)
+                                            <span style="color:#999;font-size:10px;">{{ $g->tiene_proyecto ? 'Tiene proyecto' : 'Sin proyecto' }}</span>
+                                        @else
+                                            @if ($g->tiene_proyecto)
+                                                @if ($g->proyecto_estado_validacion !== 'aprobado')
+                                                    <a href="{{ route('proyectos.gestion.edit', $g->proyecto_id) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
+                                                @else
+                                                    <span style="color:#008000;font-weight:bold;font-size:10px;">Aprobado</span>
+                                                @endif
+                                            @else
+                                                <a href="{{ route('proyectos.gestion.desde-grupo', $g->grp_codigo) }}" class="cm-btn cm-btn-success cm-btn-sm">Actualizar</a>
+                                            @endif
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
 
             {{-- Botón Exportar Excel (solo administrador y coordinador) --}}
             @php

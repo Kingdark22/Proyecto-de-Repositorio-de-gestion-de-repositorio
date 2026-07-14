@@ -37,7 +37,7 @@
 
 
     {{-- ─── CABECERA ─── --}}
-    <fieldset style="border: 2px solid #8b0000; border-radius: 8px; padding: 16px;" class="contenido-uppercase">
+    <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;" class="contenido-uppercase">
         <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 10px; font-size:15px;">
             Adjuntar los Proyectos
         </legend>
@@ -62,21 +62,21 @@
                 @endif
                 <span style="font-size:12px;color:#555;">{{ $vinculacionesPorProyecto->count() }} resultado(s)</span>
             </div>
-            <div style="margin-top:10px;">
-                <table width="100%" style="font-size:12px;border-collapse:collapse;">
+            <div style="width:100%;overflow-x:auto;margin-top:10px;">
+                <table width="100%" border="1" cellpadding="4" cellspacing="0" style="font-size:11px;border-collapse:collapse;min-width:700px;">
                     <thead>
-                        <tr style="background:#8bb2b7;color:#000;font-weight:bold;">
-                            <th width="4%" style="padding:8px 4px;text-align:center;">N&deg;</th>
-                            <th width="30%" style="padding:8px 4px;">Proyecto</th>
-                            <th width="25%" style="padding:8px 4px;">T&iacute;tulos vinculados</th>
-                            <th width="12%" style="padding:8px 4px;">Lapso</th>
-                            <th width="22%" style="padding:8px 4px;">Comunidades</th>
-                            <th width="7%" style="padding:8px 4px;">Acci&oacute;n</th>
+                        <tr style="background:#8bb2b7;">
+                            <th width="4%" style="padding:6px 4px;text-align:center;">N&deg;</th>
+                            <th width="30%" style="padding:6px 4px;">Proyecto</th>
+                            <th width="25%" style="padding:6px 4px;">T&iacute;tulos vinculados</th>
+                            <th width="10%" style="padding:6px 4px;">Lapso</th>
+                            <th width="22%" style="padding:6px 4px;">Comunidades</th>
+                            <th width="9%" style="padding:6px 4px;">Acci&oacute;n</th>
                         </tr>
                     </thead>
                     <tbody>
                         @php $rowNum = 0; @endphp
-                        @foreach($vinculacionesPorProyecto as $pid => $grupo)
+                        @forelse($vinculacionesPorProyecto as $pid => $grupo)
                             @php
                                 $rowNum++;
                                 $proyecto = $grupo->first()->proyecto;
@@ -87,10 +87,10 @@
                                 $countComunidades = count($comunidadesNombres);
                                 $maxShow = 3;
                             @endphp
-                            <tr style="background:{{ $rowNum % 2 == 0 ? '#E0E0E0' : '#FFF' }};" valign="top">
-                                <td align="center" style="padding:6px 4px;">{{ $rowNum }}</td>
-                                <td style="font-weight:bold;padding:6px 4px;">{{ $proyecto->titulo ?? 'N/A' }}</td>
-                                <td style="padding:6px 4px;">
+                            <tr style="background:{{ $rowNum % 2 == 0 ? '#f2f2f2' : '#FFF' }};" valign="top">
+                                <td align="center" style="padding:5px 4px;">{{ $rowNum }}</td>
+                                <td style="font-weight:bold;padding:5px 4px;">{{ $proyecto->titulo ?? 'N/A' }}</td>
+                                <td style="padding:5px 4px;">
                                     @foreach(array_slice($titulos, 0, $maxShow) as $t)
                                         <span style="display:inline-block;background:#0d6efd;color:#fff;border-radius:3px;padding:1px 6px;font-size:10px;margin:1px 0;">{{ $t }}</span>
                                     @endforeach
@@ -98,8 +98,8 @@
                                         <span style="display:inline-block;background:#6c757d;color:#fff;border-radius:3px;padding:1px 6px;font-size:10px;margin:1px 0;">+{{ $countTitulos - $maxShow }}</span>
                                     @endif
                                 </td>
-                                <td style="padding:6px 4px;font-size:11px;">{{ $lapso }}</td>
-                                <td style="padding:6px 4px;">
+                                <td style="padding:5px 4px;">{{ $lapso }}</td>
+                                <td style="padding:5px 4px;">
                                     @foreach(array_slice($comunidadesNombres, 0, $maxShow) as $c)
                                         <span style="display:inline-block;background:#198754;color:#fff;border-radius:3px;padding:1px 6px;font-size:10px;margin:1px 0;">{{ $c }}</span>
                                     @endforeach
@@ -107,18 +107,21 @@
                                         <span style="display:inline-block;background:#6c757d;color:#fff;border-radius:3px;padding:1px 6px;font-size:10px;margin:1px 0;">+{{ $countComunidades - $maxShow }}</span>
                                     @endif
                                 </td>
-                                <td align="center" style="padding:6px 4px;">
+                                <td align="center" style="padding:5px 4px;">
                                     @foreach($grupo as $v)
                                         <button type="button" wire:click="quitarVinculacion({{ $v->vin_codigo }})" style="background:none;border:1px solid #c62828;color:#c62828;border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;font-weight:600;margin:1px 0;display:block;width:100%;" onmouseover="this.style.background='#c62828';this.style.color='#fff'" onmouseout="this.style.background='';this.style.color='#c62828'">Quitar {{ $loop->iteration }}</button>
                                     @endforeach
                                 </td>
                             </tr>
-                        @endforeach
+                        @empty
+                            @if(trim($busquedaListado) !== '')
+                            <tr>
+                                <td colspan="6" align="center" style="padding:15px;color:#666;font-style:italic;">No se encontraron resultados para "{{ $busquedaListado }}".</td>
+                            </tr>
+                            @endif
+                        @endforelse
                     </tbody>
                 </table>
-                @if($vinculacionesPorProyecto->isEmpty() && trim($busquedaListado) !== '')
-                    <p style="color:#666;font-style:italic;padding:10px;text-align:center;">No se encontraron resultados para "{{ $busquedaListado }}".</p>
-                @endif
             </div>
         @endif
     </fieldset>
@@ -618,127 +621,91 @@
                     <button type="button" wire:click="cerrarDetalle" style="background:none;border:none;font-size:24px;cursor:pointer;color:#888;padding:0 6px;">&times;</button>
                 </div>
 
-                {{-- Resumen --}}
-                @if($proyectoDetalle->resumen)
-                    <fieldset style="border:1px solid #e0e0e0;border-radius:6px;padding:12px;margin-bottom:14px;">
-                        <legend style="font-weight:bold;font-size:13px;color:#555;padding:0 8px;">Resumen</legend>
+                {{-- Resumen + Beneficiados --}}
+                <div style="display:flex;gap:14px;margin-bottom:14px;">
+                    @if($proyectoDetalle->resumen)
+                    <div style="flex:1;background:#fafafa;border:1px solid #e0e0e0;border-radius:6px;padding:12px;">
+                        <div style="font-weight:bold;font-size:13px;color:#8b0000;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #e0e0e0;">RESUMEN</div>
                         <p style="margin:0;font-size:12px;color:#333;line-height:1.5;">{{ $proyectoDetalle->resumen }}</p>
-                    </fieldset>
-                @endif
-
-                {{-- Clasificación --}}
-                <fieldset style="border:1px solid #e0e0e0;border-radius:6px;padding:12px;margin-bottom:14px;">
-                    <legend style="font-weight:bold;font-size:13px;color:#555;padding:0 8px;">Clasificación</legend>
-                    <table width="100%" style="font-size:12px;border-collapse:separate;border-spacing:0 5px;">
-                        <tr>
-                            <td width="28%" style="font-weight:bold;color:#555;padding:2px 4px;">Línea de investigación:</td>
-                            <td style="padding:2px 4px;">{{ $proyectoDetalle->linea_investigacion->nombre_investigacion ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight:bold;color:#555;padding:2px 4px;">Metodología:</td>
-                            <td style="padding:2px 4px;">{{ $proyectoDetalle->metodologia->nombre ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight:bold;color:#555;padding:2px 4px;">Tipo de investigación:</td>
-                            <td style="padding:2px 4px;">{{ $proyectoDetalle->tipo_investigacion->nombre ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <td style="font-weight:bold;color:#555;padding:2px 4px;">Objetivo de investigación:</td>
-                            <td style="padding:2px 4px;">{{ $proyectoDetalle->objetivo_investigacion->nombre ?? 'N/A' }}</td>
-                        </tr>
-                    </table>
-                </fieldset>
+                    </div>
+                    @endif
+                    @if($proyectoDetalle->pry_cantidad_beneficiados)
+                    <div style="min-width:140px;background:#fafafa;border:1px solid #e0e0e0;border-radius:6px;padding:12px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                        <div style="font-size:28px;font-weight:bold;color:#198754;">{{ $proyectoDetalle->pry_cantidad_beneficiados }}</div>
+                        <div style="font-size:11px;color:#666;margin-top:2px;">BENEFICIADOS</div>
+                    </div>
+                    @endif
+                </div>
 
                 {{-- Comunidad --}}
                 <fieldset style="border:1px solid #e0e0e0;border-radius:6px;padding:12px;margin-bottom:14px;">
                     <legend style="font-weight:bold;font-size:13px;color:#555;padding:0 8px;">Comunidad asociada</legend>
                     @if($proyectoDetalle->comunidad)
-                        <table width="100%" style="font-size:12px;border-collapse:separate;border-spacing:0 5px;">
-                            <tr>
-                                <td width="28%" style="font-weight:bold;color:#555;padding:2px 4px;">Nombre:</td>
-                                <td style="padding:2px 4px;">{{ $proyectoDetalle->comunidad->nombre }}</td>
-                            </tr>
-                            @if($proyectoDetalle->comunidad->rif)
-                            <tr>
-                                <td style="font-weight:bold;color:#555;padding:2px 4px;">RIF:</td>
-                                <td style="padding:2px 4px;">{{ $proyectoDetalle->comunidad->rif }}</td>
-                            </tr>
-                            @endif
-                            @if($proyectoDetalle->comunidad->correo)
-                            <tr>
-                                <td style="font-weight:bold;color:#555;padding:2px 4px;">Correo:</td>
-                                <td style="padding:2px 4px;">{{ $proyectoDetalle->comunidad->correo }}</td>
-                            </tr>
-                            @endif
-                            @if($proyectoDetalle->comunidad->numero_telefono)
-                            <tr>
-                                <td style="font-weight:bold;color:#555;padding:2px 4px;">Teléfono:</td>
-                                <td style="padding:2px 4px;">{{ $proyectoDetalle->comunidad->numero_telefono }}</td>
-                            </tr>
-                            @endif
+                        <table width="100%" style="font-size:12px;border-collapse:collapse;">
+                            @php $cRows = []; $cRows[] = ['Nombre:', $proyectoDetalle->comunidad->nombre]; @endphp
+                            @if($proyectoDetalle->comunidad->rif) @php $cRows[] = ['RIF:', $proyectoDetalle->comunidad->rif]; @endphp @endif
+                            @if($proyectoDetalle->comunidad->correo) @php $cRows[] = ['Correo:', $proyectoDetalle->comunidad->correo]; @endphp @endif
+                            @if($proyectoDetalle->comunidad->numero_telefono) @php $cRows[] = ['Teléfono:', $proyectoDetalle->comunidad->numero_telefono]; @endphp @endif
                             @if($proyectoDetalle->comunidad->direccion)
-                            <tr>
-                                <td style="font-weight:bold;color:#555;padding:2px 4px;">Dirección:</td>
-                                <td style="padding:2px 4px;">
-                                    {{ $proyectoDetalle->comunidad->direccion->dir_calle ?? '' }}
-                                    {{ $proyectoDetalle->comunidad->direccion->municipio->mun_nombre ?? '' ? ', ' . $proyectoDetalle->comunidad->direccion->municipio->mun_nombre : '' }}
-                                    {{ $proyectoDetalle->comunidad->direccion->municipio->estado->est_nombre ?? '' ? ', ' . $proyectoDetalle->comunidad->direccion->municipio->estado->est_nombre : '' }}
-                                </td>
-                            </tr>
+                                @php
+                                    $dir = trim(($proyectoDetalle->comunidad->direccion->dir_calle ?? '') . ', ' . ($proyectoDetalle->comunidad->direccion->municipio->mun_nombre ?? '') . ', ' . ($proyectoDetalle->comunidad->direccion->municipio->estado->est_nombre ?? ''), ', ');
+                                    $cRows[] = ['Dirección:', $dir ?: 'N/A'];
+                                @endphp
                             @endif
+                            @foreach($cRows as $i => $cr)
+                                <tr style="background:{{ $i % 2 == 0 ? '#FFF' : '#f5f5f5' }};">
+                                    <td width="28%" style="font-weight:bold;color:#555;padding:5px 6px;border-bottom:1px solid #eee;">{{ $cr[0] }}</td>
+                                    <td style="padding:5px 6px;border-bottom:1px solid #eee;">{{ $cr[1] }}</td>
+                                </tr>
+                            @endforeach
                         </table>
                     @else
                         <p style="margin:0;font-size:12px;color:#999;font-style:italic;">Sin comunidad asignada</p>
                     @endif
                 </fieldset>
 
-                {{-- Datos del equipo --}}
+                {{-- Clasificación --}}
                 <fieldset style="border:1px solid #e0e0e0;border-radius:6px;padding:12px;margin-bottom:14px;">
-                    <legend style="font-weight:bold;font-size:13px;color:#555;padding:0 8px;">Datos del equipo</legend>
-                    <table width="100%" style="font-size:12px;border-collapse:separate;border-spacing:0 5px;">
-                        <tr>
-                            <td width="28%" style="font-weight:bold;color:#555;padding:2px 4px;">Equipo / Sección:</td>
-                            <td style="padding:2px 4px;">{{ $proyectoDetalle->equipo_ref ?? 'N/A' }}</td>
-                        </tr>
-                        <tr>
-                            <td width="28%" style="font-weight:bold;color:#555;padding:2px 4px;">Creador (cédula):</td>
-                            <td style="padding:2px 4px;">{{ $proyectoDetalle->creador_cedula ?? 'N/A' }}</td>
-                        </tr>
-                        @if($proyectoDetalle->pry_cantidad_beneficiados)
-                        <tr>
-                            <td style="font-weight:bold;color:#555;padding:2px 4px;">Beneficiados:</td>
-                            <td style="padding:2px 4px;">{{ $proyectoDetalle->pry_cantidad_beneficiados }}</td>
-                        </tr>
-                        @endif
-                        @if($proyectoDetalle->fecha_actualizacion_estudiante)
-                        <tr>
-                            <td style="font-weight:bold;color:#555;padding:2px 4px;">Últ. actualización:</td>
-                            <td style="padding:2px 4px;">{{ $proyectoDetalle->fecha_actualizacion_estudiante ? \Carbon\Carbon::parse($proyectoDetalle->fecha_actualizacion_estudiante)->format('d/m/Y h:i A') : 'N/A' }}</td>
-                        </tr>
-                        @endif
-                        @if($proyectoDetalle->motivo_rechazo)
-                        <tr>
-                            <td style="font-weight:bold;color:#c62828;padding:2px 4px;">Motivo de rechazo:</td>
-                            <td style="padding:2px 4px;color:#c62828;">{{ $proyectoDetalle->motivo_rechazo }}</td>
-                        </tr>
-                        @endif
+                    <legend style="font-weight:bold;font-size:13px;color:#555;padding:0 8px;">Clasificación</legend>
+                    <table width="100%" style="font-size:12px;border-collapse:collapse;">
+                        @php
+                            $clasRows = [
+                                ['Línea de investigación:', $proyectoDetalle->linea_investigacion->nombre_investigacion ?? 'N/A'],
+                                ['Metodología:', $proyectoDetalle->metodologia->nombre ?? 'N/A'],
+                                ['Tipo de investigación:', $proyectoDetalle->tipo_investigacion->nombre ?? 'N/A'],
+                                ['Objetivo de investigación:', $proyectoDetalle->objetivo_investigacion->nombre ?? 'N/A'],
+                            ];
+                        @endphp
+                        @foreach($clasRows as $i => $cr)
+                            <tr style="background:{{ $i % 2 == 0 ? '#FFF' : '#f5f5f5' }};">
+                                <td width="28%" style="font-weight:bold;color:#555;padding:5px 6px;border-bottom:1px solid #eee;">{{ $cr[0] }}</td>
+                                <td style="padding:5px 6px;border-bottom:1px solid #eee;">{{ $cr[1] }}</td>
+                            </tr>
+                        @endforeach
                     </table>
                 </fieldset>
 
-                {{-- Vinculaciones actuales --}}
-                @if($proyectoDetalle->vinculaciones->isNotEmpty())
-                    <fieldset style="border:1px solid #c8e6c9;border-radius:6px;padding:12px;margin-bottom:14px;background:#f1faf1;">
-                        <legend style="font-weight:bold;font-size:13px;color:#19692e;padding:0 8px;">Vinculaciones</legend>
-                        @foreach($proyectoDetalle->vinculaciones as $vinc)
-                            <div style="font-size:12px;margin:2px 0;">
-                                <strong>{{ $vinc->titulo }}</strong>
-                                @if($vinc->comunidad)
-                                    &rarr; {{ $vinc->comunidad->nombre }}
-                                @endif
-                            </div>
+                {{-- Datos del equipo --}}
+                <fieldset style="border:1px solid #e0e0e0;border-radius:6px;padding:12px;margin-bottom:14px;">
+                    <legend style="font-weight:bold;font-size:13px;color:#555;padding:0 8px;">Datos del equipo</legend>
+                    <table width="100%" style="font-size:12px;border-collapse:collapse;">
+                        @php $eqRows = []; @endphp
+                        @php $eqRows[] = ['Equipo / Sección:', $proyectoDetalle->equipo_ref ?? 'N/A']; @endphp
+                        @php $eqRows[] = ['Creador (cédula):', $proyectoDetalle->creador_cedula ?? 'N/A']; @endphp
+                        @if($proyectoDetalle->fecha_actualizacion_estudiante)
+                            @php $eqRows[] = ['Últ. actualización:', \Carbon\Carbon::parse($proyectoDetalle->fecha_actualizacion_estudiante)->format('d/m/Y h:i A')]; @endphp
+                        @endif
+                        @if($proyectoDetalle->motivo_rechazo)
+                            @php $eqRows[] = ['Motivo de rechazo:', $proyectoDetalle->motivo_rechazo]; @endphp
+                        @endif
+                        @foreach($eqRows as $i => $er)
+                            <tr style="background:{{ $i % 2 == 0 ? '#FFF' : '#f5f5f5' }};">
+                                <td width="28%" style="font-weight:bold;color:{{ str_contains($er[0], 'rechazo') ? '#c62828' : '#555' }};padding:5px 6px;border-bottom:1px solid #eee;">{{ $er[0] }}</td>
+                                <td style="padding:5px 6px;border-bottom:1px solid #eee;{{ str_contains($er[0], 'rechazo') ? 'color:#c62828;' : '' }}">{{ $er[1] }}</td>
+                            </tr>
                         @endforeach
-                    </fieldset>
-                @endif
+                    </table>
+                </fieldset>
 
                 {{-- Documentos --}}
                 <fieldset style="border:1px solid #e0e0e0;border-radius:6px;padding:12px;">
