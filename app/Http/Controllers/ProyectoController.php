@@ -128,7 +128,7 @@ class ProyectoController extends Controller
         if ($request->ajax() && $request->get('ajax_listado')) {
             $html = view('proyectos._listado_tabla', compact(
                 'datosListado', 'canValidate', 'esAdmin', 'esCoordinador', 'esGestionador',
-                'proyectosConDocumentosRechazados'
+                'proyectosConDocumentosRechazados', 'gruposDocente'
             ))->render();
             $paginacion = ($datosListado['proyectos'] ?? collect())->links()->render();
             return response()->json(['html' => $html, 'paginacion' => $paginacion]);
@@ -1033,10 +1033,14 @@ class ProyectoController extends Controller
                     } catch (\Throwable) {
                         $q->whereRaw('pry_resumen ILIKE ?', [$termino]);
                     }
-                    // Nombre del grupo
+                    // Referencia equipo
                     $q->orWhereRaw('pry_direccion_logica ILIKE ?', [$termino]);
-                    $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo g WHERE g.grp_identificador = proyectos.pry_direccion_logica AND g.grp_nombre ILIKE ?)', [$termino]);
-                    $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo g WHERE g.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\') AND g.grp_nombre ILIKE ?)', [$termino]);
+                    // Nombre del grupo
+                    $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE (gpm.grp_identificador = proyectos.pry_direccion_logica OR gpm.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\')) AND gpm.grp_nombre ILIKE ?)', [$termino]);
+                    // Miembros del grupo
+                    $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE (gpm.grp_identificador = proyectos.pry_direccion_logica OR gpm.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\')) AND gpm.grp_miembros::text ILIKE ?)', [$termino]);
+                    // Profesor del grupo
+                    $q->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE (gpm.grp_identificador = proyectos.pry_direccion_logica OR gpm.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\')) AND (gpm.grp_creador_cedula::text ILIKE ? OR gpm.grp_contexto::text ILIKE ?))', [$termino, $termino]);
                     // Comunidad
                     $q->orWhereHas('comunidad', function ($qc) use ($termino) {
                         $qc->whereRaw('com_nombre ILIKE ?', [$termino]);
@@ -1052,6 +1056,22 @@ class ProyectoController extends Controller
                     // Tipo de investigación
                     $q->orWhereHas('tipo_investigacion', function ($qt) use ($termino) {
                         $qt->whereRaw('tin_nombre ILIKE ?', [$termino]);
+                    });
+                    // Objetivo de investigación
+                    $q->orWhereHas('objetivo_investigacion', function ($oq) use ($termino) {
+                        $oq->whereRaw('obi_nombre ILIKE ?', [$termino]);
+                    });
+                    // Vinculaciones – título
+                    $q->orWhereHas('vinculaciones.tituloVinculacion', function ($vq) use ($termino) {
+                        $vq->whereRaw('tiv_titulo ILIKE ?', [$termino]);
+                    });
+                    // Vinculaciones – comunidad vinculada
+                    $q->orWhereHas('vinculaciones.comunidad', function ($vcq) use ($termino) {
+                        $vcq->whereRaw('com_nombre ILIKE ?', [$termino]);
+                    });
+                    // Documentos – nombre del componente
+                    $q->orWhereHas('documentos.componente', function ($dcq) use ($termino) {
+                        $dcq->whereRaw('comp_nombre ILIKE ?', [$termino]);
                     });
                     // Código exacto
                     if (is_numeric($searchTrimmed)) {

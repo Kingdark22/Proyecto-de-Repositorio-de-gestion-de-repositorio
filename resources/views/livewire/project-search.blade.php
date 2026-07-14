@@ -227,101 +227,149 @@
     </fieldset>
 
     @if ($isDetailsModalOpen && $selectedProject)
+        @php
+            $grupoDetalle = $selectedProject->getRelation('grupoDetalle');
+            $miembros = $grupoDetalle ? ($grupoDetalle->grp_miembros ?? []) : [];
+            $profesorCed = $grupoDetalle ? trim((string) ($grupoDetalle->grp_creador_cedula ?? '')) : '';
+            $profesorNombre = '';
+            if ($profesorCed !== '') {
+                $profesorUser = \App\Models\User::where('usu_cedula', $profesorCed)->first();
+                if ($profesorUser) {
+                    $profesorNombre = $profesorUser->nombre;
+                }
+            }
+            if ($profesorNombre === '' && $grupoDetalle) {
+                $profesorNombre = trim((string) ($grupoDetalle->grp_contexto['creador_usuario'] ?? ''));
+            }
+        @endphp
         <div
             style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; display: flex; justify-content: center; align-items: center; overflow-y: auto;">
             <div
-                style="background-color: #FFF; border: 2px solid #8b0000; border-radius: 6px; padding: 20px; width: 850px; max-height: 90vh; overflow-y: auto;">
-                <div
-                    style="display: flex; justify-content: space-between; border-bottom: 2px solid #8b0000; padding-bottom: 10px; margin-bottom: 15px;">
-                    <div style="width: 90%;">
-                        <h3 style="margin: 0; font-size: 16px; font-weight: bold; color: #8b0000;">{{ $selectedProject->titulo }}
-                        </h3>
-                        <span style="font-size: 11px;"><b>Equipo:</b> {{ $selectedProject->equipo_resumen }}</span>
+                style="background-color: #FFF; border: 2px solid #8b0000; border-radius: 8px; width: 880px; max-height: 92vh; overflow-y: auto; box-shadow: 0 6px 24px rgba(0,0,0,0.25);">
+
+                {{-- Header --}}
+                <div style="background:#8b0000;color:#fff;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <div style="font-size:15px;font-weight:bold;">{{ $selectedProject->titulo }}</div>
                     </div>
                     <button type="button" wire:click="closeDetails"
-                        style="background: #8b0000; border: none; font-size: 14px; color: #FFF; cursor: pointer; font-weight: bold; padding: 2px 8px; border-radius: 3px;">X</button>
+                        style="background:rgba(255,255,255,0.15);border:none;font-size:20px;color:#fff;cursor:pointer;padding:0 10px;border-radius:4px;">&times;</button>
                 </div>
 
-                <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 11px; margin-bottom: 10px;">
-                    <tr>
-                        <td width="50%" valign="top">
-                            <fieldset style="border: 1px solid #CCC; padding: 8px; height: 100%;">
-                                <legend style="font-weight: bold; font-size: 11px;">Informaci&oacute;n del equipo</legend>
-                                <b>Equipo:</b> {{ $selectedProject->equipo_resumen }}
-                            </fieldset>
-                        </td>
-                        <td width="50%" valign="top">
-                            <fieldset style="border: 1px solid #CCC; padding: 8px; height: 100%;">
-                                <legend style="font-weight: bold; font-size: 11px;">Comunidad original</legend>
-                                <b>Nombre:</b> {{ $selectedProject->comunidad->nombre ?? 'N/A' }}<br>
-                                <b>RIF:</b> {{ $selectedProject->comunidad->rif ?? 'N/A' }}<br>
-                                <b>Direcci&oacute;n:</b> {{ $selectedProject->comunidad->direccion?->dir_calle ?? 'N/A' }}
-                            </fieldset>
-                        </td>
-                    </tr>
-                </table>
+                <div style="padding:14px 18px;">
 
-                <fieldset style="border: 1px solid #CCC; padding: 8px; margin-bottom: 10px;">
-                    <legend style="font-weight: bold; font-size: 11px;">Detalles del Proyecto</legend>
-                    <div style="margin-bottom: 8px;">
-                        <b>T&iacute;tulo del Proyecto:</b><br>
-                        <span style="font-size: 12px; font-weight: bold; color: #111;">{{ $selectedProject->titulo }}</span>
+                    {{-- Resumen + Beneficiados --}}
+                    <div style="margin-bottom:12px;">
+                        <div style="font-weight:bold;font-size:13px;color:#8b0000;margin-bottom:4px;">RESUMEN</div>
+                        <div style="font-size:12px;color:#333;line-height:1.5;text-align:justify;">{{ $selectedProject->resumen ?: 'Sin resumen disponible.' }}</div>
+                        @if($selectedProject->pry_cantidad_beneficiados)
+                        <div style="margin-top:6px;padding:6px 10px;background:#f0faf0;border:1px solid #c8e6c9;border-radius:4px;display:inline-block;">
+                            <b>Beneficiados:</b> <span style="font-size:18px;font-weight:bold;color:#198754;">{{ $selectedProject->pry_cantidad_beneficiados }}</span>
+                        </div>
+                        @endif
                     </div>
-                    <div style="border-top: 1px solid #eee; padding-top: 6px;">
-                        <b>Resumen:</b><br>
-                        <div style="font-size: 11px; text-align: justify; line-height: 1.5; margin-top: 2px;">{{ $selectedProject->resumen ?: 'Sin resumen disponible.' }}</div>
-                    </div>
-                </fieldset>
 
-                <fieldset style="border: 1px solid #CCC; padding: 8px; margin-bottom: 10px;">
-                    <legend style="font-weight: bold; font-size: 11px;">Ficha t&eacute;cnica</legend>
-                    <table width="100%" cellpadding="3" cellspacing="0" style="font-size: 11px;">
-                        <tr>
-                            <td width="25%"><b>Investigaci&oacute;n:</b></td>
-                            <td width="25%">{{ $selectedProject->tipo_investigacion?->nombre ?? 'N/D' }}</td>
-                        </tr>
-                        <tr>
-                            <td><b>Metodolog&iacute;a:</b></td>
-                            <td>{{ $selectedProject->metodologia?->nombre ?? 'N/D' }}</td>
-                            <td><b>L&iacute;nea de investigaci&oacute;n:</b></td>
-                            <td>{{ $selectedProject->linea_investigacion?->nombre_investigacion ?? 'N/D' }}</td>
-                        </tr>
-                        <tr>
-                            <td><b>Objetivo de investigaci&oacute;n:</b></td>
-                            <td colspan="3">{{ $selectedProject->objetivo_investigacion?->nombre ?? 'N/D' }}</td>
+                    {{-- Dos columnas: Datos del proyecto | Clasificacion --}}
+                    <table width="100%" cellpadding="0" cellspacing="0" style="font-size:12px;">
+                        <tr valign="top">
+                            {{-- Columna izquierda: Datos del proyecto --}}
+                            <td width="50%" style="padding-right:10px;">
+                                <div style="font-weight:bold;font-size:13px;color:#555;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #ddd;">DATOS DEL PROYECTO</div>
+                                <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;">
+                                    @if($profesorNombre)
+                                    <tr>
+                                        <td width="35%" style="font-weight:bold;border:1px solid #ddd;background:#f5f5f5;padding:4px 6px;">Profesor</td>
+                                        <td style="border:1px solid #ddd;padding:4px 6px;color:#8b0000;font-weight:bold;">{{ $profesorNombre }}</td>
+                                    </tr>
+                                    @endif
+                                    <tr>
+                                        <td style="font-weight:bold;border:1px solid #ddd;background:#f5f5f5;padding:4px 6px;">Equipo</td>
+                                        <td style="border:1px solid #ddd;padding:4px 6px;">{{ $selectedProject->equipo_resumen }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight:bold;border:1px solid #ddd;background:#f5f5f5;padding:4px 6px;">Comunidad</td>
+                                        <td style="border:1px solid #ddd;padding:4px 6px;">{{ $selectedProject->comunidad->nombre ?? 'N/A' }}</td>
+                                    </tr>
+                                    @if($selectedProject->comunidad?->rif)
+                                    <tr>
+                                        <td style="font-weight:bold;border:1px solid #ddd;background:#f5f5f5;padding:4px 6px;">RIF</td>
+                                        <td style="border:1px solid #ddd;padding:4px 6px;">{{ $selectedProject->comunidad->rif }}</td>
+                                    </tr>
+                                    @endif
+                                    @if($selectedProject->comunidad?->direccion?->dir_calle)
+                                    <tr>
+                                        <td style="font-weight:bold;border:1px solid #ddd;background:#f5f5f5;padding:4px 6px;">Direcci&oacute;n</td>
+                                        <td style="border:1px solid #ddd;padding:4px 6px;">{{ $selectedProject->comunidad->direccion->dir_calle }}</td>
+                                    </tr>
+                                    @endif
+                                </table>
+
+                                <div style="font-weight:bold;font-size:13px;color:#555;margin:10px 0 6px;padding-bottom:4px;border-bottom:1px solid #ddd;">INTEGRANTES ({{ count($miembros) }})</div>
+                                @forelse($miembros as $i => $m)
+                                <div style="padding:3px 6px;{{ $i % 2 == 0 ? 'background:#fff;' : 'background:#f5f5f5;' }}border:1px solid #ddd;{{ $loop->first ? '' : 'border-top:none;' }}">
+                                    {{ $i+1 }}. {{ $m['nombre'] ?? '' }} {{ $m['apellido'] ?? '' }}
+                                </div>
+                                @empty
+                                <div style="padding:6px;color:#999;font-style:italic;">Sin integrantes registrados</div>
+                                @endforelse
+                            </td>
+                            {{-- Columna derecha: Clasificacion --}}
+                            <td width="50%" style="padding-left:10px;">
+                                <div style="font-weight:bold;font-size:13px;color:#555;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #ddd;">CLASIFICACI&Oacute;N</div>
+                                <table width="100%" cellpadding="4" cellspacing="0" style="border-collapse:collapse;">
+                                    <tr>
+                                        <td width="35%" style="font-weight:bold;border:1px solid #ddd;background:#f5f5f5;padding:4px 6px;">Investigaci&oacute;n</td>
+                                        <td style="border:1px solid #ddd;padding:4px 6px;">{{ $selectedProject->tipo_investigacion?->nombre ?? 'N/D' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight:bold;border:1px solid #ddd;background:#f5f5f5;padding:4px 6px;">Metodolog&iacute;a</td>
+                                        <td style="border:1px solid #ddd;padding:4px 6px;">{{ $selectedProject->metodologia?->nombre ?? 'N/D' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight:bold;border:1px solid #ddd;background:#f5f5f5;padding:4px 6px;">L&iacute;nea</td>
+                                        <td style="border:1px solid #ddd;padding:4px 6px;">{{ $selectedProject->linea_investigacion?->nombre_investigacion ?? 'N/D' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-weight:bold;border:1px solid #ddd;background:#f5f5f5;padding:4px 6px;">Objetivo</td>
+                                        <td style="border:1px solid #ddd;padding:4px 6px;">{{ $selectedProject->objetivo_investigacion?->nombre ?? 'N/D' }}</td>
+                                    </tr>
+                                </table>
+                            </td>
                         </tr>
                     </table>
-                </fieldset>
 
-                        @php $detSrchDocs = $selectedProject->documentos; @endphp
-                @if ($detSrchDocs->isNotEmpty())
-                    <fieldset style="border: 1px solid #CCC; padding: 8px; margin-bottom: 10px;">
-                        <legend style="font-weight: bold; font-size: 11px;">Documentos</legend>
-                        <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 11px; border-collapse: collapse;">
+                    {{-- Documentos --}}
+                    @php $detSrchDocs = $selectedProject->documentos; @endphp
+                    @if ($detSrchDocs->isNotEmpty())
+                    <div style="margin-top:12px;">
+                        <div style="font-weight:bold;font-size:13px;color:#555;margin-bottom:5px;">DOCUMENTOS</div>
+                        <table width="100%" cellpadding="4" cellspacing="0" style="font-size:12px;border-collapse:collapse;">
                             @foreach ($detSrchDocs as $doc)
-                                <tr style="border-bottom: 1px solid #EEE;">
-                                    <td width="60%" style="padding: 4px;">{{ $doc->componente?->nombre ?? 'Documento' }}</td>
-                                    <td width="20%" align="center" style="padding: 4px;">
-                                        @if ($doc->pd_estado === 1)
-                                            <span style="color: green; font-weight: bold;">Aprobado</span>
-                                        @elseif ($doc->pd_estado === 2)
-                                            <span style="color: red; font-weight: bold;">Rechazado</span>
-                                        @else
-                                            <span style="color: #888;">Pendiente</span>
-                                        @endif
-                                    </td>
-                                    <td width="20%" align="center" style="padding: 4px;">
-                                        <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank"
-                                            style="display:inline-block;background:#8b0000;color:#fff;padding:2px 12px;border-radius:3px;font-size:10px;text-decoration:none;">Ver</a>
-                                    </td>
-                                </tr>
+                            <tr style="border-bottom:1px solid #eee;">
+                                <td style="padding:5px 4px;">{{ $doc->componente?->nombre ?? 'Documento' }}</td>
+                                <td width="15%" align="center" style="padding:5px 4px;">
+                                    @if ($doc->pd_estado === 1)
+                                        <span style="color:#008000;font-weight:bold;">Aprobado</span>
+                                    @elseif ($doc->pd_estado === 2)
+                                        <span style="color:#c82333;font-weight:bold;">Rechazado</span>
+                                    @else
+                                        <span style="color:#888;">Pendiente</span>
+                                    @endif
+                                </td>
+                                <td width="15%" align="center" style="padding:5px 4px;">
+                                    <a href="{{ route('documentos.serve', ['path' => $doc->pd_archivo_path]) }}" target="_blank"
+                                        style="display:inline-block;background:#8b0000;color:#fff;padding:3px 14px;border-radius:4px;font-size:11px;text-decoration:none;font-weight:600;">Ver</a>
+                                </td>
+                            </tr>
                             @endforeach
                         </table>
-                    </fieldset>
-                @endif
+                    </div>
+                    @endif
 
-                <div style="text-align: center; margin-top: 15px;">
-                    <button type="button" wire:click="closeDetails" style="background: #8b0000; border: none; color: #FFF; font-weight: bold; padding: 6px 20px; border-radius: 4px; cursor: pointer; font-size: 12px;">Cerrar detalles</button>
+                    <div style="text-align:center;margin-top:14px;">
+                        <button type="button" wire:click="closeDetails" style="background:#8b0000;border:none;color:#fff;font-weight:bold;padding:6px 26px;border-radius:4px;cursor:pointer;font-size:12px;">Cerrar detalles</button>
+                    </div>
+
                 </div>
             </div>
         </div>

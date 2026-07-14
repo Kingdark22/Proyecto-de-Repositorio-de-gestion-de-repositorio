@@ -41,7 +41,10 @@ class ProjectSearch extends Component
 
     public function mount(): void
     {
-        // No se auto-selecciona lapso: mostrar todos los proyectos al cargar
+        $vigente = \App\Models\LapsoAcademico::vigente();
+        if ($vigente) {
+            $this->lapsoFilter = (string) $vigente->lap_codigo;
+        }
     }
 
     public function toggleProject(int $id): void
