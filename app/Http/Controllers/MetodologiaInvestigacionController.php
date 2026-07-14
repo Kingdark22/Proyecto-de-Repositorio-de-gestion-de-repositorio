@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\MetodologiaInvestigacion;
+use App\Repositories\CatalogoRepository;
 use App\Services\UnicidadNombreService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -59,6 +60,8 @@ class MetodologiaInvestigacionController extends Controller
             'descripcion' => trim($validated['descripcion']),
             'estado_logico' => true,
         ]);
+
+        app(CatalogoRepository::class)->invalidarCatalogos();
 
         return redirect()->route('metodologia-investigacion')
             ->with('success', 'Metodología registrada con éxito.');

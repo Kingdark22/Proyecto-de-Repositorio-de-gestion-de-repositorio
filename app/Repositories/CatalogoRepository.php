@@ -21,14 +21,12 @@ class CatalogoRepository
      */
     public function catalogos(?int $programaId = null, ?string $trayectoCodigo = null): array
     {
-        $ttl = now()->addMinutes(10);
-
         return [
-            'lineas' => Cache::remember('gestion_cat_lineas', $ttl, fn() => $this->lineasActivas()),
-            'metodologias' => Cache::remember('gestion_cat_metodologias', $ttl, fn() => $this->metodologiasActivas()),
-            'tipos_investigacion' => Cache::remember('gestion_cat_tipos_investigacion', $ttl, fn() => $this->tiposInvestigacionActivos()),
-            'objetivos_investigacion' => Cache::remember('gestion_cat_objetivos_investigacion', $ttl, fn() => $this->objetivosInvestigacionActivos()),
-            'lapsos' => Cache::remember('gestion_cat_lapsos', $ttl, fn() => $this->lapsosActivos()),
+            'lineas' => $this->lineasActivas(),
+            'metodologias' => $this->metodologiasActivas(),
+            'tipos_investigacion' => $this->tiposInvestigacionActivos(),
+            'objetivos_investigacion' => $this->objetivosInvestigacionActivos(),
+            'lapsos' => Cache::remember('gestion_cat_lapsos', now()->addMinutes(10), fn() => $this->lapsosActivos()),
             'componentes_disp' => $this->componentesPorProgramaYTrayecto($programaId, $trayectoCodigo),
         ];
     }
