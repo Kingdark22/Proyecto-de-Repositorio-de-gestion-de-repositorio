@@ -792,7 +792,7 @@ class GrupoProyectoController extends Controller
         $correo = $request->input('correo');
         if ($correo) {
             $correoService = app(ValidacionCorreoService::class);
-            $resultado = $correoService->validarCompleto($correo, true);
+            $resultado = $correoService->validarCompleto($correo, false);
             if (! $resultado['valido']) {
                 return response()->json(['ok' => false, 'error' => $resultado['error'] ?? 'El correo ingresado no es válido.'], 422);
             }

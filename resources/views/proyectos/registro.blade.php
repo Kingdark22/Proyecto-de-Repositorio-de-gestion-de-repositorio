@@ -1173,8 +1173,13 @@ function guardarCatalogo() {
         }
     })
     .catch(e => {
-        document.getElementById('modal-catalogo-error').textContent = e.message || 'Error al guardar. Intente de nuevo.';
-        document.getElementById('modal-catalogo-error').style.display = 'block';
+        var errEl = document.getElementById('modal-catalogo-error');
+        if (errEl) {
+            errEl.textContent = e.message || 'Error al guardar. Intente de nuevo.';
+            errEl.style.display = 'block';
+        }
+    })
+    .finally(() => {
         btn.disabled = false;
         btn.textContent = 'Guardar';
     });
