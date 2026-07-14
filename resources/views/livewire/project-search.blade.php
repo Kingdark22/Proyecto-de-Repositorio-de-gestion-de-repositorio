@@ -194,17 +194,7 @@
                                 <div style="font-size: 10px;"><b>Comunidad original:</b> {{ $p->comunidad->nombre }}</div>
                             @endif
                             
-                            {{-- Vinculación asociada --}}
-                            @if($p->vinculaciones && $p->vinculaciones->isNotEmpty())
-                                @foreach($p->vinculaciones as $v)
-                                    <div style="font-size: 10px; margin-top: 3px; padding: 2px 5px; background: #fff8f0; border-left: 2px solid #8b0000; border-radius: 3px;">
-                                        <div><b>T&iacute;tulo Vinculaci&oacute;n:</b> <span style="color:#8b0000; font-weight:bold;">{{ $v->tituloVinculacion?->titulo }}</span></div>
-                                        @if($v->comunidad)
-                                            <div><b>Comunidad Vinculada:</b> <span style="font-weight:600;">{{ $v->comunidad->nombre }}</span></div>
-                                        @endif
-                                    </div>
-                                @endforeach
-                            @endif
+
                         </td>
                         <td style="padding: 5px; font-size: 10px;">{{ Str::limit($p->resumen, 100) }}</td>
                         <td align="center" style="padding: 5px;">
@@ -255,25 +245,10 @@
                 <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 11px; margin-bottom: 10px;">
                     <tr>
                         <td width="50%" valign="top">
-                            @if($selectedProject->vinculaciones && $selectedProject->vinculaciones->isNotEmpty())
-                                @php $v = $selectedProject->vinculaciones->first(); @endphp
-                                <fieldset style="border: 1px solid #8b0000; padding: 8px; height: 100%; background: #fff8f0; border-radius: 4px;">
-                                    <legend style="font-weight: bold; font-size: 11px; color: #8b0000;">Vinculaci&oacute;n y Equipo</legend>
-                                    <b>T&iacute;tulo Vinculaci&oacute;n:</b> <span style="font-size: 12px; color: #8b0000; font-weight: bold;">{{ $v->tituloVinculacion?->titulo }}</span><br>
-                                    @if($v->comunidad)
-                                        <b>Comunidad Vinculada:</b> <span style="font-weight: bold;">{{ $v->comunidad->nombre }}</span><br>
-                                        @if($v->comunidad->rif) <b>RIF:</b> {{ $v->comunidad->rif }}<br> @endif
-                                        @if($v->comunidad->numero_telefono) <b>Tel&eacute;fono:</b> {{ $v->comunidad->numero_telefono }}<br> @endif
-                                    @endif
-                                    <b>Equipo:</b> {{ $selectedProject->equipo_resumen }}
-                                </fieldset>
-                            @else
-                                <fieldset style="border: 1px solid #CCC; padding: 8px; height: 100%;">
-                                    <legend style="font-weight: bold; font-size: 11px;">Informaci&oacute;n del equipo</legend>
-                                    <b>Equipo:</b> {{ $selectedProject->equipo_resumen }}<br>
-                                    <span style="color:#666; font-style:italic;">Sin vinculaci&oacute;n registrada</span>
-                                </fieldset>
-                            @endif
+                            <fieldset style="border: 1px solid #CCC; padding: 8px; height: 100%;">
+                                <legend style="font-weight: bold; font-size: 11px;">Informaci&oacute;n del equipo</legend>
+                                <b>Equipo:</b> {{ $selectedProject->equipo_resumen }}
+                            </fieldset>
                         </td>
                         <td width="50%" valign="top">
                             <fieldset style="border: 1px solid #CCC; padding: 8px; height: 100%;">
