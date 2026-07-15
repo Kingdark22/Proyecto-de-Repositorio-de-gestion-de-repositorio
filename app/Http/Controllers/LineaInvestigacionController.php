@@ -141,12 +141,11 @@ class LineaInvestigacionController extends Controller
             }
         }
 
-        LineaInvestigacion::guardar([
-            'nombre_investigacion' => $nombre,
-            'area_de_investigacion' => trim($validated['area_de_investigacion']),
-            'programa_id' => $validated['programa_id'],
-            'descripcion' => trim($validated['descripcion']),
-        ], $id);
+        $item->nombre_investigacion = $nombre;
+        $item->area_de_investigacion = trim($validated['area_de_investigacion']);
+        $item->programa_id = $validated['programa_id'];
+        $item->descripcion = trim($validated['descripcion']);
+        $item->save();
 
         return redirect()->route('lineas-investigacion')
             ->with('success', 'Línea de Investigación actualizada con éxito.');

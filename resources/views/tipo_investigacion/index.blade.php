@@ -61,7 +61,6 @@
 @endpush
 
 @section('content')
-    </div>
     <div style="margin-bottom: 15px; display: flex; align-items: center;">
         <form method="GET" action="{{ route('tipos-investigacion') }}" style="display: contents;" id="searchForm">
             <div>

@@ -478,56 +478,6 @@
                 </div>
             </div>
 
-            {{-- MODAL CREAR CATÁLOGO --}}
-            <div id="modal-catalogo" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarModalCatalogo()">
-                <div style="background:#fff;border-radius:10px;padding:24px;max-width:480px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
-                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #8b0000;">
-                        <h3 id="modal-catalogo-titulo" style="margin:0;font-size:16px;font-weight:bold;color:#333;"></h3>
-                    </div>
-                    <input type="hidden" id="modal-catalogo-tipo" value="">
-                    <input type="hidden" id="modal-catalogo-ruta" value="">
-
-                    {{-- Nombre --}}
-                    <div style="margin-bottom:12px;">
-                        <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Nombre: <span style="color:red;">*</span></label>
-                        <input type="text" id="modal-catalogo-nombre" oninput="validarNombre(this)" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:13px;" placeholder="Nombre...">
-                        <span id="nombreStatus" style="font-size:11px;display:none;"></span>
-                    </div>
-
-                    {{-- Descripción (opcional) --}}
-                    <div style="margin-bottom:12px;">
-                        <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Descripción:</label>
-                        <textarea id="modal-catalogo-descripcion" rows="2" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></textarea>
-                    </div>
-
-                    {{-- Programa (solo para línea de investigación) --}}
-                    <div id="modal-catalogo-programa" style="display:none;margin-bottom:12px;">
-                        <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Programa: <span style="color:red;">*</span></label>
-                        <select id="modal-catalogo-programa-select" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:13px;">
-                            <option value="">Seleccione un programa...</option>
-                            @foreach($catalogosForm['programas'] ?? [] as $prog)
-                                <option value="{{ $prog->pro_codigo }}" {{ (($datosForm['programa_id_derived'] ?? '') == $prog->pro_codigo) ? 'selected' : '' }}>
-                                    {{ $prog->pro_siglas ?? $prog->pro_nombre }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div id="modal-catalogo-mencion" style="display:none;margin-bottom:12px;">
-                        <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">
-                            <input type="checkbox" id="modal-catalogo-mencion-check" style="margin-right:6px;"> Mención Honorífica
-                        </label>
-                    </div>
-
-                    <div id="modal-catalogo-error" style="color:#dc3545;font-size:11px;margin-bottom:8px;display:none;"></div>
-
-                    <div style="margin-top:20px;text-align:center;display:flex;gap:10px;justify-content:center;">
-                        <button type="button" onclick="guardarCatalogo()" class="cm-btn cm-btn-success" style="padding:8px 20px;font-size:13px;">Guardar</button>
-                        <button type="button" onclick="cerrarModalCatalogo()" class="cm-btn cm-btn-danger" style="padding:8px 20px;font-size:13px;">Cancelar</button>
-                    </div>
-                </div>
-            </div>
-
             {{-- MODAL ASIGNAR ROLES --}}
             <div id="modal-roles" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarRolesModal()">
                 <div style="background:#fff;border-radius:6px;padding:16px;max-width:400px;width:90%;box-shadow:0 4px 20px rgba(0,0,0,0.2);">
@@ -566,6 +516,56 @@
             </div>
         </fieldset>
     </form>
+
+    {{-- MODAL CREAR CATÁLOGO --}}
+    <div id="modal-catalogo" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarModalCatalogo()">
+        <div style="background:#fff;border-radius:10px;padding:24px;max-width:480px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #8b0000;">
+                <h3 id="modal-catalogo-titulo" style="margin:0;font-size:16px;font-weight:bold;color:#333;"></h3>
+            </div>
+            <input type="hidden" id="modal-catalogo-tipo" value="">
+            <input type="hidden" id="modal-catalogo-ruta" value="">
+
+            {{-- Nombre --}}
+            <div style="margin-bottom:12px;">
+                <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Nombre: <span style="color:red;">*</span></label>
+                <input type="text" id="modal-catalogo-nombre" oninput="validarNombre(this)" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:13px;" placeholder="Nombre...">
+                <span id="nombreStatus" style="font-size:11px;display:none;"></span>
+            </div>
+
+            {{-- Descripción (opcional) --}}
+            <div style="margin-bottom:12px;">
+                <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Descripción:</label>
+                <textarea id="modal-catalogo-descripcion" rows="2" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></textarea>
+            </div>
+
+            {{-- Programa (solo para línea de investigación) --}}
+            <div id="modal-catalogo-programa" style="display:none;margin-bottom:12px;">
+                <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Programa: <span style="color:red;">*</span></label>
+                <select id="modal-catalogo-programa-select" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:13px;">
+                    <option value="">Seleccione un programa...</option>
+                    @foreach($catalogosForm['programas'] ?? [] as $prog)
+                        <option value="{{ $prog->pro_codigo }}" {{ (($datosForm['programa_id_derived'] ?? '') == $prog->pro_codigo) ? 'selected' : '' }}>
+                            {{ $prog->pro_siglas ?? $prog->pro_nombre }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div id="modal-catalogo-mencion" style="display:none;margin-bottom:12px;">
+                <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">
+                    <input type="checkbox" id="modal-catalogo-mencion-check" style="margin-right:6px;"> Mención Honorífica
+                </label>
+            </div>
+
+            <div id="modal-catalogo-error" style="color:#dc3545;font-size:11px;margin-bottom:8px;display:none;"></div>
+
+            <div style="margin-top:20px;text-align:center;display:flex;gap:10px;justify-content:center;">
+                <button type="button" onclick="guardarCatalogo()" class="cm-btn cm-btn-success" style="padding:8px 20px;font-size:13px;">Guardar</button>
+                <button type="button" onclick="cerrarModalCatalogo()" class="cm-btn cm-btn-danger" style="padding:8px 20px;font-size:13px;">Cancelar</button>
+            </div>
+        </div>
+    </div>
 
     {{-- MODAL RECHAZO --}}
     <div id="rejectModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarRechazar()">

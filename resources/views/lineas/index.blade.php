@@ -61,7 +61,6 @@
 @endpush
 
 @section('content')
-    </div>
     <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
         <form method="GET" action="{{ route('lineas-investigacion') }}" style="display: flex; align-items: center; gap: 8px; margin: 0;" id="searchForm">
             <b>Buscar Línea:</b>
