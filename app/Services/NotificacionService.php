@@ -33,14 +33,26 @@ class NotificacionService
 
         $notificaciones = [];
 
-        if ($isAdmin || $isCoordinator || $isTeacher) {
+        if ($isCoordinator) {
+            // Coordinador: notificaciones administrativas generales
+            $proyectosCompletados = Proyecto::where('estado_validacion', 'completado')->count();
+            if ($proyectosCompletados > 0) {
+                $notificaciones[] = [
+                    'type' => 'warning',
+                    'title' => 'Proyectos pendientes de revisión',
+                    'mensaje' => "Hay {$proyectosCompletados} proyecto(s) completado(s) pendiente(s) de revisión por los profesores.",
+                    'url' => route('proyectos.gestion'),
+                ];
+            }
+        }
+
+        if ($isTeacher) {
             $query = Proyecto::whereIn('estado_validacion', ['completado']);
             $query2 = Proyecto::where('estado_validacion', 'pendiente')->where('actualizado_por_estudiante', true);
 
             $cedula = trim($user->usu_cedula);
 
-            if ($isTeacher) {
-                $gruposCreados = app(GrupoProyectoService::class)->listar(['creador' => $cedula]);
+            $gruposCreados = app(GrupoProyectoService::class)->listar(['creador' => $cedula]);
                 $clavesCreador = $gruposCreados->pluck('clave')->filter()->values()->toArray();
 
                 if ($clavesCreador !== []) {
@@ -52,7 +64,6 @@ class NotificacionService
                     $query->whereRaw('1 = 0');
                     $query2->whereRaw('1 = 0');
                 }
-            }
 
             $proyectos = $query->get();
             $proyectosActualizados = $query2->get();

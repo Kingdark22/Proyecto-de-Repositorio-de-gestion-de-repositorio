@@ -221,6 +221,7 @@ class ProyectoGestionService
             'canRegister' => $user ? $this->usuarioPuedeRegistrar($user) : false,
             'esAdmin' => $esAdmin,
             'comunidades' => $this->comunidadRepo->allOrdered(),
+            'programas' => $this->catalogoRepo->programasDisponibles(),
         ]);
 
         $datos['catalogosVacios'] = $this->catalogoRepo->catalogoVacios($datos);

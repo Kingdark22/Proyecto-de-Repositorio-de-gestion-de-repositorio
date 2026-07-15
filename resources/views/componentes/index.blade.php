@@ -31,13 +31,6 @@
 @endpush
 
 @section('content')
-    <div id="flashContainer">
-    @if (session('success'))
-        <div data-flash-msg style="background-color: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border: 1px solid #c3e6cb; border-radius: 4px; font-weight: bold; text-align: center;">
-            {{ session('success') }}
-        </div>
-    @endif
-    </div>
 
     <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 12px;">
         <form method="GET" action="{{ route('componentes.index') }}" style="display: flex; align-items: center; gap: 8px; margin: 0;" id="searchForm">

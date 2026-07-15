@@ -28,12 +28,6 @@
 @endpush
 
 @section('content')
-    @if (session('success'))
-        <div style="background: #d4edda; color: #155724; padding: 10px; margin-bottom: 15px; border: 1px solid #c3e6cb; border-radius: 4px; font-weight: bold; text-align: center;">{{ session('success') }}</div>
-    @endif
-    @if (session('error'))
-        <div style="background: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px; font-weight: bold; text-align: center;">{{ session('error') }}</div>
-    @endif
     @if ($errors->any())
         <div style="background: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border: 1px solid #f5c6cb; border-radius: 4px; font-weight: bold;">
             <ul style="margin:0;padding-left:20px;">
@@ -413,7 +407,8 @@
                                         <div style="font-size:11px;color:#999;margin-bottom:4px;">Pendiente de carga</div>
                                     @endif
                                     @unless($soloLectura)
-                                    <input type="file" name="documentos[{{ $comp->id }}]" accept="{{ $acceptStr }}" style="width:100%;font-size:11px;">
+                                    <input type="file" name="documentos[{{ $comp->id }}]" accept="{{ $acceptStr }}" data-allowed="{{ $acceptTypes }}" onchange="validarTipoArchivo(this)" style="width:100%;font-size:11px;">
+                                    <div id="doc-error-{{ $comp->id }}" style="color:#dc3545;font-size:10px;display:none;"></div>
                                     @endunless
                                     @error('documentos.' . $comp->id)<br><span class="validation-error">{{ $message }}</span>@enderror
                                 @else
@@ -503,6 +498,19 @@
                     <div style="margin-bottom:12px;">
                         <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Descripción:</label>
                         <textarea id="modal-catalogo-descripcion" rows="2" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:12px;"></textarea>
+                    </div>
+
+                    {{-- Programa (solo para línea de investigación) --}}
+                    <div id="modal-catalogo-programa" style="display:none;margin-bottom:12px;">
+                        <label style="font-weight:bold;font-size:12px;display:block;margin-bottom:4px;">Programa: <span style="color:red;">*</span></label>
+                        <select id="modal-catalogo-programa-select" style="width:100%;padding:7px 8px;border:1px solid #ccc;border-radius:5px;box-sizing:border-box;font-size:13px;">
+                            <option value="">Seleccione un programa...</option>
+                            @foreach($catalogosForm['programas'] ?? [] as $prog)
+                                <option value="{{ $prog->pro_codigo }}" {{ (($datosForm['programa_id_derived'] ?? '') == $prog->pro_codigo) ? 'selected' : '' }}>
+                                    {{ $prog->pro_siglas ?? $prog->pro_nombre }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div id="modal-catalogo-mencion" style="display:none;margin-bottom:12px;">
@@ -628,6 +636,32 @@ function confirmarRechazoDoc() {
     }
     actualizarDoc(id, 2, obs);
     cerrarModalRechazo();
+}
+
+function validarTipoArchivo(input) {
+    var errorDiv = input.parentNode.querySelector('div[id^="doc-error-"]');
+    if (!input.files || !input.files[0]) {
+        if (errorDiv) errorDiv.style.display = 'none';
+        return;
+    }
+    var name = input.files[0].name.toLowerCase();
+    var allowed = (input.getAttribute('data-allowed') || '').toLowerCase();
+    var extMap = { 'img': ['jpg','jpeg','png','gif'], 'doc': ['doc','docx'], 'docx': ['doc','docx'], 'xls': ['xls','xlsx'], 'xlsx': ['xls','xlsx'] };
+    var ext = name.split('.').pop();
+    var tipos = allowed.split(',').map(function(t) { return t.trim(); });
+    var valido = false;
+    for (var i = 0; i < tipos.length; i++) {
+        var t = tipos[i];
+        if (t === ext) { valido = true; break; }
+        if (extMap[t] && extMap[t].indexOf(ext) !== -1) { valido = true; break; }
+    }
+    if (!valido) {
+        errorDiv.textContent = 'Tipo de archivo no v\u00e1lido. Solo se permite: ' + allowed.toUpperCase() + '.';
+        errorDiv.style.display = 'block';
+        input.value = '';
+    } else {
+        errorDiv.style.display = 'none';
+    }
 }
 </script>
 @push('scripts')
@@ -1073,6 +1107,8 @@ function abrirModalCatalogo(tipo) {
     if (menc) menc.style.display = cfg.mostrarMencion ? 'block' : 'none';
     const mencChk = document.getElementById('modal-catalogo-mencion-check');
     if (mencChk) mencChk.checked = false;
+    const progDiv = document.getElementById('modal-catalogo-programa');
+    if (progDiv) progDiv.style.display = tipo === 'linea' ? 'block' : 'none';
     document.getElementById('modal-catalogo-error').style.display = 'none';
     document.getElementById('nombreStatus').style.display = 'none';
     document.getElementById('modal-catalogo').style.display = 'flex';
@@ -1120,8 +1156,14 @@ function guardarCatalogo() {
     // Línea requiere area_de_investigacion y programa_id
     if (tipo === 'linea') {
         data.area_de_investigacion = nombre.length > 100 ? nombre.substring(0, 100) : nombre;
-        const progInput = document.querySelector('[name="programa_id_derived"]');
-        if (progInput && progInput.value) data.programa_id = progInput.value;
+        const progSelect = document.getElementById('modal-catalogo-programa-select');
+        if (progSelect && progSelect.value) {
+            data.programa_id = progSelect.value;
+        } else {
+            document.getElementById('modal-catalogo-error').textContent = 'Debe seleccionar un programa.';
+            document.getElementById('modal-catalogo-error').style.display = 'block';
+            return;
+        }
     }
     if (cfg.mostrarMencion) {
         const mencChk = document.getElementById('modal-catalogo-mencion-check');
