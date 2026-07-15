@@ -796,22 +796,28 @@
                 el.dataset.correoOk = 'false';
                 return;
             }
-            span.style.color = '#888';
-            span.textContent = 'Verificando correo...';
-            el.dataset.correoOk = 'checking';
-            var url = (el.dataset.checkUrl || '/comunidades/check-email') + '?correo=' + encodeURIComponent(val);
-            fetch(url).then(function(r) { return r.json(); }).then(function(data) {
-                if (data.valido) {
-                    span.style.color = '#28a745'; span.textContent = '✓ Correo válido';
-                    el.dataset.correoOk = 'true';
-                } else {
-                    span.style.color = '#dc3545'; span.textContent = '✗ ' + (data.error || 'Correo inválido');
-                    el.dataset.correoOk = 'false';
-                }
-            }).catch(function() {
-                span.style.color = '#888'; span.textContent = 'No se pudo verificar';
-                el.dataset.correoOk = '';
-            });
+            if (el._ac) el._ac.abort();
+            if (el._dt) clearTimeout(el._dt);
+            el._dt = setTimeout(function() {
+                span.style.color = '#888';
+                span.textContent = 'Verificando correo...';
+                el.dataset.correoOk = 'checking';
+                el._ac = new AbortController();
+                var url = (el.dataset.checkUrl || '/comunidades/check-email') + '?correo=' + encodeURIComponent(val);
+                fetch(url, { signal: el._ac.signal }).then(function(r) { return r.json(); }).then(function(data) {
+                    if (data.valido) {
+                        span.style.color = '#28a745'; span.textContent = '✓ Correo válido';
+                        el.dataset.correoOk = 'true';
+                    } else {
+                        span.style.color = '#dc3545'; span.textContent = '✗ ' + (data.error || 'Correo inválido');
+                        el.dataset.correoOk = 'false';
+                    }
+                }).catch(function(e) {
+                    if (e.name === 'AbortError') return;
+                    span.style.color = '#888'; span.textContent = 'No se pudo verificar';
+                    el.dataset.correoOk = '';
+                });
+            }, 400);
         }
         function validarRif(el) {
             var span = document.getElementById(el.dataset.statusSpan || 'rifStatus');

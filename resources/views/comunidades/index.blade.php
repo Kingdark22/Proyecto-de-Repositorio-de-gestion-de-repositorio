@@ -19,6 +19,7 @@
         text-decoration: none;
     }
     .cm-btn:hover { transform: translateY(-1px); }
+    .cm-btn-primary { background: #19692e; border-color: #154f26; color: #fff; }
     .cm-btn-success { background: #198754; border-color: #166f43; color: #fff; }
     .cm-btn-danger { background: #c82333; border-color: #a71d2a; color: #fff; }
     .cm-btn-secondary { background: #f4f4f4; border: 1px solid #c2c2c2; color: #222; }
@@ -27,81 +28,71 @@
 @endpush
 
 @section('content')
+    <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+        <form method="GET" action="{{ route('comunidades.index') }}" style="display: flex; align-items: center; gap: 8px; margin: 0;" id="searchForm">
+            <b>Buscar (nombre / RIF):</b>
+            <input name="search" type="text" value="{{ $search }}" style="width: 400px; padding: 4px 6px; border-radius: 4px; border: 1px solid #999;" placeholder="Nombre o RIF..." oninput="buscarConDebounce(this)">
+        </form>
+        @if ($puedeGestionar)
+            <button type="button" onclick="window.location='{{ route('comunidades.create') }}'" class="cm-btn cm-btn-success" style="font-size: 14px; padding: 6px 16px;">
+                Registrar nueva comunidad
+            </button>
+        @endif
     </div>
 
-    <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin-bottom: 20px;">
-        <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Buscador y listado</legend>
-        <table width="100%" border="0" cellpadding="8" cellspacing="0" style="font-size: 11px;">
-            <tr>
-                <td width="65%">
-                    <form method="GET" action="{{ route('comunidades.index') }}" id="searchForm" style="display: flex; align-items: center; gap: 8px; margin: 0;">
-                        <b>Buscar (nombre / RIF):</b>
-                        <input name="search" type="text" value="{{ $search }}" style="width: 70%; padding: 3px;" placeholder="Nombre o RIF..." oninput="buscarTiempoReal()">
-                    </form>
-                    <script>
-                        let timerBusqueda;
-                        function buscarTiempoReal() {
-                            clearTimeout(timerBusqueda);
-                            timerBusqueda = setTimeout(function() {
-                                document.getElementById('searchForm').submit();
-                            }, 400);
-                        }
-                    </script>
-                </td>
-                <td width="35%" align="right">
-                    @if ($puedeGestionar)
-                        <button type="button" onclick="window.location='{{ route('comunidades.create') }}'" class="cm-btn cm-btn-success" style="font-size: 14px; padding: 8px 18px;">
-                            Registrar nueva comunidad
-                        </button>
-                    @endif
-                </td>
-            </tr>
-        </table>
+    <div id="searchResults">
+        <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
+            <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Listado de Comunidades</legend>
 
-        <table width="100%" border="1" cellpadding="5" cellspacing="0"
-            style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 10px;">
-            <thead>
-                <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
-                    <th width="30%">Comunidad / dirección</th>
-                    <th width="11%">RIF</th>
-                    <th width="16%">Contacto</th>
-                    <th width="10%">Acciones</th>
-                </tr>
-            </thead>
-            <tbody class="Texto">
-                @foreach ($comunidades as $c)
-                    <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }};" valign="top">
-                        <td>
-                            <span style="font-weight: bold;">{{ $c->nombre }}</span>
-                            <br><span style="font-size: 9px; color: #555;">{{ $c->direccion?->municipio?->estado?->est_nombre ?? '' }} / {{ $c->direccion?->municipio?->mun_nombre ?? '' }} - {{ $c->direccion?->dir_calle ?? '' }}</span>
-                        </td>
-                        <td align="center">{{ $c->rif }}</td>
-                        <td align="center">{{ $c->correo }}<br><b>{{ $c->numero_telefono }}</b></td>
-                        <td align="center">
-                            @if ($puedeGestionar)
-                                <div style="display: inline-flex; align-items: center; gap: 4px;">
-                                    <button type="button" onclick="window.location='{{ route('comunidades.edit', $c->id) }}'"
-                                        class="cm-btn cm-btn-secondary cm-btn-sm">Editar</button>
-                                    <form method="POST" action="{{ route('comunidades.destroy', $c->id) }}" style="display: inline; margin: 0;"
-                                        >
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="cm-btn cm-btn-danger cm-btn-sm" data-ajax-delete data-delete-name="{{ $c->nombre }}">Eliminar</button>
-                                    </form>
-                                </div>
-                            @else
-                                <span style="color: #888; font-size: 10px;">Solo lectura</span>
-                            @endif
-                        </td>
+            <table width="100%" border="1" cellpadding="5" cellspacing="0"
+                style="border-collapse: collapse; border-color: #bbbbbb; font-size: 11px; margin-top: 5px;">
+                <thead>
+                    <tr style="background-color: #8bb2b7; color: #000; font-weight: bold;">
+                        <th style="padding: 5px;">Comunidad / dirección</th>
+                        <th style="padding: 5px;">RIF</th>
+                        <th style="padding: 5px;">Contacto</th>
+                        <th style="padding: 5px;" width="100">Acciones</th>
                     </tr>
-                @endforeach
-                @if ($comunidades->isEmpty())
-                    <tr>
-                        <td colspan="4" align="center" style="padding: 20px;">No hay comunidades registradas.</td>
-                    </tr>
-                @endif
-            </tbody>
-        </table>
-        <div style="margin-top: 10px;">{{ $comunidades->links() }}</div>
-    </fieldset>
+                </thead>
+                <tbody class="Texto">
+                    @foreach ($comunidades as $c)
+                        <tr style="background-color: {{ $loop->iteration % 2 == 0 ? '#E0E0E0' : '#FFFFFF' }};" valign="top">
+                            <td style="padding: 5px;">
+                                <span style="font-weight: bold;">{{ $c->nombre }}</span>
+                                <br><span style="font-size: 9px; color: #555;">{{ $c->direccion?->municipio?->estado?->est_nombre ?? '' }} / {{ $c->direccion?->municipio?->mun_nombre ?? '' }} - {{ $c->direccion?->dir_calle ?? '' }}</span>
+                            </td>
+                            <td align="center" style="padding: 5px;">{{ $c->rif }}</td>
+                            <td align="center" style="padding: 5px;">{{ $c->correo }}<br><b>{{ $c->numero_telefono }}</b></td>
+                            <td align="center" style="padding: 5px;">
+                                @if ($puedeGestionar)
+                                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                                        <button type="button" onclick="window.location='{{ route('comunidades.edit', $c->id) }}'"
+                                            class="cm-btn cm-btn-secondary cm-btn-sm">Editar</button>
+                                        <form method="POST" action="{{ route('comunidades.destroy', $c->id) }}" style="display: inline; margin: 0;">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="cm-btn cm-btn-danger cm-btn-sm" data-ajax-delete data-delete-name="{{ $c->nombre }}">Eliminar</button>
+                                        </form>
+                                    </div>
+                                @else
+                                    <span style="color: #888; font-size: 10px;">Solo lectura</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                    @if ($comunidades->isEmpty())
+                        <tr>
+                            <td colspan="4" align="center" style="padding: 20px; font-weight: bold; background-color: #FFFFFF;">
+                                No hay comunidades registradas.
+                            </td>
+                        </tr>
+                    @endif
+                </tbody>
+            </table>
+
+            <div style="margin-top: 10px;">
+                {{ $comunidades->links() }}
+            </div>
+        </fieldset>
+    </div>
 @endsection

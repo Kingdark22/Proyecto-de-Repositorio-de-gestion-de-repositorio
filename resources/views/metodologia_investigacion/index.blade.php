@@ -61,7 +61,6 @@
 @section('header', 'Gestión de Metodologías de Investigación')
 
 @section('content')
-    </div>
     <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; gap: 20px;">
         <form method="GET" action="{{ route('metodologia-investigacion') }}" style="display: inline-flex; align-items: center; gap: 6px;" id="searchForm">
             <b>Buscar Metodología:</b>
