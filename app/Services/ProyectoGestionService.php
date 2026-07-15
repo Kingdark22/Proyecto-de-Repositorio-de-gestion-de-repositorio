@@ -119,8 +119,9 @@ class ProyectoGestionService
         // Verificar que todos los documentos estén aceptados antes de aprobar
         $proyectoConDocs = $this->proyectoRepo->findWithDocuments($id);
 
-        // Derivar programa desde la sección del equipo (mismo criterio que verificarSiProyectoEstaCompletado)
+        // Derivar programa y trayecto desde la sección del equipo (mismo criterio que verificarSiProyectoEstaCompletado)
         $programaDerived = null;
+        $traCodigo = null;
         $partes = $this->equipoSeccion->parsearClave($proyectoConDocs->equipo_ref ?? '');
         if ($partes) {
             try {
@@ -128,11 +129,14 @@ class ProyectoGestionService
                     ->table('seccion as sec')
                     ->leftJoin('malla as mal', 'mal.mal_codigo', '=', 'sec.sec_cod_malla')
                     ->leftJoin('programa as pro', 'pro.pro_codigo', '=', 'mal.mal_cod_programa')
+                    ->leftJoin('semestre as sem', 'sem.sem_codigo', '=', 'sec.sec_cod_semestre')
+                    ->leftJoin('trayecto as tra', 'tra.tra_codigo', '=', 'sem.sem_cod_trayecto')
                     ->where('sec.sec_codigo', $partes['sec_codigo'])
-                    ->select('pro.pro_codigo')
+                    ->select(['pro.pro_codigo', 'tra.tra_codigo'])
                     ->first();
                 if ($row) {
                     $programaDerived = (int) $row->pro_codigo;
+                    $traCodigo = isset($row->tra_codigo) ? (string) $row->tra_codigo : null;
                 }
             } catch (\Throwable) {
             }
@@ -140,7 +144,7 @@ class ProyectoGestionService
 
         $componentes = app(\App\Repositories\CatalogoRepository::class)->componentesPorProgramaYTrayecto(
             $programaDerived,
-            null
+            $traCodigo
         );
         $docsPorComponente = $proyectoConDocs->documentos->keyBy('comp_codigo');
 
@@ -217,6 +221,7 @@ class ProyectoGestionService
             'canRegister' => $user ? $this->usuarioPuedeRegistrar($user) : false,
             'esAdmin' => $esAdmin,
             'comunidades' => $this->comunidadRepo->allOrdered(),
+            'programas' => $this->catalogoRepo->programasDisponibles(),
         ]);
 
         $datos['catalogosVacios'] = $this->catalogoRepo->catalogoVacios($datos);

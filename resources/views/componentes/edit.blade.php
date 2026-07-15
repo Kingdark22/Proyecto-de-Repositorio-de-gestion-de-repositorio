@@ -39,6 +39,7 @@
         <form method="POST" action="{{ route('componentes.update', $item->id) }}" style="margin: 0;" onsubmit="return validarFormulario(this)">
             @csrf
             @method('PUT')
+            <input type="hidden" name="id_edit" value="{{ $item->id }}">
             <table width="100%" border="0" cellpadding="6" cellspacing="0" style="font-size: 12px;">
                 <tr>
                     <td width="25%"><b>Nombre del componente:</b></td>
@@ -55,7 +56,7 @@
                     <td>
                         <select name="tipo_archivo" style="width: 60%; padding: 6px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
                             @foreach (\App\Models\Componente::tiposArchivo() as $val => $label)
-                                <option value="{{ $val }}" {{ old('tipo_archivo', $item->tipo_archivo ?? 'pdf') == $val ? 'selected' : '' }}>{{ $label }}</option>
+                                <option value="{{ $val }}" {{ strtolower(old('tipo_archivo', $item->tipo_archivo ?? 'pdf')) == $val ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
                         <span class="obligatorio">*</span>

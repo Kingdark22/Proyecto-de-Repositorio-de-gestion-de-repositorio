@@ -218,6 +218,8 @@
     border-radius: 14px;
     box-shadow: 0 12px 40px -8px rgba(0, 0, 0, 0.18), 0 4px 12px -4px rgba(0, 0, 0, 0.06);
     width: 320px;
+    max-height: 300px;
+    overflow: hidden;
     z-index: 99999;
     font-family: 'Poppins', 'Verdana', sans-serif;
     animation: notifDropdownIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -268,7 +270,7 @@
 /* ─── Lista de notificaciones ─── */
 .notif-list {
     padding: 4px 0;
-    max-height: 400px;
+    max-height: 200px;
     overflow-y: auto;
 }
 

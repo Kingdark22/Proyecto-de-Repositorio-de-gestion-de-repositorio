@@ -44,31 +44,33 @@ class Componente extends RepositorioModel
     }
 
     /**
-     * Obtiene el accept HTML para el input file.
+     * Obtiene el accept HTML para el input file (MIME types + extensiones).
      */
     public function getAcceptAttribute(): string
     {
-        $map = [
-            'pdf' => '.pdf',
-            'zip' => '.zip',
-            'rar' => '.rar',
-            'doc' => '.doc,.docx',
-            'docx' => '.doc,.docx',
-            'xls' => '.xls,.xlsx',
-            'xlsx' => '.xls,.xlsx',
-            'img' => '.jpg,.jpeg,.png,.gif',
+        $typeMap = [
+            'pdf' => ['application/pdf', '.pdf'],
+            'zip' => ['application/zip', '.zip'],
+            'rar' => ['application/vnd.rar', '.rar'],
+            'doc' => ['application/msword', '.doc,.docx'],
+            'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', '.doc,.docx'],
+            'xls' => ['application/vnd.ms-excel', '.xls,.xlsx'],
+            'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xls,.xlsx'],
+            'img' => ['image/jpeg,image/png,image/gif', '.jpg,.jpeg,.png,.gif'],
         ];
 
         $tipos = explode(',', $this->tipo_archivo ?? 'pdf');
+        $mimes = [];
         $exts = [];
         foreach ($tipos as $t) {
-            $t = trim($t);
-            if (isset($map[$t])) {
-                $exts[] = $map[$t];
+            $t = strtolower(trim($t));
+            if (isset($typeMap[$t])) {
+                $mimes[] = $typeMap[$t][0];
+                $exts[] = $typeMap[$t][1];
             }
         }
 
-        return implode(',', array_unique($exts));
+        return implode(',', array_unique($mimes)) . ',' . implode(',', array_unique($exts));
     }
 
     /**
@@ -99,7 +101,7 @@ class Componente extends RepositorioModel
         $tipos = explode(',', $this->tipo_archivo ?? 'pdf');
         $mimes = [];
         foreach ($tipos as $t) {
-            $t = trim($t);
+            $t = strtolower(trim($t));
             if (isset($map[$t])) {
                 $mimes[] = $map[$t];
             }
