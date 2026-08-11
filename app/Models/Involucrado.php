@@ -2,15 +2,13 @@
 
 namespace App\Models;
 
-use App\Models\RepositorioModel;
-
 class Involucrado extends RepositorioModel
 {
     protected $table = 'involucrados';
-    protected $primaryKey = 'id';
-    public $incrementing = true;
-    protected $keyType = 'int';
-    public $timestamps = true;
+    protected $primaryKey = 'inv_codigo';
+
+    const CREATED_AT = 'inv_created_at';
+    const UPDATED_AT = 'inv_updated_at';
 
     protected $fillable = [
         'nombre',

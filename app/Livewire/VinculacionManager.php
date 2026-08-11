@@ -365,8 +365,7 @@ class VinculacionManager extends Component
             $this->selectedProjects = [];
             return;
         }
-        $query = Proyecto::where('estado_validacion', 'aprobado')
-            ->where('estado_logico', true);
+        $query = Proyecto::where('pry_estado', 'Aprobado');
         if ($this->search !== '') {
             $term = '%' . trim($this->search) . '%';
             $query->where(function ($q) use ($term) {
@@ -406,8 +405,7 @@ class VinculacionManager extends Component
 
     protected function selectedProjectsCount(): int
     {
-        $query = Proyecto::where('estado_validacion', 'aprobado')
-            ->where('estado_logico', true);
+        $query = Proyecto::where('pry_estado', 'Aprobado');
         if ($this->search !== '') {
             $term = '%' . trim($this->search) . '%';
             $query->where(function ($q) use ($term) {
@@ -460,7 +458,6 @@ class VinculacionManager extends Component
                 'proyecto_id' => $pid,
                 'titulo_vinculacion_id' => $tituloId,
                 'com_codigo' => $comCodigo,
-                'tipo' => 'Vinculación',
             ]);
             $creadas++;
         }
@@ -626,8 +623,7 @@ class VinculacionManager extends Component
 
             if ($this->mostrarWizard) {
                 $query = Proyecto::with('comunidad', 'linea_investigacion', 'metodologia', 'tipo_investigacion', 'objetivo_investigacion', 'vinculaciones.tituloVinculacion', 'vinculaciones.comunidad')
-                    ->where('estado_validacion', 'aprobado')
-                    ->where('estado_logico', true);
+                    ->where('pry_estado', 'Aprobado');
 
                 if ($this->search !== '') {
                     $search = trim($this->search);
@@ -635,7 +631,6 @@ class VinculacionManager extends Component
                     $query->where(function ($q) use ($search, $term) {
                         $q->whereRaw('pry_resumen ILIKE ?', [$term])
                           ->orWhereRaw('pry_direccion_logica ILIKE ?', [$term])
-                          ->orWhereRaw('pry_motivo_rechazo ILIKE ?', [$term])
                           ->orWhereRaw('pry_creador_cedula ILIKE ?', [$term])
                           ->orWhereRaw('pry_cantidad_beneficiados::text ILIKE ?', [$term])
                           ->orWhereHas('comunidad', fn($cq) => $cq->whereRaw('com_nombre ILIKE ?', [$term]))
@@ -645,7 +640,7 @@ class VinculacionManager extends Component
                           ->orWhereHas('objetivo_investigacion', fn($cq) => $cq->whereRaw('obi_nombre::text ILIKE ?', [$term]))
                           ->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE gpm.grp_identificador = proyectos.pry_direccion_logica AND gpm.grp_nombre ILIKE ?)', [$term])
                           ->orWhereRaw('EXISTS (SELECT 1 FROM grupo_proyecto_modulo gpm WHERE gpm.grp_codigo::text = regexp_replace(proyectos.pry_direccion_logica, E\'^EQGRP:\', \'\') AND gpm.grp_nombre ILIKE ?)', [$term])
-                          ->orWhereRaw('EXISTS (SELECT 1 FROM proyecto_involucrado pi JOIN involucrados i ON i.id = pi.involucrado_id WHERE pi.proyecto_id = proyectos.pry_codigo AND (i.nombre ILIKE ? OR i.apellido ILIKE ?))', [$term, $term]);
+                          ->orWhereRaw('EXISTS (SELECT 1 FROM proyecto_involucrado pi JOIN involucrados i ON i.inv_codigo = pi.inv_codigo WHERE pi.pry_codigo = proyectos.pry_codigo AND (i.inv_nombre ILIKE ? OR i.inv_apellido ILIKE ?))', [$term, $term]);
                     });
                 }
 

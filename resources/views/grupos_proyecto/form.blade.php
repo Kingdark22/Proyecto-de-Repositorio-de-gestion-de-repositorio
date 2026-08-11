@@ -102,6 +102,32 @@
     }
     .com-row:hover { background: #e8f0fe; }
     .com-row.selected { background: #cce5ff; font-weight: 600; }
+
+    /* ===== Stepper pasos progresivos (solo registro) ===== */
+    .grp-stepper {
+        display: flex; gap: 8px; margin: 4px 0 14px;
+        flex-wrap: wrap;
+    }
+    .grp-step-ind {
+        flex: 1; min-width: 130px; text-align: center;
+        padding: 7px 6px; border-radius: 6px;
+        background: #f2f2f2; border: 1px solid #e0e0e0;
+        color: #888; font-size: 11px; font-weight: 600;
+        opacity: .55; transition: all .2s ease; cursor: default;
+    }
+    .grp-step-ind .num {
+        display: inline-flex; width: 20px; height: 20px; border-radius: 50%;
+        background: #c2c2c2; color: #fff; align-items: center; justify-content: center;
+        margin-right: 6px; font-size: 11px;
+    }
+    .grp-step-ind.active { background: #f0f7f0; border-color: #b8d4b8; color: #19692e; opacity: 1; }
+    .grp-step-ind.active .num { background: #19692e; }
+    .grp-step-ind.done { background: #e8f5ec; border-color: #b8d4b8; color: #198754; opacity: 1; }
+    .grp-step-ind.done .num { background: #198754; }
+
+    .grp-step { display: none; }
+    .grp-step.grp-step-visible { display: block; animation: grpFade .25s ease; }
+    @keyframes grpFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 </style>
 @endpush
 
@@ -114,6 +140,13 @@
             Ejecute: <code>php artisan migrate --path=database/migrations/2026_05_26_100000_create_grupo_proyecto_modulo_table.php</code>
         </div>
     @endif
+
+    @unless ($isProfessor)
+        <div style="background: #fff3cd; border: 1px solid #f0b606; padding: 8px 10px; font-size: 11px; margin-bottom: 12px;">
+            <b>Coordinador/Administrador:</b> solo puede registrar grupos de <b>lapsos anteriores</b>.
+            Los grupos del lapso actual los crean los profesores.
+        </div>
+    @endunless
 
     <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">
         <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 8px;">
@@ -129,124 +162,137 @@
             {{-- Hidden field for members JSON --}}
             <input type="hidden" name="miembros" id="miembrosInput" value="">
 
-            <table width="100%" style="font-size:11px; table-layout: fixed; border-collapse: collapse;">
-                <tr>
-                    <td width="40%" style="vertical-align: top;">
-                        <b>Nombre del equipo:</b> <span style="color:#c82333;">*</span><br>
-                        <input type="text" name="nombre" id="nombreInput"
-                            value="{{ old('nombre', $grupo->nombre ?? '') }}"
-                            class="grp-filter-input" style="width:100%;" maxlength="120" minlength="3" required
-                            placeholder="Ej: Equipo Alpha, Proyecto Web"
-                            data-check-url="{{ route('grupos-proyecto.api.check-nombre') }}"
-                            data-exclude="{{ $grupo->grp_codigo ?? '' }}"
-                            oninput="validarNombreDisponible(this)">
-                        <span id="nombreStatus" class="status-indicator"></span>
-                        @error('nombre')<span style="color:#dc3545;font-size:10px;">{{ $message }}</span>@enderror
-                    </td>
-                    @if (isset($grupo) && ($grupo->identificador ?? ''))
-                    <td width="30%" style="vertical-align: top;">
-                        <b>Código del equipo:</b><br>
-                        <span style="font-size:13px;font-weight:bold;color:#8b0000;">{{ $grupo->identificador }}</span>
-                    </td>
-                    @endif
-                    <td width="{{ isset($grupo) && ($grupo->identificador ?? '') ? '30%' : '50%' }}" style="vertical-align: top;">
-                        <b>Comunidad:</b><br>
-                        <div style="display:flex;gap:4px;align-items:center; min-width: 0;">
-                            @php $comSel = old('comunidad', $grupo->com_codigo ?? ''); @endphp
-                            <input type="hidden" name="comunidad" id="comunidadId" value="{{ $comSel }}">
-                            <div id="comunidadBadge" style="display:{{ $comSel ? 'flex' : 'none' }};align-items:center;gap:6px;background:#f0f7f0;border:1px solid #b8d4b8;border-radius:4px;padding:4px 10px;font-size:12px;flex:1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
-                                <span style="font-weight:bold; overflow: hidden; text-overflow: ellipsis;">{{ $comSel ? ($comunidades->firstWhere('com_codigo', (int)$comSel)?->com_nombre ?? '') : '' }}</span>
-                                <button type="button" onclick="document.getElementById('comunidadId').value='';document.getElementById('comunidadBadge').style.display='none';document.getElementById('comunidadSearchWrapper').style.display='flex'" style="background:none;border:none;cursor:pointer;color:#991b19;font-size:14px;padding:0 2px; flex-shrink: 0;" title="Cambiar comunidad">✕</button>
-                            </div>
-                            <div class="grp-search-wrapper" id="comunidadSearchWrapper" style="flex:1;display:{{ $comSel ? 'none' : 'block' }}; min-width: 0;">
-                                <input type="text" id="comunidadSearch" placeholder="Buscar comunidad..."
-                                    value="" class="grp-filter-input" style="width:100%;" autocomplete="off">
-                                <div class="grp-dropdown" id="comunidadDropdown">
-                                    <div class="grp-dropdown-empty">Escriba para buscar comunidades...</div>
-                                </div>
-                            </div>
-                            <button type="button" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space:nowrap; flex-shrink: 0;" onclick="abrirModalComunidad()" title="Crear nueva comunidad">+</button>
-                        </div>
-                        @error('comunidad')<span style="color:#dc3545;font-size:10px;">{{ $message }}</span>@enderror
-                    </td>
-                </tr>
-                <tr>
-                    <td colspan="2" style="padding-top:8px;">
-                        <b>Contexto académico:</b>
-                        <div style="display:flex;gap:16px;margin-top:4px;align-items:center;">
-                            @if($isProfessor && !isset($grupo) && $lapsoPreseleccionado)
-                                @php $lapsoActual = $lapsos->firstWhere('lap_codigo', (int)$lapsoPreseleccionado); @endphp
-                                <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;height:32px;background:#f0f7f0;border:1px solid #b8d4b8;border-radius:4px;font-size:12px;font-weight:bold;box-sizing:border-box;">
-                                    📅 {{ $lapsoActual->lap_nombre ?? 'Lapso #'.$lapsoPreseleccionado }}
-                                </span>
-                            @endif
-                            <select name="lapso" id="lapsoSelect" class="grp-filter-select" required
-                                style="{{ $isProfessor && !isset($grupo) && $lapsoPreseleccionado ? 'display:none;' : '' }}">
-                                <option value="">Lapso</option>
-                                @foreach ($lapsos as $l)
-                                    <option value="{{ $l->lap_codigo }}"
-                                        {{ $lapsoPreseleccionado == $l->lap_codigo ? 'selected' : '' }}
-                                        {{ isset($grupo) && $grupo->lap_codigo == $l->lap_codigo ? 'selected' : '' }}>
-                                        {{ $l->lap_nombre }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <select name="programa" id="programaSelect" class="grp-filter-select">
-                                <option value="">PNF</option>
-                            </select>
-                            <select name="seccion" id="seccionSelect" class="grp-filter-select" required>
-                                <option value="">Sección</option>
-                            </select>
-                        </div>
-                        @error('lapso')<span style="color:#dc3545;font-size:10px;">{{ $message }}</span>@enderror
-                        @error('seccion')<span style="color:#dc3545;font-size:10px;">{{ $message }}</span>@enderror
-                    </td>
-                </tr>
-            </table>
-
-            <div style="margin-top:6px;background:#f0f7f0;border:1px solid #b8d4b8;border-radius:4px;padding:6px 10px;font-size:12px; display:none;" id="selectedSectionBadge">
-                <b>Sección seleccionada:</b> <span id="selectedSectionText"></span>
+            @unless (isset($grupo))
+            {{-- Stepper de pasos (solo registro) --}}
+            <div class="grp-stepper" id="grpStepper">
+                <div class="grp-step-ind active" data-step="1"><span class="num">1</span> Nombre</div>
+                <div class="grp-step-ind" data-step="2"><span class="num">2</span> Comunidad</div>
+                <div class="grp-step-ind" data-step="3"><span class="num">3</span> Contexto académico</div>
+                <div class="grp-step-ind" data-step="4"><span class="num">4</span> Integrantes</div>
             </div>
-            <p style="font-size:11px;color:#856404;margin-top:4px;" id="selectSectionHint">Seleccione lapso, PNF y sección para buscar estudiantes.</p>
+            @endunless
 
-            <div style="margin-top:8px;padding:8px;background:#f5f5f5;border:1px solid #ccc;display:none;" id="studentSection">
-                <b>Agregar integrante:</b>
-                <span id="studentSectionStatus" style="font-size:10px;color:#666;margin-left:8px;"></span><br>
-                <div style="display:flex;gap:16px;align-items:center;margin-top:4px;">
-                    <div class="grp-search-wrapper" style="position:relative;flex:1; min-width: 0;">
-                        <input type="text" id="estudianteSearch"
-                            placeholder="🔍 Escriba nombre, apellido o cédula para buscar..."
-                            class="grp-filter-input" style="width:100%;padding:8px 10px;font-size:12px;height:34px;"
-                            autocomplete="off" disabled>
-                        <div class="grp-dropdown" id="estudianteDropdown" style="width:100%;">
-                            <div class="grp-dropdown-empty">Primero seleccione lapso, PNF y sección.</div>
+            {{-- ========== PASO 1: NOMBRE DEL EQUIPO ========== --}}
+            <div class="grp-step {{ isset($grupo) ? 'grp-step-visible' : '' }}" id="grpStep1" data-stepord="1">
+                <b>Nombre del equipo:</b> <span style="color:#c82333;">*</span><br>
+                <input type="text" name="nombre" id="nombreInput"
+                    value="{{ old('nombre', $grupo->nombre ?? '') }}"
+                    class="grp-filter-input" style="width:100%; max-width:420px;" maxlength="120" minlength="3" required
+                    placeholder="Ej: Equipo Alpha, Proyecto Web"
+                    data-check-url="{{ route('grupos-proyecto.api.check-nombre') }}"
+                    data-exclude="{{ $grupo->grp_codigo ?? '' }}"
+                    oninput="validarNombreDisponible(this)">
+                <span id="nombreStatus" class="status-indicator"></span>
+                @error('nombre')<span style="color:#dc3545;font-size:10px;">{{ $message }}</span>@enderror
+            </div>
+
+            @if (isset($grupo) && ($grupo->identificador ?? ''))
+                <div style="margin-top:8px;">
+                    <b>Código del equipo:</b>
+                    <span style="font-size:13px;font-weight:bold;color:#8b0000;">{{ $grupo->identificador }}</span>
+                </div>
+            @endif
+
+            {{-- ========== PASO 2: COMUNIDAD ========== --}}
+            <div class="grp-step {{ isset($grupo) ? 'grp-step-visible' : '' }}" id="grpStep2" data-stepord="2">
+                <b>Comunidad:</b> <span style="color:#c82333;">*</span><br>
+                <div style="display:flex;gap:4px;align-items:center; min-width: 0; max-width:420px;">
+                    @php $comSel = old('comunidad', $grupo->com_codigo ?? ''); @endphp
+                    <input type="hidden" name="comunidad" id="comunidadId" value="{{ $comSel }}">
+                    <div id="comunidadBadge" style="display:{{ $comSel ? 'flex' : 'none' }};align-items:center;gap:6px;background:#f0f7f0;border:1px solid #b8d4b8;border-radius:4px;padding:4px 10px;font-size:12px;flex:1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                        <span style="font-weight:bold; overflow: hidden; text-overflow: ellipsis;">{{ $comSel ? ($comunidades->firstWhere('com_codigo', (int)$comSel)?->com_nombre ?? '') : '' }}</span>
+                        <button type="button" onclick="deseleccionarComunidad()" style="background:none;border:none;cursor:pointer;color:#991b19;font-size:14px;padding:0 2px; flex-shrink: 0;" title="Cambiar comunidad">✕</button>
+                    </div>
+                    <div class="grp-search-wrapper" id="comunidadSearchWrapper" style="flex:1;display:{{ $comSel ? 'none' : 'block' }}; min-width: 0;">
+                        <input type="text" id="comunidadSearch" placeholder="Buscar comunidad..."
+                            value="" class="grp-filter-input" style="width:100%;" autocomplete="off">
+                        <div class="grp-dropdown" id="comunidadDropdown">
+                            <div class="grp-dropdown-empty">Escriba para buscar comunidades...</div>
                         </div>
                     </div>
-                    <select id="rolSelect" class="grp-filter-select" style="width:130px;">
-                        <option value="1">Líder</option>
-                        <option value="2">Autor</option>
-                    </select>
-                    <button type="button" class="cm-btn cm-btn-success cm-btn-sm" id="agregarBtn" disabled
-                        onclick="agregarIntegrante()">Agregar</button>
+                    <button type="button" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space:nowrap; flex-shrink: 0;" onclick="abrirModalComunidad()" title="Crear nueva comunidad">+</button>
                 </div>
+                @error('comunidad')<span style="color:#dc3545;font-size:10px;">{{ $message }}</span>@enderror
             </div>
 
-            <table width="100%" border="1" cellpadding="4"
-                style="font-size:11px;margin-top:10px;border-collapse:collapse;">
-                <thead>
-                    <tr style="background:#ddd;">
-                        <th>Cédula</th>
-                        <th>Nombre</th>
-                        <th>Rol</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="miembrosTableBody">
-                    <tr id="miembrosEmptyRow">
-                        <td colspan="4" align="center" style="padding:12px;color:#999;">Agregue al menos un líder y los autores del grupo.</td>
-                    </tr>
-                </tbody>
-            </table>
+            {{-- ========== PASO 3: CONTEXTO ACADÉMICO ========== --}}
+            <div class="grp-step {{ isset($grupo) ? 'grp-step-visible' : '' }}" id="grpStep3" data-stepord="3">
+                <b>Contexto académico:</b> <span style="color:#c82333;">*</span>
+                <div style="display:flex;gap:12px;margin-top:4px;align-items:center; flex-wrap: wrap;">
+                    @if($isProfessor && !isset($grupo) && $lapsoPreseleccionado)
+                        @php $lapsoActual = $lapsos->firstWhere('lap_codigo', (int)$lapsoPreseleccionado); @endphp
+                        <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;height:32px;background:#f0f7f0;border:1px solid #b8d4b8;border-radius:4px;font-size:12px;font-weight:bold;box-sizing:border-box;">
+                            📅 {{ $lapsoActual->lap_nombre ?? 'Lapso #'.$lapsoPreseleccionado }}
+                        </span>
+                    @endif
+                    <select name="lapso" id="lapsoSelect" class="grp-filter-select" required
+                        style="{{ $isProfessor && !isset($grupo) && $lapsoPreseleccionado ? 'display:none;' : '' }}">
+                        <option value="">Lapso</option>
+                        @foreach ($lapsos as $l)
+                            <option value="{{ $l->lap_codigo }}"
+                                {{ $lapsoPreseleccionado == $l->lap_codigo ? 'selected' : '' }}
+                                {{ isset($grupo) && $grupo->lap_codigo == $l->lap_codigo ? 'selected' : '' }}>
+                                {{ $l->lap_nombre }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <select name="programa" id="programaSelect" class="grp-filter-select">
+                        <option value="">PNF</option>
+                    </select>
+                    <select name="seccion" id="seccionSelect" class="grp-filter-select" required>
+                        <option value="">Sección</option>
+                    </select>
+                </div>
+                @error('lapso')<span style="color:#dc3545;font-size:10px;">{{ $message }}</span>@enderror
+                @error('seccion')<span style="color:#dc3545;font-size:10px;">{{ $message }}</span>@enderror
+
+                <div style="margin-top:6px;background:#f0f7f0;border:1px solid #b8d4b8;border-radius:4px;padding:6px 10px;font-size:12px; display:none;" id="selectedSectionBadge">
+                    <b>Sección seleccionada:</b> <span id="selectedSectionText"></span>
+                </div>
+                <p style="font-size:11px;color:#856404;margin-top:4px;" id="selectSectionHint">Seleccione lapso, PNF y sección para buscar estudiantes.</p>
+            </div>
+
+            {{-- ========== PASO 4: INTEGRANTES ========== --}}
+            <div class="grp-step {{ isset($grupo) ? 'grp-step-visible' : '' }}" id="grpStep4" data-stepord="4">
+                <div style="padding:8px;background:#f5f5f5;border:1px solid #ccc; display:none;" id="studentSection">
+                    <b>Agregar integrante:</b>
+                    <span id="studentSectionStatus" style="font-size:10px;color:#666;margin-left:8px;"></span><br>
+                    <div style="display:flex;gap:12px;align-items:center;margin-top:4px; flex-wrap: wrap;">
+                        <div class="grp-search-wrapper" style="position:relative;flex:1; min-width: 200px;">
+                            <input type="text" id="estudianteSearch"
+                                placeholder="🔍 Escriba nombre, apellido o cédula para buscar..."
+                                class="grp-filter-input" style="width:100%;padding:8px 10px;font-size:12px;height:34px;"
+                                autocomplete="off" disabled>
+                            <div class="grp-dropdown" id="estudianteDropdown" style="width:100%;">
+                                <div class="grp-dropdown-empty">Primero seleccione lapso, PNF y sección.</div>
+                            </div>
+                        </div>
+                        <select id="rolSelect" class="grp-filter-select" style="width:130px;">
+                            <option value="1">Líder</option>
+                            <option value="2">Autor</option>
+                        </select>
+                        <button type="button" class="cm-btn cm-btn-success cm-btn-sm" id="agregarBtn" disabled
+                            onclick="agregarIntegrante()">Agregar</button>
+                    </div>
+                </div>
+
+                <table width="100%" border="1" cellpadding="4"
+                    style="font-size:11px;margin-top:10px;border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#ddd;">
+                            <th>Cédula</th>
+                            <th>Nombre</th>
+                            <th>Rol</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="miembrosTableBody">
+                        <tr id="miembrosEmptyRow">
+                            <td colspan="4" align="center" style="padding:12px;color:#999;">Agregue al menos un líder y los autores del grupo.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
             <div style="margin-top:14px;text-align:center;">
                 <button type="submit" class="cm-btn cm-btn-success" id="guardarBtn"  {{ !$tablaOk ? 'disabled' : '' }}>
@@ -371,6 +417,25 @@ let estudiantesCache = [];
 let comunidadesCache = @json($comunidades->map(fn($c) => ['id' => $c->com_codigo, 'nombre' => $c->com_nombre, 'rif' => $c->com_rif ?? '']));
 let isProfessor = {{ $isProfessor ? 'true' : 'false' }};
 let editingMode = {{ isset($grupo) ? 'true' : 'false' }};
+
+// ========== Stepper progresivo (solo modo registro) ==========
+const grpSteps = document.querySelectorAll('#grpStepper .grp-step-ind'); // null si edición
+let currentStep = 1;
+
+function grpShowStep(n) {
+    currentStep = n;
+    for (let i = 1; i <= 4; i++) {
+        const block = document.getElementById('grpStep' + i);
+        if (block) {
+            block.classList.toggle('grp-step-visible', i <= n);
+        }
+    }
+    grpSteps.forEach(function(el) {
+        const s = parseInt(el.dataset.step, 10);
+        el.classList.toggle('active', s === n);
+        el.classList.toggle('done', s < n);
+    });
+}
 
 // ========== DOM refs ==========
 const lapsoSelect = document.getElementById('lapsoSelect');
@@ -514,10 +579,12 @@ seccionSelect.addEventListener('change', function() {
         badgeText.textContent = this.options[this.selectedIndex].text;
         studentSection.style.display = 'block';
         hint.style.display = 'none';
+        if (!editingMode && currentStep >= 3) grpShowStep(4);
     } else {
         badge.style.display = 'none';
         studentSection.style.display = 'none';
         hint.style.display = 'block';
+        if (!editingMode && currentStep === 4) grpShowStep(3);
     }
 
     if (!lapso || !seccion) return;
@@ -621,6 +688,14 @@ function seleccionarEstudiante(est) {
     agregarBtn.dataset.apellido = est.apellido || '';
 }
 
+// ========== Deseleccionar comunidad (restablece paso 2 en registro) ==========
+function deseleccionarComunidad() {
+    document.getElementById('comunidadId').value = '';
+    document.getElementById('comunidadBadge').style.display = 'none';
+    document.getElementById('comunidadSearchWrapper').style.display = 'flex';
+    if (!editingMode) grpShowStep(2);
+}
+
 // ========== Add/Remove members ==========
 function agregarIntegrante() {
     var cedula = agregarBtn.dataset.cedula;
@@ -705,9 +780,11 @@ function validarNombreDisponible(input) {
                 if (data.available) {
                     statusEl.textContent = '✓ Disponible';
                     statusEl.className = 'status-indicator status-ok';
+                    if (!editingMode && currentStep <= 2) grpShowStep(2);
                 } else {
                     statusEl.textContent = '✗ Nombre no disponible';
                     statusEl.className = 'status-indicator status-err';
+                    if (!editingMode) grpShowStep(1);
                 }
             })
             .catch(function() {
@@ -750,6 +827,7 @@ function showComunidadDropdown(data) {
                 var badge = document.getElementById('comunidadBadge');
                 badge.querySelector('span').textContent = c.nombre;
                 badge.style.display = 'flex';
+                if (!editingMode && currentStep <= 3) grpShowStep(3);
             };
             comunidadDropdown.appendChild(div);
         });
@@ -917,7 +995,12 @@ function guardarComunidadAjax() {
         comunidadesCache.push({ id: result.id, nombre: result.nombre, rif: '' });
         comunidadId.value = result.id;
         comunidadSearch.value = result.nombre;
+        document.getElementById('comunidadSearchWrapper').style.display = 'none';
+        var badge = document.getElementById('comunidadBadge');
+        badge.querySelector('span').textContent = result.nombre;
+        badge.style.display = 'flex';
         cerrarModalComunidad();
+        if (!editingMode) grpShowStep(3);
     })
     .catch(function(err) {
         showModalError(err.message || 'Error al crear la comunidad.');
@@ -976,6 +1059,14 @@ function escapeHtml(str) {
 
 // ========== Init on page load ==========
 document.addEventListener('DOMContentLoaded', function() {
+    // En modo registro, empezar en el paso 1 (solo nombre visible)
+    if (!editingMode) {
+        grpShowStep(1);
+        // Ocultar hint de contexto mientras no se desbloquee
+        var hint = document.getElementById('selectSectionHint');
+        if (hint) hint.style.display = 'none';
+    }
+
     @if (isset($grupo))
         if (lapsoSelect.value) {
             lapsoSelect.dispatchEvent(new Event('change'));

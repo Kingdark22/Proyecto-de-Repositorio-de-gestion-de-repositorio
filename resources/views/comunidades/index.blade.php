@@ -27,7 +27,6 @@
 @endpush
 
 @section('content')
-    </div>
 
     <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin-bottom: 20px;">
         <legend style="color: #000; font-weight: bold; font-style: italic; padding: 0 5px;">Buscador y listado</legend>

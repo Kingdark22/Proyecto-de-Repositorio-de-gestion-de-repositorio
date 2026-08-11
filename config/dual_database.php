@@ -37,7 +37,7 @@ return [
     */
     'repositorio_tables' => [
         'proyectos',
-        'proyecto_documentos',
+        'proyecto_componente',
         'comunidades',
         'comunidad_estudiante',
         'linea_investigacions',

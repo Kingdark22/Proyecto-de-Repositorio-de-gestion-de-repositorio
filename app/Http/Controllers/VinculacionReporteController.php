@@ -196,19 +196,19 @@ class VinculacionReporteController extends Controller
                 $conn = (string) config('dual_database.repositorio_connection', 'pgsql');
                 $invRows = DB::connection($conn)
                     ->table('proyecto_involucrado as pi')
-                    ->join('involucrados as i', 'i.id', '=', 'pi.involucrado_id')
-                    ->join('involucrado_rol as ir', 'ir.proyecto_involucrado_id', '=', 'pi.id')
-                    ->join('roles_involucrados as ri', 'ri.id', '=', 'ir.rol_id')
-                    ->whereIn('pi.proyecto_id', $proyectoIds)
+                    ->join('involucrados as i', 'i.inv_codigo', '=', 'pi.inv_codigo')
+                    ->join('detalle_involucrados_rol as dir', 'dir.inv_codigo', '=', 'i.inv_codigo')
+                    ->join('roles_involucrados as ri', 'ri.rin_codigo', '=', 'dir.rin_codigo')
+                    ->whereIn('pi.pry_codigo', $proyectoIds)
                     ->where(function ($q) {
-                        $q->whereRaw("LOWER(ri.nombre) LIKE ?", ['%tutor%'])
-                          ->orWhereRaw("LOWER(ri.nombre) LIKE ?", ['%representante%']);
+                        $q->whereRaw("LOWER(ri.rin_nombre) LIKE ?", ['%tutor%'])
+                          ->orWhereRaw("LOWER(ri.rin_nombre) LIKE ?", ['%representante%']);
                     })
                     ->select([
-                        'pi.proyecto_id',
-                        DB::raw("TRIM(i.nombre) as nombre"),
-                        DB::raw("TRIM(i.apellido) as apellido"),
-                        DB::raw("LOWER(ri.nombre) as rol_lower"),
+                        'pi.pry_codigo as proyecto_id',
+                        DB::raw("TRIM(i.inv_nombre) as nombre"),
+                        DB::raw("TRIM(i.inv_apellido) as apellido"),
+                        DB::raw("LOWER(ri.rin_nombre) as rol_lower"),
                     ])
                     ->distinct()
                     ->get();
@@ -318,7 +318,7 @@ class VinculacionReporteController extends Controller
                 'integrantes' => $miembros,
                 'localidad' => $loc,
                 'comunidad' => $p->comunidad?->nombre ?? '',
-                'socializacion' => $v->estado_socializacion ?? 'APROBADO',
+                'socializacion' => 'APROBADO',
             ];
         }
 
@@ -421,7 +421,7 @@ class VinculacionReporteController extends Controller
         // Usar LIKE indexado sobre pry_direccion_logica para patrón EQSEC:{lapso}:*
         $likePattern = 'EQSEC:' . $lapCodigo . ':%';
 
-        return Proyecto::where('estado_logico', true)
+        return Proyecto::where('pry_estado', 'Aprobado')
             ->where(function ($q) use ($likePattern, $lapCodigo) {
                 $q->where('pry_direccion_logica', 'LIKE', $likePattern)
                   ->orWhereIn('pry_direccion_logica', function ($sub) use ($lapCodigo) {

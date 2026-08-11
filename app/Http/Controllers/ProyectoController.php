@@ -59,6 +59,12 @@ class ProyectoController extends Controller
             $gruposDocente = $this->gestion->gruposDelDocente($user, $filtrosGrupos)->toArray();
         }
 
+        // Admin y coordinador: ver grupos de lapsos anteriores (sin proyecto)
+        if ($esAdmin || $esCoordinador) {
+            $gruposAdmin = $this->gestion->gruposSinProyectoLapsosAnteriores($user)->toArray();
+            $gruposDocente = array_merge($gruposDocente, $gruposAdmin);
+        }
+
         // Proyectos líder (estudiante)
         $esEstudianteLider = false;
         $proyectosLider = collect();
@@ -146,6 +152,156 @@ class ProyectoController extends Controller
         ));
     }
 
+    /**
+     * Vista aparte de creación de proyecto con catálogos inline (patrón de clasificación).
+     * El equipo/grupo se toma automáticamente desde ?grp_codigo=... cuando llega del flujo de grupos.
+     */
+    public function create(Request $request)
+    {
+        $user = auth()->user();
+        $activeRole = $this->userRoleService->getActiveRole($user);
+        $esProfesor = $this->userRoleService->roleMatches('profesor proyecto', $activeRole);
+        $esGestionador = $this->userRoleService->roleMatches('gestionador', $activeRole);
+        $esAdmin = $this->userRoleService->roleMatches('administrador', $activeRole);
+        $esCoordinador = $this->userRoleService->roleMatches('coordinador', $activeRole);
+
+        // Grupo auto-tomado (como en registrarProyectoDesdeGrupo) desde ?grp_codigo=
+        $datosForm = [
+            'titulo' => '',
+            'resumen' => '',
+            'linea_investigacion_id' => '',
+            'metodologia_id' => '',
+            'tipo_investigacion_id' => '',
+            'objetivo_investigacion_id' => '',
+            'comunidad_id' => '',
+            'cantidad_beneficiados' => '',
+            'equipo_seccion_clave' => '',
+            'filterLapsoEquipo' => '',
+            'filterProgramaEquipo' => '',
+            'filterSeccionEquipo' => '',
+            'programa_id_derived' => null,
+            'trayecto_derived' => '',
+            'trayecto_derived_codigo' => '',
+        ];
+
+        $grupoInfo = null;
+        $grupo = null;
+        $grpCodigo = (int) $request->get('grp_codigo', $request->get('grp', 0));
+        if ($grpCodigo > 0) {
+            $grupo = $this->grupos->obtener($grpCodigo);
+            if ($grupo) {
+                $clave = $grupo->identificador ?: $this->grupos->construirClave($grpCodigo);
+                $datosForm = array_merge($datosForm, [
+                    'equipo_seccion_clave' => $clave,
+                    'filterLapsoEquipo' => (string) ($grupo->lap_codigo ?? ''),
+                    'filterProgramaEquipo' => ($grupo->pro_codigo ?? null) !== null ? (string) $grupo->pro_codigo : '',
+                    'filterSeccionEquipo' => (string) ($grupo->sec_codigo ?? ''),
+                    'programa_id_derived' => $grupo->pro_codigo ?? null,
+                    'trayecto_derived' => $grupo->tra_nombre ?? '',
+                    'trayecto_derived_codigo' => ($grupo->tra_codigo ?? null) !== null ? (string) $grupo->tra_codigo : '',
+                    'titulo' => trim((string) ($grupo->nombre ?? '')),
+                    'comunidad_id' => ($grupo->com_codigo ?? null) !== null ? (string) $grupo->com_codigo : '',
+                ]);
+                $grupoInfo = $grupo;
+            }
+        }
+
+        // Admin/coordinador solo pueden crear desde grupos de lapsos anteriores
+        if ($grupo && ($esAdmin || $esCoordinador)) {
+            $lapVigente = app(\App\Services\IntranetProfessorService::class)->lapsoVigenteCodigo();
+            if ($lapVigente !== null && (int) $grupo->lap_codigo === $lapVigente) {
+                return redirect()->route('proyectos.gestion')
+                    ->with('error', 'Los proyectos del lapso actual los suben los profesores. Usted solo puede registrar proyectos de lapsos anteriores.');
+            }
+        }
+
+        $estadoForm = $this->buildEstadoFromDatos($datosForm);
+        $catalogosForm = $this->gestion->datosVistaFormulario($estadoForm);
+
+        // Catálogos para los acordeones inline (igual que clasificacion.index)
+        $estados = \App\Models\Estado::orderBy('est_nombre')->get();
+        $programas = \App\Models\Programa::orderBy('pro_siglas')->get();
+
+        $puedeGestionar = $esAdmin || $esCoordinador || $esGestionador;
+
+        return view('proyectos.crear', compact(
+            'esProfesor', 'esGestionador', 'esAdmin', 'esCoordinador',
+            'datosForm', 'catalogosForm', 'grupoInfo', 'estados', 'programas',
+            'puedeGestionar',
+        ));
+    }
+
+    public function store(Request $request)
+    {
+        $user = auth()->user();
+        $activeRole = $this->userRoleService->getActiveRole($user);
+        $esProfesor = $this->userRoleService->roleMatches('profesor proyecto', $activeRole);
+        $esAdmin = $this->userRoleService->roleMatches('administrador', $activeRole);
+        $esCoordinador = $this->userRoleService->roleMatches('coordinador', $activeRole);
+
+        if (!$this->gestion->usuarioPuedeRegistrar($user)) {
+            return redirect()->route('proyectos.crear')
+                ->with('error', 'No tienes permiso para crear proyectos.');
+        }
+
+        // Admin/coordinador solo pueden crear proyectos de grupos de lapsos anteriores
+        if ($esAdmin || $esCoordinador) {
+            $clavePost = (string) $request->input('equipo_seccion_clave', '');
+            if ($clavePost !== '') {
+                $grupoPost = \App\Models\GrupoProyectoModulo::porIdentificador($clavePost);
+                $lapVigente = app(\App\Services\IntranetProfessorService::class)->lapsoVigenteCodigo();
+                if ($grupoPost && $lapVigente !== null && (int) $grupoPost->lap_codigo === $lapVigente) {
+                    return redirect()->route('proyectos.gestion')
+                        ->with('error', 'Los proyectos del lapso actual los suben los profesores. Usted solo puede registrar proyectos de lapsos anteriores.');
+                }
+            }
+        }
+
+        $estadoForm = [
+            'resumen' => $request->input('resumen', ''),
+            'linea_investigacion_id' => $request->input('linea_investigacion_id', ''),
+            'metodologia_id' => $request->input('metodologia_id', ''),
+            'tipo_investigacion_id' => $request->input('tipo_investigacion_id', ''),
+            'objetivo_investigacion_id' => $request->input('objetivo_investigacion_id', ''),
+            'titulo' => $request->input('titulo', ''),
+            'comunidad_id' => $request->input('comunidad_id', ''),
+            'cantidad_beneficiados' => $request->input('cantidad_beneficiados', ''),
+            'equipo_seccion_clave' => $request->input('equipo_seccion_clave', ''),
+            'filterLapsoEquipo' => $request->input('filterLapsoEquipo', ''),
+            'filterProgramaEquipo' => $request->input('filterProgramaEquipo', ''),
+            'filterSeccionEquipo' => $request->input('filterSeccionEquipo', ''),
+            'programa_id' => $request->input('programa_id_derived'),
+            'trayecto' => $request->input('trayecto_derived', ''),
+            'trayecto_codigo' => $request->input('trayecto_derived_codigo', ''),
+        ];
+
+        $rules = $this->gestion->reglasValidacion($estadoForm, $user, false);
+        $request->validate($rules, [
+            'titulo.required' => 'El título del proyecto es obligatorio.',
+            'resumen.required' => 'El resumen es obligatorio para los estudiantes.',
+            'comunidad_id.required' => 'La comunidad es obligatoria.',
+            'linea_investigacion_id.required' => 'La línea de investigación es obligatoria.',
+            'metodologia_id.required' => 'La metodología es obligatoria.',
+            'tipo_investigacion_id.required' => 'El tipo de investigación es obligatorio.',
+            'objetivo_investigacion_id.required' => 'El objetivo de investigación es obligatorio.',
+            'equipo_seccion_clave.required' => 'Debe seleccionar un equipo/sección.',
+        ], [
+            'titulo' => 'título del proyecto',
+            'resumen' => 'resumen',
+            'linea_investigacion_id' => 'línea de investigación',
+            'metodologia_id' => 'metodología',
+            'tipo_investigacion_id' => 'tipo de investigación',
+            'objetivo_investigacion_id' => 'objetivo de investigación',
+            'comunidad_id' => 'comunidad',
+            'equipo_seccion_clave' => 'equipo y sección',
+        ]);
+
+        $proyecto = $this->gestion->guardar(null, $estadoForm, $user, [], []);
+
+        return redirect()->route('proyectos.gestion.edit', $proyecto->id)
+            ->with('success', 'Proyecto creado con éxito. Complete los datos restantes.');
+    }
+
     public function edit($id)
     {
         $user = auth()->user();
@@ -178,15 +334,16 @@ class ProyectoController extends Controller
             }
         }
 
-        // Solo integrantes del equipo, profesor proyecto creador, coordinador o administrador pueden acceder
-        if (!$esMiembro && !$esProfesorCreador && !$esCoordinador && !$esAdmin) {
+        // Solo integrantes del equipo, profesor proyecto creador, coordinador (creador) o administrador pueden acceder
+        $esCreadorProyecto = trim((string) $proyecto->creador_cedula) === $usuarioCedula;
+        if (!$esMiembro && !$esProfesorCreador && !$esAdmin && !($esCoordinador && $esCreadorProyecto)) {
             return redirect()->route('proyectos.gestion')
                 ->with('error', 'No tienes permiso para acceder a este proyecto.');
         }
 
         $modoActualizacion = $esMiembro && !$esAdminEnSistema;
-        $canValidate = $esProfesorCreador;
-        $soloLectura = $esCoordinador || $esAdmin;
+        $canValidate = $esProfesorCreador || $esAdmin || $esCoordinador;
+        $soloLectura = false;
 
         $datosForm = $this->gestion->cargarParaEdicion($id);
         $estadoForm = $this->buildEstadoFromDatos($datosForm);
@@ -242,14 +399,9 @@ class ProyectoController extends Controller
             }
         }
 
-        // Admin y coordinador no pueden modificar proyectos
-        if ($esAdmin || $esCoordinador) {
-            return redirect()->route('proyectos.gestion')
-                ->with('error', 'No tienes permiso para modificar este proyecto.');
-        }
-
-        // Solo integrantes del equipo y profesor proyecto creador pueden actualizar
-        if (!$esMiembro && !$esProfesorCreador) {
+        // Solo integrantes del equipo, profesor proyecto creador, admin o coordinador (creador) pueden actualizar
+        $esCreadorProyecto = trim((string) $proyecto->creador_cedula) === $usuarioCedula;
+        if (!$esMiembro && !$esProfesorCreador && !$esAdmin && !($esCoordinador && $esCreadorProyecto)) {
             return redirect()->route('proyectos.gestion')
                 ->with('error', 'No tienes permiso para modificar este proyecto.');
         }
@@ -360,6 +512,11 @@ class ProyectoController extends Controller
                 'titulo.required' => 'El título del proyecto es obligatorio.',
                 'resumen.required' => 'El resumen es obligatorio para los estudiantes.',
                 'comunidad_id.required' => 'La comunidad es obligatoria.',
+                'linea_investigacion_id.required' => 'La línea de investigación es obligatoria.',
+                'metodologia_id.required' => 'La metodología es obligatoria.',
+                'tipo_investigacion_id.required' => 'El tipo de investigación es obligatorio.',
+                'objetivo_investigacion_id.required' => 'El objetivo de investigación es obligatorio.',
+                'equipo_seccion_clave.required' => 'Debe seleccionar un equipo/sección.',
             ], [
                 'titulo' => 'título del proyecto',
                 'resumen' => 'resumen',
@@ -386,13 +543,11 @@ class ProyectoController extends Controller
             $updateData = [
                 'actualizado_por_estudiante' => true,
                 'fecha_actualizacion_estudiante' => now(),
-                'estado_logico' => true,
             ];
 
             // Si estaba rechazado, volver a pendiente para re-evaluación
-            if ($proyecto->estado_validacion === 'rechazado') {
-                $updateData['estado_validacion'] = 'pendiente';
-                $updateData['motivo_rechazo'] = null;
+            if ($proyecto->pry_estado === 'Rechazado') {
+                $updateData['pry_estado'] = 'Pendiente';
             }
 
             $proyecto->update($updateData);
@@ -421,10 +576,8 @@ class ProyectoController extends Controller
 
         $proyecto = $proyecto->fresh(['documentos']);
         $completos = $this->gestion->verificarSiProyectoEstaCompletado($proyecto);
-        if ($completos && $proyecto->estado_validacion !== 'aprobado') {
-            $proyecto->update(['estado_validacion' => 'completado']);
-        } elseif (!$completos && $proyecto->estado_validacion === 'completado') {
-            $proyecto->update(['estado_validacion' => 'pendiente']);
+        if ($completos && $proyecto->pry_estado !== 'Aprobado') {
+            $proyecto->update(['pry_estado' => 'Pendiente']);
         }
 
         return redirect()->route('proyectos.gestion')
@@ -435,13 +588,13 @@ class ProyectoController extends Controller
     {
         try {
             $proyecto = \App\Models\Proyecto::findOrFail($id);
-            $estadoAnterior = $proyecto->estado_validacion;
+            $estadoAnterior = $proyecto->pry_estado;
             $this->gestion->aprobar((int) $id);
-            $msg = $estadoAnterior === 'pendiente'
+            $msg = $estadoAnterior === 'Pendiente'
                 ? 'Proyecto marcado como completado. El administrador debe aprobarlo.'
                 : 'Proyecto aprobado con éxito.';
 
-            if ($estadoAnterior === 'completado') {
+            if ($estadoAnterior === 'Pendiente') {
                 try {
                     $proyecto->refresh();
                     $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($proyecto->equipo_ref ?? '');
@@ -535,9 +688,20 @@ class ProyectoController extends Controller
                 break;
             }
         }
-        if (!$esMiembro && !$esProfesorCreador) {
+        $esAdmin = $this->userRoleService->roleMatches('administrador', $activeRole);
+        $esCoordinador = $this->userRoleService->roleMatches('coordinador', $activeRole);
+        if (!$esMiembro && !$esProfesorCreador && !$esAdmin && !$esCoordinador) {
             return redirect()->route('proyectos.gestion')
                 ->with('error', 'No tienes permiso para crear un proyecto desde este grupo.');
+        }
+
+        if ($esAdmin || $esCoordinador) {
+            $grupoLapso = (int) ($ctx['lap_codigo'] ?? $grupo->lap_codigo ?? 0);
+            $lapVigente = app(\App\Services\IntranetProfessorService::class)->lapsoVigenteCodigo();
+            if ($lapVigente !== null && $grupoLapso === $lapVigente) {
+                return redirect()->route('proyectos.gestion')
+                    ->with('error', 'Los proyectos del lapso actual los suben los profesores. Usted solo puede registrar proyectos de lapsos anteriores.');
+            }
         }
 
         $proyecto = $this->gestion->registrarProyectoDesdeGrupo((int) $grupo->grp_codigo, $user);
@@ -672,8 +836,8 @@ class ProyectoController extends Controller
             $connection = (string) config('dual_database.repositorio_connection', 'pgsql');
             $roleNames = DB::connection($connection)
                 ->table('roles_involucrados')
-                ->whereIn('id', $request->input('roles', []))
-                ->pluck('nombre', 'id');
+                ->whereIn('rin_codigo', $request->input('roles', []))
+                ->pluck('rin_nombre', 'rin_codigo');
             $roles = [];
             foreach ($request->input('roles', []) as $rolId) {
                 $roles[] = ['id' => (int) $rolId, 'nombre' => $roleNames->get($rolId, '')];
@@ -823,8 +987,7 @@ class ProyectoController extends Controller
         $pnf     = $datos['pnfPredominante'] ?? '';
 
         // ── Post-procesar sede fallback ────────────────────────────────────
-        $proyectosEquipo = Proyecto::where('estado_validacion', 'aprobado')
-            ->where('estado_logico', true)
+        $proyectosEquipo = Proyecto::where('pry_estado', 'Aprobado')
             ->orderBy('id')
             ->select(['pry_codigo', 'pry_direccion_logica'])
             ->get()
@@ -1021,8 +1184,7 @@ class ProyectoController extends Controller
             $searchTrimmed = trim($search);
             $termino = '%' . $searchTrimmed . '%';
 
-            $query = Proyecto::where('estado_validacion', 'aprobado')
-                ->where('estado_logico', true)
+            $query = Proyecto::where('pry_estado', 'Aprobado')
                 ->where(function ($q) use ($searchTrimmed, $termino) {
                     // Resumen del proyecto
                     try {
@@ -1172,8 +1334,8 @@ class ProyectoController extends Controller
                     $todosAceptados = $allDocs->isNotEmpty() && $allDocs->every(fn ($d) => (int) $d->pd_estado === 1);
                     $completos = $todosAceptados && $this->gestion->verificarSiProyectoEstaCompletado($proyecto);
 
-                    if ($completos && $proyecto->estado_validacion !== 'aprobado') {
-                        $proyecto->update(['estado_validacion' => 'completado']);
+                    if ($completos && $proyecto->pry_estado !== 'Aprobado') {
+                        $proyecto->update(['pry_estado' => 'Pendiente']);
                         \Illuminate\Support\Facades\Log::info("Proyecto {$proyecto->getKey()} auto-completado: todos los documentos aceptados y componentes completos.");
 
                         if (!empty($cedulas)) {

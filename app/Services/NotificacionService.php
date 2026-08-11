@@ -35,7 +35,7 @@ class NotificacionService
 
         if ($isCoordinator) {
             // Coordinador: notificaciones administrativas generales
-            $proyectosCompletados = Proyecto::where('estado_validacion', 'completado')->count();
+            $proyectosCompletados = Proyecto::where('pry_estado', 'Pendiente')->count();
             if ($proyectosCompletados > 0) {
                 $notificaciones[] = [
                     'type' => 'warning',
@@ -47,8 +47,8 @@ class NotificacionService
         }
 
         if ($isTeacher) {
-            $query = Proyecto::whereIn('estado_validacion', ['completado']);
-            $query2 = Proyecto::where('estado_validacion', 'pendiente')->where('actualizado_por_estudiante', true);
+            $query = Proyecto::whereIn('pry_estado', ['Pendiente']);
+            $query2 = Proyecto::where('pry_estado', 'Pendiente')->where('actualizado_por_estudiante', true);
 
             $cedula = trim($user->usu_cedula);
 
@@ -186,7 +186,7 @@ class NotificacionService
             }
 
             // 1.5 Proyectos completados — todos los documentos aceptados, pendiente de aprobación final
-            $proyectosCompletados = Proyecto::where('estado_validacion', 'completado')->where('estado_logico', true)->get();
+            $proyectosCompletados = Proyecto::where('pry_estado', 'Pendiente')->get();
             $gruposCacheComp = $this->precargarGruposProyecto($proyectosCompletados, $gruposSvc);
             foreach ($proyectosCompletados as $p) {
                 if ($this->esMiembroDelProyecto($p, $cedula, $gruposSvc, $gruposCacheComp)) {
@@ -232,7 +232,7 @@ class NotificacionService
                     $notificaciones[] = [
                         'type' => 'warning',
                         'title' => 'Proyecto rechazado',
-                        'mensaje' => 'Revisión requerida para "' . $p->titulo . '". Motivo: ' . ($p->motivo_rechazo ?: 'Revisar detalles.'),
+                        'mensaje' => 'Revisión requerida para "' . $p->titulo . '". Revisar detalles.',
                         'url' => route('proyectos.gestion', ['edit' => $p->id]),
                         'proyecto_id' => $p->id,
                     ];
@@ -274,7 +274,7 @@ class NotificacionService
             }
 
             // 3. Proyectos aprobados — notificación de repositorio + solvencia
-            $proyectosAprobados = Proyecto::where('estado_validacion', 'aprobado')->where('estado_logico', true)->get();
+            $proyectosAprobados = Proyecto::where('pry_estado', 'Aprobado')->get();
             $gruposCacheAprob = $this->precargarGruposProyecto($proyectosAprobados, $gruposSvc);
             foreach ($proyectosAprobados as $p) {
                 if ($this->esMiembroDelProyecto($p, $cedula, $gruposSvc, $gruposCacheAprob)) {

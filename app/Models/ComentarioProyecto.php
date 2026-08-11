@@ -15,6 +15,7 @@ class ComentarioProyecto extends RepositorioModel
         'proyecto_id',
         'usuario_externo_id',
         'nombre_contacto',
+        'fecha_creacion',
     ];
 
     public function proyecto()

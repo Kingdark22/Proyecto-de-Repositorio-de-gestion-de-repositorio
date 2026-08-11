@@ -9,15 +9,12 @@ class Proyecto extends RepositorioModel
     protected $table = 'proyectos';
 
     protected $fillable = [
-        // titulo es accessor - no se persiste en BD
         'resumen',
         'linea_investigacion_id',
         'metodologia_id',
         'tipo_investigacion_id',
         'objetivo_investigacion_id',
-        'estado_logico',
-        'estado_validacion',
-        'motivo_rechazo',
+        'pry_estado',
         'actualizado_por_estudiante',
         'fecha_actualizacion_estudiante',
         'creador_cedula',
@@ -26,6 +23,8 @@ class Proyecto extends RepositorioModel
         'equipo_ref',
     ];
 
+    protected $uppercaseExceptions = ['pry_estado', 'correo', 'email', 'password', 'contrasena'];
+
     protected static array $resumenEquipoCache = [];
 
     public function getTituloAttribute(): string
@@ -33,12 +32,10 @@ class Proyecto extends RepositorioModel
         if (!$this->equipo_ref) {
             return '(sin título)';
         }
-        // Try as identificador first
         $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($this->equipo_ref ?? '');
         if ($grupo) {
             return $grupo->grp_nombre;
         }
-        // Fallback: parse as EQGRP:{id}
         $service = app(\App\Services\GrupoProyectoService::class);
         $partes = $service->parsearClave($this->equipo_ref);
         if ($partes && ($partes['tipo'] ?? '') === \App\Services\GrupoProyectoService::PREFIJO && !empty($partes['grp_codigo'])) {
@@ -64,26 +61,34 @@ class Proyecto extends RepositorioModel
         return $resumen;
     }
 
+    public function getEstadoValidacionAttribute(): string
+    {
+        return strtolower((string) $this->pry_estado);
+    }
+
+    public function getMotivoRechazoAttribute(): string
+    {
+        return '';
+    }
+
     protected $casts = [
-        'estado_logico' => 'boolean',
         'actualizado_por_estudiante' => 'boolean',
         'fecha_actualizacion_estudiante' => 'datetime',
     ];
-    
 
     public function scopeActivos(Builder $query): Builder
     {
-        return $query->where('estado_logico', true);
+        return $query->where('pry_estado', 'Aprobado');
     }
 
     public function scopeAprobados(Builder $query): Builder
     {
-        return $query->where('estado_validacion', 'aprobado');
+        return $query->where('pry_estado', 'Aprobado');
     }
 
     public function scopeVisiblesPublico(Builder $query): Builder
     {
-        return $query->activos()->aprobados();
+        return $query->where('pry_estado', 'Aprobado');
     }
 
     public function scopeBusquedaPublica(Builder $query, ?string $search = null, ?int $programaId = null, ?string $lapso = null): Builder
@@ -101,13 +106,10 @@ class Proyecto extends RepositorioModel
 
         if ($programaId) {
             $query->whereHas('linea_investigacion', function ($q) use ($programaId) {
-                $q->where('programa_id', $programaId);
+                $q->where('coord_codigo', $programaId);
             });
         }
 
-        // El filtro de lapso depende de cómo se guarde en equipo_ref o similar
-        // Por ahora lo dejamos así si no hay una columna directa de lapso en proyectos
-        
         return $query;
     }
 
@@ -156,7 +158,6 @@ class Proyecto extends RepositorioModel
             $ref = $p->equipo_ref;
             if (!$ref) continue;
 
-            // Try as identificador
             if (!str_starts_with($ref, 'EQGRP:') && !str_starts_with($ref, 'EQSEC:')) {
                 $identificadores[] = $ref;
             } else {
@@ -197,14 +198,9 @@ class Proyecto extends RepositorioModel
         }
     }
 
-    // ─── Scopes y métodos para ValidacionesManager ────────────────
-
-    /**
-     * Proyectos pendientes o completados (listos para revisión).
-     */
     public function scopePendientes(Builder $query, ?string $search = null): Builder
     {
-        $query->whereIn('estado_validacion', ['pendiente', 'completado']);
+        $query->where('pry_estado', 'Pendiente');
 
         if ($search !== null && $search !== '') {
             $query->where(function ($q) use ($search) {
@@ -212,7 +208,6 @@ class Proyecto extends RepositorioModel
                 try {
                     $q->orWhereRaw('pry_resumen ILIKE ?', ["%{$search}%"]);
                 } catch (\Throwable) {
-                    // fallback
                 }
             });
         }
@@ -220,44 +215,29 @@ class Proyecto extends RepositorioModel
         return $query;
     }
 
-    /**
-     * Aprueba el proyecto directamente.
-     */
     public function aprobar(): void
     {
         $this->update([
-            'estado_validacion' => 'aprobado',
-            'estado_logico' => true,
+            'pry_estado' => 'Aprobado',
         ]);
     }
 
-    /**
-     * Rechaza el proyecto con un motivo.
-     */
     public function rechazar(string $motivo): void
     {
         $this->update([
-            'estado_validacion' => 'rechazado',
-            'motivo_rechazo' => $motivo,
-            'estado_logico' => false,
+            'pry_estado' => 'Rechazado',
         ]);
     }
 
-    /**
-     * Proyectos rechazados (para notificaciones).
-     */
     public function scopeRechazados(Builder $query): Builder
     {
-        return $query->where('estado_validacion', 'rechazado')
+        return $query->where('pry_estado', 'Rechazado')
             ->where('actualizado_por_estudiante', false);
     }
 
-    /**
-     * Proyectos pendientes de documentos por parte del estudiante.
-     */
     public function scopePendientesEstudiante(Builder $query): Builder
     {
         return $query->where('actualizado_por_estudiante', false)
-            ->whereIn('estado_validacion', ['pendiente', 'aprobado']);
+            ->where('pry_estado', 'Pendiente');
     }
 }

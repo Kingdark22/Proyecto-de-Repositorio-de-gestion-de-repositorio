@@ -23,33 +23,15 @@ $notificacionesCount = count($notificacionesList);
                     <div class="arrow-icon"></div>
                 </div>
                 <div class="legacy-submenu">
-                    @if ($nav['canViewComunes'])
-                    <a href="{{ route('comunidades.index') }}"
-                        class="{{ request()->routeIs('comunidades.index') ? 'active-sub' : '' }}">Comunidades</a>
+                    @if ($nav['canManageCatalogs'])
+                    <a href="{{ route('clasificacion.index') }}"
+                        class="{{ request()->routeIs('clasificacion.index') ? 'active-sub' : '' }}">Clasificación de proyectos</a>
                     @endif
+
                     @if ($nav['canViewGruposProyecto'])
                     <a href="{{ route('grupos-proyecto.index') }}"
                         class="{{ request()->routeIs('grupos-proyecto.index') ? 'active-sub' : '' }}">Equipos de
                         proyecto</a>
-                    @endif
-
-                    @if ($nav['canManageCatalogs'])
-                    <a href="{{ route('lineas-investigacion') }}"
-                        class="{{ request()->routeIs('lineas-investigacion') ? 'active-sub' : '' }}">Líneas de
-                        investigación</a>
-                    <a href="{{ route('tipos-investigacion') }}"
-                        class="{{ request()->routeIs('tipos-investigacion') ? 'active-sub' : '' }}">Tipos de
-                        investigación</a>
-                    <a href="{{ route('metodologia-investigacion') }}"
-                        class="{{ request()->routeIs('metodologia-investigacion') ? 'active-sub' : '' }}">Metodologías</a>
-                    <a href="{{ route('objetivos-investigacion') }}"
-                        class="{{ request()->routeIs('objetivos-investigacion') ? 'active-sub' : '' }}">Objetivos de
-                        investigación</a>
-                    @endif
-
-                    @if ($nav['canManageComponents'])
-                    <a href="{{ route('componentes.index') }}"
-                        class="{{ request()->routeIs('componentes.index') ? 'active-sub' : '' }}">Componentes</a>
                     @endif
                 </div>
             </li>
@@ -62,7 +44,7 @@ $notificacionesCount = count($notificacionesList);
                 </div>
                 <div class="legacy-submenu">
                     <a href="{{ route('proyectos.buscar') }}"
-                        class="{{ request()->routeIs('proyectos.buscar') ? 'active-sub' : '' }}">Explorar proyectos</a>
+                        class="{{ request()->routeIs('proyectos.buscar') ? 'active-sub' : '' }}">Biblioteca de proyectos</a>
                     @if ($nav['canRegisterProject'] || $nav['canValidateProjects'] || ($nav['isCoordinator'] ?? false) || ($nav['isAdmin'] ?? false))
                     <a href="{{ route('proyectos.gestion') }}"
                         class="{{ request()->routeIs('proyectos.gestion', 'proyectos.crear', 'validaciones.index') ? 'active-sub' : '' }}">Depósito de proyectos</a>

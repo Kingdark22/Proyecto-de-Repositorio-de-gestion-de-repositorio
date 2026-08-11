@@ -97,6 +97,20 @@ Route::middleware(['auth', 'active.role'])->group(function () {
         });
     });
 
+    // Clasificación de Proyectos — página unificada
+    Route::middleware('role:administrador,coordinador,gestionador')->group(function () {
+        Route::get('/clasificacion', [\App\Http\Controllers\ClasificacionController::class, 'index'])->name('clasificacion.index');
+        Route::get('/clasificacion/listados', [\App\Http\Controllers\ClasificacionController::class, 'listados'])->name('clasificacion.listados');
+        Route::get('/clasificacion/componentes/vinculacion-data', [\App\Http\Controllers\ClasificacionController::class, 'vinculacionData'])->name('clasificacion.vinculacion.data');
+        Route::post('/clasificacion/componentes/vinculacion-guardar', [\App\Http\Controllers\ClasificacionController::class, 'vinculacionGuardar'])->name('clasificacion.vinculacion.guardar');
+        Route::get('/clasificacion/{tipo}/{id}/editar', [\App\Http\Controllers\ClasificacionController::class, 'editar'])->name('clasificacion.editar');
+        Route::put('/clasificacion/{tipo}/{id}/actualizar', [\App\Http\Controllers\ClasificacionController::class, 'actualizar'])->name('clasificacion.actualizar');
+        Route::get('/clasificacion/{tipo}/listar', [\App\Http\Controllers\ClasificacionController::class, 'listar'])->name('clasificacion.listar');
+        Route::post('/clasificacion/{tipo}/guardar', [\App\Http\Controllers\ClasificacionController::class, 'guardar'])->name('clasificacion.guardar');
+        Route::delete('/clasificacion/{tipo}/{id}/eliminar', [\App\Http\Controllers\ClasificacionController::class, 'eliminar'])->name('clasificacion.eliminar');
+        Route::get('/clasificacion/{tipo}/verificar', [\App\Http\Controllers\ClasificacionController::class, 'verificar'])->name('clasificacion.verificar');
+    });
+
     Route::middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador,docente')->group(function () {
         Route::get('/proyectos/gestion/{id}/edit', [\App\Http\Controllers\ProyectoController::class, 'edit'])->name('proyectos.gestion.edit');
         Route::put('/proyectos/gestion/{id}', [\App\Http\Controllers\ProyectoController::class, 'update'])->name('proyectos.gestion.update');
@@ -146,9 +160,12 @@ Route::middleware(['auth', 'active.role'])->group(function () {
     Route::get('/vinculacion/reporte-pdf', [\App\Http\Controllers\VinculacionReporteController::class, 'reportePdf'])->name('vinculacion.reporte-pdf')->middleware('auth');
     Route::get('/vinculacion/reporte-excel', [\App\Http\Controllers\VinculacionReporteController::class, 'exportarExcel'])->name('vinculacion.reporte-excel')->middleware('auth');
 
-    Route::get('/proyectos/crear', function () {
-        return redirect('/proyectos/gestion?' . http_build_query(request()->query()));
-    })->middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador')->name('proyectos.crear');
+    Route::get('/proyectos/crear', [\App\Http\Controllers\ProyectoController::class, 'create'])
+        ->middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador')
+        ->name('proyectos.crear');
+    Route::post('/proyectos/crear', [\App\Http\Controllers\ProyectoController::class, 'store'])
+        ->middleware('role:administrador,estudiante,coordinador,profesor proyecto,gestionador')
+        ->name('proyectos.crear.store');
 
     Route::get('/validaciones', function () {
         return redirect('/proyectos/gestion');

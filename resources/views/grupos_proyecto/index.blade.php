@@ -66,11 +66,6 @@
 @section('content')
     <h2 class="titulo" style="margin-bottom: 10px; font-weight: bolder;">Equipos de proyecto</h2>
 
-    <p style="font-size: 11px; color: #444; margin-bottom: 12px;">
-        Registre el <strong>grupo de proyecto</strong> eligiendo estudiantes de la <strong>sección del PNF</strong>.
-        Queda identificado con un código único auto-generado.
-    </p>
-
     {{-- Flash messages se muestran como toast flotante (app.blade.php) --}}
 
     @if (!$tablaOk)
@@ -82,8 +77,8 @@
     @endif
 
     {{-- Filtros --}}
-    <div style="margin-bottom: 10px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
-        <form method="GET" action="{{ route('grupos-proyecto.index') }}" id="filterForm" style="display: contents;">
+    <div style="margin-bottom: 10px;">
+        <form method="GET" action="{{ route('grupos-proyecto.index') }}" id="filterForm" style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
             <select name="lapso" class="grp-filter-select" onchange="this.form.submit()">
                 <option value="">Lapso</option>
                 @foreach ($lapsos as $l)
@@ -102,12 +97,25 @@
                     <option value="{{ $s->sec_codigo }}" {{ $filterSeccion == $s->sec_codigo ? 'selected' : '' }}>{{ $s->sec_nombre }}</option>
                 @endforeach
             </select>
-            <input name="search" type="text" value="{{ $search }}" placeholder="Buscar nombre&hellip;" class="grp-filter-input" style="flex: 1; min-width: 200px; position:relative;" id="grpSearchInput" autocomplete="off" oninput="buscarGrupo()">
-            <div id="grpSearchAutocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;max-height:220px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
+            <div style="position: relative; flex: 1; min-width: 200px;">
+                <input name="search" type="text" value="{{ $search }}" placeholder="Buscar nombre&hellip;" class="grp-filter-input" style="width: 100%;" id="grpSearchInput" autocomplete="off" oninput="buscarGrupo()">
+                <div id="grpSearchAutocomplete" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:4px;max-height:220px;overflow-y:auto;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
+            </div>
+            @if($isProfessor || ($esAdmin ?? false) || ($esCoordinador ?? false))
+                <a href="{{ route('grupos-proyecto.create') }}" class="cm-btn cm-btn-success cm-btn-sm" style="margin-left: auto;">Registrar nuevo grupo</a>
+            @endif
             <noscript><button type="submit" class="cm-btn cm-btn-sm">Buscar</button></noscript>
         </form>
-        @if($isProfessor)
-            <a href="{{ route('grupos-proyecto.create') }}" class="cm-btn cm-btn-success cm-btn-sm" style="margin-left: auto;">Registrar nuevo grupo</a>
+
+        @if(($esAdmin ?? false) || ($esCoordinador ?? false))
+            <form method="GET" action="{{ route('grupos-proyecto.index') }}" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; padding: 8px 10px; background: #f5f5f5; border: 1px dashed #c2c2c2; border-radius: 6px;">
+                <span style="font-size: 11px; font-weight: 600; color: #555;">Buscar grupos de un profesor:</span>
+                <input name="profesor" type="text" value="{{ $filterProfesor }}" placeholder="Nombre o cédula del profesor&hellip;" class="grp-filter-input" autocomplete="off" style="flex: 1; min-width: 180px;">
+                <button type="submit" class="cm-btn cm-btn-secondary cm-btn-sm" title="Buscar los grupos de un profesor">Buscar profesor</button>
+                @if($filterProfesor !== '')
+                    <a href="{{ route('grupos-proyecto.index', array_merge(array_filter(request()->query(), fn ($v, $k) => $k !== 'profesor', ARRAY_FILTER_USE_BOTH), ['page' => 1])) }}" class="cm-btn cm-btn-danger cm-btn-sm" title="Volver a ver solo tus grupos">Ver mis grupos</a>
+                @endif
+            </form>
         @endif
     </div>
 
@@ -179,8 +187,10 @@
                                     @if(($esAdmin ?? false) || ($esCoordinador ?? false))
                                         @if($tieneProyecto)
                                             <a href="{{ route('proyectos.gestion.edit', $proyecto->id) }}" class="cm-btn cm-btn-secondary cm-btn-xs" title="Ver proyecto (solo lectura)">Ver</a>
+                                        @elseif($lapsoVigente && (int) $g->lap_codigo === (int) $lapsoVigente)
+                                            <span style="color:#999; font-size:10px;" title="Los proyectos del lapso actual los suben los profesores. Solo puede registrar proyectos de lapsos anteriores.">Solo lapso anterior</span>
                                         @else
-                                            <span style="color:#999;font-size:10px;">Sin proyecto</span>
+                                            <a href="{{ route('proyectos.crear', ['grp_codigo' => $g->grp_codigo]) }}" class="cm-btn cm-btn-success cm-btn-xs" title="Registrar proyecto desde este grupo">Registrar proyecto</a>
                                         @endif
                                     @else
                                     {{-- Actualizar va al formulario de registro del proyecto --}}
@@ -204,7 +214,17 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" align="center">No hay grupos registrados. Cree uno con integrantes de la sección.</td>
+                                <td colspan="9" align="center">
+                                    @if(($esAdmin ?? false) || ($esCoordinador ?? false))
+                                        @if($filterProfesor !== '')
+                                            No se encontraron grupos para el profesor «{{ $filterProfesor }}».
+                                        @else
+                                            No hay grupos creados por ti. Usa «Buscar por profesor» para localizar los grupos de un profesor.
+                                        @endif
+                                    @else
+                                        No hay grupos registrados. Cree uno con integrantes de la sección.
+                                    @endif
+                                </td>
                             </tr>
                         @endforelse
                     </tbody>

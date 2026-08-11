@@ -24,6 +24,31 @@
     .validation-error { color: #dc3545; font-size: 11px; }
     .obligatorio { color: red; font-weight: bold; }
     .filter-input, .filter-select { height: 30px; padding: 3px 6px; font-size: 11px; border: 1px solid #ccc; border-radius: 4px; }
+
+    /* ===== Acordeones de actualización (estilo rojo del sistema) ===== */
+    .prj-acc { border:1px solid #e5e7eb; border-radius:12px; margin-bottom:14px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.05); transition:border-color .25s, box-shadow .25s; }
+    .prj-acc:hover { box-shadow:0 3px 10px rgba(0,0,0,.08); }
+    .prj-acc-head { display:flex; align-items:center; gap:12px; padding:14px 16px; cursor:pointer; background:#fff; transition:background .25s; user-select:none; }
+    .prj-acc-head:hover { background:#fef2f2; }
+    .prj-acc-head.open { background:linear-gradient(135deg,#7f1d1d,#991b1b); color:#fff; }
+    .prj-acc-num { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px; background:#fee2e2; color:#8b0000; flex-shrink:0; transition:all .25s; }
+    .prj-acc-head.open .prj-acc-num { background:#fff; color:#8b0000; }
+    .prj-acc-title { font-weight:700; font-size:14px; line-height:1.2; }
+    .prj-acc-sub { font-size:11px; color:#64748b; margin-top:1px; }
+    .prj-acc-head.open .prj-acc-sub { color:#fecaca; }
+    .prj-acc-info { flex:1; }
+    .prj-acc-chev { font-size:12px; color:#94a3b8; transition:transform .3s; flex-shrink:0; }
+    .prj-acc-head.open .prj-acc-chev { color:#fff; transform:rotate(180deg); }
+    .prj-acc-body { display:none; border-top:1px solid #e2e8f0; background:#f8fafc; padding:16px 18px; }
+    .prj-acc-body.open { display:block; }
+    .prj-acc-body label.prj-label { display:block; font-size:11px; font-weight:700; color:#8b0000; text-transform:uppercase; margin-bottom:4px; }
+    .prj-acc-body .prj-field { margin-bottom:14px; }
+    .prj-acc-body input[type="text"], .prj-acc-body input[type="number"], .prj-acc-body textarea, .prj-acc-body select { width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px; box-sizing:border-box; background:#fff; transition:border-color .2s, box-shadow .2s; }
+    .prj-acc-body input:focus, .prj-acc-body textarea:focus, .prj-acc-body select:focus { border-color:#991b1b; outline:none; box-shadow:0 0 0 3px rgba(153,27,27,.12); }
+    .prj-acc-body select { height:36px; cursor:pointer; }
+    .prj-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .prj-check-chip { display:flex; align-items:center; gap:8px; padding:8px 12px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; }
+    @media (max-width: 700px){ .prj-grid-2 { grid-template-columns:1fr; } }
 </style>
 @endpush
 
@@ -70,12 +95,22 @@
         <input type="hidden" name="trayecto_derived_codigo" value="{{ $datosForm['trayecto_derived_codigo'] ?? '' }}">
         <input type="hidden" name="comunidad_id" value="{{ $datosForm['comunidad_id'] ?? '' }}">
 
-        <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
-            <legend style="color: #000; font-weight: bold; padding: 0 5px;">&nbsp;</legend>
+        @php $paso = 1; @endphp
 
-            {{-- == DATOS DEL PROYECTO == --}}
-            <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
-                <legend style="font-weight: bold; font-size: 12px;">Datos del proyecto</legend>
+        <div style="border:2px solid #8b0000;border-radius:12px;padding:18px;background:#FFF;">
+
+            {{-- Paso 1: Datos del proyecto --}}
+            @php $accNum = $paso++; @endphp
+            <div class="prj-acc open" id="prjAcc-{{ $accNum }}">
+                <div class="prj-acc-head" onclick="prjToggle({{ $accNum }})">
+                    <span class="prj-acc-num">{{ $accNum }}</span>
+                    <div class="prj-acc-info">
+                        <div class="prj-acc-title">Datos del proyecto</div>
+                        <div class="prj-acc-sub">Título, comunidad, cantidad de beneficiados y resumen.</div>
+                    </div>
+                    <span class="prj-acc-chev">&#9660;</span>
+                </div>
+                <div class="prj-acc-body open" id="prjBody-{{ $accNum }}">
                 <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 12px;">
                     {{-- TÍTULO: más grande para profesor --}}
                     <tr>
@@ -100,11 +135,10 @@
                                 @endif
                             </td>
                         </tr>
-                        @if($esProfesor || $soloLectura)
                         <tr>
                             <td width="20%"><b>Cantidad de Beneficiados:</b></td>
                             <td colspan="3">
-                                @if($soloLectura || !$esProfesor)
+                                @if($soloLectura)
                                     <span style="font-weight:bold;font-size:14px;">{{ $datosForm['cantidad_beneficiados'] ?? 'N/A' }}</span>
                                 @else
                                 <input type="number" name="cantidad_beneficiados" 
@@ -113,7 +147,6 @@
                                 @endif
                             </td>
                         </tr>
-                        @endif
                         <tr>
                             <td valign="top"><b>Resumen:</b></td>
                         <td colspan="3">
@@ -128,99 +161,141 @@
 
                     {{-- Fechas/Calificación eliminados --}}
                 </table>
-            </fieldset>
+                </div>
+            </div>
 
-            {{-- == CLASIFICACIÓN == --}}
+            {{-- Paso 2: Clasificación del proyecto --}}
             @if(!$modoActualizacion || $soloLectura)
-            <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
-                <legend style="font-weight: bold; font-size: 12px;">Clasificación del proyecto</legend>
-                <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 12px;">
-                    @php
-                        $lineaNombre = optional(collect($catalogosForm['lineas'] ?? []))->firstWhere('id', $datosForm['linea_investigacion_id'] ?? '')?->nombre_investigacion ?? 'N/A';
-                        $metodologiaNombre = optional(collect($catalogosForm['metodologias'] ?? []))->firstWhere('id', $datosForm['metodologia_id'] ?? '')?->nombre ?? 'N/A';
-                        $tipoInvNombre = optional(collect($catalogosForm['tipos_investigacion'] ?? []))->firstWhere('id', $datosForm['tipo_investigacion_id'] ?? '')?->nombre ?? 'N/A';
-                        $objetivoNombre = optional(collect($catalogosForm['objetivos_investigacion'] ?? []))->firstWhere('id', $datosForm['objetivo_investigacion_id'] ?? '')?->nombre ?? 'N/A';
-                    @endphp
-                    @if($soloLectura)
-                    <tr>
-                        <td width="20%"><b>Línea de Investigación:</b></td>
-                        <td width="30%">{{ $lineaNombre }}</td>
-                        <td width="20%"><b>Metodología:</b></td>
-                        <td width="30%">{{ $metodologiaNombre }}</td>
-                    </tr>
-                    <tr>
-                        <td><b>Tipo de Investigación:</b></td>
-                        <td>{{ $tipoInvNombre }}</td>
-                        <td><b>Objetivo de Investigación:</b></td>
-                        <td>{{ $objetivoNombre }}</td>
-                    </tr>
-                    @else
-                    <tr>
-                        <td width="20%"><b>Línea de Investigación:</b></td>
-                        <td width="30%">
-                            <div style="display:flex;gap:4px;align-items:center;">
-                                <select name="linea_investigacion_id" style="flex:1;font-size:11px;">
-                                    <option value="">Seleccione...</option>
-                                    @foreach(($catalogosForm['lineas'] ?? []) as $l)
-                                        <option value="{{ $l->id }}" {{ old('linea_investigacion_id', $datosForm['linea_investigacion_id'] ?? '') == $l->id ? 'selected' : '' }}>{{ $l->nombre_investigacion }}</option>
-                                    @endforeach
-                                </select>
-                                <button type="button" onclick="abrirModalCatalogo('linea')" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space:nowrap;padding:4px 8px;font-size:11px;" title="Nueva línea de investigación">+</button>
-                            </div>
-                        </td>
-                        <td width="20%"><b>Metodología:</b></td>
-                        <td width="30%">
-                            <div style="display:flex;gap:4px;align-items:center;">
-                                <select name="metodologia_id" style="flex:1;font-size:11px;">
-                                    <option value="">Seleccione...</option>
-                                    @foreach(($catalogosForm['metodologias'] ?? []) as $m)
-                                        <option value="{{ $m->id }}" {{ old('metodologia_id', $datosForm['metodologia_id'] ?? '') == $m->id ? 'selected' : '' }}>{{ $m->nombre }}</option>
-                                    @endforeach
-                                </select>
-                                <button type="button" onclick="abrirModalCatalogo('metodologia')" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space:nowrap;padding:4px 8px;font-size:11px;" title="Nueva metodología">+</button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><b>Tipo de Investigación:</b></td>
-                        <td>
-                            <div style="display:flex;gap:4px;align-items:center;">
-                                <select name="tipo_investigacion_id" style="flex:1;font-size:11px;">
-                                    <option value="">Seleccione...</option>
-                                    @foreach(($catalogosForm['tipos_investigacion'] ?? []) as $ti)
-                                        <option value="{{ $ti->id }}" {{ old('tipo_investigacion_id', $datosForm['tipo_investigacion_id'] ?? '') == $ti->id ? 'selected' : '' }}>{{ $ti->nombre }}</option>
-                                    @endforeach
-                                </select>
-                                <button type="button" onclick="abrirModalCatalogo('tipo_investigacion')" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space:nowrap;padding:4px 8px;font-size:11px;" title="Nuevo tipo de investigación">+</button>
-                            </div>
-                        </td>
-                        <td><b>Objetivo de Investigación:</b></td>
-                        <td>
-                            <div style="display:flex;gap:4px;align-items:center;">
-                                <select name="objetivo_investigacion_id" style="flex:1;font-size:11px;">
-                                    <option value="">Seleccione...</option>
-                                    @foreach(($catalogosForm['objetivos_investigacion'] ?? []) as $oi)
-                                        <option value="{{ $oi->id }}" {{ old('objetivo_investigacion_id', $datosForm['objetivo_investigacion_id'] ?? '') == $oi->id ? 'selected' : '' }}>{{ $oi->nombre }}</option>
-                                    @endforeach
-                                </select>
-                                <button type="button" onclick="abrirModalCatalogo('objetivo_investigacion')" class="cm-btn cm-btn-primary cm-btn-sm" style="white-space:nowrap;padding:4px 8px;font-size:11px;" title="Nuevo objetivo de investigación">+</button>
-                            </div>
-                        </td>
-                    </tr>
-                    @endif
-                </table>
-            </fieldset>
+            @php $accNum = $paso++; @endphp
+            <div class="prj-acc" id="prjAcc-{{ $accNum }}">
+                <div class="prj-acc-head" onclick="prjToggle({{ $accNum }})">
+                    <span class="prj-acc-num">{{ $accNum }}</span>
+                    <div class="prj-acc-info">
+                        <div class="prj-acc-title">Clasificación del proyecto</div>
+                        <div class="prj-acc-sub">Línea, metodología, tipo y objetivo de investigación.</div>
+                    </div>
+                    <span class="prj-acc-chev">&#9660;</span>
+                </div>
+                <div class="prj-acc-body" id="prjBody-{{ $accNum }}">
+                @php
+                    $lineaNombre = optional(collect($catalogosForm['lineas'] ?? []))->firstWhere('id', $datosForm['linea_investigacion_id'] ?? '')?->nombre_investigacion ?? 'N/A';
+                    $metodologiaNombre = optional(collect($catalogosForm['metodologias'] ?? []))->firstWhere('id', $datosForm['metodologia_id'] ?? '')?->nombre ?? 'N/A';
+                    $tipoInvNombre = optional(collect($catalogosForm['tipos_investigacion'] ?? []))->firstWhere('id', $datosForm['tipo_investigacion_id'] ?? '')?->nombre ?? 'N/A';
+                    $objetivoNombre = optional(collect($catalogosForm['objetivos_investigacion'] ?? []))->firstWhere('id', $datosForm['objetivo_investigacion_id'] ?? '')?->nombre ?? 'N/A';
+                @endphp
+                @if($soloLectura)
+                <div class="prj-grid-2">
+                    <div class="prj-check-chip">
+                        <div>
+                            <label class="prj-label">Línea de Investigación</label>
+                            <div style="font-weight:bold;font-size:13px;">{{ $lineaNombre }}</div>
+                        </div>
+                    </div>
+                    <div class="prj-check-chip">
+                        <div>
+                            <label class="prj-label">Metodología</label>
+                            <div style="font-weight:bold;font-size:13px;">{{ $metodologiaNombre }}</div>
+                        </div>
+                    </div>
+                    <div class="prj-check-chip">
+                        <div>
+                            <label class="prj-label">Tipo de Investigación</label>
+                            <div style="font-weight:bold;font-size:13px;">{{ $tipoInvNombre }}</div>
+                        </div>
+                    </div>
+                    <div class="prj-check-chip">
+                        <div>
+                            <label class="prj-label">Objetivo de Investigación</label>
+                            <div style="font-weight:bold;font-size:13px;">{{ $objetivoNombre }}</div>
+                        </div>
+                    </div>
+                </div>
+                @else
+                <div class="prj-grid-2">
+                    {{-- Línea --}}
+                    <div class="prj-field">
+                        <label class="prj-label">Línea de Investigación <span style="color:#dc2626;">*</span></label>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <select name="linea_investigacion_id" required>
+                                <option value="">Seleccione...</option>
+                                @foreach(($catalogosForm['lineas'] ?? []) as $l)
+                                    <option value="{{ $l->id }}" {{ old('linea_investigacion_id', $datosForm['linea_investigacion_id'] ?? '') == $l->id ? 'selected' : '' }}>{{ $l->nombre_investigacion }}</option>
+                                @endforeach
+                            </select>
+                            <button type="button" onclick="abrirModalCatalogo('linea')" style="flex-shrink:0;background:#8b0000;color:#fff;border:none;border-radius:6px;width:36px;height:36px;font-size:18px;font-weight:bold;cursor:pointer;" title="Nueva línea">+</button>
+                        </div>
+                        @error('linea_investigacion_id')<div style="color:#dc3545;font-size:10px;">{{ $message }}</div>@enderror
+                    </div>
+
+                    {{-- Metodología --}}
+                    <div class="prj-field">
+                        <label class="prj-label">Metodología <span style="color:#dc2626;">*</span></label>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <select name="metodologia_id" required>
+                                <option value="">Seleccione...</option>
+                                @foreach(($catalogosForm['metodologias'] ?? []) as $m)
+                                    <option value="{{ $m->id }}" {{ old('metodologia_id', $datosForm['metodologia_id'] ?? '') == $m->id ? 'selected' : '' }}>{{ $m->nombre }}</option>
+                                @endforeach
+                            </select>
+                            <button type="button" onclick="abrirModalCatalogo('metodologia')" style="flex-shrink:0;background:#8b0000;color:#fff;border:none;border-radius:6px;width:36px;height:36px;font-size:18px;font-weight:bold;cursor:pointer;" title="Nueva metodología">+</button>
+                        </div>
+                        @error('metodologia_id')<div style="color:#dc3545;font-size:10px;">{{ $message }}</div>@enderror
+                    </div>
+
+                    {{-- Tipo --}}
+                    <div class="prj-field">
+                        <label class="prj-label">Tipo de Investigación <span style="color:#dc2626;">*</span></label>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <select name="tipo_investigacion_id" required>
+                                <option value="">Seleccione...</option>
+                                @foreach(($catalogosForm['tipos_investigacion'] ?? []) as $ti)
+                                    <option value="{{ $ti->id }}" {{ old('tipo_investigacion_id', $datosForm['tipo_investigacion_id'] ?? '') == $ti->id ? 'selected' : '' }}>{{ $ti->nombre }}</option>
+                                @endforeach
+                            </select>
+                            <button type="button" onclick="abrirModalCatalogo('tipo_investigacion')" style="flex-shrink:0;background:#8b0000;color:#fff;border:none;border-radius:6px;width:36px;height:36px;font-size:18px;font-weight:bold;cursor:pointer;" title="Nuevo tipo">+</button>
+                        </div>
+                        @error('tipo_investigacion_id')<div style="color:#dc3545;font-size:10px;">{{ $message }}</div>@enderror
+                    </div>
+
+                    {{-- Objetivo --}}
+                    <div class="prj-field">
+                        <label class="prj-label">Objetivo de Investigación <span style="color:#dc2626;">*</span></label>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <select name="objetivo_investigacion_id" required>
+                                <option value="">Seleccione...</option>
+                                @foreach(($catalogosForm['objetivos_investigacion'] ?? []) as $oi)
+                                    <option value="{{ $oi->id }}" {{ old('objetivo_investigacion_id', $datosForm['objetivo_investigacion_id'] ?? '') == $oi->id ? 'selected' : '' }}>{{ $oi->nombre }}</option>
+                                @endforeach
+                            </select>
+                            <button type="button" onclick="abrirModalCatalogo('objetivo_investigacion')" style="flex-shrink:0;background:#8b0000;color:#fff;border:none;border-radius:6px;width:36px;height:36px;font-size:18px;font-weight:bold;cursor:pointer;" title="Nuevo objetivo">+</button>
+                        </div>
+                        @error('objetivo_investigacion_id')<div style="color:#dc3545;font-size:10px;">{{ $message }}</div>@enderror
+                    </div>
+                </div>
+                @endif
+                </div>
+            </div>
             @endif
 
-{{-- == INVOLUCRADOS (solo profesor proyecto creador) == --}}
+            {{-- Paso 3: Involucrados --}}
             @php
                 $puedeGestionarInvolucrados = $esProfesor || $esGestionador;
                 $puedeGestionarInvolucrados = $puedeGestionarInvolucrados || !empty($canValidate);
                 $proyectoId = $proyecto->id;
             @endphp
             @if($puedeGestionarInvolucrados)
-            <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px; background: #fafafa;">
-                <legend style="font-weight: bold; font-size: 12px; color: #8b0000;">Involucrados del proyecto</legend>
+            @php $accNum = $paso++; @endphp
+            <div class="prj-acc" id="prjAcc-{{ $accNum }}">
+                <div class="prj-acc-head" onclick="prjToggle({{ $accNum }})">
+                    <span class="prj-acc-num">{{ $accNum }}</span>
+                    <div class="prj-acc-info">
+                        <div class="prj-acc-title">Involucrados del proyecto</div>
+                        <div class="prj-acc-sub">Personas involucradas y sus roles en el proyecto.</div>
+                    </div>
+                    <span class="prj-acc-chev">&#9660;</span>
+                </div>
+                <div class="prj-acc-body" id="prjBody-{{ $accNum }}">
+
 
                 {{-- Involucrados actuales --}}
                 <div id="involucrados-list">
@@ -270,7 +345,8 @@
                 <div style="text-align:center;">
                     <button type="button" onclick="abrirModalInvolucrado()" style="background:#8b0000;color:#fff;border:none;border-radius:3px;padding:6px 16px;font-size:12px;cursor:pointer;">+ Insertar involucrado</button>
                 </div>
-            </fieldset>
+                </div>
+            </div>
 
             {{-- Modal: Insertar involucrado --}}
             <div id="modal-involucrado" onclick="if(event.target===this)cerrarModalInvolucrado()" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;">
@@ -321,10 +397,19 @@
             </div>
             @endif
 
-            {{-- == INTEGRANTES DEL EQUIPO == --}}
+            {{-- Paso 4: Integrantes del equipo --}}
             @if(!empty($miembrosGrupo))
-            <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
-                <legend style="font-weight: bold; font-size: 12px;">Integrantes del equipo</legend>
+            @php $accNum = $paso++; @endphp
+            <div class="prj-acc" id="prjAcc-{{ $accNum }}">
+                <div class="prj-acc-head" onclick="prjToggle({{ $accNum }})">
+                    <span class="prj-acc-num">{{ $accNum }}</span>
+                    <div class="prj-acc-info">
+                        <div class="prj-acc-title">Integrantes del equipo</div>
+                        <div class="prj-acc-sub">Miembros del grupo de proyecto.</div>
+                    </div>
+                    <span class="prj-acc-chev">&#9660;</span>
+                </div>
+                <div class="prj-acc-body" id="prjBody-{{ $accNum }}">
                 <table width="100%" border="1" cellpadding="4" cellspacing="0" style="font-size: 11px; border-collapse: collapse;">
                     <thead>
                         <tr style="background:#ddd;">
@@ -351,10 +436,11 @@
                         @endforeach
                     </tbody>
                 </table>
-            </fieldset>
+                </div>
+            </div>
             @endif
 
-            {{-- == DOCUMENTOS POR COMPONENTE == --}}
+            {{-- Paso 5: Documentos por componente --}}
             @php
                 $componentesDisp = $catalogosForm['componentes_disp'] ?? collect();
                 $docsExistentes = $datosForm['archivos_actuales'] ?? [];
@@ -362,10 +448,17 @@
 
             {{-- Mostrar componentes solo si hay documentos subidos, o el estudiante ya guardó el proyecto --}}
             @if($componentesDisp->isNotEmpty() && ($soloLectura || (!$esProfesor && $proyecto->exists) || ($esProfesor && !empty($docsExistentes))))
-            <fieldset style="border: 1px solid #CCC; padding: 10px; margin-bottom: 15px;">
-                <legend style="font-weight: bold; font-size: 12px;">
-                    Documentos del proyecto por componente
-                </legend>
+            @php $accNum = $paso++; @endphp
+            <div class="prj-acc" id="prjAcc-{{ $accNum }}">
+                <div class="prj-acc-head" onclick="prjToggle({{ $accNum }})">
+                    <span class="prj-acc-num">{{ $accNum }}</span>
+                    <div class="prj-acc-info">
+                        <div class="prj-acc-title">Documentos del proyecto por componente</div>
+                        <div class="prj-acc-sub">Suba o revise los documentos de cada componente.</div>
+                    </div>
+                    <span class="prj-acc-chev">&#9660;</span>
+                </div>
+                <div class="prj-acc-body" id="prjBody-{{ $accNum }}">
 
                 <table width="100%" border="0" cellpadding="4" cellspacing="0" style="font-size: 12px;">
                     @foreach($componentesDisp as $comp)
@@ -454,7 +547,8 @@
                         </tr>
                     @endforeach
                 </table>
-            </fieldset>
+                </div>
+            </div>
             @endif
 
 
@@ -555,16 +649,16 @@
 
             {{-- == BOTONES == --}}
             <div style="text-align:center;margin-top:20px;">
-                <a href="{{ route('proyectos.gestion') }}" class="pgm-btn-cancel" style="margin-right:10px;">{{ $soloLectura ? 'Cerrar' : ($proyecto->estado_validacion === 'completado' ? 'Cerrar' : 'Cancelar') }}</a>
+                <a href="{{ route('proyectos.gestion') }}" class="pgm-btn-cancel" style="margin-right:10px;">{{ $soloLectura ? 'Cerrar' : ($proyecto->estado_validacion === 'pendiente' ? 'Cerrar' : 'Cancelar') }}</a>
                 @unless($soloLectura)
                     <button type="submit" class="pgm-btn-save">{{ $modoActualizacion ? 'Subir documentos' : 'Guardar cambios' }}</button>
-                    @if (!empty($canValidate) && $proyecto->estado_validacion === 'completado')
+                    @if (!empty($canValidate) && $proyecto->estado_validacion === 'pendiente')
                         <button type="button" class="cm-btn cm-btn-success cm-btn-sm" style="margin-left:10px;" onclick="mostrarModalAccion({icon:'\u2705',title:'Aprobar proyecto',message:'\u00bfAprueba este proyecto?',detailValue:'{{ $proyecto->titulo }}',confirmText:'S\u00ed, aprobar',confirmClass:'cm-btn-success',onConfirm:function(){window.location='{{ route('proyectos.gestion.approve', $proyecto->id) }}'}})">Aprobar</button>
                         <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" style="margin-left:5px;" onclick="abrirRechazar({{ $proyecto->id }})">Rechazar</button>
                     @endif
                 @endunless
             </div>
-        </fieldset>
+        </div>
     </form>
 
     {{-- MODAL RECHAZO --}}
@@ -669,6 +763,21 @@ function validarTipoArchivo(input) {
 // ─── Variables globales ───────────────────────────────────────────
 let personaTimer = null;
 let rolesTimer = null;
+
+// ─── Acordeones teal (mismo patrón que el formulario de creación) ─
+function prjToggle(num){
+    var acc=document.getElementById('prjAcc-'+num);
+    if(!acc)return;
+    var head=acc.querySelector('.prj-acc-head');
+    var body=document.getElementById('prjBody-'+num);
+    var isOpen=head.classList.contains('open');
+    document.querySelectorAll('.prj-acc-head').forEach(function(h){h.classList.remove('open')});
+    document.querySelectorAll('.prj-acc-body').forEach(function(b){b.classList.remove('open')});
+    if(!isOpen){
+        head.classList.add('open');
+        body.classList.add('open');
+    }
+}
 
 // ─── Modal involucrado ──────────────────────────────────────────
 function abrirModalInvolucrado() {
