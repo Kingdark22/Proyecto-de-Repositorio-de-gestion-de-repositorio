@@ -64,10 +64,13 @@ class LineaInvestigacionController extends Controller
         );
 
         if (!$disponible) {
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'error' => 'Este nombre ya está en uso.'], 422);
+            }
             return back()->withErrors(['nombre_investigacion' => 'Este nombre ya está en uso.'])->withInput();
         }
 
-        LineaInvestigacion::guardar([
+        $modelo = LineaInvestigacion::guardar([
             'nombre_investigacion' => $nombre,
             'area_de_investigacion' => trim($validated['area_de_investigacion']),
             'programa_id' => $validated['programa_id'],
@@ -76,6 +79,14 @@ class LineaInvestigacionController extends Controller
         ]);
 
         app(CatalogoRepository::class)->invalidarCatalogos();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'id' => $modelo->getKey(),
+                'nombre' => $modelo->nombre_investigacion,
+            ]);
+        }
 
         return redirect()->route('lineas-investigacion')
             ->with('success', 'Línea de Investigación registrada con éxito.');
@@ -130,12 +141,11 @@ class LineaInvestigacionController extends Controller
             }
         }
 
-        LineaInvestigacion::guardar([
-            'nombre_investigacion' => $nombre,
-            'area_de_investigacion' => trim($validated['area_de_investigacion']),
-            'programa_id' => $validated['programa_id'],
-            'descripcion' => trim($validated['descripcion']),
-        ], $id);
+        $item->nombre_investigacion = $nombre;
+        $item->area_de_investigacion = trim($validated['area_de_investigacion']);
+        $item->programa_id = $validated['programa_id'];
+        $item->descripcion = trim($validated['descripcion']);
+        $item->save();
 
         return redirect()->route('lineas-investigacion')
             ->with('success', 'Línea de Investigación actualizada con éxito.');

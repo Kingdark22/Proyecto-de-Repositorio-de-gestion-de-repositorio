@@ -402,7 +402,7 @@
             </div>
 
             <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;">
-                <button type="button" class="cm-btn cm-btn-success" onclick="guardarComunidadAjax()">Guardar Comunidad</button>
+                <button type="button" class="cm-btn cm-btn-success" onclick="guardarComunidadAjax(event)">Guardar Comunidad</button>
                 <button type="button" class="cm-btn cm-btn-secondary" onclick="cerrarModalComunidad()">Cancelar</button>
             </div>
         </div>
@@ -937,7 +937,7 @@ document.getElementById('comNombre').addEventListener('input', function() {
 });
 
 // ========== Save community via AJAX ==========
-function guardarComunidadAjax() {
+function guardarComunidadAjax(event) {
     var errorEl = document.getElementById('comunidadModalError');
     errorEl.style.display = 'none';
 
@@ -968,11 +968,11 @@ function guardarComunidadAjax() {
 
     var data = {
         nombre: nombre,
-        rif_letra: document.getElementById('comRifLetra').value,
-        rif_numero: rifNumero,
-        correo: correo,
-        prefijo_telefono: document.getElementById('comTelPrefijo').value,
-        numero_telefono: document.getElementById('comTelefono').value,
+        rif_letra: document.getElementById('comRifLetra').value || null,
+        rif_numero: rifNumero || null,
+        correo: correo || null,
+        prefijo_telefono: document.getElementById('comTelPrefijo').value || null,
+        numero_telefono: document.getElementById('comTelefono').value || null,
         estado_id: estado,
         municipio_id: municipio,
         dir_nombre: direccion
@@ -984,7 +984,7 @@ function guardarComunidadAjax() {
 
     fetch('{{ route('grupos-proyecto.api.crear-comunidad') }}', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
         body: JSON.stringify(data)
     })
     .then(function(r) {
@@ -1003,7 +1003,12 @@ function guardarComunidadAjax() {
         if (!editingMode) grpShowStep(3);
     })
     .catch(function(err) {
-        showModalError(err.message || 'Error al crear la comunidad.');
+        var msg = err.message || 'Error al crear la comunidad.';
+        if (err.errors) {
+            var firstKey = Object.keys(err.errors)[0];
+            if (firstKey) msg = err.errors[firstKey][0];
+        }
+        showModalError(msg);
     })
     .finally(function() {
         btn.disabled = false;

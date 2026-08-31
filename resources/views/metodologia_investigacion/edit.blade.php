@@ -58,7 +58,6 @@
 @section('header', 'Editar Metodología de Investigación')
 
 @section('content')
-<div>
     <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 20px; background-color: #FFF;">
         <legend style="padding:0 5px;font-weight:bold;">&nbsp;</legend>
 
@@ -100,5 +99,4 @@
             </div>
         </form>
     </fieldset>
-</div>
 @endsection

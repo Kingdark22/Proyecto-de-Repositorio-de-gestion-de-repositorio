@@ -12,6 +12,7 @@ use App\Services\ValidacionCorreoService;
 use App\Services\ValidacionRifService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ComunidadController extends Controller
 {
@@ -103,13 +104,9 @@ class ComunidadController extends Controller
 
         $correo = trim($validated['correo'] ?? '');
         if ($correo !== '') {
-            $resultado = $correoService->validarCompleto($correo);
+            $resultado = $correoService->validarCompleto($correo, false);
             if (!$resultado['valido']) {
                 return back()->withErrors(['correo' => $resultado['error'] ?? 'Correo inválido.'])->withInput();
-            }
-            $resultado2 = $correoService->validarCompleto($correo, true);
-            if (!$resultado2['valido']) {
-                return back()->withErrors(['correo' => $resultado2['error'] ?? 'El dominio del correo no existe.'])->withInput();
             }
         }
 
@@ -128,6 +125,9 @@ class ComunidadController extends Controller
         }
 
         $this->gestion->guardar(null, $payload);
+
+        Cache::forget('grupos_comunidades_form');
+        Cache::forget('gestion_comunidades_ordenadas');
 
         return redirect()->route('comunidades.index')
             ->with('success', 'Comunidad registrada con éxito.');
@@ -219,13 +219,9 @@ class ComunidadController extends Controller
 
         $correo = trim($validated['correo'] ?? '');
         if ($correo !== '') {
-            $resultado = $correoService->validarCompleto($correo);
+            $resultado = $correoService->validarCompleto($correo, false);
             if (!$resultado['valido']) {
                 return back()->withErrors(['correo' => $resultado['error'] ?? 'Correo inválido.'])->withInput();
-            }
-            $resultado2 = $correoService->validarCompleto($correo, true);
-            if (!$resultado2['valido']) {
-                return back()->withErrors(['correo' => $resultado2['error'] ?? 'El dominio del correo no existe.'])->withInput();
             }
         }
 
@@ -245,6 +241,9 @@ class ComunidadController extends Controller
 
         $this->gestion->guardar($id, $payload);
 
+        Cache::forget('grupos_comunidades_form');
+        Cache::forget('gestion_comunidades_ordenadas');
+
         return redirect()->route('comunidades.index')
             ->with('success', 'Comunidad actualizada con éxito.');
     }
@@ -252,6 +251,9 @@ class ComunidadController extends Controller
     public function destroy(Request $request, $id)
     {
         $this->gestion->eliminar($id);
+
+        Cache::forget('grupos_comunidades_form');
+        Cache::forget('gestion_comunidades_ordenadas');
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'Comunidad eliminada correctamente.']);
@@ -297,7 +299,7 @@ class ComunidadController extends Controller
             return response()->json(['valido' => false, 'error' => null, 'errores' => []]);
         }
 
-        $resultado = $correoService->validarCompleto($correo, true);
+        $resultado = $correoService->validarCompleto($correo, false);
 
         return response()->json($resultado);
     }

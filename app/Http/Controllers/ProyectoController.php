@@ -321,14 +321,11 @@ class ProyectoController extends Controller
         $usuarioUsuNombre = trim((string) $user->usu_nombre);
         $clave = $proyecto->equipo_ref ?? '';
         if ($clave !== '' && $esProfesor) {
-            $grupo = GrupoProyectoModulo::porIdentificador($clave);
+            $grupo = $this->grupos->obtenerPorClave($clave);
             if ($grupo) {
-                $ctx = $grupo->grp_contexto;
-                $creadorUsu = trim((string) ($ctx['creador_usuario'] ?? ''));
-                $creadorCed = trim((string) ($ctx['creador_cedula'] ?? $grupo->grp_creador_cedula ?? ''));
-                // 1) Por usu_nombre (nuevo)
+                $creadorUsu = trim((string) ($grupo->creador_usuario ?? ''));
+                $creadorCed = trim((string) ($grupo->creador_cedula ?? ''));
                 $matchUsu = $creadorUsu !== '' && $creadorUsu === $usuarioUsuNombre;
-                // 2) Fallback por cédula (legacy)
                 $matchCed = !$matchUsu && $creadorCed !== '' && $creadorCed === $usuarioCedula;
                 $esProfesorCreador = $matchUsu || $matchCed;
             }
@@ -386,14 +383,11 @@ class ProyectoController extends Controller
         $usuarioUsuNombre = trim((string) $user->usu_nombre);
         $clave = $proyecto->equipo_ref ?? '';
         if ($clave !== '' && $esProfesor) {
-            $grupo = GrupoProyectoModulo::porIdentificador($clave);
+            $grupo = $this->grupos->obtenerPorClave($clave);
             if ($grupo) {
-                $ctx = $grupo->grp_contexto;
-                $creadorUsu = trim((string) ($ctx['creador_usuario'] ?? ''));
-                $creadorCed = trim((string) ($ctx['creador_cedula'] ?? $grupo->grp_creador_cedula ?? ''));
-                // 1) Por usu_nombre (nuevo)
+                $creadorUsu = trim((string) ($grupo->creador_usuario ?? ''));
+                $creadorCed = trim((string) ($grupo->creador_cedula ?? ''));
                 $matchUsu = $creadorUsu !== '' && $creadorUsu === $usuarioUsuNombre;
-                // 2) Fallback por cédula (legacy)
                 $matchCed = !$matchUsu && $creadorCed !== '' && $creadorCed === $usuarioCedula;
                 $esProfesorCreador = $matchUsu || $matchCed;
             }
@@ -559,13 +553,9 @@ class ProyectoController extends Controller
                 $cedulaProfesor = $proyecto->creador_cedula;
                 $clave = $proyecto->equipo_ref;
                 if ($clave) {
-                    $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($clave);
-                    if (!$grupo && str_starts_with($clave, 'EQGRP:')) {
-                        $codigo = (int) substr($clave, 6);
-                        $grupo = \App\Models\GrupoProyectoModulo::find($codigo);
-                    }
-                    if ($grupo && $grupo->grp_creador_cedula) {
-                        $cedulaProfesor = trim((string) $grupo->grp_creador_cedula);
+                    $grupo = $this->grupos->obtenerPorClave($clave);
+                    if ($grupo && ($grupo->creador_cedula ?? '') !== '') {
+                        $cedulaProfesor = trim((string) $grupo->creador_cedula);
                     }
                 }
                 $this->notificacionService->notificarActualizacionEstudiante($proyecto, $cedulaProfesor);
@@ -597,8 +587,8 @@ class ProyectoController extends Controller
             if ($estadoAnterior === 'Pendiente') {
                 try {
                     $proyecto->refresh();
-                    $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($proyecto->equipo_ref ?? '');
-                    $cedulas = collect($grupo?->grp_miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
+                    $grupo = $this->grupos->obtenerPorClave($proyecto->equipo_ref ?? '');
+                    $cedulas = collect($grupo?->miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
                     $this->notificacionService->notificarProyectoAprobado($proyecto, $cedulas);
                 } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::warning("Error notificando aprobación: " . $e->getMessage());
@@ -630,8 +620,8 @@ class ProyectoController extends Controller
             // Notificar a estudiantes del proyecto rechazado
             try {
                 $proyecto = \App\Models\Proyecto::findOrFail($id);
-                $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($proyecto->equipo_ref ?? '');
-                $cedulas = collect($grupo?->grp_miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
+                $grupo = $this->grupos->obtenerPorClave($proyecto->equipo_ref ?? '');
+                $cedulas = collect($grupo?->miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
                 if (!empty($cedulas)) {
                     $this->notificacionService->notificarProyectoRechazado(
                         $proyecto,
@@ -656,9 +646,15 @@ class ProyectoController extends Controller
         $user = auth()->user();
         $activeRole = $this->userRoleService->getActiveRole($user);
 
-        $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($grpCodigo);
+        $grupo = null;
+        if (is_numeric($grpCodigo)) {
+            $grupo = $this->grupos->obtener((int) $grpCodigo);
+        }
         if (!$grupo) {
-            $grupo = app(\App\Services\GrupoProyectoService::class)->obtener((int) $grpCodigo);
+            $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($grpCodigo);
+        }
+        if (!$grupo) {
+            $grupo = $this->grupos->obtenerPorClave($grpCodigo);
         }
         if (!$grupo) {
             return redirect()->route('proyectos.gestion')
@@ -713,13 +709,13 @@ class ProyectoController extends Controller
 
         // Notificar a estudiantes del equipo
         try {
-            $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($proyecto->equipo_ref ?? '');
+            $grupo = $this->grupos->obtenerPorClave($proyecto->equipo_ref ?? '');
             if ($grupo) {
-                $cedulas = collect($grupo->grp_miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
+                $cedulas = collect($grupo->miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
                 if (!empty($cedulas)) {
                     $this->notificacionService->notificarNuevoProyectoDesdeGrupo(
                         $proyecto,
-                        $grupo->grp_nombre,
+                        $grupo->nombre,
                         $cedulas
                     );
                 }
@@ -1326,8 +1322,8 @@ class ProyectoController extends Controller
             $proyecto = $proyectoId ? \App\Models\Proyecto::find($proyectoId) : null;
 
             if ($proyecto) {
-                $grupo = \App\Models\GrupoProyectoModulo::porIdentificador($proyecto->equipo_ref ?? '');
-                $cedulas = collect($grupo?->grp_miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
+                $grupo = $this->grupos->obtenerPorClave($proyecto->equipo_ref ?? '');
+                $cedulas = collect($grupo?->miembros ?? [])->pluck('cedula')->filter()->values()->toArray();
 
                 if ($nuevoEstado == 1) {
                     $allDocs = \App\Models\ProyectoDocumento::where('pry_codigo', $proyecto->getKey())->get();
