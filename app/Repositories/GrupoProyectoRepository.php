@@ -59,7 +59,7 @@ class GrupoProyectoRepository
     }
 
     /**
-     * @param  array{lapso?: int|null, programa?: int|null, seccion?: int|array|null, trayecto?: string|null, equipo?: string|null, busqueda?: string|null, creador?: string|null, inactivos?: bool}  $filtros
+     * @param  array{lapso?: int|null, programa?: int|null, seccion?: int|array|null, trayecto?: string|null, equipo?: string|null, busqueda?: string|null, creador?: string|null, creador_usuario?: string|null, estudiante_cedula?: string|null, inactivos?: bool}  $filtros
      * @return Collection<int, GrupoProyectoModulo>
      */
     public function listar(array $filtros = []): Collection
@@ -104,6 +104,13 @@ class GrupoProyectoRepository
             }
             if (!empty($filtros['creador'])) {
                 $query->where('grp_creador_cedula', trim((string) $filtros['creador']));
+            }
+            if (!empty($filtros['creador_usuario'])) {
+                $term = '%' . mb_strtolower(trim((string) $filtros['creador_usuario'])) . '%';
+                $query->where(function ($q) use ($term) {
+                    $q->whereRaw("LOWER(CAST(grp_contexto AS jsonb)->>'creador_usuario') LIKE ?", [$term])
+                      ->orWhereRaw('LOWER(grp_creador_cedula) LIKE ?', [$term]);
+                });
             }
             if (!empty($filtros['estudiante_cedula'])) {
                 $ced = trim((string) $filtros['estudiante_cedula']);

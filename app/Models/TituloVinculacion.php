@@ -8,6 +8,7 @@ class TituloVinculacion extends RepositorioModel
 
     protected $fillable = [
         'tiv_titulo',
+        'estado_logico',
     ];
 
     public function getTituloAttribute(): string

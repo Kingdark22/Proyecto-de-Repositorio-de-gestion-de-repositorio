@@ -16,11 +16,11 @@ class ProyectoPublicado extends RepositorioModel
 
     public function proyecto()
     {
-        return $this->belongsTo(Proyecto::class, 'pry_codigo', 'pry_codigo');
+        return $this->belongsTo(Proyecto::class, 'proyecto_id', 'pry_codigo');
     }
 
     public function comentarios()
     {
-        return $this->hasMany(ComentarioProyecto::class, 'pry_codigo', 'pry_codigo');
+        return $this->hasMany(ComentarioProyecto::class, 'pry_codigo', 'proyecto_id');
     }
 }

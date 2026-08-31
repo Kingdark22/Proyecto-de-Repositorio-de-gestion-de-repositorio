@@ -11,7 +11,8 @@ class Vinculacion extends RepositorioModel
         'titulo_vinculacion_id',
         'vin_descripcion',
         'com_codigo',
-        'tipo',
+        'observaciones',
+        'estado_logico',
     ];
 
     protected $with = ['tituloVinculacion'];

@@ -6,8 +6,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProyectoDocumento extends RepositorioModel
 {
-    protected $table = 'proyecto_documentos';
-    protected $primaryKey = 'pd_codigo';
+    protected $table = 'proyecto_componente';
+    protected $primaryKey = 'pom_codigo';
 
     protected $fillable = [
         'pry_codigo',

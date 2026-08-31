@@ -22,13 +22,32 @@ class CatalogoRepository
     public function catalogos(?int $programaId = null, ?string $trayectoCodigo = null): array
     {
         return [
-            'lineas' => $this->lineasActivas(),
+            'lineas' => $this->lineasPorPrograma($programaId),
             'metodologias' => $this->metodologiasActivas(),
             'tipos_investigacion' => $this->tiposInvestigacionActivos(),
             'objetivos_investigacion' => $this->objetivosInvestigacionActivos(),
             'lapsos' => Cache::remember('gestion_cat_lapsos', now()->addMinutes(10), fn() => $this->lapsosActivos()),
             'componentes_disp' => $this->componentesPorProgramaYTrayecto($programaId, $trayectoCodigo),
         ];
+    }
+
+    /**
+     * Líneas activas filtradas por programa (coordinación).
+     *
+     * - Si programaId es null, devuelve todas (vista admin/sin contexto).
+     * - Las líneas sin programa asignado (programa_id null/0) se consideran globales.
+     */
+    public function lineasPorPrograma(?int $programaId): Collection
+    {
+        $lineas = $this->lineasActivas();
+
+        if ($programaId === null) {
+            return $lineas;
+        }
+
+        return $lineas
+            ->filter(fn ($l) => (int) ($l->programa_id ?? 0) === 0 || (int) ($l->programa_id ?? 0) === (int) $programaId)
+            ->values();
     }
 
     public function invalidarCatalogos(): void

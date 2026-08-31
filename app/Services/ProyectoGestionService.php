@@ -175,13 +175,10 @@ class ProyectoGestionService
             );
         }
 
-        $nuevoEstado = $proyecto->estado_validacion === 'pendiente' ? 'completado' : 'aprobado';
-
         $this->proyectoRepo->update($id, [
-            'estado_validacion' => $nuevoEstado,
-            'estado_logico' => true,
+            'pry_estado' => 'Aprobado',
         ]);
-        $this->registrarAuditoria($proyecto, $nuevoEstado === 'completado' ? 'completar' : 'aprobar');
+        $this->registrarAuditoria($proyecto, 'aprobar');
     }
 
     public function rechazar(int $id, string $motivo, ?User $user = null): void
@@ -191,9 +188,7 @@ class ProyectoGestionService
         $this->autorizarValidacionProyecto($user, $proyecto);
 
         $this->proyectoRepo->update($id, [
-            'estado_validacion' => 'rechazado',
-            'motivo_rechazo' => $motivo,
-            'estado_logico' => true,
+            'pry_estado' => 'Rechazado',
         ]);
         $this->registrarAuditoria($proyecto, 'rechazar');
     }
@@ -223,6 +218,16 @@ class ProyectoGestionService
             'comunidades' => $this->comunidadRepo->allOrdered(),
             'programas' => $this->catalogoRepo->programasDisponibles(),
         ]);
+
+        // Al editar, asegurar que la línea ya seleccionada siga visible
+        // aunque no pertenezca al programa derivado del proyecto.
+        $lineaSeleccionada = (string) ($estado['linea_investigacion_id'] ?? '');
+        if ($lineaSeleccionada !== '' && $programaId !== null && !$datos['lineas']->contains('id', $lineaSeleccionada)) {
+            $linea = \App\Models\LineaInvestigacion::find($lineaSeleccionada);
+            if ($linea) {
+                $datos['lineas'] = $datos['lineas']->push($linea);
+            }
+        }
 
         $datos['catalogosVacios'] = $this->catalogoRepo->catalogoVacios($datos);
 
@@ -311,12 +316,9 @@ class ProyectoGestionService
             'comunidad_id' => $datos['comunidad_id'],
             'pry_cantidad_beneficiados' => $datos['cantidad_beneficiados'] ?? null,
             'equipo_ref' => $datos['equipo_seccion_clave'],
-            'estado_validacion' => $editingId 
-                ? ($existing->estado_validacion ?? 'pendiente') 
-                : ($esAdmin ? 'aprobado' : 'pendiente'),
-            'estado_logico' => $editingId
-                ? (bool) ($existing->estado_logico ?? false)
-                : ($esAdmin ? true : false),
+            'pry_estado' => $editingId
+                ? ($existing->pry_estado ?? 'Pendiente')
+                : ($esAdmin ? 'Aprobado' : 'Pendiente'),
         ];
 
         if (!$editingId) {
@@ -461,9 +463,42 @@ class ProyectoGestionService
             'com_codigo' => $g->com_codigo,
             'tiene_proyecto' => $proyectoPorClave->has($g->clave),
             'proyecto_id' => $proyectoPorClave->get($g->clave)?->id,
-            'proyecto_estado_validacion' => $proyectoPorClave->get($g->clave)?->estado_validacion,
-            'proyecto_estado_logico' => $proyectoPorClave->get($g->clave)?->estado_logico,
+            'proyecto_estado_validacion' => $proyectoPorClave->get($g->clave)?->pry_estado,
         ])->values();
+    }
+
+    public function gruposSinProyectoLapsosAnteriores(User $user): Collection
+    {
+        $gruposSvc = app(GrupoProyectoService::class);
+        if (!$gruposSvc->tablaDisponible()) {
+            return collect();
+        }
+
+        $lapVigente = app(IntranetProfessorService::class)->lapsoVigenteCodigo();
+        if ($lapVigente === null) {
+            return collect();
+        }
+
+        $grupos = $gruposSvc->listar();
+        $gruposViejos = $grupos->filter(fn ($g) => (int) $g->lap_codigo !== $lapVigente);
+
+        $claves = $gruposViejos->pluck('clave')->toArray();
+        $proyectoPorClave = $this->proyectoRepo->findByEquipos($claves)->keyBy('equipo_ref');
+
+        return $gruposViejos->filter(fn ($g) => !$proyectoPorClave->has($g->clave))
+            ->map(fn ($g) => (object) [
+                'grp_codigo' => $g->grp_codigo,
+                'nombre' => $g->nombre,
+                'clave' => $g->clave,
+                'lap_nombre' => $g->lap_nombre,
+                'sec_nombre' => $g->sec_nombre,
+                'pro_siglas' => $g->pro_siglas,
+                'integrantes' => $g->integrantes ?? 0,
+                'com_codigo' => $g->com_codigo,
+                'tiene_proyecto' => false,
+                'proyecto_id' => null,
+                'proyecto_estado_validacion' => null,
+            ])->values();
     }
 
     public function registrarProyectoDesdeGrupo(int $grpCodigo, User $user): ?Proyecto
@@ -485,8 +520,7 @@ class ProyectoGestionService
             'resumen' => '',
             'comunidad_id' => $grupo->com_codigo,
             'equipo_ref' => $identificador,
-            'estado_validacion' => 'pendiente',
-            'estado_logico' => false,
+            'pry_estado' => 'Pendiente',
             'creador_cedula' => trim((string) $user->usu_cedula),
         ]);
 
@@ -604,24 +638,35 @@ class ProyectoGestionService
             'titulo' => 'required|max:255',
             'resumen' => $esProfesor ? 'nullable|string' : 'required|min:10',
 
-            'linea_investigacion_id' => ['nullable', Rule::exists('\App\Models\LineaInvestigacion', (new \App\Models\LineaInvestigacion())->getKeyName())],
-            'metodologia_id' => ['nullable', Rule::exists('\App\Models\MetodologiaInvestigacion', (new \App\Models\MetodologiaInvestigacion())->getKeyName())],
-            'tipo_investigacion_id' => ['nullable', Rule::exists('\App\Models\TipoInvestigacion', (new \App\Models\TipoInvestigacion())->getKeyName())],
-            'objetivo_investigacion_id' => ['nullable', Rule::exists('\App\Models\ObjetivoInvestigacion', (new \App\Models\ObjetivoInvestigacion())->getKeyName())],
+            'linea_investigacion_id' => ['required', Rule::exists('\App\Models\LineaInvestigacion', (new \App\Models\LineaInvestigacion())->getKeyName())],
+            'metodologia_id' => ['required', Rule::exists('\App\Models\MetodologiaInvestigacion', (new \App\Models\MetodologiaInvestigacion())->getKeyName())],
+            'tipo_investigacion_id' => ['required', Rule::exists('\App\Models\TipoInvestigacion', (new \App\Models\TipoInvestigacion())->getKeyName())],
+            'objetivo_investigacion_id' => ['required', Rule::exists('\App\Models\ObjetivoInvestigacion', (new \App\Models\ObjetivoInvestigacion())->getKeyName())],
             'comunidad_id' => ['required', Rule::exists('\App\Models\Comunidad', (new \App\Models\Comunidad())->getKeyName())],
             'equipo_seccion_clave' => [
                 'required',
                 function ($attribute, $value, $fail) use ($user) {
-                    if (! $this->equipoSeccion->parsearClave($value)) {
+                    $parsed = $this->equipoSeccion->parsearClave($value);
+                    if (! $parsed) {
                         $fail('Debe seleccionar el equipo (sección y lapso en intranet).');
 
                         return;
                     }
-                    if (! $this->usuarioEsAdminEnSistema($user)) {
-                        $activeRole = app(UserRoleService::class)->getActiveRole($user);
+
+                    $activeRole = app(UserRoleService::class)->getActiveRole($user);
+                    $esAdmin = app(UserRoleService::class)->roleMatches('administrador', $activeRole);
+                    $esCoordinador = app(UserRoleService::class)->roleMatches('coordinador', $activeRole);
+
+                    if ($esAdmin || $esCoordinador) {
+                        $lapVigente = app(IntranetProfessorService::class)->lapsoVigenteCodigo();
+                        if ($lapVigente !== null && (int) $parsed['lap_codigo'] === $lapVigente) {
+                            $fail('Los proyectos del lapso actual los suben los profesores. Usted solo puede registrar proyectos de lapsos anteriores.');
+
+                            return;
+                        }
+                    } else {
                         $esStaff = app(UserRoleService::class)->roleMatches('profesor proyecto', $activeRole)
-                            || app(UserRoleService::class)->roleMatches('gestionador', $activeRole)
-                            || app(UserRoleService::class)->roleMatches('coordinador', $activeRole);
+                            || app(UserRoleService::class)->roleMatches('gestionador', $activeRole);
                         if (! $esStaff) {
                             $cedula = trim((string) $user->usu_cedula);
                             if (! $this->equipoSeccion->estudiantePerteneceEquipo($cedula, $value)) {
@@ -1155,21 +1200,21 @@ class ProyectoGestionService
 
         $rows = DB::connection($connection)
             ->table('proyecto_involucrado as pi')
-            ->join('involucrados as i', 'i.id', '=', 'pi.involucrado_id')
-            ->leftJoin('involucrado_rol as ir', 'ir.proyecto_involucrado_id', '=', 'pi.id')
-            ->leftJoin('roles_involucrados as ri', 'ri.id', '=', 'ir.rol_id')
-            ->where('pi.proyecto_id', $proyectoId)
+            ->join('involucrados as i', 'i.inv_codigo', '=', 'pi.inv_codigo')
+            ->leftJoin('detalle_involucrados_rol as dir', 'dir.inv_codigo', '=', 'i.inv_codigo')
+            ->leftJoin('roles_involucrados as ri', 'ri.rin_codigo', '=', 'dir.rin_codigo')
+            ->where('pi.pry_codigo', $proyectoId)
             ->select([
-                'i.id',
-                'i.nombre',
-                'i.apellido',
-                'i.cedula',
-                'pi.id as pivot_id',
-                'ri.id as rol_id',
-                'ri.nombre as rol_nombre',
+                'i.inv_codigo as id',
+                'i.inv_nombre as nombre',
+                'i.inv_apellido as apellido',
+                'i.inv_cedula as cedula',
+                'pi.pin_codigo as pivot_id',
+                'ri.rin_codigo as rol_id',
+                'ri.rin_nombre as rol_nombre',
             ])
-            ->orderBy('i.apellido')
-            ->orderBy('i.nombre')
+            ->orderBy('i.inv_apellido')
+            ->orderBy('i.inv_nombre')
             ->get();
 
         return $rows->groupBy('id')->map(function ($items) {
@@ -1202,38 +1247,36 @@ class ProyectoGestionService
         }
         $connection = (string) config('dual_database.repositorio_connection', 'pgsql');
 
-        // Verificar si ya existe la relación
+        // Verificar si ya existe la relación proyecto ↔ involucrado
         $existing = DB::connection($connection)
             ->table('proyecto_involucrado')
-            ->where('proyecto_id', $proyectoId)
-            ->where('involucrado_id', $involucradoId)
+            ->where('pry_codigo', $proyectoId)
+            ->where('inv_codigo', $involucradoId)
             ->first();
 
         if ($existing) {
-            $pivotId = $existing->id;
+            $pivotId = $existing->pin_codigo;
         } else {
             $pivotId = DB::connection($connection)->table('proyecto_involucrado')->insertGetId([
-                'proyecto_id' => $proyectoId,
-                'involucrado_id' => $involucradoId,
+                'pry_codigo' => $proyectoId,
+                'inv_codigo' => $involucradoId,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
         }
 
-        // Agregar roles que no existan
+        // Agregar roles que no existan (los roles pertenecen al involucrado en detalle_involucrados_rol)
         foreach ($roleIds as $rolId) {
             $exists = DB::connection($connection)
-                ->table('involucrado_rol')
-                ->where('proyecto_involucrado_id', $pivotId)
-                ->where('rol_id', $rolId)
+                ->table('detalle_involucrados_rol')
+                ->where('inv_codigo', $involucradoId)
+                ->where('rin_codigo', $rolId)
                 ->exists();
 
             if (! $exists) {
-                DB::connection($connection)->table('involucrado_rol')->insert([
-                    'proyecto_involucrado_id' => $pivotId,
-                    'rol_id' => $rolId,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                DB::connection($connection)->table('detalle_involucrados_rol')->insert([
+                    'inv_codigo' => $involucradoId,
+                    'rin_codigo' => $rolId,
                 ]);
             }
         }
@@ -1248,37 +1291,32 @@ class ProyectoGestionService
     {
         $connection = (string) config('dual_database.repositorio_connection', 'pgsql');
 
-        DB::connection($connection)
-            ->table('involucrado_rol')
-            ->where('proyecto_involucrado_id', $pivotId)
-            ->where('rol_id', $rolId)
-            ->delete();
+        $pivot = DB::connection($connection)
+            ->table('proyecto_involucrado')
+            ->where('pin_codigo', $pivotId)
+            ->first();
+
+        if ($pivot) {
+            DB::connection($connection)
+                ->table('detalle_involucrados_rol')
+                ->where('inv_codigo', $pivot->inv_codigo)
+                ->where('rin_codigo', $rolId)
+                ->delete();
+        }
     }
 
     /**
-     * Elimina un involucrado de un proyecto (y sus roles asociados).
+     * Elimina un involucrado de un proyecto.
      */
     public function quitarInvolucradoDeProyecto(int $proyectoId, int $involucradoId): void
     {
         $connection = (string) config('dual_database.repositorio_connection', 'pgsql');
 
-        $pivot = DB::connection($connection)
+        DB::connection($connection)
             ->table('proyecto_involucrado')
-            ->where('proyecto_id', $proyectoId)
-            ->where('involucrado_id', $involucradoId)
-            ->first();
-
-        if ($pivot) {
-            DB::connection($connection)
-                ->table('involucrado_rol')
-                ->where('proyecto_involucrado_id', $pivot->id)
-                ->delete();
-
-            DB::connection($connection)
-                ->table('proyecto_involucrado')
-                ->where('id', $pivot->id)
-                ->delete();
-        }
+            ->where('pry_codigo', $proyectoId)
+            ->where('inv_codigo', $involucradoId)
+            ->delete();
     }
 
     /**
@@ -1293,7 +1331,7 @@ class ProyectoGestionService
     {
         $proyecto = $this->proyectoRepo->findOrFail($proyectoId);
 
-        if ($proyecto->estado_validacion !== 'aprobado') {
+        if ($proyecto->pry_estado !== 'Aprobado') {
             throw new \RuntimeException('El proyecto debe estar aprobado para generar la solvencia.');
         }
 

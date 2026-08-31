@@ -44,14 +44,19 @@ class ProyectosPublicadosManager extends Component
             return;
         }
 
-        ComentarioProyecto::create([
-            'descripcion' => trim($this->nuevoComentario),
-            'proyecto_id' => $pub->id,
-        ]);
+        try {
+            ComentarioProyecto::create([
+                'descripcion' => trim($this->nuevoComentario),
+                'proyecto_id' => $pub->id,
+            ]);
 
-        $this->nuevoComentario = '';
-        $this->tipoMensaje = 'success';
-        $this->mensaje = 'Comentario agregado correctamente.';
+            $this->nuevoComentario = '';
+            $this->tipoMensaje = 'success';
+            $this->mensaje = 'Comentario agregado correctamente.';
+        } catch (\Throwable $e) {
+            $this->tipoMensaje = 'error';
+            $this->mensaje = 'No se pudo guardar el comentario en este momento.';
+        }
     }
 
     public function limpiarMensaje(): void
@@ -62,8 +67,7 @@ class ProyectosPublicadosManager extends Component
     protected function proyectosQuery()
     {
         $query = Proyecto::with('comunidad')
-            ->where('estado_validacion', 'aprobado')
-            ->where('estado_logico', true);
+            ->where('pry_estado', 'Aprobado');
 
         if ($this->filterComunidadId !== '') {
             $query->where('comunidad_id', (int) $this->filterComunidadId);
@@ -98,9 +102,13 @@ class ProyectosPublicadosManager extends Component
                 $this->selectedPubId = null;
             } else {
                 Proyecto::precargarTitulos(collect([$selectedProyecto]));
-                $comentarios = ComentarioProyecto::where('proyecto_id', $selectedProyecto->id)
-                    ->orderBy('id', 'desc')
-                    ->get();
+                try {
+                    $comentarios = ComentarioProyecto::where('proyecto_id', $selectedProyecto->id)
+                        ->orderBy('id', 'desc')
+                        ->get();
+                } catch (\Throwable) {
+                    $comentarios = collect();
+                }
             }
         }
 

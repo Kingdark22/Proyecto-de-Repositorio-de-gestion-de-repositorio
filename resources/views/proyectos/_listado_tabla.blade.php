@@ -57,7 +57,7 @@
                 </td>
                 <td align="center" style="padding:5px;">
                     <div style="display:inline-flex;gap:4px;flex-wrap:wrap;justify-content:center;">
-                        @if (!empty($canValidate) && $p->estado_validacion === 'completado' && !in_array($p->pry_codigo, $proyectosConDocumentosRechazados ?? []))
+                        @if (!empty($canValidate) && $p->estado_validacion === 'pendiente' && !in_array($p->pry_codigo, $proyectosConDocumentosRechazados ?? []))
                             <button type="button" class="cm-btn cm-btn-success cm-btn-sm" onclick="mostrarModalAccion({icon:'\u2705',title:'Aprobar proyecto',message:'\u00bfAprueba este proyecto?',detailValue:'{{ addslashes($p->titulo) }}',confirmText:'S\u00ed, aprobar',confirmClass:'cm-btn-success',onConfirm:function(){window.location='{{ route('proyectos.gestion.approve', $p->id) }}'}})">Aprobar</button>
                             <button type="button" class="cm-btn cm-btn-warning cm-btn-sm" onclick="abrirRechazar({{ $p->id }})">Rechazar</button>
                         @endif

@@ -28,17 +28,6 @@
 @endpush
 
 @section('content')
-    <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-        <form method="GET" action="{{ route('comunidades.index') }}" style="display: flex; align-items: center; gap: 8px; margin: 0;" id="searchForm">
-            <b>Buscar (nombre / RIF):</b>
-            <input name="search" type="text" value="{{ $search }}" style="width: 400px; padding: 4px 6px; border-radius: 4px; border: 1px solid #999;" placeholder="Nombre o RIF..." oninput="buscarConDebounce(this)">
-        </form>
-        @if ($puedeGestionar)
-            <button type="button" onclick="window.location='{{ route('comunidades.create') }}'" class="cm-btn cm-btn-success" style="font-size: 14px; padding: 6px 16px;">
-                Registrar nueva comunidad
-            </button>
-        @endif
-    </div>
 
     <div id="searchResults">
         <fieldset style="border: 2px solid #8b0000; border-radius: 6px; padding: 10px; margin: 0;">

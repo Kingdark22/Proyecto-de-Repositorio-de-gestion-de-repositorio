@@ -166,8 +166,7 @@ class ReporteDepositoService
         $search = isset($filtros['search']) && $filtros['search'] !== '' ? trim($filtros['search']) : null;
 
         return Proyecto::with(['comunidad', 'linea_investigacion', 'comunidad.direccion.municipio.estado'])
-            ->where('estado_validacion', 'aprobado')
-            ->where('estado_logico', true)
+            ->where('pry_estado', 'Aprobado')
             ->when($search !== null, function ($q) use ($search) {
                 $termino = '%' . $search . '%';
                 $q->where(function ($w) use ($search, $termino) {
@@ -407,15 +406,15 @@ class ReporteDepositoService
 
             $rows = DB::connection($conn)
                 ->table('proyecto_involucrado as pi')
-                ->join('involucrados as i', 'i.id', '=', 'pi.involucrado_id')
-                ->join('involucrado_rol as ir', 'ir.proyecto_involucrado_id', '=', 'pi.id')
-                ->join('roles_involucrados as ri', 'ri.id', '=', 'ir.rol_id')
-                ->where('pi.proyecto_id', $proyectoId)
-                ->whereRaw("LOWER(ri.nombre) LIKE ?", ['%tutor%'])
+                ->join('involucrados as i', 'i.inv_codigo', '=', 'pi.inv_codigo')
+                ->join('detalle_involucrados_rol as dir', 'dir.inv_codigo', '=', 'i.inv_codigo')
+                ->join('roles_involucrados as ri', 'ri.rin_codigo', '=', 'dir.rin_codigo')
+                ->where('pi.pry_codigo', $proyectoId)
+                ->whereRaw("LOWER(ri.rin_nombre) LIKE ?", ['%tutor%'])
                 ->select([
-                    DB::raw("TRIM(i.nombre) as nombre"),
-                    DB::raw("TRIM(i.apellido) as apellido"),
-                    DB::raw("TRIM(i.cedula) as cedula"),
+                    DB::raw("TRIM(i.inv_nombre) as nombre"),
+                    DB::raw("TRIM(i.inv_apellido) as apellido"),
+                    DB::raw("TRIM(i.inv_cedula) as cedula"),
                 ])
                 ->distinct()
                 ->get();
@@ -456,15 +455,15 @@ class ReporteDepositoService
 
             $rows = DB::connection($conn)
                 ->table('proyecto_involucrado as pi')
-                ->join('involucrados as i', 'i.id', '=', 'pi.involucrado_id')
-                ->join('involucrado_rol as ir', 'ir.proyecto_involucrado_id', '=', 'pi.id')
-                ->join('roles_involucrados as ri', 'ri.id', '=', 'ir.rol_id')
-                ->where('pi.proyecto_id', $proyectoId)
-                ->whereRaw("LOWER(ri.nombre) LIKE ?", ['%representante%'])
+                ->join('involucrados as i', 'i.inv_codigo', '=', 'pi.inv_codigo')
+                ->join('detalle_involucrados_rol as dir', 'dir.inv_codigo', '=', 'i.inv_codigo')
+                ->join('roles_involucrados as ri', 'ri.rin_codigo', '=', 'dir.rin_codigo')
+                ->where('pi.pry_codigo', $proyectoId)
+                ->whereRaw("LOWER(ri.rin_nombre) LIKE ?", ['%representante%'])
                 ->select([
-                    DB::raw("TRIM(i.nombre) as nombre"),
-                    DB::raw("TRIM(i.apellido) as apellido"),
-                    DB::raw("TRIM(i.cedula) as cedula"),
+                    DB::raw("TRIM(i.inv_nombre) as nombre"),
+                    DB::raw("TRIM(i.inv_apellido) as apellido"),
+                    DB::raw("TRIM(i.inv_cedula) as cedula"),
                 ])
                 ->distinct()
                 ->get();
@@ -537,19 +536,19 @@ class ReporteDepositoService
 
             $rows = DB::connection($conn)
                 ->table('proyecto_involucrado as pi')
-                ->join('involucrados as i', 'i.id', '=', 'pi.involucrado_id')
-                ->join('involucrado_rol as ir', 'ir.proyecto_involucrado_id', '=', 'pi.id')
-                ->join('roles_involucrados as ri', 'ri.id', '=', 'ir.rol_id')
-                ->whereIn('pi.proyecto_id', $proyectoIds)
+                ->join('involucrados as i', 'i.inv_codigo', '=', 'pi.inv_codigo')
+                ->join('detalle_involucrados_rol as dir', 'dir.inv_codigo', '=', 'i.inv_codigo')
+                ->join('roles_involucrados as ri', 'ri.rin_codigo', '=', 'dir.rin_codigo')
+                ->whereIn('pi.pry_codigo', $proyectoIds)
                 ->where(function ($q) {
-                    $q->whereRaw("LOWER(ri.nombre) LIKE ?", ['%tutor%'])
-                      ->orWhereRaw("LOWER(ri.nombre) LIKE ?", ['%representante%']);
+                    $q->whereRaw("LOWER(ri.rin_nombre) LIKE ?", ['%tutor%'])
+                      ->orWhereRaw("LOWER(ri.rin_nombre) LIKE ?", ['%representante%']);
                 })
                 ->select([
-                    'pi.proyecto_id',
-                    DB::raw("TRIM(i.nombre) as nombre"),
-                    DB::raw("TRIM(i.apellido) as apellido"),
-                    DB::raw("LOWER(ri.nombre) as rol_lower"),
+                    'pi.pry_codigo as proyecto_id',
+                    DB::raw("TRIM(i.inv_nombre) as nombre"),
+                    DB::raw("TRIM(i.inv_apellido) as apellido"),
+                    DB::raw("LOWER(ri.rin_nombre) as rol_lower"),
                 ])
                 ->distinct()
                 ->get();

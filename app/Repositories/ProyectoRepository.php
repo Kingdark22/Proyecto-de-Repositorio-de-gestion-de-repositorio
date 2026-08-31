@@ -111,7 +111,7 @@ class ProyectoRepository
     public function alternarEstado(int $id): void
     {
         $item = Proyecto::findOrFail($id);
-        $item->update(['estado_logico' => !$item->estado_logico]);
+        $item->update(['pry_estado' => $item->pry_estado === 'Aprobado' ? 'Pendiente' : 'Aprobado']);
     }
 
     /**
@@ -153,7 +153,7 @@ class ProyectoRepository
                     });
                 });
             })
-            ->when(($filtros['estado'] ?? '') !== '', fn($q) => $q->where('estado_validacion', $filtros['estado']))
+            ->when(($filtros['estado'] ?? '') !== '', fn($q) => $q->where('pry_estado', $filtros['estado']))
             ->when(($filtros['comunidad'] ?? '') !== '', fn($q) => $q->where('comunidad_id', $filtros['comunidad']))
             ->when(($filtros['creador_cedula'] ?? '') !== '', fn($q) => $q->where('creador_cedula', $filtros['creador_cedula']))
             ->when(($filtros['equipo_ref'] ?? null) !== null, fn($q) => $q->whereIn('pry_direccion_logica', $filtros['equipo_ref']))
@@ -169,18 +169,18 @@ class ProyectoRepository
     /**
      * @return Collection<int, Proyecto>
      */
-    public function pendientesValidacion(array $estados = ['pendiente', 'completado']): Collection
+    public function pendientesValidacion(array $estados = ['Pendiente']): Collection
     {
-        return Proyecto::whereIn('estado_validacion', $estados)->get();
+        return Proyecto::whereIn('pry_estado', $estados)->get();
     }
 
     /**
      * @return Collection<int, Proyecto>
      */
-    public function pendientesEstudiante(array $excludeEstados = ['aprobado', 'rechazado']): Collection
+    public function pendientesEstudiante(array $excludeEstados = ['Aprobado', 'Rechazado']): Collection
     {
         return Proyecto::where('actualizado_por_estudiante', false)
-            ->whereNotIn('estado_validacion', $excludeEstados)
+            ->whereNotIn('pry_estado', $excludeEstados)
             ->whereNotNull('pry_direccion_logica')
             ->get();
     }
@@ -190,7 +190,7 @@ class ProyectoRepository
      */
     public function rechazados(): Collection
     {
-        return Proyecto::where('estado_validacion', 'rechazado')
+        return Proyecto::where('pry_estado', 'Rechazado')
             ->whereNotNull('pry_direccion_logica')
             ->get();
     }

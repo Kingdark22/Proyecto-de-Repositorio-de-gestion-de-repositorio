@@ -32,7 +32,7 @@ class CleanupOrphanProjects extends Command
         $this->newLine();
 
         foreach ($orphans as $p) {
-            $this->line("  [{$p->id}] {$p->equipo_ref} — \"{$p->titulo}\" ({$p->estado_validacion})");
+            $this->line("  [{$p->id}] {$p->equipo_ref} — \"{$p->titulo}\" ({$p->pry_estado})");
         }
 
         $this->newLine();

@@ -38,7 +38,8 @@ class GrupoProyectoController extends Controller
         $tablaOk = $this->grupos->tablaDisponible();
 
         // Lapsos: coordinador ve todos, profesor solo activos
-        $esCoordinador = $activeRole === 'coordinador';
+        $esCoordinador = app(UserRoleService::class)->roleMatches('coordinador', $activeRole ?? '');
+        $esAdmin = app(UserRoleService::class)->roleMatches('administrador', $activeRole ?? '');
         $lapsos = $esCoordinador
             ? $this->profesores->todosLosLapsos()
             : $this->profesores->lapsosActivos();
@@ -48,6 +49,7 @@ class GrupoProyectoController extends Controller
         $filterPrograma = $request->get('programa', '');
         $filterSeccion = $request->get('seccion', '');
         $search = $request->get('search', '');
+        $filterProfesor = trim((string) $request->get('profesor', ''));
 
         // Si es profesor, forzar lapso vigente y filtrar por sus grupos
         if ($isProfessor && $filterLapso === '') {
@@ -95,6 +97,14 @@ class GrupoProyectoController extends Controller
             $filters['seccion'] = $secCodigos !== [] ? $secCodigos : [-1];
         } elseif ($activeRole === 'estudiante') {
             $filters['estudiante_cedula'] = trim((string) $user->usu_cedula);
+        } elseif ($esCoordinador || $esAdmin) {
+            // Coordinador/admin: por defecto solo sus propios grupos;
+            // si busca por profesor, muestra los grupos de ese profesor
+            if ($filterProfesor !== '') {
+                $filters['creador_usuario'] = $filterProfesor;
+            } else {
+                $filters['creador'] = trim((string) $user->usu_cedula);
+            }
         } elseif ($seccionCodigo) {
             $filters['seccion'] = $seccionCodigo;
         }
@@ -147,15 +157,16 @@ class GrupoProyectoController extends Controller
         $total = $lista->count();
         $items = $lista->slice(($page - 1) * $perPage, $perPage)->values();
 
-        $esAdmin = $activeRole === 'administrador';
+        $esAdmin = app(UserRoleService::class)->roleMatches('administrador', $activeRole ?? '');
 
         return view('grupos_proyecto.index', compact(
             'items', 'total', 'perPage', 'page',
             'lapsos', 'programas', 'secciones',
-            'filterLapso', 'filterPrograma', 'filterSeccion', 'search',
+            'filterLapso', 'filterPrograma', 'filterSeccion', 'search', 'filterProfesor',
             'tablaOk', 'isProfessor', 'esAdmin', 'esCoordinador', 'proyectoPorClave', 'creadorNombres',
         ))->with('userCedula', trim((string) $user->usu_cedula))
-          ->with('userUsuNombre', trim((string) $user->usu_nombre));
+          ->with('userUsuNombre', trim((string) $user->usu_nombre))
+          ->with('lapsoVigente', $this->profesores->lapsoVigenteCodigo());
     }
 
     /**
@@ -166,18 +177,29 @@ class GrupoProyectoController extends Controller
         $user = auth()->user();
         $activeRole = app(UserRoleService::class)->getActiveRole($user);
         $isProfessor = $activeRole === 'profesor proyecto';
+        $esCoordinador = app(UserRoleService::class)->roleMatches('coordinador', $activeRole ?? '');
+        $esAdmin = app(UserRoleService::class)->roleMatches('administrador', $activeRole ?? '');
 
-        // Solo profesor proyecto puede crear grupos
-        if ($activeRole !== 'profesor proyecto') {
+        // Pueden crear grupos: profesor proyecto, coordinador y administrador
+        $puedeCrearGrupos = $isProfessor || $esCoordinador || $esAdmin;
+        if (! $puedeCrearGrupos) {
             return redirect()->route('grupos-proyecto.index')
-                ->with('error', 'Solo el profesor de proyecto puede crear grupos.');
+                ->with('error', 'Solo el profesor de proyecto, el coordinador o el administrador pueden crear grupos.');
         }
 
         Log::info('create: rol='.($activeRole ?? 'null').', isProfessor='.($isProfessor ? 'true' : 'false').', cedula='.$user->usu_cedula);
 
         $tablaOk = $this->grupos->tablaDisponible();
-        // Solo profesor proyecto puede crear grupos, solo ve lapsos activos
-        $lapsos = $this->profesores->lapsosActivos();
+
+        // Profesor: solo lapsos activos. Coordinador/admin: solo lapsos anteriores al vigente.
+        if ($isProfessor) {
+            $lapsos = $this->profesores->lapsosActivos();
+        } else {
+            $lapsoVigente = $this->profesores->lapsoVigenteCodigo();
+            $lapsos = $this->profesores->todosLosLapsos()
+                ->reject(fn ($l) => $lapsoVigente !== null && (int) $l->lap_codigo === $lapsoVigente)
+                ->values();
+        }
 
         // Comunidades para el select
         $comunidades = Cache::remember('grupos_comunidades_form', 3600, fn () =>
@@ -214,11 +236,15 @@ class GrupoProyectoController extends Controller
     {
         $user = auth()->user();
         $activeRole = app(UserRoleService::class)->getActiveRole($user);
+        $isProfessor = $activeRole === 'profesor proyecto';
+        $esCoordinador = app(UserRoleService::class)->roleMatches('coordinador', $activeRole ?? '');
+        $esAdmin = app(UserRoleService::class)->roleMatches('administrador', $activeRole ?? '');
 
-        // Solo profesor proyecto puede crear grupos
-        if ($activeRole !== 'profesor proyecto') {
+        // Pueden crear grupos: profesor proyecto, coordinador y administrador
+        $puedeCrearGrupos = $isProfessor || $esCoordinador || $esAdmin;
+        if (! $puedeCrearGrupos) {
             return redirect()->route('grupos-proyecto.index')
-                ->with('error', 'Solo el profesor de proyecto puede crear grupos.');
+                ->with('error', 'Solo el profesor de proyecto, el coordinador o el administrador pueden crear grupos.');
         }
 
         $validated = $request->validate([
@@ -250,6 +276,15 @@ class GrupoProyectoController extends Controller
         $proCodigo = $request->input('programa') ? (int) $request->input('programa') : null;
         $comCodigo = (int) $request->input('comunidad');
         $nombre = trim($request->input('nombre'));
+
+        // Coordinador/admin: no pueden crear grupos en el lapso vigente (solo lapsos anteriores)
+        if (! $isProfessor) {
+            $lapsoVigente = $this->profesores->lapsoVigenteCodigo();
+            if ($lapsoVigente !== null && $lapCodigo === $lapsoVigente) {
+                return redirect()->back()->withInput()
+                    ->with('error', 'Los grupos del lapso actual los crean los profesores. Usted solo puede crear grupos de lapsos anteriores.');
+            }
+        }
 
         // Parsear miembros desde JSON
         $miembros = json_decode($request->input('miembros'), true);
@@ -350,15 +385,19 @@ class GrupoProyectoController extends Controller
         $user = auth()->user();
         $activeRole = app(UserRoleService::class)->getActiveRole($user);
         $isProfessor = $activeRole === 'profesor proyecto';
+        $esCoordinador = app(UserRoleService::class)->roleMatches('coordinador', $activeRole ?? '');
+        $esAdmin = app(UserRoleService::class)->roleMatches('administrador', $activeRole ?? '');
 
-        // Solo profesor proyecto puede editar grupos
-        if ($activeRole !== 'profesor proyecto') {
+        // Pueden editar grupos: profesor proyecto, coordinador y administrador
+        if (! ($isProfessor || $esCoordinador || $esAdmin)) {
             return redirect()->route('grupos-proyecto.index')
-                ->with('error', 'Solo el profesor de proyecto puede editar grupos.');
+                ->with('error', 'Solo el profesor de proyecto, el coordinador o el administrador pueden editar grupos.');
         }
 
         $tablaOk = $this->grupos->tablaDisponible();
-        $lapsos = $this->profesores->lapsosActivos();
+        $lapsos = $isProfessor
+            ? $this->profesores->lapsosActivos()
+            : $this->profesores->todosLosLapsos();
 
         $grupo = $this->grupos->obtener((int) $id);
         if (! $grupo) {
@@ -376,7 +415,7 @@ class GrupoProyectoController extends Controller
 
         // Bloquear si el proyecto asociado ya está aprobado
         $proyecto = $this->proyectoRepo->findFirstByEquipoRef($grupo->clave);
-        if ($proyecto && $proyecto->estado_validacion === 'aprobado') {
+        if ($proyecto && $proyecto->pry_estado === 'Aprobado') {
             return redirect()->route('grupos-proyecto.index')
                 ->with('error', 'No se puede editar el grupo porque el proyecto asociado ya está aprobado.');
         }
@@ -404,11 +443,14 @@ class GrupoProyectoController extends Controller
     {
         $user = auth()->user();
         $activeRole = app(UserRoleService::class)->getActiveRole($user);
+        $isProfessor = $activeRole === 'profesor proyecto';
+        $esCoordinador = app(UserRoleService::class)->roleMatches('coordinador', $activeRole ?? '');
+        $esAdmin = app(UserRoleService::class)->roleMatches('administrador', $activeRole ?? '');
 
-        // Solo profesor proyecto puede actualizar grupos
-        if ($activeRole !== 'profesor proyecto') {
+        // Pueden actualizar grupos: profesor proyecto, coordinador y administrador
+        if (! ($isProfessor || $esCoordinador || $esAdmin)) {
             return redirect()->route('grupos-proyecto.index')
-                ->with('error', 'Solo el profesor de proyecto puede actualizar grupos.');
+                ->with('error', 'Solo el profesor de proyecto, el coordinador o el administrador pueden actualizar grupos.');
         }
 
         $grpCodigo = (int) $id;
@@ -428,7 +470,7 @@ class GrupoProyectoController extends Controller
 
         // Bloquear si el proyecto asociado ya está aprobado
         $proyecto = $this->proyectoRepo->findFirstByEquipoRef($grupo->clave);
-        if ($proyecto && $proyecto->estado_validacion === 'aprobado') {
+        if ($proyecto && $proyecto->pry_estado === 'Aprobado') {
             return redirect()->route('grupos-proyecto.index')
                 ->with('error', 'No se puede actualizar el grupo porque el proyecto asociado ya está aprobado.');
         }
@@ -530,14 +572,17 @@ class GrupoProyectoController extends Controller
     {
         $user = auth()->user();
         $activeRole = app(UserRoleService::class)->getActiveRole($user);
+        $isProfessor = $activeRole === 'profesor proyecto';
+        $esCoordinador = app(UserRoleService::class)->roleMatches('coordinador', $activeRole ?? '');
+        $esAdmin = app(UserRoleService::class)->roleMatches('administrador', $activeRole ?? '');
 
-        // Solo profesor proyecto puede eliminar grupos
-        if ($activeRole !== 'profesor proyecto') {
+        // Pueden eliminar grupos: profesor proyecto, coordinador y administrador
+        if (! ($isProfessor || $esCoordinador || $esAdmin)) {
             if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => false, 'message' => 'Solo el profesor de proyecto puede eliminar grupos.']);
+                return response()->json(['success' => false, 'message' => 'Solo el profesor de proyecto, el coordinador o el administrador pueden eliminar grupos.']);
             }
             return redirect()->route('grupos-proyecto.index')
-                ->with('error', 'Solo el profesor de proyecto puede eliminar grupos.');
+                ->with('error', 'Solo el profesor de proyecto, el coordinador o el administrador pueden eliminar grupos.');
         }
 
         $grpCodigo = (int) $id;
@@ -563,7 +608,7 @@ class GrupoProyectoController extends Controller
         }
 
         $proyecto = $this->proyectoRepo->findFirstByEquipoRef($grupo->clave);
-        if ($proyecto && $proyecto->estado_validacion === 'aprobado') {
+        if ($proyecto && $proyecto->pry_estado === 'Aprobado') {
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => 'No se puede eliminar el grupo porque el proyecto asociado ya está aprobado.']);
             }
